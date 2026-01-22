@@ -50,6 +50,8 @@ namespace Cash8Avalon
         private static readonly IBrush EVEN_ROW_BACKGROUND = Brushes.White;
         private static readonly IBrush ODD_ROW_BACKGROUND = Brushes.AliceBlue;
 
+        private bool newDocument = false;
+
         public Cash_checks()
         {
             Console.WriteLine("=== Конструктор Cash_checks начат ===");
@@ -535,7 +537,6 @@ namespace Cash8Avalon
                 checkForm.date_time_write = dateTimeWrite;
                 checkForm.OnFormLoaded();
 
-
                 // Находим активное окно
                 Window parentWindow = null;
 
@@ -582,42 +583,42 @@ namespace Cash8Avalon
             }
         }
 
-        private async Task ShowErrorMessage(string message)
-        {
-            // Простой способ показать сообщение об ошибке
-            var dialog = new Window
-            {
-                Title = "Ошибка",
-                Width = 400,
-                Height = 200,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                Content = new StackPanel
-                {
-                    Children =
-            {
-                new TextBlock
-                {
-                    Text = message,
-                    TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(20)
-                },
-                new Button
-                {
-                    Content = "OK",
-                    Width = 100,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 10, 0, 20)
-                }
-            }
-                }
-            };
+        //private async Task ShowErrorMessage(string message)
+        //{
+        //    // Простой способ показать сообщение об ошибке
+        //    var dialog = new Window
+        //    {
+        //        Title = "Ошибка",
+        //        Width = 400,
+        //        Height = 200,
+        //        WindowStartupLocation = WindowStartupLocation.CenterScreen,
+        //        Content = new StackPanel
+        //        {
+        //            Children =
+        //    {
+        //        new TextBlock
+        //        {
+        //            Text = message,
+        //            TextWrapping = TextWrapping.Wrap,
+        //            Margin = new Thickness(20)
+        //        },
+        //        new Button
+        //        {
+        //            Content = "OK",
+        //            Width = 100,
+        //            HorizontalAlignment = HorizontalAlignment.Center,
+        //            Margin = new Thickness(0, 10, 0, 20)
+        //        }
+        //    }
+        //        }
+        //    };
 
-            // Находим кнопку и добавляем обработчик
-            var button = ((StackPanel)dialog.Content).Children.OfType<Button>().First();
-            button.Click += (s, e) => dialog.Close();
+        //    // Находим кнопку и добавляем обработчик
+        //    var button = ((StackPanel)dialog.Content).Children.OfType<Button>().First();
+        //    button.Click += (s, e) => dialog.Close();
 
-            await dialog.ShowDialog(null);
-        }
+        //    await dialog.ShowDialog(null);
+        //}
 
         #region Обработчики событий мыши и клавиатуры
 
@@ -669,11 +670,245 @@ namespace Cash8Avalon
             _scrollViewer?.Focus();
         }
 
+        //private async void ProcessInsertKey()
+        //{
+        //    if (DateTime.Now <= MainStaticClass.GetMinDateWork)
+        //    {
+        //        await MessageBox.Show(" У ВАС УСТАНОВЛЕНА НЕПРАВИЛЬНАЯ ДАТА НА КОМПЬЮТЕРЕ !!! ДАЛЬНЕЙШАЯ РАБОТА С ЧЕКАМИ НЕВОЗМОЖНА !!!", "Проверка даты на компьютере", MessageBoxButton.OK, MessageBoxType.Error);
+        //        return;
+        //    }
+        //    if (MainStaticClass.CashDeskNumber != 9)
+        //    {
+        //        bool restart = false; bool errors = false;
+        //        MainStaticClass.check_version_fn(ref restart, ref errors);
+        //        if (errors)
+        //        {
+        //            return;
+        //        }
+        //        if (restart)
+        //        {
+        //            await MessageBox.Show("У вас неверно была установлена версия ФН,НЕОБХОДИМ ПЕРЕЗАПУСК КАССОВОЙ ПРОГРАММЫ !!!", "Проверка настройки ФН", MessageBoxButton.OK, MessageBoxType.Error);
+        //            //this.Close();
+        //            return;
+        //        }
+        //    }
+        //    if (MainStaticClass.SystemTaxation == 0)
+        //    {
+        //        await MessageBox.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!");
+        //        return;
+        //    }
+
+
+        //    //Проверка на заполненность обяз реквизитов
+        //    if (await AllIsFilled())
+        //    {
+        //        if (newDocument)
+        //        {
+        //            return;
+        //        }
+
+        //        if (txtB_cashier.Text.Trim().Length == 0)
+        //        {
+        //            await MessageBox.Show("Не заполнен кассир");
+        //            return;
+        //        }
+
+        //        MainStaticClass.validate_date_time_with_fn(15);
+
+        //        newDocument = true;
+        //        Cash_check doc = new Cash_check();
+        //        doc.cashier = txtB_cashier.Text;
+        //        doc.ShowDialog();
+        //        doc.Dispose();
+        //        newDocument = false;
+        //        LoadDocuments();             
+        //    }
+        //}
+
+        private async void ProcessInsertKey()
+        {
+            Console.WriteLine("Insert нажат - создание нового чека");
+
+            try
+            {
+                // Проверка даты на компьютере
+                if (DateTime.Now <= MainStaticClass.GetMinDateWork)
+                {
+                    await MessageBox.Show(
+                        " У ВАС УСТАНОВЛЕНА НЕПРАВИЛЬНАЯ ДАТА НА КОМПЬЮТЕРЕ !!! ДАЛЬНЕЙШАЯ РАБОТА С ЧЕКАМИ НЕВОЗМОЖНА !!!",
+                        "Проверка даты на компьютере",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error
+                    );
+                    return;
+                }
+
+                // Проверка версии ФН
+                if (MainStaticClass.CashDeskNumber != 9)
+                {
+                    bool restart = false;
+                    bool errors = false;
+                    MainStaticClass.check_version_fn(ref restart, ref errors);
+
+                    if (errors)
+                    {
+                        return;
+                    }
+
+                    if (restart)
+                    {
+                        await MessageBox.Show(
+                            "У вас неверно была установлена версия ФН, НЕОБХОДИМ ПЕРЕЗАПУСК КАССОВОЙ ПРОГРАММЫ !!!",
+                            "Проверка настройки ФН",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error
+                        );
+                        return;
+                    }
+                }
+
+                // Проверка системы налогообложения
+                if (MainStaticClass.SystemTaxation == 0)
+                {
+                    await MessageBox.Show(
+                        "У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!"
+                    );
+                    return;
+                }
+
+                // Проверка на заполненность обязательных реквизитов
+                if (!await AllIsFilled())
+                {
+                    return;
+                }
+
+                // Проверка кассира
+                var txtCashier = this.FindControl<TextBox>("txtB_cashier");
+                if (txtCashier == null || string.IsNullOrWhiteSpace(txtCashier.Text))
+                {
+                    await MessageBox.Show("Не заполнен кассир");
+                    return;
+                }
+
+                // Проверка времени с ФН
+                MainStaticClass.validate_date_time_with_fn(15);
+
+                // Создаем контрол для нового чека
+                var checkForm = new Cash_check();
+
+                // Настраиваем для нового чека (пустой)
+                checkForm.IsNewCheck = true; // Добавьте это свойство в класс Cash_check
+                checkForm.cashier = txtCashier.Text; // Передаем кассира
+
+                // Дополнительная инициализация для нового чека
+                //checkForm.InitializeForNewCheck(); // Создайте этот метод в Cash_check
+                checkForm.OnFormLoaded();
+
+                // Находим активное окно
+                Window parentWindow = null;
+
+                // Вариант 1: Через TopLevel
+                var topLevel = TopLevel.GetTopLevel(this);
+                if (topLevel is Window currentWindow)
+                {
+                    parentWindow = currentWindow;
+                }
+
+                // Вариант 2: Через Application
+                if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
+                }
+
+                // Создаем окно с правильным заголовком
+                var newWindow = new Window
+                {
+                    Title = "Новый чек",
+                    Width = 1200,
+                    Height = 800,
+                    Content = checkForm
+                };
+
+                // Подписываемся на событие закрытия окна
+                //newWindow.Closed += (s, e) =>
+                //{
+                //    if (checkForm.CheckCreated) // Добавьте это свойство в Cash_check
+                //    {
+                //        LoadDocuments(); // Обновляем список после создания чека
+                //    }
+                //};
+
+                // Устанавливаем позиционирование
+                if (parentWindow != null)
+                {
+                    newWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+                    // Показываем как диалог
+                    await newWindow.ShowDialog(parentWindow);
+                }
+                else
+                {
+                    newWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    newWindow.Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при создании нового чека: {ex.Message}");
+                await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
+            }
+        }
+
+        private async Task<bool> AllIsFilled()
+        {
+            bool result = true;
+            //NpgsqlConnection conn = null;
+            //try
+            //{
+            try
+            {
+                if (MainStaticClass.Nick_Shop.Trim().Length == 0)
+                {
+                    await MessageBox.Show("Не заполнен код магазина","Проверка заполнения",MessageBoxButton.OK,MessageBoxType.Error);
+                    return false;
+                }
+                if (MainStaticClass.CashDeskNumber == 0)
+                {
+                    await MessageBox.Show("Номер кассы не может быть ноль","Проверка заполнения",MessageBoxButton.OK,MessageBoxType.Error);
+                    return false;
+                }
+                if (MainStaticClass.Cash_Operator.Trim().Length == 0)
+                {
+                    await MessageBox.Show("Не заполнен Кассир", "Проверка заполнения", MessageBoxButton.OK, MessageBoxType.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show(" AllIsFilled " + ex.Message);
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Глобальная обработка клавиатуры
         /// </summary>
         private void OnGlobalKeyDown(object sender, KeyEventArgs e)
         {
+
+            if (e.Key == Key.Insert)
+            {
+                // Обработка Insert - работает ВЕЗДЕ на форме
+                if (e.Key == Key.Insert)
+                {
+                    ProcessInsertKey();
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+
             // Проверяем, есть ли фокус в таблице
             bool isTableFocused = _scrollViewer?.IsFocused == true ||
                                  _tableGrid?.IsFocused == true ||
@@ -746,7 +981,7 @@ namespace Cash8Avalon
                 var numCash = this.FindControl<TextBlock>("num_cash");
                 if (numCash != null)
                 {
-                    numCash.Text = MainStaticClass.CashDeskNumber.ToString();
+                    numCash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
                     Console.WriteLine($"Номер кассы установлен: {numCash.Text}");
                 }
 

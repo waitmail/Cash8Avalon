@@ -1,4 +1,4 @@
-using Avalonia;
+п»їusing Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -14,19 +14,19 @@ namespace Cash8Avalon
 {
     public partial class InputActionBarcode : Window
     {
-        // Объявляем поля для элементов управления
+        // РћР±СЉСЏРІР»СЏРµРј РїРѕР»СЏ РґР»СЏ СЌР»РµРјРµРЅС‚РѕРІ СѓРїСЂР°РІР»РµРЅРёСЏ
         private TextBox? _inputBarcodeTextBox;
         private TextBlock? _authorizationTextBlock;
 
         public string EnteredBarcode => _inputBarcodeTextBox?.Text?.Trim() ?? string.Empty;
 
-        /*Тип вызова этой формы
-         * 1.Вызов для ввода акционного штрихкода (штрихкод акции)
-         * 2.Вызов для ввода акционного штрихкода (штрихкод товара когда подарок)
-         * 3.Вызов для ввода 
-         * 4.Вызов для ввода штрихкода продавца консультанта
-         * 5.вызов для ввод 4 последних цифр телефона 
-         * 6.вызов для ввода QR - кода маркера товара
+        /*РўРёРї РІС‹Р·РѕРІР° СЌС‚РѕР№ С„РѕСЂРјС‹
+         * 1.Р’С‹Р·РѕРІ РґР»СЏ РІРІРѕРґР° Р°РєС†РёРѕРЅРЅРѕРіРѕ С€С‚СЂРёС…РєРѕРґР° (С€С‚СЂРёС…РєРѕРґ Р°РєС†РёРё)
+         * 2.Р’С‹Р·РѕРІ РґР»СЏ РІРІРѕРґР° Р°РєС†РёРѕРЅРЅРѕРіРѕ С€С‚СЂРёС…РєРѕРґР° (С€С‚СЂРёС…РєРѕРґ С‚РѕРІР°СЂР° РєРѕРіРґР° РїРѕРґР°СЂРѕРє)
+         * 3.Р’С‹Р·РѕРІ РґР»СЏ РІРІРѕРґР° 
+         * 4.Р’С‹Р·РѕРІ РґР»СЏ РІРІРѕРґР° С€С‚СЂРёС…РєРѕРґР° РїСЂРѕРґР°РІС†Р° РєРѕРЅСЃСѓР»СЊС‚Р°РЅС‚Р°
+         * 5.РІС‹Р·РѕРІ РґР»СЏ РІРІРѕРґ 4 РїРѕСЃР»РµРґРЅРёС… С†РёС„СЂ С‚РµР»РµС„РѕРЅР° 
+         * 6.РІС‹Р·РѕРІ РґР»СЏ РІРІРѕРґР° QR - РєРѕРґР° РјР°СЂРєРµСЂР° С‚РѕРІР°СЂР°
          */
         public Cash_check caller = null;
         //public ProcessingOfActions caller2 = null;
@@ -36,21 +36,21 @@ namespace Cash8Avalon
 
         public int call_type = 0;
         public int count = 0;
-        public int num_doc = 0; //номер акционного документа по которму выдается подарок
-        public int mode = 0;//Это для акционных подарков когда перебирается осносноая dt тогда нужна другая dt,эта переменная показывает в какую dt вствлять строки
+        public int num_doc = 0; //РЅРѕРјРµСЂ Р°РєС†РёРѕРЅРЅРѕРіРѕ РґРѕРєСѓРјРµРЅС‚Р° РїРѕ РєРѕС‚РѕСЂРјСѓ РІС‹РґР°РµС‚СЃСЏ РїРѕРґР°СЂРѕРє
+        public int mode = 0;//Р­С‚Рѕ РґР»СЏ Р°РєС†РёРѕРЅРЅС‹С… РїРѕРґР°СЂРєРѕРІ РєРѕРіРґР° РїРµСЂРµР±РёСЂР°РµС‚СЃСЏ РѕСЃРЅРѕСЃРЅРѕР°СЏ dt С‚РѕРіРґР° РЅСѓР¶РЅР° РґСЂСѓРіР°СЏ dt,СЌС‚Р° РїРµСЂРµРјРµРЅРЅР°СЏ РїРѕРєР°Р·С‹РІР°РµС‚ РІ РєР°РєСѓСЋ dt РІСЃС‚РІР»СЏС‚СЊ СЃС‚СЂРѕРєРё
         //System.Windows.Forms.Timer input_barcode_timer = null;
 
         public InputActionBarcode()
         {
             InitializeComponent();
 
-            // Инициализируем элементы после загрузки XAML
+            // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЌР»РµРјРµРЅС‚С‹ РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё XAML
             InitializeControls();
 
-            // Устанавливаем позицию окна
+            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїРѕР·РёС†РёСЋ РѕРєРЅР°
             Position = new PixelPoint(332, 99);
 
-            // Подписываемся на события
+            // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёСЏ
             SubscribeToEvents();
         }
 
@@ -61,59 +61,70 @@ namespace Cash8Avalon
 
         private void InitializeControls()
         {
-            // Находим элементы по имени из XAML
+            // РќР°С…РѕРґРёРј СЌР»РµРјРµРЅС‚С‹ РїРѕ РёРјРµРЅРё РёР· XAML
             _inputBarcodeTextBox = this.FindControl<TextBox>("inputBarcodeTextBox");
             _authorizationTextBlock = this.FindControl<TextBlock>("authorizationTextBlock");
 
             if (_inputBarcodeTextBox == null)
             {
-                Console.WriteLine("Ошибка: TextBox inputBarcodeTextBox не найден!");
+                Console.WriteLine("РћС€РёР±РєР°: TextBox inputBarcodeTextBox РЅРµ РЅР°Р№РґРµРЅ!");
             }
 
             if (_authorizationTextBlock == null)
             {
-                Console.WriteLine("Ошибка: TextBlock authorizationTextBlock не найден!");
+                Console.WriteLine("РћС€РёР±РєР°: TextBlock authorizationTextBlock РЅРµ РЅР°Р№РґРµРЅ!");
+            }
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e); // в†ђ Р­РўРђ РЎРўР РћРљРђ Р”РћР‘РђР’Р›Р•РќРђ (Р’РђР–РќРћ!)
+                        
+            if (e.Key == Key.Escape) 
+            {
+                Close(false);
+                e.Handled = true;
             }
         }
 
         private void SubscribeToEvents()
         {
-            // Подписываемся на событие загрузки окна
+            // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёРµ Р·Р°РіСЂСѓР·РєРё РѕРєРЅР°
             Loaded += OnWindowLoaded;
 
-            // Подписываемся на события TextBox
+            // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёСЏ TextBox
             if (_inputBarcodeTextBox != null)
             {
                 _inputBarcodeTextBox.KeyDown += InputBarcodeTextBox_KeyDown;
             }
 
-            // Глобальная обработка клавиш для всего окна
+            // Р“Р»РѕР±Р°Р»СЊРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РєР»Р°РІРёС€ РґР»СЏ РІСЃРµРіРѕ РѕРєРЅР°
             this.KeyDown += Window_KeyDown;
         }
 
         private void OnWindowLoaded(object? sender, RoutedEventArgs e)
         {
-            // Устанавливаем фокус на TextBox после загрузки окна
+            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„РѕРєСѓСЃ РЅР° TextBox РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё РѕРєРЅР°
             _inputBarcodeTextBox?.Focus();
 
             if (call_type == 1)
             {
-                _authorizationTextBlock.Text = "Введите штрихкод(промокод), включающий акцию";
+                _authorizationTextBlock.Text = "Р’РІРµРґРёС‚Рµ С€С‚СЂРёС…РєРѕРґ(РїСЂРѕРјРѕРєРѕРґ), РІРєР»СЋС‡Р°СЋС‰РёР№ Р°РєС†РёСЋ";
                 _inputBarcodeTextBox.MaxLength = 13;
             }
             else if (call_type == 2)
             {
-                _authorizationTextBlock.Text = "Введите штрихкод подарка";
+                _authorizationTextBlock.Text = "Р’РІРµРґРёС‚Рµ С€С‚СЂРёС…РєРѕРґ РїРѕРґР°СЂРєР°";
                 _inputBarcodeTextBox.MaxLength = 13;
             }
             else if (call_type == 3)
             {
-                _authorizationTextBlock.Text = "Введите штрихкод администратора";
+                _authorizationTextBlock.Text = "Р’РІРµРґРёС‚Рµ С€С‚СЂРёС…РєРѕРґ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°";
                 _inputBarcodeTextBox.MaxLength = 13;
             }
             else if (call_type == 4)
             {
-                //authorization.Text = "Введите штрихкод продавца";
+                //authorization.Text = "Р’РІРµРґРёС‚Рµ С€С‚СЂРёС…РєРѕРґ РїСЂРѕРґР°РІС†Р°";
                 //input_barcode_timer = new System.Windows.Forms.Timer();
                 //input_barcode_timer.Interval = 700;
                 //this.input_barcode_timer.Tick += new EventHandler(input_barcode_timer_Tick);
@@ -122,17 +133,17 @@ namespace Cash8Avalon
             }
             else if (call_type == 5)
             {
-                _authorizationTextBlock.Text = "Введите последние 4 цифры номера телефона";
+                _authorizationTextBlock.Text = "Р’РІРµРґРёС‚Рµ РїРѕСЃР»РµРґРЅРёРµ 4 С†РёС„СЂС‹ РЅРѕРјРµСЂР° С‚РµР»РµС„РѕРЅР°";
                 _inputBarcodeTextBox.MaxLength = 4;
             }
             else if (call_type == 6)
             {
-                _authorizationTextBlock.Text = " Просканируйте код маркировки. Отказ - Esc ";
+                _authorizationTextBlock.Text = " РџСЂРѕСЃРєР°РЅРёСЂСѓР№С‚Рµ РєРѕРґ РјР°СЂРєРёСЂРѕРІРєРё. РћС‚РєР°Р· - Esc ";
                 //this.input_barcode.MaxLength = 100;
             }
         }
 
-        // Обработка нажатия клавиш в TextBox
+        // РћР±СЂР°Р±РѕС‚РєР° РЅР°Р¶Р°С‚РёСЏ РєР»Р°РІРёС€ РІ TextBox
         //private void InputBarcodeTextBox_KeyDown(object? sender, KeyEventArgs e)
         //{
         //    if (e.Key == Key.Enter)
@@ -156,11 +167,11 @@ namespace Cash8Avalon
 
                 //if (e.Key == Key.Enter)
                 //{
-                //    if (caller != null)//Чек продажи 
+                //    if (caller != null)//Р§РµРє РїСЂРѕРґР°Р¶Рё 
                 //    {
                 //        if (!(caller.check_action(_inputBarcodeTextBox.Text)))
                 //        {
-                //            await MessageBox.Show("Акция с таким штрихкодом не найдена");
+                //            await MessageBox.Show("РђРєС†РёСЏ СЃ С‚Р°РєРёРј С€С‚СЂРёС…РєРѕРґРѕРј РЅРµ РЅР°Р№РґРµРЅР°");
                 //        }
                 //        else
                 //        {
@@ -168,24 +179,24 @@ namespace Cash8Avalon
                 //            {
                 //                if (caller.action_barcode_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
                 //                {
-                //                    caller.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Для обычных акций
+                //                    caller.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Р”Р»СЏ РѕР±С‹С‡РЅС‹С… Р°РєС†РёР№
                 //                }
                 //            }
                 //            else
                 //            {
                 //                if (caller.action_barcode_bonus_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
                 //                {
-                //                    caller.action_barcode_bonus_list.Add(_inputBarcodeTextBox.Text);//Для бонусных акций
+                //                    caller.action_barcode_bonus_list.Add(_inputBarcodeTextBox.Text);//Р”Р»СЏ Р±РѕРЅСѓСЃРЅС‹С… Р°РєС†РёР№
                 //                }
                 //            }
                 //        }
                 //        caller.inpun_action_barcode = false;
                 //    }
-                //    else if (caller3 != null)//проверка акций
+                //    else if (caller3 != null)//РїСЂРѕРІРµСЂРєР° Р°РєС†РёР№
                 //    {
                 //        if (!(caller3.check_action(_inputBarcodeTextBox.Text)))
                 //        {
-                //            await MessageBox.Show("Акция с таким штрихкодом не найдена");
+                //            await MessageBox.Show("РђРєС†РёСЏ СЃ С‚Р°РєРёРј С€С‚СЂРёС…РєРѕРґРѕРј РЅРµ РЅР°Р№РґРµРЅР°");
                 //        }
                 //        else
                 //        {
@@ -193,14 +204,14 @@ namespace Cash8Avalon
                 //            {
                 //                if (caller3.action_barcode_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
                 //                {
-                //                    caller3.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Для обычных акций
+                //                    caller3.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Р”Р»СЏ РѕР±С‹С‡РЅС‹С… Р°РєС†РёР№
                 //                }
                 //            }
                 //            //else
                 //            //{
                 //            //    if (caller3.action_barcode_bonus_list.IndexOf(input_barcode.Text) == -1)
                 //            //    {
-                //            //        caller3.action_barcode_bonus_list.Add(input_barcode.Text);//Для бонусных акций
+                //            //        caller3.action_barcode_bonus_list.Add(input_barcode.Text);//Р”Р»СЏ Р±РѕРЅСѓСЃРЅС‹С… Р°РєС†РёР№
                 //            //    }
                 //            //}
                 //        }
@@ -209,8 +220,19 @@ namespace Cash8Avalon
 
                 //    this.Close();
                 //}
+                //else if (e.Key == Key.Escape)
+                //{
+                //    if (call_type == 1)
+                //    {
+                //        caller.inpun_action_barcode = false;
+                //    }
+                //    //this.Close();
+                //    // Р—Р°РєСЂС‹РІР°РµРј РѕРєРЅРѕ СЃ СЂРµР·СѓР»СЊС‚Р°С‚РѕРј false (РѕС‚РјРµРЅР°)
+                //    Close(false);
+                //    e.Handled = true;
+                //}
             }
-            else if (call_type == 2)//После сообщения о подарке ввод штрихкода товара
+            else if (call_type == 2)//РџРѕСЃР»Рµ СЃРѕРѕР±С‰РµРЅРёСЏ Рѕ РїРѕРґР°СЂРєРµ РІРІРѕРґ С€С‚СЂРёС…РєРѕРґР° С‚РѕРІР°СЂР°
             {
             //    //Cash_check parent = ((Cash_check)this.Parent);
             //    if (e.KeyChar == 13)
@@ -234,7 +256,7 @@ namespace Cash8Avalon
             //        this.Close();
             //    }
             //}
-            //else if (call_type == 3)//Проверка на удаление документа
+            //else if (call_type == 3)//РџСЂРѕРІРµСЂРєР° РЅР° СѓРґР°Р»РµРЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°
             //{
             //    if (e.KeyChar == 13)
             //    {
@@ -242,16 +264,16 @@ namespace Cash8Avalon
             //        this.Close();
             //    }
             //}
-            //else if (call_type == 5)//Проверка на 4 последние цифры телефона 
+            //else if (call_type == 5)//РџСЂРѕРІРµСЂРєР° РЅР° 4 РїРѕСЃР»РµРґРЅРёРµ С†РёС„СЂС‹ С‚РµР»РµС„РѕРЅР° 
             //{
             //    //if (e.KeyChar != 13)
             //    //{
-            //    //    //MessageBox.Show("необходимо ввести 4 цифры ");
+            //    //    //MessageBox.Show("РЅРµРѕР±С…РѕРґРёРјРѕ РІРІРµСЃС‚Рё 4 С†РёС„СЂС‹ ");
             //    //    return;
             //    //}
             //    //if (input_barcode.Text.Trim().Length < 4)
             //    //{
-            //    //    await MessageBox.Show("Необходимо ввести 4 цифры ");
+            //    //    await MessageBox.Show("РќРµРѕР±С…РѕРґРёРјРѕ РІРІРµСЃС‚Рё 4 С†РёС„СЂС‹ ");
             //    //    return;
             //    //}
             //    //int result = 0;
@@ -268,11 +290,11 @@ namespace Cash8Avalon
             //    //}
             //    //catch (NpgsqlException ex)
             //    //{
-            //    //    await MessageBox.Show("Ошибка при проверке номера телефона " + ex.Message);
+            //    //    await MessageBox.Show("РћС€РёР±РєР° РїСЂРё РїСЂРѕРІРµСЂРєРµ РЅРѕРјРµСЂР° С‚РµР»РµС„РѕРЅР° " + ex.Message);
             //    //}
             //    //catch (Exception ex)
             //    //{
-            //    //    await MessageBox.Show("Ошибка при проверке номера телефона " + ex.Message);
+            //    //    await MessageBox.Show("РћС€РёР±РєР° РїСЂРё РїСЂРѕРІРµСЂРєРµ РЅРѕРјРµСЂР° С‚РµР»РµС„РѕРЅР° " + ex.Message);
             //    //}
             //    //finally
             //    //{
@@ -283,11 +305,11 @@ namespace Cash8Avalon
             //    //}
             //    //if (result != 1)
             //    //{
-            //    //    await MessageBox.Show("Введенные цифры не верны");
+            //    //    await MessageBox.Show("Р’РІРµРґРµРЅРЅС‹Рµ С†РёС„СЂС‹ РЅРµ РІРµСЂРЅС‹");
             //    //    _inputBarcodeTextBox.Text = "";
             //    //    if (MainStaticClass.ckeck_failed_input_phone_on_client(caller.client.Tag.ToString()) > 2)
             //    //    {
-            //    //        await MessageBox.Show("Вы превысили число попыток(3) ввести последние 4 цифры номера телефона");
+            //    //        await MessageBox.Show("Р’С‹ РїСЂРµРІС‹СЃРёР»Рё С‡РёСЃР»Рѕ РїРѕРїС‹С‚РѕРє(3) РІРІРµСЃС‚Рё РїРѕСЃР»РµРґРЅРёРµ 4 С†РёС„СЂС‹ РЅРѕРјРµСЂР° С‚РµР»РµС„РѕРЅР°");
             //    //        this.Close();
             //    //    }
             //    //    insert_record_failed_input_phone();
@@ -299,27 +321,27 @@ namespace Cash8Avalon
             //    //}
 
             }
-            else if (call_type == 6)//Проверка на длину кода маркировки
+            else if (call_type == 6)//РџСЂРѕРІРµСЂРєР° РЅР° РґР»РёРЅСѓ РєРѕРґР° РјР°СЂРєРёСЂРѕРІРєРё
             {
                 if (e.Key != Key.Enter)
                 {
                     return;
                 }
-                //длина строки маркера не должна быть меньше 31 символов
+                //РґР»РёРЅР° СЃС‚СЂРѕРєРё РјР°СЂРєРµСЂР° РЅРµ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РјРµРЅСЊС€Рµ 31 СЃРёРјРІРѕР»РѕРІ
                 if (_inputBarcodeTextBox.Text.Trim().Length < 14)
                 {
-                    await MessageBox.Show("Длина строки кода маркера меньше 14 символа, это ошибка !!! ");
+                    await MessageBox.Show("Р”Р»РёРЅР° СЃС‚СЂРѕРєРё РєРѕРґР° РјР°СЂРєРµСЂР° РјРµРЅСЊС€Рµ 14 СЃРёРјРІРѕР»Р°, СЌС‚Рѕ РѕС€РёР±РєР° !!! ");
                     _inputBarcodeTextBox.Text = "";
                     return;
                 }
-                /////////////////////////////////////////////////ЭТО НАДО ВСЕ ПРОВЕРИТЬ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //Здесь проверяем, на отсутствие символов кирилицы
-                //Regex reg = new Regex(@"^([^а-яА-Я]+)$");
-                //System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(e.KeyChar.ToString(), "[а-яА-Я]");
-                Regex reg = new Regex("[а-яА-ЯёЁ]");
+                /////////////////////////////////////////////////Р­РўРћ РќРђР”Рћ Р’РЎР• РџР РћР’Р•Р РРўР¬ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                //Р—РґРµСЃСЊ РїСЂРѕРІРµСЂСЏРµРј, РЅР° РѕС‚СЃСѓС‚СЃС‚РІРёРµ СЃРёРјРІРѕР»РѕРІ РєРёСЂРёР»РёС†С‹
+                //Regex reg = new Regex(@"^([^Р°-СЏРђ-РЇ]+)$");
+                //System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(e.KeyChar.ToString(), "[Р°-СЏРђ-РЇ]");
+                Regex reg = new Regex("[Р°-СЏРђ-РЇС‘РЃ]");
                 if (reg.IsMatch(_inputBarcodeTextBox.Text.Trim()))
                 {
-                    await MessageBox.Show("Обнаружены кирилличиские символы,ПЕРЕКЛЮЧИТЕ ЯЗЫК ВВОДА НА АНГЛИЙСКИЙ И ПОВТОРИТЕ ВВОД КОДА МАРКИРОВКИ ЕЩЕ РАЗ");
+                    await MessageBox.Show("РћР±РЅР°СЂСѓР¶РµРЅС‹ РєРёСЂРёР»Р»РёС‡РёСЃРєРёРµ СЃРёРјРІРѕР»С‹,РџР•Р Р•РљР›Р®Р§РРўР• РЇР—Р«Рљ Р’Р’РћР”Рђ РќРђ РђРќР“Р›РР™РЎРљРР™ Р РџРћР’РўРћР РРўР• Р’Р’РћР” РљРћР”Рђ РњРђР РљРР РћР’РљР Р•Р©Р• Р РђР—");
                     _inputBarcodeTextBox.Text = "";
                     return;
                 }
@@ -329,17 +351,19 @@ namespace Cash8Avalon
                 this.Close(true);
                 e.Handled = true;
             }
-            if (e.Key == Key.Escape)
-            {
-                if (call_type == 1)
-                {
-                    caller.inpun_action_barcode = false;
-                }
-                //this.Close();
-                // Закрываем окно с результатом false (отмена)
-                Close(false);
-                e.Handled = true;
-            }
+            
+            //if (e.Key == Key.Escape)
+            //{
+            //    if (call_type == 1)
+            //    {
+            //        caller.inpun_action_barcode = false;
+            //    }
+            //    //this.Close();
+            //    // Р—Р°РєСЂС‹РІР°РµРј РѕРєРЅРѕ СЃ СЂРµР·СѓР»СЊС‚Р°С‚РѕРј false (РѕС‚РјРµРЅР°)
+            //    Close(false);
+            //    e.Handled = true;
+            //}
+
             //else if (e.KeyChar == 27)
             //{
             //    if (call_type == 1)
@@ -351,10 +375,10 @@ namespace Cash8Avalon
         }
 
 
-        // Глобальная обработка клавиш для всего окна
+        // Р“Р»РѕР±Р°Р»СЊРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РєР»Р°РІРёС€ РґР»СЏ РІСЃРµРіРѕ РѕРєРЅР°
         private void Window_KeyDown(object? sender, KeyEventArgs e)
         {
-            // Дополнительная обработка клавиш, если нужно
+            // Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РєР»Р°РІРёС€, РµСЃР»Рё РЅСѓР¶РЅРѕ
         }
 
         private void ProcessBarcode()
@@ -365,22 +389,22 @@ namespace Cash8Avalon
 
             if (string.IsNullOrEmpty(barcode))
             {
-                // Можно показать сообщение об ошибке
+                // РњРѕР¶РЅРѕ РїРѕРєР°Р·Р°С‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ
                 return;
             }
 
-            // Вызываем событие
+            // Р’С‹Р·С‹РІР°РµРј СЃРѕР±С‹С‚РёРµ
             OnBarcodeEntered(barcode);
 
-            // Очищаем поле и возвращаем фокус
+            // РћС‡РёС‰Р°РµРј РїРѕР»Рµ Рё РІРѕР·РІСЂР°С‰Р°РµРј С„РѕРєСѓСЃ
             _inputBarcodeTextBox.Text = string.Empty;
             _inputBarcodeTextBox.Focus();
         }
 
-        // Свойство для получения введенного штрихкода
+        // РЎРІРѕР№СЃС‚РІРѕ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РІРІРµРґРµРЅРЅРѕРіРѕ С€С‚СЂРёС…РєРѕРґР°
        
 
-        // Метод для очистки поля ввода
+        // РњРµС‚РѕРґ РґР»СЏ РѕС‡РёСЃС‚РєРё РїРѕР»СЏ РІРІРѕРґР°
         public void ClearInput()
         {
             if (_inputBarcodeTextBox != null)
@@ -390,13 +414,13 @@ namespace Cash8Avalon
             }
         }
 
-        // Метод для установки позиции окна
+        // РњРµС‚РѕРґ РґР»СЏ СѓСЃС‚Р°РЅРѕРІРєРё РїРѕР·РёС†РёРё РѕРєРЅР°
         public void SetPosition(int x, int y)
         {
             Position = new PixelPoint(x, y);
         }
 
-        // Метод для изменения текста авторизации
+        // РњРµС‚РѕРґ РґР»СЏ РёР·РјРµРЅРµРЅРёСЏ С‚РµРєСЃС‚Р° Р°РІС‚РѕСЂРёР·Р°С†РёРё
         public void SetAuthorizationMessage(string message)
         {
             if (_authorizationTextBlock != null)
@@ -405,7 +429,7 @@ namespace Cash8Avalon
             }
         }
 
-        // Событие для передачи результата
+        // РЎРѕР±С‹С‚РёРµ РґР»СЏ РїРµСЂРµРґР°С‡Рё СЂРµР·СѓР»СЊС‚Р°С‚Р°
         public event EventHandler<string>? BarcodeEntered;
 
         protected virtual void OnBarcodeEntered(string barcode)
@@ -413,7 +437,7 @@ namespace Cash8Avalon
             BarcodeEntered?.Invoke(this, barcode);
         }
 
-        // Метод для установки фокуса на поле ввода
+        // РњРµС‚РѕРґ РґР»СЏ СѓСЃС‚Р°РЅРѕРІРєРё С„РѕРєСѓСЃР° РЅР° РїРѕР»Рµ РІРІРѕРґР°
         public void FocusInputField()
         {
             _inputBarcodeTextBox?.Focus();

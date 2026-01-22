@@ -57,7 +57,7 @@ namespace Cash8Avalon
         private double discount = 0;
         public Int64 numdoc = 0;
         private bool inpun_client_barcode = false;
-        public bool itsnew = true;
+        public bool IsNewCheck = true;
         public string date_time_write = "";
         public string p_sum_pay = "";
         public string p_sum_doc = "";
@@ -367,7 +367,7 @@ namespace Cash8Avalon
 
             //DateTime start = DateTime.Now;
             //Повторная проверка если документ не новый или уже вызвано окно оплаты подбор товара не работает
-            if (!itsnew)
+            if (!IsNewCheck)
             {
                 return;
             }
@@ -592,7 +592,7 @@ namespace Cash8Avalon
                     await MessageBox.Show("Товар с кодом/штрихкодком " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error);
                     return;
                 }
-            }
+            }  
 
             //Проверка по сертификату
             if (productData.isCertificate())

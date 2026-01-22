@@ -14,23 +14,27 @@
         </Grid.RowDefinitions>
         
         <!-- Верхняя панель с кнопкой закрытия -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <!-- Левая часть: ваши существующие элементы -->
+            <!-- Левая часть: все существующие элементы управления -->
             <StackPanel Grid.Column="0" Spacing="10">
                 <!-- Строка 1: Документы и кнопки -->
                 <DockPanel Name="Row1Panel">
+                    <!-- Это тоже TextBox, поэтому тоже исправляем -->
                     <TextBox Name="txtB_not_unloaded_docs" 
                             IsEnabled="False"
                             Text=""
                             FontSize="12"
                             Margin="0,0,10,0"
                             MinHeight="30"
-                            VerticalAlignment="Center"/>
+                            MinWidth="500"
+                            VerticalAlignment="Center"
+                            Background="White"
+                            Foreground="Black"/>
                     
                     <Button Name="btn_update_status_send" 
                            Content="Обновить" 
@@ -41,13 +45,7 @@
                     <Button Name="btn_check_actions" 
                            Content="ПРОВЕРКА АКЦИЙ" 
                            Width="150"
-                           HorizontalAlignment="Left"/>
-
-                    <Button Name="btnNewCheck" 
-                    Content="Новый чек (Insert)" 
-                    Width="150"
-                    Margin="10,0,0,0"
-                    HorizontalAlignment="Left"/>
+                           HorizontalAlignment="Left"/>                   
                     
                     <Image Name="pictureBox_get_update_program"
                           Width="65"
@@ -68,32 +66,37 @@
                                    VerticalAlignment="Center"/>
                         <Button Name="fill" 
                                Content="Заполнить" 
-                               Width="80"
+                               Width="90"
                                VerticalAlignment="Center"/>
                     </StackPanel>
                     
-                    <!-- Центр: Кассир -->
+                    <!-- Центр: Кассир и номер кассы -->
                     <StackPanel Orientation="Horizontal" Spacing="5" Margin="20,0,0,0" Name="CashierPanel">
                         <TextBlock Text="Кассир:" 
                                   VerticalAlignment="Center"/>
+                        <!-- TextBox - поле ввода, в отключенном состоянии нужно явно задавать цвета -->
                         <TextBox Name="txtB_cashier" 
                                 IsEnabled="False"
                                 Width="150"
-                                VerticalAlignment="Center"/>
-                    </StackPanel>
-                    
-                    <!-- Правая часть: Номер кассы и чекбокс -->
-                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" Name="RightPanel">
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0"
+                                Background="White"
+                                Foreground="Black"/>
+                        
+                        <!-- TextBlock - просто отображение текста, всегда виден нормально -->
                         <Border BorderBrush="Gray" 
                                BorderThickness="1" 
                                Padding="5"
-                               CornerRadius="3">
+                               CornerRadius="3"
+                               Background="White"
+                               MinWidth="150">
                             <TextBlock Name="num_cash" 
                                       Text="" 
                                       Foreground="Maroon"
                                       FontWeight="Bold"/>
                         </Border>
                         
+                        <!-- Чекбокс оставляем в правой части -->
                         <CheckBox Name="checkBox_show_3_last_checks" 
                                  Content="3"
                                  IsChecked="True"
@@ -103,7 +106,7 @@
                 </DockPanel>
             </StackPanel>
             
-            <!-- Правая часть: кнопка закрытия -->
+            <!-- Правая часть: кнопка закрытия на первом уровне -->
             <Button Grid.Column="1" 
                     Name="btnClose"
                     Content="✕" 
@@ -113,6 +116,9 @@
                     FontWeight="Bold"
                     Background="Transparent"
                     BorderThickness="0"
+                    VerticalAlignment="Top"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,0,0"
                     Click="CloseButton_Click"/>
         </Grid>
         
