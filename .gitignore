@@ -361,3 +361,67 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+
+
+# ============================================
+# ДОБАВЛЕНО ДЛЯ ПРОЕКТА CASH8AVALON
+# ============================================
+
+# Криптографические классы (не для публикации)
+CryptorEngine.cs
+*CryptorEngine*
+
+# Файлы конфигурации с паролями/ключами
+*.config
+appsettings*.json
+secrets.json
+
+# Локальные настройки БД
+connectionstrings.config
+
+# Логи и временные файлы приложения
+*.log
+*.tmp
+temp/
+
+# Резервные копии
+*.bak
+*.backup
+
+# Файлы специфичные для проекта
+Setting.gaa
+
+# Автогенерируемые файлы Avalonia
+avalonia/
+*.axaml.cs
+
+# Исключить папку с обновлениями
+UpdateNpgsql/
+
+# Исключить скриншоты/демо
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+
+# Файлы документации/инструкции
+*.doc
+*.docx
+*.pdf
+README-local.md
+
+
+# Файлы Avalonia
+avalonia/
+*.axaml.cs
+bin/
+obj/
+.DS_Store
+*.userprefs
+*.cache
+.vs/
+packages/
+
+# ============================================
