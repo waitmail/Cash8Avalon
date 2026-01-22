@@ -896,18 +896,15 @@ namespace Cash8Avalon
         /// </summary>
         private void OnGlobalKeyDown(object sender, KeyEventArgs e)
         {
+            Console.WriteLine($"Key pressed: {e.Key}");
 
+            // Обработка Insert - работает ВЕЗДЕ на форме
             if (e.Key == Key.Insert)
             {
-                // Обработка Insert - работает ВЕЗДЕ на форме
-                if (e.Key == Key.Insert)
-                {
-                    ProcessInsertKey();
-                    e.Handled = true;
-                    return;
-                }
+                ProcessInsertKey();
+                e.Handled = true;
+                return;
             }
-
 
             // Проверяем, есть ли фокус в таблице
             bool isTableFocused = _scrollViewer?.IsFocused == true ||
@@ -945,6 +942,11 @@ namespace Cash8Avalon
 
                 case Key.End:
                     if (_checkItems.Count > 0) SelectRow(_checkItems.Count - 1);
+                    e.Handled = true;
+                    break;
+
+                case Key.F5: // Добавьте F5 для обновления
+                    LoadDocuments();
                     e.Handled = true;
                     break;
             }
@@ -1008,6 +1010,16 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка в OnLoaded: {ex.Message}");
             }
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await Task.Delay(100); // Небольшая задержка
+                this.Focus();
+
+                // Или попробуйте фокус на ScrollViewer
+                _scrollViewer?.Focus();
+
+                Console.WriteLine("✓ Фокус установлен после задержки");
+            }, DispatcherPriority.Background);
         }
 
         private void InitializeEvents()

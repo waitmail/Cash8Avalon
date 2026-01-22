@@ -22,6 +22,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static Cash8Avalon.Cash_check;
+using static Cash8Avalon.LoadDataWebService;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
@@ -99,6 +100,7 @@ namespace Cash8Avalon
         public double sale_non_cash_money = 0;
         public bool payment_by_sbp = false;
         public bool payment_by_sbp_sales = false;
+        
 
         List<int> qr_code_lenght = new List<int>();
 
@@ -203,6 +205,17 @@ namespace Cash8Avalon
             Console.WriteLine("=== Конструктор Cash_check завершен ===");
         }
 
+        public double Discount
+        {
+            get
+            {
+                return discount;
+            }
+            set
+            {
+                discount = value;
+            }
+        }
 
 
         public void OnFormLoaded()
@@ -213,7 +226,7 @@ namespace Cash8Avalon
             InitializeFormData();
 
             // 4. Отладочная информация
-            DebugGridInfo();
+            //DebugGridInfo();
         }
         
         // Новый глобальный обработчик для всей формы
@@ -266,7 +279,13 @@ namespace Cash8Avalon
                 Client = GetRequiredControl<TextBox>("client");
                 NumCash = GetRequiredControl<TextBox>("num_cash");
                 User = GetRequiredControl<TextBox>("user");
+               
                 ClientBarcodeOrPhone = GetRequiredControl<TextBox>("client_barcode");
+                if (ClientBarcodeOrPhone != null)
+                {
+                    ClientBarcodeOrPhone.KeyDown += ClientBarcodeOrPhone_KeyDown;
+                }
+                //client_barcode
                 NumSales = GetRequiredControl<TextBox>("txtB_num_sales");
                 InputSearchProduct = GetRequiredControl<TextBox>("txtB_search_product");
 
@@ -285,6 +304,284 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
+            }
+        }
+
+        private void ClientBarcodeOrPhone_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                MainStaticClass.write_event_in_log(" Перед началом поиска клиента ", "Документ чек", numdoc.ToString());
+                ProcessClientDiscount(ClientBarcodeOrPhone.Text.Trim());
+            }
+            else
+            {
+                // Разрешаем только цифры и Backspace
+                if (!IsDigitKey(e.Key) && e.Key != Key.Back && e.Key != Key.Delete)
+                {
+                    e.Handled = true;
+                }
+            }
+        }       
+
+        // Метод для проверки, является ли клавиша цифрой
+        private bool IsDigitKey(Key key)
+        {
+            // Проверяем цифры на основной клавиатуре
+            if (key >= Key.D0 && key <= Key.D9)
+                return true;
+
+            // Проверяем цифры на NumPad
+            if (key >= Key.NumPad0 && key <= Key.NumPad9)
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// Обработка ввода дисконтной карты клиента
+        /// </summary>
+        /// <param name="barcode"></param>
+        private async void ProcessClientDiscount(string barcode)
+        {
+            Discount = 0;           
+           
+            if ((barcode.Trim().Length == 10) || (barcode.Trim().Length == 13))
+            {
+                MainStaticClass.write_event_in_log(" Код клиента имеет нормальную длину " + barcode, " Документ ", numdoc.ToString());
+                //if (MainStaticClass.PassPromo == "")
+                //{
+                NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                NpgsqlCommand command = new NpgsqlCommand();
+                command.Connection = conn;
+                //command.CommandText = " SELECT discount_types.discount_percent,clients.code,clients.name,clients.phone AS clients_phone," +
+                //    " temp_phone_clients.phone AS temp_phone_clients_phone,attribute,clients.its_work,COALESCE(clients.bonus_is_on,0) AS bonus_is_on  FROM clients " +
+                //    " left join discount_types ON clients.discount_types_code= discount_types.code " +
+                //    " left join temp_phone_clients ON clients.code = temp_phone_clients.barcode " +
+                //    " WHERE clients.code='" + barcode + "' OR right(clients.phone,10)='" + barcode + "' AND clients.its_work = 1 ";
+
+                if (barcode.Substring(0, 1) == "9")
+                {
+                    check_and_verify_phone_number(barcode);//возможно что это новый клиент необходимо провести проверку 
+
+                    command.CommandText = " SELECT 5.00,clients.code,clients.name,clients.phone AS clients_phone," +
+                     " temp_phone_clients.phone AS temp_phone_clients_phone,attribute,clients.its_work,COALESCE(clients.bonus_is_on,0) AS bonus_is_on  FROM clients " +
+                     " left join temp_phone_clients ON clients.code = temp_phone_clients.barcode " +
+                     " WHERE clients.phone='" + barcode + "' AND clients.its_work = 1 ";
+                }
+                else
+                {
+                    command.CommandText = " SELECT 5.00,clients.code,clients.name,clients.phone AS clients_phone," +
+                        " temp_phone_clients.phone AS temp_phone_clients_phone,attribute,clients.its_work,COALESCE(clients.bonus_is_on,0) AS bonus_is_on  FROM clients " +
+                        " left join temp_phone_clients ON clients.code = temp_phone_clients.barcode " +
+                        " WHERE clients.code='" + barcode + "' AND clients.its_work = 1 ";
+                }
+
+                MainStaticClass.write_event_in_log("Старт поиска клиента", "Документ чек", numdoc.ToString());
+
+                NpgsqlDataReader reader = command.ExecuteReader();
+                //bool client_find = false;
+                while (reader.Read())
+                {
+                    //bool client_find = true;
+
+                    if (reader["its_work"].ToString() != "1")
+                    {
+                        await MessageBox.Show(" Эта карточка клиента заблокирована !!!","Проверка ввода клиента",MessageBoxButton.OK,MessageBoxType.Error);
+                        break;
+                    }
+
+                    //bonus_is_on = Convert.ToInt16(reader["bonus_is_on"]);
+
+                    client_barcode_scanned = 1;
+
+                    //if (bonus_is_on == 0)
+                    //{
+                    Discount = Convert.ToDouble(reader.GetDecimal(0)) / 100;
+                    //}
+
+                    client_barcode.IsEnabled = false;//дисконтная карта определена, сделаем недоступным окно ввода кода  
+                    //txtB_client_phone.IsEnabled = false;//дисконтная карта определена, сделаем недоступным окно ввода телефона  
+                    //btn_inpute_phone_client.IsEnabled = false;
+                    //this.btn_inpute_phone_client.IsEnabled = false;
+                    //it_is_possible_to_write_off_bonuses = true;
+
+                    if (reader["attribute"].ToString().Trim() == "1")
+                    {
+                        client.Background = Brushes.LightGreen;// System.Drawing.ColorTranslator.FromHtml("#22FF99");
+                    }
+                    MainStaticClass.write_event_in_log(" Клиент найден ", "Документ чек", numdoc.ToString());
+                    MainStaticClass.write_event_in_log(" Присвоение значения реквизиту на форме ", " Документ ", numdoc.ToString());
+                    //this.client.Tag = reader["code"].ToString();
+                    this.client.Tag = reader["code"].ToString();
+                    this.client.Text = reader["name"].ToString();
+
+
+                    //if ((reader["clients_phone"].ToString().Trim().Length < 10) && (reader["temp_phone_clients_phone"].ToString().Trim().Length < 10))//будем считать, что номера телефона нет
+                    //{
+                    //    InputePhoneClient ipc = new InputePhoneClient();
+                    //    ipc.barcode = barcode;
+                    //    DialogResult dialogResult = ipc.ShowDialog();
+                    //    //if (bonus_is_on == 1)//Проверка для новой бонусной карты, при сканировании если нет привязанного номера телефона, то он обязательно должен быть введен 
+                    //    //{
+                    //    //    if (dialogResult != DialogResult.OK)
+                    //    //    {
+                    //    //        MessageBox.Show(" Для бонусной карты недопустимо отсутствие номера телефона ");
+                    //    //        MessageBox.Show(" БОНУСНУЮ КАРТУ НЕ ВЫДАВАТЬ НИ В КОЕМ СЛУЧАЕ !!! ");
+                    //    //        this.client.Tag = null;
+                    //    //        this.client.Text = "";
+                    //    //        this.client_barcode.Text = "";
+                    //    //    }
+                    //    //}
+                    //    //this.inputbarcode.Focus();
+                    //    this.txtB_search_product.Focus();
+                    //    btn_inpute_phone_client.Enabled = true;
+                    //}
+                    //else//думалось заполнить телефонный номер в форму , но это наверное лишнее
+                    //{
+                    //    btn_inpute_phone_client.Enabled = true;
+                    //}
+                }
+                reader.Close();
+                conn.Close();
+
+
+                if (this.client.Tag == null)//По каким то причинам клиент или не найден или не прошел проверки 
+                {
+                    MainStaticClass.write_event_in_log(" Клиент не найден ", "Документ чек", numdoc.ToString());
+                    await MessageBox.Show("Клиент не найден");
+                    return;
+                }
+
+
+                if (check_type.SelectedIndex == 1)//При возврате теперь можно использовать карту клиента 
+                {
+                    Discount = 0;
+                }
+
+                //Discount = Discount / 100;
+
+                if (Discount != 0)//Пересчитать цены 
+                {
+                    MainStaticClass.write_event_in_log(" Начало пересчета ТЧ " + barcode, " Документ ", numdoc.ToString());                   
+                    RecalculateAllProducts();
+                    MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ " + barcode, " Документ ", numdoc.ToString());
+                }
+
+                //Проверить на день рождения и вывести предупреждение
+                //MainStaticClass.write_event_in_log(" Проверка на день рождения начало " + barcode, " Документ ", numdoc.ToString());
+                //if (actions_birthday())
+                //{
+                //    MessageBox.Show(" ДР " + get_date_birthday());
+                //    MainStaticClass.write_event_in_log(" Сегодня днюха у " + barcode, " Документ ", numdoc.ToString());
+                //}
+                //MainStaticClass.write_event_in_log(" Проверка на день рождения окончание " + barcode, " Документ ", numdoc.ToString());
+                ////this.inputbarcode.Focus();
+                //this.txtB_search_product.Focus();
+                //this.client_barcode.Text = "";
+                //this.btn_inpute_phone_client.Enabled = false;
+            }
+            else
+            {
+                await MessageBox.Show("Введено неверное количество символов");
+            }
+            MainStaticClass.write_event_in_log(" Выход из процедуры поиска клиента " + barcode, " Документ ", numdoc.ToString());
+        }
+
+        /// <summary>
+/// Пересчитать все товары в чеке (аналог перебора listView1.Items)
+/// </summary>
+private void RecalculateAllProducts()
+{
+    MainStaticClass.write_event_in_log(" Начало пересчета ТЧ ", "Документ", numdoc.ToString());
+    
+    // Перебираем все товары в коллекции
+    foreach (var product in _productsData)
+    {
+        RecalculateProductSums(product);
+    }
+    
+    // Обновляем Grid с новыми данными
+    RefreshProductsGrid();
+    UpdateTotalSum();
+    
+    MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ ", "Документ", numdoc.ToString());
+}
+
+        /// <summary>
+        /// При вводе номера телефона
+        /// сначала происходит проверка 
+        /// наличия клиента с таким номером телефона
+        /// если клиент не найден он создается и работа 
+        /// происходит с новой виртуальной картой 
+        /// равной номеру телефона, если клиент 
+        /// найден тогда действия с ним
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void check_and_verify_phone_number(string phone_number)
+        {
+            MainStaticClass.write_event_in_log(" Проверка наличия телефона старт ", " Документ ", numdoc.ToString());
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+            try
+            {
+                conn.Open();
+                string query = "SELECT code,name FROM clients where phone='" + phone_number + "'";
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                NpgsqlDataReader reader = command.ExecuteReader();
+                bool client_exist = false;
+                while (reader.Read())
+                {
+                    client_exist = true;
+                    MainStaticClass.write_event_in_log(" Присвоение значения реквизиту на форме ", " Документ ", numdoc.ToString());
+                    client.Tag = reader["code"].ToString();
+                    client.Text = reader["name"].ToString();
+                    Discount = Convert.ToDouble(0.05);
+                    //txtB_client_phone.IsEnabled = false;
+                    client_barcode.IsEnabled = false;
+
+                }
+                if (!client_exist)
+                {
+                    MainStaticClass.write_event_in_log(" Проверка наличия телефона это новый телефон  ", " Документ ", numdoc.ToString());
+                    query = "DELETE FROM temp_phone_clients WHERE phone='" + phone_number + "'";
+                    command = new NpgsqlCommand(query, conn);
+                    command.ExecuteNonQuery();
+                    query = "INSERT INTO temp_phone_clients(barcode, phone)VALUES ('" + phone_number + "','" + phone_number + "')";
+                    command = new NpgsqlCommand(query, conn);
+                    command.ExecuteNonQuery();
+                    conn.Close();
+                    if (client.Tag == null)
+                    {
+                        MainStaticClass.write_event_in_log(" Присвоение значения реквизиту на форме ", " Документ ", numdoc.ToString());
+                        client.Tag = phone_number;
+                        client.Text = phone_number;
+                        Discount = Convert.ToDouble(0.05);
+                        //txtB_client_phone.IsEnabled = false;
+                        client_barcode.IsEnabled = false;
+                    }
+                }
+                //Пересчет ТЧ в любом случае
+                MainStaticClass.write_event_in_log(" Начало пересчета ТЧ " + phone_number, " Документ ", numdoc.ToString());
+                RecalculateAllProducts();
+                MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ " + phone_number, " Документ ", numdoc.ToString());
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show(" Ошибки при записи номера телефона " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show(" Ошибки при записи номера телефона " + ex.Message);
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
             }
         }
 
@@ -1882,16 +2179,23 @@ namespace Cash8Avalon
                 if (dataIndex >= 0 && dataIndex < _productsData.Count)
                 {
                     var product = _productsData[dataIndex];
+
+                    // ПРОВЕРКА: нельзя увеличивать количество для весового, маркированного товара или сертификата
+                    if (!CanIncreaseQuantity(product))
+                    {
+                        // Показываем сообщение о запрете увеличения
+                        //ShowCannotIncreaseMessage(product);
+                        //// Эффект ошибки/предупреждения
+                        //ShowWarningEffect(dataIndex);
+                        return;
+                    }
+
                     product.Quantity++;
 
                     RecalculateProductSums(product);
                     UpdateProductRowInGrid(dataIndex);
                     UpdateTotalSum();
 
-                    // Замените эту строку:
-                    // ShowSimpleQuantityEffect(dataIndex, true);
-
-                    // На эту:
                     ShowQuantityEffect(dataIndex, true); // true = увеличение (зеленый)
 
                     Console.WriteLine($"✓ Увеличено количество товара '{product.Tovar}' до {product.Quantity}");
@@ -1900,6 +2204,76 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при увеличении количества: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Проверка, можно ли увеличивать количество для данного товара
+        /// Возвращает false для весовых, маркированных товаров и сертификатов
+        /// </summary>
+        private bool CanIncreaseQuantity(ProductItem product)
+        {
+            try
+            {
+                // Получаем данные товара из БД для проверки флагов
+                using (var conn = MainStaticClass.NpgsqlConn())
+                {
+                    conn.Open();
+                    string query = "SELECT its_certificate, its_marked, fractional FROM tovar WHERE code = @code";
+
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@code", product.Code);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
+                                bool isMarked = Convert.ToBoolean(reader["its_marked"]);
+                                bool isFractional = Convert.ToBoolean(reader["fractional"]);
+
+                                // Проверяем все ограничения:
+                                // 1. Сертификат - нельзя увеличивать количество
+                                // 2. Маркированный товар - нельзя увеличивать количество
+                                // 3. Весовой товар (fractional) - нельзя увеличивать количество
+
+                                if (isCertificate)
+                                {
+                                    Console.WriteLine($"⚠ Товар {product.Tovar} - сертификат, увеличение количества запрещено");
+                                    return false;
+                                }
+
+                                if (isMarked)
+                                {
+                                    Console.WriteLine($"⚠ Товар {product.Tovar} - маркированный, увеличение количества запрещено");
+                                    return false;
+                                }
+
+                                if (isFractional)
+                                {
+                                    Console.WriteLine($"⚠ Товар {product.Tovar} - весовой, увеличение количества запрещено");
+                                    return false;
+                                }
+
+                                // Все проверки пройдены - можно увеличивать
+                                return true;
+                            }
+                            else
+                            {
+                                // Товар не найден в БД - разрешаем увеличение по умолчанию
+                                Console.WriteLine($"⚠ Товар {product.Code} не найден в БД, разрешаем увеличение");
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}");
+                // В случае ошибки разрешаем увеличение, чтобы не блокировать пользователя
+                return true;
             }
         }
 
@@ -2128,12 +2502,88 @@ namespace Cash8Avalon
             }
         }
 
-        // Метод для пересчета сумм товара
+        // Метод для пересчета сумм товара с учетом скидки
         private void RecalculateProductSums(ProductItem product)
         {
+            // ПЕРЕСЧЕТ ЦЕНЫ СО СКИДКОЙ (аналог WinForms calculate_on_string)
+            if (Discount > 0) // Если есть скидка у клиента
+            {
+                // Проверка: не участвует в акции и не подарок (аналог SubItems[8] и SubItems[9])
+                if (product.Action == 0 && product.Gift == 0)
+                {
+                    // Проверка на сертификат
+                    if (!IsCertificate(product.Code.ToString()))
+                    {
+                        // Проверяем тип чека (0 = Продажа)
+                        if (CheckType != null && CheckType.SelectedIndex == 0)
+                        {
+                            decimal originalPrice = product.Price;
+                            decimal discountedPrice = originalPrice - originalPrice * (decimal)Discount;
+                            decimal roundedUpPrice = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
+                            product.PriceAtDiscount = roundedUpPrice;
+                        }
+                        else
+                        {
+                            // Для возвратов и корректировок - цена без скидки
+                            product.PriceAtDiscount = product.Price;
+                        }
+                    }
+                    else // Сертификат
+                    {
+                        // Для сертификата цена со скидкой равна номиналу
+                        product.PriceAtDiscount = Math.Round(product.Price, 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+                else // Если товар участвует в акции или это подарок
+                {
+                    // Для акционных товаров и подарков - цена без скидки
+                    product.PriceAtDiscount = product.Price;
+
+                    // Если это подарок с ценой 0.01
+                    if (product.Gift != 0 && Math.Abs((double)product.Price - 0.01) < 0.001)
+                    {
+                        // Особый расчет для подарков по цене 0.01
+                        product.PriceAtDiscount = product.Price;
+                    }
+                }
+            }
+            else // Если скидки нет
+            {
+                product.PriceAtDiscount = product.Price;
+            }
+
+            // Расчет сумм (это уже есть)
             product.Sum = product.Quantity * product.Price;
             product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
         }
+
+        /// <summary>
+        /// Проверка является ли товар сертификатом
+        /// </summary>
+        private bool IsCertificate(string productCode)
+        {
+            try
+            {
+                using (var conn = MainStaticClass.NpgsqlConn())
+                {
+                    conn.Open();
+                    string query = "SELECT COUNT(*) FROM tovar WHERE code = @code AND its_certificate = '1'";
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@code", Convert.ToInt64(productCode));
+                        var result = cmd.ExecuteScalar();
+                        return Convert.ToInt32(result) > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
+                return false;
+            }
+        }
+
+
 
         // Метод для обновления всей строки товара в Grid (обновление текста без пересоздания)
         private void UpdateProductRowInGrid(int dataIndex)
@@ -2263,135 +2713,285 @@ namespace Cash8Avalon
 
         // Метод для показа диалога редактирования количества (по нажатию Enter)
         // Альтернативный метод для показа диалога редактирования количества
-        private void ShowQuantityEditDialog(int dataIndex)
+        private async void ShowQuantityEditDialog(int dataIndex)
         {
             if (dataIndex >= 0 && dataIndex < _productsData.Count)
             {
                 var product = _productsData[dataIndex];
 
-                // Создаем простое окно
+                // Создаем окно с увеличенными размерами
                 var dialog = new Window
                 {
                     Title = "Изменение количества",
-                    Width = 300,
-                    Height = 150,
-                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                    Width = 400,
+                    Height = 280,
+                    WindowStartupLocation = WindowStartupLocation.Manual,
                     CanResize = false,
                     ShowInTaskbar = false,
-                    SystemDecorations = SystemDecorations.BorderOnly // Только рамка и кнопка закрытия
+                    SystemDecorations = SystemDecorations.BorderOnly
                 };
 
-                var stackPanel = new StackPanel
+                // Внешний Border с выраженной рамкой
+                var outerBorder = new Border
                 {
-                    Margin = new Thickness(20),
-                    Spacing = 10
+                    BorderBrush = Brushes.DarkSlateGray,
+                    BorderThickness = new Thickness(3),
+                    Background = Brushes.WhiteSmoke,
+                    Child = new Border
+                    {
+                        BorderBrush = Brushes.LightGray,
+                        BorderThickness = new Thickness(1),
+                        Background = Brushes.White,
+                        Padding = new Thickness(20, 15, 20, 15), // УМЕНЬШИЛИ ОТСТУП СНИЗУ С 20 ДО 15
+                        Child = CreateDialogContent(product, dataIndex, dialog)
+                    }
                 };
 
-                stackPanel.Children.Add(new TextBlock
-                {
-                    Text = $"Товар: {product.Tovar}",
-                    TextWrapping = TextWrapping.Wrap,
-                    MaxWidth = 250
-                });
+                dialog.Content = outerBorder;
 
-                var textBox = new TextBox
+                // Позиционируем окно
+                dialog.Loaded += (s, e) =>
                 {
-                    Text = product.Quantity.ToString(),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Width = 120,
-                    MaxLength = 5
+                    PositionDialogCorrectly(dialog);
                 };
 
-                // Устанавливаем фокус и выделяем весь текст при загрузке окна
+                // Автовыделение текста при загрузке окна
                 dialog.Opened += (s, e) =>
                 {
-                    Dispatcher.UIThread.Post(() =>
+                    Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        textBox.Focus();
-                        textBox.SelectAll(); // Выделяем весь текст
+                        // Находим TextBox в содержимом
+                        if (outerBorder.Child is Border innerBorder &&
+                            innerBorder.Child is StackPanel stackPanel)
+                        {
+                            foreach (var child in stackPanel.Children)
+                            {
+                                if (child is Border textBoxBorder &&
+                                    textBoxBorder.Child is TextBox textBox)
+                                {
+                                    textBox.Focus();
+                                    textBox.SelectAll();
+                                    break;
+                                }
+                            }
+                        }
                     }, DispatcherPriority.Background);
                 };
 
-                var buttonPanel = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Spacing = 10,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-
-                var okButton = new Button
-                {
-                    Content = "OK",
-                    Width = 80,
-                    IsDefault = true
-                };
-
-                var cancelButton = new Button
-                {
-                    Content = "Отмена",
-                    Width = 80,
-                    IsCancel = true
-                };
-
-                bool dialogResult = false;
-
-                void ApplyQuantityChanges()
-                {
-                    if (int.TryParse(textBox.Text, out int newQuantity) && newQuantity >= 1 && newQuantity <= 9999)
-                    {
-                        product.Quantity = newQuantity;
-                        RecalculateProductSums(product);
-                        UpdateProductRowInGrid(dataIndex);
-                        UpdateTotalSum();
-                        dialogResult = true;
-                        Console.WriteLine($"✓ Количество товара '{product.Tovar}' изменено на {product.Quantity}");
-                    }
-                    else
-                    {
-                        Console.WriteLine("⚠ Неверное количество товара");
-                    }
-                    dialog.Close();
-                }
-
-                okButton.Click += (s, e) => ApplyQuantityChanges();
-
-                cancelButton.Click += (s, e) =>
-                {
-                    dialogResult = false;
-                    dialog.Close();
-                };
-
-                // Обработка нажатия Enter в TextBox
-                textBox.KeyDown += (s, e) =>
-                {
-                    if (e.Key == Key.Enter)
-                    {
-                        ApplyQuantityChanges();
-                        e.Handled = true;
-                    }
-                };
-
-                // Обработка нажатия Escape в окне
-                dialog.KeyDown += (s, e) =>
-                {
-                    if (e.Key == Key.Escape)
-                    {
-                        dialog.Close();
-                        e.Handled = true;
-                    }
-                };
-
-                buttonPanel.Children.Add(okButton);
-                buttonPanel.Children.Add(cancelButton);
-
-                stackPanel.Children.Add(textBox);
-                stackPanel.Children.Add(buttonPanel);
-
-                dialog.Content = stackPanel;
-
                 // Показываем окно
-                dialog.ShowDialog(this.FindAncestorOfType<Window>());
+                await dialog.ShowDialog(this.FindAncestorOfType<Window>());
+            }
+        }
+
+        /// <summary>
+        /// Создает содержимое диалога
+        /// </summary>
+        private StackPanel CreateDialogContent(ProductItem product, int dataIndex, Window dialog)
+        {
+            var stackPanel = new StackPanel
+            {
+                Spacing = 20 // УМЕНЬШИЛИ С 25 ДО 20
+            };
+
+            // Информация о товаре
+            var productTextBlock = new TextBlock
+            {
+                Text = $"Товар: {product.Tovar}",
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 340,
+                MaxHeight = 40,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                FontWeight = FontWeight.SemiBold,
+                FontSize = 13,
+                Margin = new Thickness(0, 0, 0, 5),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            stackPanel.Children.Add(productTextBlock);
+
+            // TextBox с БОЛЬШИМ ШРИФТОМ
+            var textBox = new TextBox
+            {
+                Text = product.Quantity.ToString(),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Width = 160,
+                MaxLength = 5,
+                FontSize = 22,
+                FontWeight = FontWeight.Bold,
+                Name = "quantityTextBox",
+                TextAlignment = TextAlignment.Center,
+                CaretBrush = Brushes.Blue,
+                SelectionBrush = Brushes.LightBlue,
+                Foreground = Brushes.Black
+            };
+
+            var textBoxBorder = new Border
+            {
+                BorderBrush = Brushes.SteelBlue,
+                BorderThickness = new Thickness(3),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(18, 15, 18, 15),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Background = Brushes.AliceBlue,
+                Width = 200,
+                Height = 75,
+                Margin = new Thickness(0, 10, 0, 15), // УМЕНЬШИЛИ ОТСТУП СНИЗУ С 20 ДО 15
+                Child = textBox
+            };
+
+            stackPanel.Children.Add(textBoxBorder);
+
+            // КОНТЕЙНЕР ДЛЯ КНОПОК - ПОДНИМАЕМ ВЫШЕ
+            var buttonContainer = new Border
+            {
+                Height = 55, // НЕМНОГО УМЕНЬШИЛИ ВЫСОТУ
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(0, 10, 0, 0), // УМЕНЬШИЛИ ОТСТУП СВЕРХУ С 25 ДО 10
+                Child = CreateButtonPanel(product, textBox, dataIndex, dialog)
+            };
+
+            stackPanel.Children.Add(buttonContainer);
+
+            return stackPanel;
+        }
+
+        /// <summary>
+        /// Создает панель с кнопками
+        /// </summary>
+        private StackPanel CreateButtonPanel(ProductItem product, TextBox textBox, int dataIndex, Window dialog)
+        {
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Spacing = 25 // УМЕНЬШИЛИ С 30 ДО 25
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 105, // НЕМНОГО УМЕНЬШИЛИ
+                Height = 40, // НЕМНОГО УМЕНЬШИЛИ
+                IsDefault = true,
+                Background = Brushes.LightGreen,
+                BorderBrush = Brushes.Green,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(15, 8), // УМЕНЬШИЛИ ОТСТУПЫ
+                FontWeight = FontWeight.Bold,
+                FontSize = 14,
+                CornerRadius = new CornerRadius(5),
+                Margin = new Thickness(0, 0, 0, 0)
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Отмена",
+                Width = 105,
+                Height = 40,
+                IsCancel = true,
+                Background = Brushes.LightCoral,
+                BorderBrush = Brushes.DarkRed,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(15, 8),
+                FontWeight = FontWeight.Bold,
+                FontSize = 14,
+                CornerRadius = new CornerRadius(5),
+                Margin = new Thickness(0, 0, 0, 0)
+            };
+
+            // Обработчики событий
+            okButton.Click += (s, e) =>
+            {
+                ApplyQuantityChanges(product, textBox.Text, dataIndex);
+                dialog.Close();
+            };
+
+            cancelButton.Click += (s, e) => dialog.Close();
+
+            // Обработка клавиш
+            textBox.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter)
+                {
+                    okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    dialog.Close();
+                    e.Handled = true;
+                }
+            };
+
+            // Выделяем текст при получении фокуса
+            textBox.GotFocus += (s, e) =>
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    textBox.SelectAll();
+                }, DispatcherPriority.Background);
+            };
+
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            return buttonPanel;
+        }
+
+        /// <summary>
+        /// Применяет изменения количества
+        /// </summary>
+        private void ApplyQuantityChanges(ProductItem product, string quantityText, int dataIndex)
+        {
+            if (int.TryParse(quantityText, out int newQuantity) && newQuantity >= 1 && newQuantity <= 9999)
+            {
+                product.Quantity = newQuantity;
+                RecalculateProductSums(product);
+                UpdateProductRowInGrid(dataIndex);
+                UpdateTotalSum();
+                Console.WriteLine($"✓ Количество товара '{product.Tovar}' изменено на {product.Quantity}");
+            }
+            else
+            {
+                Console.WriteLine("⚠ Неверное количество товара");
+            }
+        }
+
+        /// <summary>
+        /// Корректно позиционирует диалоговое окно
+        /// </summary>
+        private void PositionDialogCorrectly(Window dialog)
+        {
+            try
+            {
+                // Получаем главное окно
+                var mainWindow = this.FindAncestorOfType<Window>();
+                if (mainWindow == null) return;
+
+                // Получаем экран
+                var screen = mainWindow.Screens.ScreenFromPoint(mainWindow.Position);
+                if (screen == null) return;
+
+                // Рабочая область экрана
+                var workingArea = screen.WorkingArea;
+
+                // Позиция в центре родительского окна
+                double targetX = mainWindow.Position.X + (mainWindow.Bounds.Width / 2) - (dialog.Bounds.Width / 2);
+                double targetY = mainWindow.Position.Y + (mainWindow.Bounds.Height / 2) - (dialog.Bounds.Height / 2);
+
+                // Корректируем позицию
+                if (targetX < workingArea.X) targetX = workingArea.X + 10;
+                if (targetY < workingArea.Y) targetY = workingArea.Y + 10;
+                if (targetX + dialog.Bounds.Width > workingArea.Right) targetX = workingArea.Right - dialog.Bounds.Width - 10;
+                if (targetY + dialog.Bounds.Height > workingArea.Bottom) targetY = workingArea.Bottom - dialog.Bounds.Height - 50;
+
+                dialog.Position = new PixelPoint((int)targetX, (int)targetY);
+                dialog.Topmost = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при позиционировании диалога: {ex.Message}");
             }
         }
 
@@ -2507,28 +3107,28 @@ namespace Cash8Avalon
             }
         }
 
-        private void DebugGridInfo()
-        {
-            Console.WriteLine("\n=== Отладочная информация Grid ===");
+        //private void DebugGridInfo()
+        //{
+        //    Console.WriteLine("\n=== Отладочная информация Grid ===");
 
-            Console.WriteLine($"Grid товаров: {_productsTableGrid != null}");
-            if (_productsTableGrid != null)
-            {
-                Console.WriteLine($"  - Колонок: {_productsTableGrid.ColumnDefinitions.Count}");
-                Console.WriteLine($"  - Строк: {_productsTableGrid.RowDefinitions.Count}");
-                Console.WriteLine($"  - Записей: {_productsData.Count}");
-            }
+        //    Console.WriteLine($"Grid товаров: {_productsTableGrid != null}");
+        //    if (_productsTableGrid != null)
+        //    {
+        //        Console.WriteLine($"  - Колонок: {_productsTableGrid.ColumnDefinitions.Count}");
+        //        Console.WriteLine($"  - Строк: {_productsTableGrid.RowDefinitions.Count}");
+        //        Console.WriteLine($"  - Записей: {_productsData.Count}");
+        //    }
 
-            Console.WriteLine($"\nGrid сертификатов: {_certificatesTableGrid != null}");
-            if (_certificatesTableGrid != null)
-            {
-                Console.WriteLine($"  - Колонок: {_certificatesTableGrid.ColumnDefinitions.Count}");
-                Console.WriteLine($"  - Строк: {_certificatesTableGrid.RowDefinitions.Count}");
-                Console.WriteLine($"  - Записей: {_certificatesData.Count}");
-            }
+        //    Console.WriteLine($"\nGrid сертификатов: {_certificatesTableGrid != null}");
+        //    if (_certificatesTableGrid != null)
+        //    {
+        //        Console.WriteLine($"  - Колонок: {_certificatesTableGrid.ColumnDefinitions.Count}");
+        //        Console.WriteLine($"  - Строк: {_certificatesTableGrid.RowDefinitions.Count}");
+        //        Console.WriteLine($"  - Записей: {_certificatesData.Count}");
+        //    }
 
-            Console.WriteLine("=== Конец отладочной информации ===\n");
-        }
+        //    Console.WriteLine("=== Конец отладочной информации ===\n");
+        //}
 
         // Метод для открытия записанного документа (аналог старого метода)
         private void ToOpenTheWrittenDownDocument()

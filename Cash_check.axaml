@@ -67,6 +67,7 @@
 
                         <TextBlock Grid.Column="6" Text="Пользователь:" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="7" Name="user" VerticalAlignment="Center"
+                                 IsReadOnly="True" 
                                  VerticalContentAlignment="Center" Margin="100,0"/>
                     </Grid>
                     
