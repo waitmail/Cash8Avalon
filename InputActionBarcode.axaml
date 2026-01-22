@@ -1,0 +1,65 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="Cash8Avalon.InputActionBarcode"
+        x:Name="InputActionBarcodeWindow"
+        Title="Interface_switching"
+        Width="500"
+        Height="75"
+        MinWidth="500"
+        MinHeight="60"
+        MaxWidth="500"
+        MaxHeight="99"
+        WindowStartupLocation="CenterScreen"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        WindowState="Normal">
+    
+    <Window.Styles>
+        <Style Selector="Window">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </Window.Styles>
+    
+    <Border Background="White"
+            BorderBrush="LightGray"
+            BorderThickness="1"
+            CornerRadius="2"
+            Margin="0">
+        
+        <Grid Margin="16,8,16,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Label authorization -->
+            <TextBlock x:Name="authorizationTextBlock"
+                       Grid.Row="0"
+                       HorizontalAlignment="Center"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Foreground="DarkGreen"
+                       Text="¬ведите штрихкод, включающий акцию"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,16"/>
+            
+            <!-- TextBox input_barcode -->
+            <TextBox x:Name="inputBarcodeTextBox"
+                     Grid.Row="1"
+                     Width="472"
+                     Height="20"
+                     MaxLength="200"
+                     FontSize="12"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Center"
+                     Text="" />
+        </Grid>
+    </Border>
+</Window>

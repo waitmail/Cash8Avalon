@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="421"
+        x:Class="Cash8Avalon.ReasonsDeletionCheck"
+        Title="Причины удаления чека"
+        Width="944"
+        Height="421"
+        SizeToContent="Manual"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False">
+    
+    <DockPanel Margin="6">
+        <!-- ComboBox с причинами -->
+        <ComboBox Name="comboBox_reasons"
+                  DockPanel.Dock="Top"
+                  Margin="0,54,0,20"
+                  Height="52"
+                  FontSize="14.25"
+                  SelectedIndex="0"
+                  SelectionChanged="comboBox_reasons_SelectedIndexChanged">
+            <ComboBox.Items>
+                <ListBoxItem>Проверка акции.</ListBoxItem>
+                <ListBoxItem>Несрабатывание акции, переоценки, уценки.</ListBoxItem>
+                <ListBoxItem>Ошибка магазина.</ListBoxItem>
+                <ListBoxItem>Техническая ошибка.</ListBoxItem>
+                <ListBoxItem>Клиента не устроила цена.</ListBoxItem>
+                <ListBoxItem>Клиенту не хватило денег.</ListBoxItem>
+                <ListBoxItem>IT-отдел</ListBoxItem>
+                <ListBoxItem>Иные причины.</ListBoxItem>
+            </ComboBox.Items>
+        </ComboBox>
+        
+        <!-- Кнопки внизу -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,20,0,0">
+            <Button Name="btn_ok"
+                    Content="Выбрать"
+                    Width="258"
+                    Height="94"
+                    Margin="0,0,374,0"
+                    Click="Btn_ok_Click"/>
+            
+            <Button Name="btn_cancel"
+                    Content="Отмена"
+                    Width="264"
+                    Height="94"
+                    Click="Btn_cancel_Click"/>
+        </StackPanel>
+    </DockPanel>
+</Window>

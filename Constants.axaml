@@ -1,0 +1,502 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="800"
+             d:DesignHeight="600"
+             x:Class="Cash8Avalon.Constants">
+    
+    <!-- Основной контейнер с "оконным" стилем -->
+    <Border BorderBrush="#FF0078D7"
+            BorderThickness="1"
+            CornerRadius="3"
+            Margin="0">
+        <Grid Background="White">
+            
+            <!-- Распределение строк: заголовок и контент -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            
+            <!-- ===== ЗАГОЛОВОК ОКНА (как в Windows) ===== -->
+            <Border Grid.Row="0"
+                    Background="#FF0078D7"
+                    Height="32">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Название окна -->
+                    <TextBlock Grid.Column="0"
+                               Text="Константы"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="10,0"
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               FontFamily="Segoe UI" />
+                    
+                    <!-- Крестик закрытия в стиле Windows -->
+                    <Button Grid.Column="1"
+                            x:Name="CloseButton"
+                            Width="46"
+                            Height="32"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Click="CloseButton_Click">
+                        <TextBlock Text="✕"
+                                   Foreground="White"
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                </Grid>
+            </Border>
+            
+            <!-- ===== ОСНОВНОЕ СОДЕРЖИМОЕ ===== -->
+            <ScrollViewer Grid.Row="1"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid Margin="10"
+                      ColumnDefinitions="Auto,*,Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                    
+                    <!-- ===== НАЗВАНИЕ МАГАЗИНА, НОМЕР КАССЫ и ВКЛЮЧИТЬ ПИОТ НА ОДНОЙ СТРОКЕ ===== -->
+                    <Grid Grid.Row="0"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />  <!-- Название магазина текст -->
+                            <ColumnDefinition Width="40" />    <!-- Поле магазина (3 символа) -->
+                            <ColumnDefinition Width="Auto" />  <!-- № Кассы текст -->
+                            <ColumnDefinition Width="40" />    <!-- Поле № Кассы -->
+                            <ColumnDefinition Width="Auto" />  <!-- Включить ПИот -->
+                            <ColumnDefinition Width="Auto" />  <!-- Версия ФН текст -->
+                            <ColumnDefinition Width="70" />    <!-- Поле версии -->
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Название магазина -->
+                        <TextBlock Grid.Column="0"
+                                   Text="Название магазина"
+                                   VerticalAlignment="Center"
+                                   Margin="5"
+                                   FontFamily="Segoe UI" />
+                        
+                        <TextBox Grid.Column="1"
+                                 x:Name="nick_shop"
+                                 MaxLength="3"
+                                 Margin="5"
+                                 Width="40"
+                                 FontFamily="Segoe UI" />
+                        
+                        <!-- № Кассы -->
+                        <TextBlock Grid.Column="2"
+                                   Text="№ Кассы"
+                                   VerticalAlignment="Center"
+                                   Margin="15,5,5,5"
+                                   FontFamily="Segoe UI" />
+                        
+                        <TextBox Grid.Column="3"
+                                 x:Name="cash_desk_number"
+                                 MaxLength="1"
+                                 Margin="5"
+                                 Width="40"
+                                 FontFamily="Segoe UI" />
+                        
+                        <!-- Включить ПИот -->
+                        <CheckBox Grid.Column="4"
+                                  x:Name="checkBox_includePIot"
+                                  Content="Включить ПИот"
+                                  Margin="15,0,15,0"
+                                  VerticalAlignment="Center"
+                                  FontFamily="Segoe UI" />
+                        
+                        <!-- Версия ФН -->
+                        <TextBlock Grid.Column="5"
+                                   Text="Версия ФН:"
+                                   VerticalAlignment="Center"
+                                   Margin="5"
+                                   FontFamily="Segoe UI" />
+                        
+                        <TextBox Grid.Column="6"
+                                 x:Name="txtB_version_fn"
+                                 IsEnabled="False"
+                                 HorizontalContentAlignment="Center"
+                                 Margin="5"
+                                 Width="70"
+                                 FontFamily="Segoe UI" />
+                    </Grid>
+                    
+                    <!-- ===== СИСТЕМА НАЛОГООБЛОЖЕНИЯ И НДС НА ОДНОЙ СТРОКЕ ===== -->
+                    <Grid Grid.Row="1"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="4"
+                          Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />  <!-- Система налогообложения текст -->
+                            <ColumnDefinition Width="150" />   <!-- ComboBox системы налогообложения -->
+                            <ColumnDefinition Width="Auto" />  <!-- Ставка НДС текст -->
+                            <ColumnDefinition Width="150" />   <!-- ComboBox НДС -->
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Система налогообложения (левая часть) -->
+                        <TextBlock Grid.Column="0"
+                                   Text="Система налогообложения"
+                                   VerticalAlignment="Center"
+                                   Margin="5"
+                                   FontFamily="Segoe UI" />
+                        
+                        <ComboBox Grid.Column="1"
+                                  x:Name="comboBox_system_taxation"
+                                  Margin="5"
+                                  FontFamily="Segoe UI" />
+                        
+                        <!-- Ставка % НДС для ИП (правая часть) -->
+                        <TextBlock Grid.Column="2"
+                                   Text="Ставка % НДС для ИП"
+                                   VerticalAlignment="Center"
+                                   Margin="20,5,5,5"
+                                   FontFamily="Segoe UI" />
+                        
+                        <ComboBox Grid.Column="3"
+                                  x:Name="comboBox_nds_ip"
+                                  Margin="5"
+                                  FontFamily="Segoe UI" />
+                    </Grid>
+                    
+                    <!-- Группа прямой печати (компактная версия) -->
+                    <Border Grid.Row="2"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="4"
+                            BorderBrush="Gray"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Margin="0,5,0,0"
+                            Padding="5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Включить прямую печать -->
+                            <CheckBox Grid.Row="0"
+                                      Grid.Column="0"
+                                      x:Name="checkBox_printing_using_libraries"
+                                      Content="Включить прямую печать"
+                                      Margin="5"
+                                      FontFamily="Segoe UI" />
+                            
+                            <!-- Вариант подключения (справа от CheckBox) -->
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="2"
+                                       Text="Вариант подключения:"
+                                       VerticalAlignment="Center"
+                                       Margin="10,5,5,5"
+                                       FontFamily="Segoe UI" />
+                            
+                            <ComboBox Grid.Row="0"
+                                      Grid.Column="3"
+                                      x:Name="comboBox_variant_connect_fn"
+                                      Margin="5"
+                                      FontFamily="Segoe UI" />
+                            
+                            <!-- Порт ФН (USB) - сильно прижат влево -->
+                            <TextBlock Grid.Row="1"
+                                       Grid.Column="0"
+                                       Text="Порт ФН (USB):"
+                                       VerticalAlignment="Center"
+                                       Margin="5,0,2,0"
+                                       FontFamily="Segoe UI" />
+                            
+                            <ComboBox Grid.Row="1"
+                                      Grid.Column="1"
+                                      x:Name="comboBox_fn_port"
+                                      Margin="0"
+                                      FontFamily="Segoe UI" />
+                            
+                            <!-- IP адрес ФН -->
+                            <TextBlock Grid.Row="1"
+                                       Grid.Column="2"
+                                       Text="IP адрес ФН:"
+                                       VerticalAlignment="Center"
+                                       Margin="10,5,5,5"
+                                       FontFamily="Segoe UI" />
+                            
+                            <TextBox Grid.Row="1"
+                                     Grid.Column="3"
+                                     x:Name="txtB_fn_ipaddr"
+                                     Margin="5"
+                                     FontFamily="Segoe UI" />
+                            
+                            <!-- Кнопка проверки соединения -->
+                            <Button Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="4"
+                                    x:Name="btn_test_connection"
+                                    Content="Проверка соединения"
+                                    Margin="10,0,0,0"
+                                    Width="184"
+                                    Height="80"
+                                    VerticalAlignment="Center"
+                                    FontFamily="Segoe UI" />
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Группа весов -->
+                    <Border Grid.Row="3"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="4"
+                            BorderBrush="Gray"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Margin="0,5,0,0"
+                            Padding="5">
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Получать вес автоматически (в 2 строки) -->
+                            <CheckBox Grid.Column="0"
+                                      Grid.ColumnSpan="2"
+                                      x:Name="checkBox_get_weight_automatically"
+                                      VerticalAlignment="Center"
+                                      Margin="5,0,5,0">
+                                <TextBlock Text="Получать вес с&#x0a;весов автоматически"
+                                           TextWrapping="Wrap"
+                                           Width="110"
+                                           FontFamily="Segoe UI" />
+                            </CheckBox>
+                            
+                            <!-- Порт весов -->
+                            <TextBlock Grid.Column="2"
+                                       Text="Порт весов:"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0,5,0"
+                                       FontFamily="Segoe UI" />
+                            
+                            <ComboBox Grid.Column="3"
+                                      x:Name="comboBox_scale_port"
+                                      Margin="5,0,5,0"
+                                      FontFamily="Segoe UI" />
+                            
+                            <!-- Делитель для перевода веса -->
+                            <TextBlock Grid.Column="4"
+                                       Text="Делитель:"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0,5,0"
+                                       FontFamily="Segoe UI"
+                                       ToolTip.Tip="Делитель для перевода веса в килограммы" />
+                            
+                            <TextBox Grid.Column="5"
+                                     x:Name="txtB_constant_conversion_to_kilograms"
+                                     HorizontalContentAlignment="Right"
+                                     Margin="5,0,10,0"
+                                     FontFamily="Segoe UI" />
+                            
+                            <!-- Кнопка получения веса -->
+                            <Button Grid.Column="6"
+                                    x:Name="btn_get_weight"
+                                    Content="Получить вес"
+                                    Margin="5,0,0,0"
+                                    Width="120"
+                                    Height="35"
+                                    VerticalAlignment="Center"
+                                    FontFamily="Segoe UI" />
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Группа эквайрингового терминала -->
+                    <Border Grid.Row="4"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="4"
+                            BorderBrush="Gray"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Margin="0,5,0,0"
+                            Padding="5">
+                        
+                        <Grid RowDefinitions="Auto,Auto">
+                            <TextBlock Grid.Row="0"
+                                       Text="Настройки эквайрингового терминала"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,8"
+                                       FontFamily="Segoe UI" />
+                            
+                            <Grid Grid.Row="1"
+                                  ColumnDefinitions="Auto,150,Auto,100,Auto,200">
+                                
+                                <!-- Банк -->
+                                <TextBlock Grid.Column="0"
+                                           Text="Банк:"
+                                           VerticalAlignment="Center"
+                                           Margin="5"
+                                           FontFamily="Segoe UI" />
+                                
+                                <ComboBox Grid.Column="1"
+                                          x:Name="comboBox_acquiring_bank"
+                                          Margin="5"
+                                          FontFamily="Segoe UI" />
+                                
+                                <!-- ИД терминала -->
+                                <TextBlock Grid.Column="2"
+                                           Text="ИД терминала:"
+                                           VerticalAlignment="Center"
+                                           Margin="20,5,5,5"
+                                           FontFamily="Segoe UI" />
+                                
+                                <TextBox Grid.Column="3"
+                                         x:Name="txtB_id_acquiring_terminal"
+                                         MaxLength="8"
+                                         Margin="5"
+                                         FontFamily="Segoe UI" />
+                                
+                                <!-- IP адрес терминала -->
+                                <TextBlock Grid.Column="4"
+                                           Text="IP адрес терминала:"
+                                           VerticalAlignment="Center"
+                                           Margin="20,5,5,5"
+                                           FontFamily="Segoe UI" />
+                                
+                                <TextBox Grid.Column="5"
+                                         x:Name="txtB_ip_address_acquiring_terminal"
+                                         MaxLength="21"
+                                         Margin="5"
+                                         FontFamily="Segoe UI" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Настройки ЛМ ЧЗ -->
+                    <Grid Grid.Row="5"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="4"
+                          Margin="0,5,0,0">
+                        
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="460" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Text="IP адрес ЛМ ЧЗ:"
+                                   VerticalAlignment="Center"
+                                   Margin="5"
+                                   FontFamily="Segoe UI" />
+                        
+                        <TextBox Grid.Column="1"
+                                 x:Name="txtB_ip_addr_lm_ch_z"
+                                 Margin="5"
+                                 FontFamily="Segoe UI" />
+                        
+                        <Button Grid.Column="2"
+                                x:Name="btn_status"
+                                Content="Проверить подключение"
+                                Margin="5"
+                                Width="200"
+                                FontFamily="Segoe UI" />
+                    </Grid>
+                    
+                    <!-- Период выгрузки и дата загрузки -->
+                    <Grid Grid.Row="6"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="4"
+                          Margin="0,5,0,0">
+                        
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="196" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Период выгрузки (в 2 строки) -->
+                        <TextBlock Grid.Column="0"
+                                   Text="Период выгрузки&#x0a;в Центр&#x0a;(в минутах):"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0,5,0"
+                                   Width="120"
+                                   FontFamily="Segoe UI" />
+                        
+                        <TextBox Grid.Column="1"
+                                 x:Name="unloading_period"
+                                 MaxLength="3"
+                                 Margin="10,0,20,0"
+                                 FontFamily="Segoe UI" />
+                        
+                        <!-- Дата загрузки карточек (в 3 строки) -->
+                        <TextBlock Grid.Column="2"
+                                   Text="Дата последней&#x0a;загрузки карточек&#x0a;покупателей:"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0,5,0"
+                                   Width="150"
+                                   FontFamily="Segoe UI" />
+                        
+                        <TextBox Grid.Column="3"
+                                 x:Name="txtB_last_date_download_bonus_clients"
+                                 MaxLength="15"
+                                 IsReadOnly="True"
+                                 Margin="10,0,10,0"
+                                 FontFamily="Segoe UI" />
+                    </Grid>
+                    
+                    <!-- Кнопки внизу - расположены по центру -->
+                    <StackPanel Grid.Row="7"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="4"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="0,10,0,0">
+                        
+                        <Button x:Name="write"
+                                Content="Записать"
+                                Width="174"
+                                Margin="0,0,10,0"
+                                Height="44"
+                                FontFamily="Segoe UI" />
+                        
+                        <!-- Кнопка Закрыть -->
+                        <Button x:Name="btnCloseBottom"
+                                Content="Закрыть"
+                                Width="150"
+                                Margin="0,0,10,0"
+                                Height="44"
+                                FontFamily="Segoe UI"
+                                Click="CloseButton_Click" />
+                        
+                        <Button x:Name="button1"
+                                Content="Печать картинки"
+                                Width="242"
+                                Height="61"
+                                IsVisible="False"
+                                FontFamily="Segoe UI" />
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

@@ -1,0 +1,281 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="891" d:DesignHeight="600"
+             x:Class="Cash8Avalon.FPTK22">
+    
+    <!-- Основной контейнер с "оконным" стилем -->
+    <Border BorderBrush="#FF0078D7"
+            BorderThickness="1"
+            CornerRadius="3"
+            Margin="0">
+        <Grid Background="White">
+            
+            <!-- Распределение строк: заголовок и контент -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            
+            <!-- ===== ЗАГОЛОВОК ОКНА (как в Windows) ===== -->
+            <Border Grid.Row="0"
+                    Background="#FF0078D7"
+                    Height="32">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Название окна -->
+                    <TextBlock Grid.Column="0"
+                               Text="Фискальный регистратор"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="10,0"
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               FontFamily="Segoe UI" />
+                    
+                    <!-- Крестик закрытия в стиле Windows -->
+                    <Button Grid.Column="1"
+                            x:Name="CloseButton"
+                            Width="46"
+                            Height="32"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Click="CloseButton_Click">
+                        <TextBlock Text="✕"
+                                   Foreground="White"
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                </Grid>
+            </Border>
+            
+            <!-- ===== ОСНОВНОЕ СОДЕРЖИМОЕ ===== -->
+            <ScrollViewer Grid.Row="1"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Левая колонка -->
+                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,10,0" Width="350">
+                        <!-- Внесение аванса -->
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Text="Внесение аванса" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Сумма аванса" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBox x:Name="sum_avans" Grid.Column="1" HorizontalAlignment="Stretch" 
+                                             HorizontalContentAlignment="Right" Width="100"/>
+                                </Grid>
+                                <Button x:Name="avans" Content="Служебное внесение" Margin="0,8,0,0" 
+                                        HorizontalAlignment="Stretch" Click="avans_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Инкассация -->
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Text="Инкассация" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="get_summ_in_cashe" Content="Сумма в ДЯ" 
+                                            Grid.Column="0" Margin="0,0,5,0" Click="get_summ_in_cashe_Click"/>
+                                    <TextBox x:Name="sum_incass" Grid.Column="1" 
+                                             HorizontalContentAlignment="Right"/>
+                                </Grid>
+                                <Button x:Name="incass" Content="Служебная выдача" Margin="0,8,0,0" 
+                                        HorizontalAlignment="Stretch" Click="incass_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Отчеты -->
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Text="Отчеты" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="x_report" Grid.Column="0" Content="Текущий х отчет" 
+                                            Margin="0,0,5,0" HorizontalAlignment="Stretch" 
+                                            Click="x_Report_Click"/>
+                                    <Button x:Name="z_report" Grid.Column="1" Content="Суточный z отчет" 
+                                            HorizontalAlignment="Stretch" Click="z_Report_Click"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Банковский терминал -->
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Text="Банковский терминал" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <Button x:Name="btn_query_summary_report" Grid.Row="0" Grid.Column="0" 
+                                            Content="Запрос краткого отчета" Margin="0,0,5,5" 
+                                            HorizontalAlignment="Stretch" Click="btn_query_summary_report_Click"/>
+                                            
+                                    <Button x:Name="btn_query_full_report" Grid.Row="0" Grid.Column="1" 
+                                            Content="Запрос полного отчета" Margin="0,0,0,5" 
+                                            HorizontalAlignment="Stretch" Click="btn_query_full_report_Click"/>
+                                            
+                                    <Button x:Name="btn_reconciliation_of_totals" Grid.Row="1" Grid.Column="0" 
+                                            Content="Сверка итогов" Grid.ColumnSpan="2" 
+                                            HorizontalAlignment="Stretch" Click="btn_reconciliation_of_totals_Click"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Открыть/Закрыть магазин -->
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                            <StackPanel>
+                                <TextBlock Text="Открыть / Закрыть (Магазин)" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <Button x:Name="btn_open_shop" Grid.Row="0" Grid.Column="0" 
+                                            Content="Открыть магазин" Margin="0,0,5,5" 
+                                            HorizontalAlignment="Stretch" Click="btn_open_shop_Click"/>
+                                            
+                                    <Border x:Name="label_open_shop" Grid.Row="0" Grid.Column="1" 
+                                            BorderBrush="DarkGray" BorderThickness="1" 
+                                            CornerRadius="3" Margin="0,0,0,5">
+                                        <TextBlock x:Name="label_open_shop_text" Text="" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                            
+                                    <Button x:Name="btn_close_shop" Grid.Row="1" Grid.Column="0" 
+                                            Content="Закрыть магазин" Margin="0,0,5,0" 
+                                            HorizontalAlignment="Stretch" Click="btn_close_shop_Click"/>
+                                            
+                                    <Border x:Name="label_close_shop" Grid.Row="1" Grid.Column="1" 
+                                            BorderBrush="DarkGray" BorderThickness="1" 
+                                            CornerRadius="3">
+                                        <TextBlock x:Name="label_close_shop_text" Text="" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Правая колонка (Проверки) -->
+                    <Border Grid.Column="1" BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Проверки" FontWeight="Bold" Margin="0,0,0,0"/>
+                            
+                            <!-- Проверка интернета -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="btn_have_internet" Content="Проверить интернет" 
+                                        Grid.Column="0" Margin="0,0,5,0" Click="btn_have_internet_Click"/>
+                                <TextBox x:Name="txtB_have_internet" IsReadOnly="True" Grid.Column="1" 
+                                         FontSize="18" FontWeight="Bold" HorizontalContentAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Проверка отправки в ОФД -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Button x:Name="btn_ofd_exchange_status" Grid.Row="0" Grid.Column="0" 
+                                        Content="Проверить отправку в ОФД" Margin="0,0,5,0" 
+                                        Click="btn_ofd_exchange_status_Click"/>
+                                        
+                                <TextBox x:Name="txtB_ofd_exchange_status" Grid.Row="0" Grid.Column="1" 
+                                         Grid.RowSpan="2" IsReadOnly="True" FontSize="12" FontWeight="Bold"
+                                         AcceptsReturn="True" TextWrapping="Wrap" Height="100"/>
+                            </Grid>
+
+                            <!-- Открыть денежный ящик -->
+                            <Button x:Name="btn_openDrawer" Content="Открыть денежный ящик" 
+                                    HorizontalAlignment="Stretch" 
+                                    Click="btn_openDrawer_Click"/>
+
+                            <!-- Утилита отправки в ОФД -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="btn_send_fiscal" Content="Утилита отправки в ОФД" 
+                                        Grid.Column="0" Margin="0,0,5,0" Click="btn_send_fiscal_Click"/>
+                                <TextBox x:Name="txtB_ofd_utility_status" Grid.Column="1" IsReadOnly="True" 
+                                         FontSize="18" FontWeight="Bold" HorizontalContentAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Информация о ФН -->
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                                <StackPanel>
+                                    <TextBlock Text="Информация о ФН" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="txtB_fn_info" IsReadOnly="True" 
+                                             AcceptsReturn="True" TextWrapping="Wrap"
+                                             Height="150" FontSize="12"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Дата последней отправки маркировки -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="btn_date_mark" Content="Дата последней удачной отправки маркировки" 
+                                        Grid.Column="0" Margin="0,0,5,0" Click="btn_date_mark_Click"/>
+                                <TextBox x:Name="txtB_last_send_mark" Grid.Column="1" IsReadOnly="True" 
+                                         FontSize="14" HorizontalContentAlignment="Right" Background="White"/>
+                            </Grid>
+
+                            <!-- Копия последнего чека -->
+                            <Button x:Name="print_last_check" Content="Копия последнего чека" 
+                                    HorizontalAlignment="Stretch" Height="35" Click="print_last_check_Click"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

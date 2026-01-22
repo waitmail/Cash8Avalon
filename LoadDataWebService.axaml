@@ -1,0 +1,64 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="350"
+             x:Class="Cash8Avalon.LoadDataWebService"
+             MinHeight="350">
+    
+    <Grid>
+        <!-- Кнопка закрытия в правом верхнем углу -->
+        <Button x:Name="btnClose" 
+                Content="✕" 
+                Width="30" Height="30"
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Top"
+                Margin="0,5,5,0"
+                FontSize="16"
+                Background="Transparent"
+                BorderThickness="0"
+                Foreground="#666"
+                Click="btnClose_Click">
+            <Button.Styles>
+                <Style Selector="Button:hover">
+                    <Setter Property="Background" Value="#FFE0E0E0"/>
+                </Style>
+            </Button.Styles>
+        </Button>
+        
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="10" Spacing="10">
+                        
+                <!-- Кнопка полной загрузки -->
+                <Button x:Name="btn_new_load"
+                        Content="Загрузить данные (ПОЛНАЯ ЗАГРУЗКА)"
+                        MinHeight="45"
+                        Padding="10,8"
+                        Click="btn_new_load_Click"/>
+                
+                <!-- Прогресс-бар -->
+                <ProgressBar x:Name="progressBar1"
+                             Height="20"
+                             Minimum="0" Maximum="100"
+                             IsIndeterminate="False"/>
+                
+                <!-- Кнопка обновления клиентов -->
+                <Button x:Name="download_bonus_clients"
+                        Content="Обновить клиентов"
+                        MinHeight="35"
+                        Padding="10,6"
+                        Click="download_bonus_clients_Click"/>
+                
+                <!-- Быстрая загрузка (скрыта по умолчанию) -->
+                <Button x:Name="btn_new_load_fast"
+                        Content="Загрузить данные быстро (ПОЛНАЯ ЗАГРУЗКА)"
+                        MinHeight="45"
+                        Padding="10,8"
+                        IsVisible="False"
+                        Click="btn_new_load_fast_Click"/>
+                        
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+    
+</UserControl>
