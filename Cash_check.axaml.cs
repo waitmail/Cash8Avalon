@@ -203,6 +203,8 @@ namespace Cash8Avalon
                 // 5. Дополнительный глобальный обработчик для F7
                 this.AddHandler(KeyDownEvent, OnGlobalKeyDownForForm, RoutingStrategies.Tunnel);
 
+                this.Closed += Cash_check_Closed;
+
                 Console.WriteLine("✓ Конструктор завершен успешно");
             }
             catch (Exception ex)
@@ -212,6 +214,11 @@ namespace Cash8Avalon
             }
 
             Console.WriteLine("=== Конструктор Cash_check завершен ===");
+        }
+
+        private void Cash_check_Closed(object? sender, EventArgs e)
+        {
+            
         }
 
         public double Discount
@@ -237,6 +244,7 @@ namespace Cash8Avalon
             // 4. Отладочная информация
             //DebugGridInfo();
         }
+
         
         // Новый глобальный обработчик для всей формы
         private void OnGlobalKeyDownForForm(object sender, KeyEventArgs e)
@@ -252,11 +260,9 @@ namespace Cash8Avalon
                         InputSearchProduct.Focus();
                         break;
 
-                    //case Key.F5:
-                    //    // Обновить данные
-                    //    e.Handled = true;
-                    //    RefreshData();
-                    //    break;
+                    case Key.Escape:
+                        this.Close();                        
+                        break;
 
                     //case Key.F12:
                     //    // Открыть справку

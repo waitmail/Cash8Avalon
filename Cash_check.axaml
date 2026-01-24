@@ -6,334 +6,366 @@
         d:DesignWidth="800" d:DesignHeight="600"
         x:Class="Cash8Avalon.Cash_check"
         Title="Чек"
-        Width="1200"
-        Height="800"
+        Width="800"
+        Height="600"
         WindowStartupLocation="CenterScreen"
-        CanResize="True"
-        CanMaximize="True"
-        CanMinimize="True"
-        SizeToContent="Manual">
-        
+        CanResize="False"
+        CanMaximize="False"
+        CanMinimize="False"
+        SystemDecorations="None"
+        SizeToContent="Manual"
+        Background="Transparent">
     
-    <!-- Основной контейнер -->
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="80"/>
-        </Grid.RowDefinitions>
+    <!-- Внешняя рамка окна -->
+    <Border BorderBrush="#FF007ACC" 
+            BorderThickness="3"
+            Background="White"
+            CornerRadius="0">
         
-        <!-- Верхняя панель с заголовком чека -->
-        <Border Grid.Row="0" Margin="0,0,0,10">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
+        <Grid>
+            <!-- Собственный заголовок окна -->
+            <Border Name="CustomTitleBar"
+                    Height="40"
+                    Background="#FF007ACC"
+                    VerticalAlignment="Top"
+                    CornerRadius="0,0,0,0">
+                
                 <Grid>
+                    <!-- Название окна -->
+                    <TextBlock Text="Чек"
+                              Foreground="White"
+                              FontSize="14"
+                              FontWeight="Bold"
+                              VerticalAlignment="Center"
+                              Margin="15,0,0,0"/>
+                </Grid>
+            </Border>
+            
+            <!-- Основной контент (с отступом от заголовка) -->
+            <Grid Margin="0,40,0,0">
+                
+                <!-- Основной контейнер -->
+                <Grid Margin="10">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="40"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="80"/>
                     </Grid.RowDefinitions>
                     
-                    <!-- Строка 1: Тип чека и информация -->
-                    <Grid Grid.Row="0" Margin="0,0,0,5" VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                    <!-- Верхняя панель с заголовком чека -->
+                    <Border Grid.Row="0" Margin="0,0,0,10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="40"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Строка 1: Тип чека и информация -->
+                                <Grid Grid.Row="0" Margin="0,0,0,5" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" Text="Тип чека:" VerticalAlignment="Center"/>
-                        
-                        <ComboBox Grid.Column="1" Name="check_type" VerticalAlignment="Center" 
-                                  VerticalContentAlignment="Center" Width="110" HorizontalAlignment="Left" 
-                                  Margin="5,0,0,0"/>
+                                    <TextBlock Grid.Column="0" Text="Тип чека:" VerticalAlignment="Center"/>
+                                    
+                                    <ComboBox Grid.Column="1" Name="check_type" VerticalAlignment="Center" 
+                                              VerticalContentAlignment="Center" Width="110" HorizontalAlignment="Left" 
+                                              Margin="5,0,0,0"/>
 
-                        <TextBox Grid.Column="2" Name="txtB_num_sales" IsVisible="False" 
-                                 VerticalAlignment="Center" VerticalContentAlignment="Center" 
-                                 HorizontalAlignment="Left" Margin="5,0,0,0" Width="120" 
-                                 MaxLength="20" HorizontalContentAlignment="Right"
-                                 ToolTip.Tip="Введите номер продажи для возврата"/>
+                                    <TextBox Grid.Column="2" Name="txtB_num_sales" IsVisible="False" 
+                                             VerticalAlignment="Center" VerticalContentAlignment="Center" 
+                                             HorizontalAlignment="Left" Margin="5,0,0,0" Width="120" 
+                                             MaxLength="20" HorizontalContentAlignment="Right"
+                                             ToolTip.Tip="Введите номер продажи для возврата"/>
 
-                        <Button Grid.Column="3" Name="btn_fill_on_sales" VerticalAlignment="Center"
-                                VerticalContentAlignment="Center" HorizontalAlignment="Left"
-                                IsVisible="False" Margin="10,0,0,0" MinWidth="150" Height="32" 
-                                Padding="10,5">
-                            Заполнить по продаже
-                        </Button>
+                                    <Button Grid.Column="3" Name="btn_fill_on_sales" VerticalAlignment="Center"
+                                            VerticalContentAlignment="Center" HorizontalAlignment="Left"
+                                            IsVisible="False" Margin="10,0,0,0" MinWidth="150" Height="32" 
+                                            Padding="10,5">
+                                        Заполнить по продаже
+                                    </Button>
 
-                        <TextBox Grid.Column="4" Name="num_cash" IsReadOnly="True" 
-                                 Text="КАССА №" VerticalAlignment="Center"
-                                 VerticalContentAlignment="Center" Margin="10,0"
-                                 MinWidth="120" HorizontalAlignment="Left"/>
+                                    <TextBox Grid.Column="4" Name="num_cash" IsReadOnly="True" 
+                                             Text="КАССА №" VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center" Margin="10,0"
+                                             MinWidth="120" HorizontalAlignment="Left"/>
 
-                        <TextBox Grid.Column="5" Name="date_time_start" IsReadOnly="True" 
-                                 VerticalAlignment="Center" VerticalContentAlignment="Center" 
-                                 MinWidth="150" Margin="10,0"/>
+                                    <TextBox Grid.Column="5" Name="date_time_start" IsReadOnly="True" 
+                                             VerticalAlignment="Center" VerticalContentAlignment="Center" 
+                                             MinWidth="150" Margin="10,0"/>
 
-                        <TextBlock Grid.Column="6" Text="Пользователь:" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="7" Name="user" VerticalAlignment="Center"
-                                 IsReadOnly="True" 
-                                 VerticalContentAlignment="Center" Margin="5,0"/>
-                    </Grid>
+                                    <TextBlock Grid.Column="6" Text="Пользователь:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="7" Name="user" VerticalAlignment="Center"
+                                             IsReadOnly="True" 
+                                             VerticalContentAlignment="Center" Margin="5,0"/>
+                                </Grid>
+                                
+                                <!-- Строка 2: Клиент -->
+                                <Grid Grid.Row="1" Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                
+                                    <TextBlock Grid.Column="0" Text="Клиент:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Name="client" VerticalAlignment="Center" Margin="10,0"/>
+                                    <TextBlock Grid.Column="2" Text="Код клиента / Телефон +7:" 
+                                               VerticalAlignment="Center" Margin="10,0,0,0"/> 
+                                    <TextBox Grid.Column="3" Name="client_barcode" VerticalAlignment="Center" Margin="10,0"/>
+                                </Grid>
+                                
+                                <!-- Строка 3: Последний товар -->
+                                <TextBox Grid.Row="2" Name="last_tovar" IsReadOnly="True" 
+                                         Foreground="Blue" FontSize="16" MinHeight="60" Margin="0,5,0,5"/>
+                                
+                                <!-- Строка 4: Панель возврата (скрыта по умолчанию) -->
+                                <Border Grid.Row="3" Name="panel_return" Background="LightYellow" 
+                                       BorderBrush="Gray" BorderThickness="1" Padding="10" 
+                                       IsVisible="False" Margin="0,5,0,5">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="30"/>
+                                                <ColumnDefinition Width="80"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <TextBlock Grid.Column="0" Text="Количество:" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Name="return_quantity" VerticalAlignment="Center"/>
+                                            
+                                            <TextBlock Grid.Column="2" Text="Цена:" VerticalAlignment="Center" 
+                                                      Margin="10,0,0,0"/>
+                                            <TextBox Grid.Column="3" Name="return_rouble" IsEnabled="False" 
+                                                     VerticalAlignment="Center"/>
+                                            
+                                            <TextBlock Grid.Column="4" Text="." FontSize="20" VerticalAlignment="Center" 
+                                                      HorizontalAlignment="Center"/>
+                                            <TextBox Grid.Column="5" Name="return_kop" IsEnabled="False" 
+                                                     VerticalAlignment="Center"/>
+                                        </Grid>
+                                        
+                                        <Button Grid.Row="1" Name="return_enter" Content="Ввод" 
+                                               HorizontalAlignment="Center" Width="100"/>
+                                    </Grid>
+                                </Border>
+                                
+                                <!-- Строка 5: Информация об оплате -->
+                                <Grid Grid.Row="4" Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" Text="Сертификаты:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Name="txtB_sertificate_money" IsEnabled="False"
+                                            Margin="5,0,0,0" VerticalAlignment="Center"
+                                            BorderBrush="LightGray" BorderThickness="1"
+                                            Background="White" Foreground="Black"
+                                            Padding="3,2" TextAlignment="Right"
+                                            VerticalContentAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="2" Text="Карта:" VerticalAlignment="Center" 
+                                              Margin="10,0,0,0"/>
+                                    <TextBox Grid.Column="3" Name="txtB_non_cash_money" IsEnabled="False" 
+                                            Margin="5,0,0,0" VerticalAlignment="Center"
+                                            BorderBrush="LightGray" BorderThickness="1"
+                                            Background="White" Foreground="Black"
+                                            Padding="3,2" TextAlignment="Right"
+                                            VerticalContentAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="4" Text="Наличные:" VerticalAlignment="Center" 
+                                              Margin="10,0,0,0"/>
+                                    <TextBox Grid.Column="5" Name="txtB_cash_money" IsEnabled="False" 
+                                            Margin="5,0,0,0" VerticalAlignment="Center"
+                                            BorderBrush="LightGray" BorderThickness="1"
+                                            Background="White" Foreground="Black"
+                                            Padding="3,2" TextAlignment="Right"
+                                            VerticalContentAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="6" Text="Бонусы:" VerticalAlignment="Center" 
+                                              Margin="10,0,0,0"/>
+                                    <TextBox Grid.Column="7" Name="txtB_bonus_money" IsEnabled="False" 
+                                            Margin="5,0,0,0" VerticalAlignment="Center"
+                                            BorderBrush="LightGray" BorderThickness="1"
+                                            Background="White" Foreground="Black"
+                                            Padding="3,2" TextAlignment="Right"
+                                            VerticalContentAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="8" Text="№ док:" VerticalAlignment="Center" 
+                                              Margin="10,0,0,0"/>
+                                    <TextBox Grid.Column="9" Name="txtB_num_doc" IsEnabled="False" 
+                                            Margin="5,0,0,0" VerticalAlignment="Center"
+                                            BorderBrush="LightGray" BorderThickness="1"
+                                            Background="White" Foreground="Black"
+                                            Padding="3,2" TextAlignment="Right"
+                                            VerticalContentAlignment="Center"/>
+
+                                    <CheckBox Grid.Column="10" Name="checkBox_payment_by_sbp" Content="СБП" 
+                                             IsEnabled="False" IsVisible="True" VerticalAlignment="Center" 
+                                             Margin="10,0,0,0"/>
+                                </Grid>
+                                
+                                <!-- Строка 6: ИНН и наименование -->
+                                <Grid Grid.Row="5" Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" Text="ИНН:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Name="txtB_inn" MaxLength="12" 
+                                             VerticalAlignment="Center" Margin="10,0"/>
+                                    
+                                    <Button Grid.Column="2" Name="btn_get_name" Content="==>" 
+                                           VerticalAlignment="Center" Margin="5,0"/>
+                                    
+                                    <TextBox Grid.Column="3" Name="txtB_name" MaxLength="250" 
+                                             VerticalAlignment="Center"/>
+                                </Grid>
+                                
+                                <!-- Строка 7: Поиск товара -->
+                                <Grid Grid.Row="6" Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" Text="Код/ШК/Код Марк.:" 
+                                              VerticalAlignment="Center" FontSize="14"/>
+                                    <TextBox Grid.Column="1" Name="txtB_search_product" 
+                                            VerticalAlignment="Center" Margin="5,0" FontSize="14"/>
+                                </Grid>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
                     
-                    <!-- Строка 2: Клиент -->
-                    <Grid Grid.Row="1" Margin="0,5,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-    
-                        <TextBlock Grid.Column="0" Text="Клиент:" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Name="client" VerticalAlignment="Center" Margin="10,0"/>
-                        <TextBlock Grid.Column="2" Text="Код клиента / Телефон +7:" 
-                                   VerticalAlignment="Center" Margin="10,0,0,0"/> 
-                        <TextBox Grid.Column="3" Name="client_barcode" VerticalAlignment="Center" Margin="10,0"/>
-                    </Grid>
+                    <!-- Основная область: Таблица товаров/сертификатов -->
+                    <Border Grid.Row="1" BorderBrush="Red" BorderThickness="2" Background="White"
+                            Margin="0,10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <TabControl x:Name="MainTabControl">
+                            <TabItem x:Name="tabProducts" Header="Товары"/>
+                            <TabItem x:Name="tabCertificates" Header="Сертификаты"/>                
+                        </TabControl>
+                    </Border>
                     
-                    <!-- Строка 3: Последний товар -->
-                    <TextBox Grid.Row="2" Name="last_tovar" IsReadOnly="True" 
-                             Foreground="Blue" FontSize="16" MinHeight="60" Margin="0,5,0,5"/>
-                    
-                    <!-- Строка 4: Панель возврата (скрыта по умолчанию) -->
-                    <Border Grid.Row="3" Name="panel_return" Background="LightYellow" 
-                           BorderBrush="Gray" BorderThickness="1" Padding="10" 
-                           IsVisible="False" Margin="0,5,0,5">
+                    <!-- Нижняя панель с кнопками -->
+                    <Border Grid.Row="2" Margin="0,10,0,0">
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <!-- Группа "Комментарий:" -->
+                                <ColumnDefinition Width="Auto"/>
+                                
+                                <!-- Чекбоксы вертикально -->
+                                <ColumnDefinition Width="Auto"/>
+                                
+                                <!-- Сумма -->
+                                <ColumnDefinition Width="Auto"/>
+                                
+                                <!-- Пустое пространство между суммой и кнопкой -->
+                                <ColumnDefinition Width="*"/>
+                                
+                                <!-- Кнопка оплаты (прижата вправо) -->
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
                             
-                            <Grid Grid.Row="0" Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="150"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="30"/>
-                                    <ColumnDefinition Width="80"/>
-                                </Grid.ColumnDefinitions>
+                            <!-- Группа "Комментарий:" -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" 
+                                       VerticalAlignment="Center">
+                                <TextBlock Text="Комментарий:" VerticalAlignment="Center"/>
+                                <TextBox Name="comment" MaxLength="50" 
+                                        VerticalAlignment="Center" Margin="2,0,0,0" 
+                                        Width="190"/>
+                            </StackPanel>
+                            
+                            <!-- Чекбоксы вертикально -->
+                            <Grid Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 
-                                <TextBlock Grid.Column="0" Text="Количество:" VerticalAlignment="Center"/>
-                                <TextBox Grid.Column="1" Name="return_quantity" VerticalAlignment="Center"/>
+                                <CheckBox Grid.Row="0" Name="checkBox_to_print_repeatedly" 
+                                         Content="Напечатать повторно" IsEnabled="False" 
+                                         IsVisible="True" Margin="0,0,0,3" FontSize="11"/>
                                 
-                                <TextBlock Grid.Column="2" Text="Цена:" VerticalAlignment="Center" 
-                                          Margin="10,0,0,0"/>
-                                <TextBox Grid.Column="3" Name="return_rouble" IsEnabled="False" 
-                                         VerticalAlignment="Center"/>
+                                <CheckBox Grid.Row="1" Name="checkBox_to_print_repeatedly_p" 
+                                         Content="Напечатать маркировку" IsEnabled="False" 
+                                         IsVisible="True" Margin="0,0,0,3" FontSize="11"/>
                                 
-                                <TextBlock Grid.Column="4" Text="." FontSize="20" VerticalAlignment="Center" 
-                                          HorizontalAlignment="Center"/>
-                                <TextBox Grid.Column="5" Name="return_kop" IsEnabled="False" 
-                                         VerticalAlignment="Center"/>
+                                <CheckBox Grid.Row="2" Name="checkBox_print_check" 
+                                         Content="Печатать чек" FontSize="11" IsVisible="False"/>
                             </Grid>
                             
-                            <Button Grid.Row="1" Name="return_enter" Content="Ввод" 
-                                   HorizontalAlignment="Center" Width="100"/>
+                            <!-- Сумма -->
+                            <TextBox Grid.Column="2" Name="txtB_total_sum" IsReadOnly="True"
+                                    FontSize="14" FontWeight="Bold" Foreground="Blue"
+                                    MinWidth="120" Margin="0,0,10,0"
+                                    VerticalAlignment="Center" TextAlignment="Right"/>
+                            
+                            <!-- Кнопка оплаты (прижата вправо) -->
+                            <Button Grid.Column="4" Name="pay" Content="Оплатить/Вернуть (F8)"
+                                   FontWeight="Bold" FontSize="13" Height="45" MinWidth="160"
+                                   HorizontalAlignment="Right"/>
                         </Grid>
                     </Border>
                     
-                    <!-- Строка 5: Информация об оплате -->
-                    <Grid Grid.Row="4" Margin="0,5,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBlock Grid.Column="0" Text="Сертификаты:" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Name="txtB_sertificate_money" IsEnabled="False"
-                                Margin="5,0,0,0" VerticalAlignment="Center"
-                                BorderBrush="LightGray" BorderThickness="1"
-                                Background="White" Foreground="Black"
-                                Padding="3,2" TextAlignment="Right"
-                                VerticalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="2" Text="Карта:" VerticalAlignment="Center" 
-                                  Margin="10,0,0,0"/>
-                        <TextBox Grid.Column="3" Name="txtB_non_cash_money" IsEnabled="False" 
-                                Margin="5,0,0,0" VerticalAlignment="Center"
-                                BorderBrush="LightGray" BorderThickness="1"
-                                Background="White" Foreground="Black"
-                                Padding="3,2" TextAlignment="Right"
-                                VerticalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="4" Text="Наличные:" VerticalAlignment="Center" 
-                                  Margin="10,0,0,0"/>
-                        <TextBox Grid.Column="5" Name="txtB_cash_money" IsEnabled="False" 
-                                Margin="5,0,0,0" VerticalAlignment="Center"
-                                BorderBrush="LightGray" BorderThickness="1"
-                                Background="White" Foreground="Black"
-                                Padding="3,2" TextAlignment="Right"
-                                VerticalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="6" Text="Бонусы:" VerticalAlignment="Center" 
-                                  Margin="10,0,0,0"/>
-                        <TextBox Grid.Column="7" Name="txtB_bonus_money" IsEnabled="False" 
-                                Margin="5,0,0,0" VerticalAlignment="Center"
-                                BorderBrush="LightGray" BorderThickness="1"
-                                Background="White" Foreground="Black"
-                                Padding="3,2" TextAlignment="Right"
-                                VerticalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="8" Text="№ док:" VerticalAlignment="Center" 
-                                  Margin="10,0,0,0"/>
-                        <TextBox Grid.Column="9" Name="txtB_num_doc" IsEnabled="False" 
-                                Margin="5,0,0,0" VerticalAlignment="Center"
-                                BorderBrush="LightGray" BorderThickness="1"
-                                Background="White" Foreground="Black"
-                                Padding="3,2" TextAlignment="Right"
-                                VerticalContentAlignment="Center"/>
-
-                        <CheckBox Grid.Column="10" Name="checkBox_payment_by_sbp" Content="СБП" 
-                                 IsEnabled="False" IsVisible="True" VerticalAlignment="Center" 
-                                 Margin="10,0,0,0"/>
-                    </Grid>
-                    
-                    <!-- Строка 6: ИНН и наименование -->
-                    <Grid Grid.Row="5" Margin="0,5,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="100"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBlock Grid.Column="0" Text="ИНН:" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Name="txtB_inn" MaxLength="12" 
-                                 VerticalAlignment="Center" Margin="10,0"/>
-                        
-                        <Button Grid.Column="2" Name="btn_get_name" Content="==>" 
-                               VerticalAlignment="Center" Margin="5,0"/>
-                        
-                        <TextBox Grid.Column="3" Name="txtB_name" MaxLength="250" 
-                                 VerticalAlignment="Center"/>
-                    </Grid>
-                    
-                    <!-- Строка 7: Поиск товара -->
-                    <Grid Grid.Row="6" Margin="0,5,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBlock Grid.Column="0" Text="Код/ШК/Код Марк.:" 
-                                  VerticalAlignment="Center" FontSize="14"/>
-                        <TextBox Grid.Column="1" Name="txtB_search_product" 
-                                VerticalAlignment="Center" Margin="5,0" FontSize="14"/>
-                    </Grid>
+                    <!-- Панель ввода количества (скрыта по умолчанию) -->
+                    <Border Name="panel1" Background="LightSalmon" IsVisible="False"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Padding="20" Width="400" Height="150" Grid.RowSpan="3">
+                         <NumericUpDown Name="numericUpDown_enter_quantity"
+                                      Value="0"
+                                      Minimum="0"
+                                      Maximum="9999"
+                                      Increment="0.001"
+                                      FormatString="F3"
+                                      FontSize="24"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Width="200"/>
+                    </Border>
                 </Grid>
-            </ScrollViewer>
-        </Border>
-        
-        <!-- Основная область: Таблица товаров/сертификатов -->
-        <Border Grid.Row="1" BorderBrush="Red" BorderThickness="2" Background="White"
-                Margin="0,10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <TabControl x:Name="MainTabControl">
-                <TabItem x:Name="tabProducts" Header="Товары"/>
-                <TabItem x:Name="tabCertificates" Header="Сертификаты"/>                
-            </TabControl>
-        </Border>
-        
-        <!-- Нижняя панель с кнопками -->
-        <Border Grid.Row="2" Margin="0,10,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <!-- Группа "Комментарий:" -->
-                    <ColumnDefinition Width="Auto"/>
-                    
-                    <!-- Чекбоксы вертикально -->
-                    <ColumnDefinition Width="Auto"/>
-                    
-                    <!-- Сумма -->
-                    <ColumnDefinition Width="Auto"/>
-                    
-                    <!-- Пустое пространство между суммой и кнопкой -->
-                    <ColumnDefinition Width="*"/>
-                    
-                    <!-- Кнопка оплаты (прижата вправо) -->
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <!-- Группа "Комментарий:" -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" 
-                           VerticalAlignment="Center">
-                    <TextBlock Text="Комментарий:" VerticalAlignment="Center"/>
-                    <TextBox Name="comment" MaxLength="50" 
-                            VerticalAlignment="Center" Margin="2,0,0,0" 
-                            Width="190"/>
-                </StackPanel>
-                
-                <!-- Чекбоксы вертикально -->
-                <Grid Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <CheckBox Grid.Row="0" Name="checkBox_to_print_repeatedly" 
-                             Content="Напечатать повторно" IsEnabled="False" 
-                             IsVisible="True" Margin="0,0,0,3" FontSize="11"/>
-                    
-                    <CheckBox Grid.Row="1" Name="checkBox_to_print_repeatedly_p" 
-                             Content="Напечатать маркировку" IsEnabled="False" 
-                             IsVisible="True" Margin="0,0,0,3" FontSize="11"/>
-                    
-                    <CheckBox Grid.Row="2" Name="checkBox_print_check" 
-                             Content="Печатать чек" FontSize="11" IsVisible="False"/>
-                </Grid>
-                
-                <!-- Сумма -->
-                <TextBox Grid.Column="2" Name="txtB_total_sum" IsReadOnly="True"
-                        FontSize="14" FontWeight="Bold" Foreground="Blue"
-                        MinWidth="120" Margin="0,0,10,0"
-                        VerticalAlignment="Center" TextAlignment="Right"/>
-                
-                <!-- Кнопка оплаты (прижата вправо) -->
-                <Button Grid.Column="4" Name="pay" Content="Оплатить/Вернуть (F8)"
-                       FontWeight="Bold" FontSize="13" Height="45" MinWidth="160"
-                       HorizontalAlignment="Right"/>
             </Grid>
-        </Border>
-        
-        <!-- Панель ввода количества (скрыта по умолчанию) -->
-        <Border Name="panel1" Background="LightSalmon" IsVisible="False"
-               HorizontalAlignment="Center" VerticalAlignment="Center"
-               Padding="20" Width="400" Height="150" Grid.RowSpan="3">
-             <NumericUpDown Name="numericUpDown_enter_quantity"
-                          Value="0"
-                          Minimum="0"
-                          Maximum="9999"
-                          Increment="0.001"
-                          FormatString="F3"
-                          FontSize="24"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          Width="200"/>
-        </Border>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>

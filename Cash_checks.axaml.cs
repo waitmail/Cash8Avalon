@@ -564,6 +564,8 @@ namespace Cash8Avalon
                 checkWindow.CanResize = false;
                 checkWindow.CanMaximize = false;
                 checkWindow.CanMinimize = false;
+                
+
 
                 // Устанавливаем позиционирование и показываем
                 if (parentWindow != null)
