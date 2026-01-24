@@ -602,7 +602,7 @@ namespace Cash8Avalon
                 queries.Clear();
                 queries = null;
                 tran.Commit();
-                if (!MainStaticClass.SendResultGetData())
+                if (!await MainStaticClass.SendResultGetData())
                 {
                     await MessageBox.Show("Не удалось отправить информацию об успешной загрузке");
                     MainStaticClass.write_event_in_log("Не удалось отправить информацию об успешной загрузке ", "Загрузка данных", "0");

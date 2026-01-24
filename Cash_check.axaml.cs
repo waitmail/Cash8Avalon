@@ -11,16 +11,19 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Newtonsoft.Json;
 using Npgsql;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using static Cash8Avalon.Cash_check;
 using static Cash8Avalon.LoadDataWebService;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -28,7 +31,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Cash8Avalon
 {
-    public partial class Cash_check : ControlBase
+    public partial class Cash_check : Window
     {
         // Класс Requisite1260 теперь внутри класса Cash_check
         public class Requisite1260
@@ -56,6 +59,7 @@ namespace Cash8Avalon
         public ArrayList action_barcode_list = new ArrayList();
         public ArrayList action_barcode_bonus_list = new ArrayList();
         private double discount = 0;
+        private Pay pay_form = new Pay();
         public Int64 numdoc = 0;
         private bool inpun_client_barcode = false;
         public bool IsNewCheck = true;
@@ -105,7 +109,7 @@ namespace Cash8Avalon
         List<int> qr_code_lenght = new List<int>();
 
         // Событие для закрытия формы
-        public event EventHandler Closed;
+        //public event EventHandler Closed;
 
         // Контролы
         public ComboBox CheckType { get; private set; }
@@ -115,6 +119,10 @@ namespace Cash8Avalon
         public TextBox ClientBarcodeOrPhone { get; private set; }
         public TextBox NumSales { get; private set; }
         public TextBox InputSearchProduct { get; private set; }
+        public Button Pay { get; private set; }
+        public TextBox Comment { get; private set; }
+        
+        
 
         // Контролы TabItems
         private TabItem _tabProducts;
@@ -163,6 +171,7 @@ namespace Cash8Avalon
 
         // Коллекции данных для товаров
         private List<ProductItem> _productsData = new List<ProductItem>();
+        private List<ProductItem> _productsDataBackup = new List<ProductItem>(); // Резервная копия
 
         // Коллекции данных для сертификатов
         private List<CertificateItem> _certificatesData = new List<CertificateItem>();
@@ -269,25 +278,27 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("=== Проверка и заполнение контролов ===");
 
-                CheckType = GetRequiredControl<ComboBox>("check_type");
+                CheckType = this.FindControl<ComboBox>("check_type");
 
                 if (CheckType != null)
                 {
                     CheckType.SelectionChanged += CheckType_SelectionChanged;
                 }
 
-                Client = GetRequiredControl<TextBox>("client");
-                NumCash = GetRequiredControl<TextBox>("num_cash");
-                User = GetRequiredControl<TextBox>("user");
-               
-                ClientBarcodeOrPhone = GetRequiredControl<TextBox>("client_barcode");
+                Client = this.FindControl<TextBox>("client");
+                NumCash = this.FindControl<TextBox>("num_cash");
+                User = this.FindControl<TextBox>("user");
+                Comment= this.FindControl<TextBox>("comment");
+
+                ClientBarcodeOrPhone = this.FindControl<TextBox>("client_barcode");
                 if (ClientBarcodeOrPhone != null)
                 {
                     ClientBarcodeOrPhone.KeyDown += ClientBarcodeOrPhone_KeyDown;
                 }
                 //client_barcode
-                NumSales = GetRequiredControl<TextBox>("txtB_num_sales");
-                InputSearchProduct = GetRequiredControl<TextBox>("txtB_search_product");
+                NumSales = this.FindControl<TextBox>("txtB_num_sales");
+                InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
+                InputSearchProduct.Focus();
 
                 // Подписка на события поиска товара
                 if (InputSearchProduct != null)
@@ -296,14 +307,1142 @@ namespace Cash8Avalon
                     // Или: InputSearchProduct.KeyDown += OnSearchProductKeyDown;
                 }
 
-                _tabProducts = GetRequiredControl<TabItem>("tabProducts");
-                _tabCertificates = GetRequiredControl<TabItem>("tabCertificates");
+                Pay = this.FindControl<Button>("pay");
+
+                Pay.Click += Pay_Click;
+
+
+
+                _tabProducts = this.FindControl<TabItem>("tabProducts");
+                _tabCertificates = this.FindControl<TabItem>("tabCertificates");
 
                 Console.WriteLine("✓ Все основные контролы проверены");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Создать резервную копию данных товаров (аналог клонирования ListView)
+        /// </summary>
+        private void BackupProductsData()
+        {
+            MainStaticClass.write_event_in_log(" Копируем табличную часть в резервную копию ", "Документ чек", numdoc.ToString());
+
+            // Очищаем старую резервную копию
+            _productsDataBackup.Clear();
+
+            // Глубокое копирование каждого элемента
+            foreach (var product in _productsData)
+            {
+                var backupItem = new ProductItem
+                {
+                    Code = product.Code,
+                    Tovar = product.Tovar,
+                    Quantity = product.Quantity,
+                    Price = product.Price,
+                    PriceAtDiscount = product.PriceAtDiscount,
+                    Sum = product.Sum,
+                    SumAtDiscount = product.SumAtDiscount,
+                    Action = product.Action,
+                    Gift = product.Gift,
+                    Action2 = product.Action2,
+                    Mark = product.Mark
+                };
+
+                // Копируем дополнительные данные, если они есть
+                // Например, если у вас есть Tag или другие поля:
+                // backupItem.Tag = product.Tag;
+
+                _productsDataBackup.Add(backupItem);
+            }
+
+            Console.WriteLine($"✓ Создана резервная копия: {_productsDataBackup.Count} записей");
+        }
+
+        /// <summary>
+        /// Восстановить данные из резервной копии
+        /// </summary>
+        private void RestoreProductsData()
+        {
+            MainStaticClass.write_event_in_log(" Восстанавливаем табличную часть из резервной копии ", "Документ чек", numdoc.ToString());
+
+            // Очищаем текущие данные
+            _productsData.Clear();
+
+            // Копируем из резервной копии
+            foreach (var backupItem in _productsDataBackup)
+            {
+                var restoredItem = new ProductItem
+                {
+                    Code = backupItem.Code,
+                    Tovar = backupItem.Tovar,
+                    Quantity = backupItem.Quantity,
+                    Price = backupItem.Price,
+                    PriceAtDiscount = backupItem.PriceAtDiscount,
+                    Sum = backupItem.Sum,
+                    SumAtDiscount = backupItem.SumAtDiscount,
+                    Action = backupItem.Action,
+                    Gift = backupItem.Gift,
+                    Action2 = backupItem.Action2,
+                    Mark = backupItem.Mark
+                };
+
+                _productsData.Add(restoredItem);
+            }
+
+            // Обновляем Grid
+            RefreshProductsGrid();
+
+            // Выделяем первую строку если есть данные
+            if (_productsData.Count > 0)
+            {
+                SelectProductRow(0);
+            }
+
+            Console.WriteLine($"✓ Восстановлено из резервной копии: {_productsData.Count} записей");
+        }
+
+        /// <summary>
+        /// Очистить резервную копию
+        /// </summary>
+        private void ClearBackup()
+        {
+            _productsDataBackup.Clear();
+            Console.WriteLine("✓ Резервная копия очищена");
+        }
+
+        private async void Pay_Click(object? sender, RoutedEventArgs e)
+        {
+            if (MainStaticClass.PrintingUsingLibraries == 1)
+            {
+                if (MainStaticClass.GetFiscalsForbidden)
+                {
+                    await MessageBox.Show("Вам запрещена печать на фискальном регистраторе", "Проверки при печати", MessageBoxButton.OK, MessageBoxType.Error);
+                    return;
+                }
+            }
+
+
+            if (IsNewCheck)
+            {
+                // ПРОВЕРКА 1: Количество товаров в чеке (новый чек)
+                if (CheckType.SelectedIndex == 0) // Только для чека "Продажа"
+                {
+                    int productCount = _productsData.Count; // Используем коллекцию данных
+
+                    if (productCount < 3)
+                    {
+                        await MessageBox.Show("В чеке менее 3 строк, предложить покупателю доп.товар.",
+                                             "В чеке менее 3 строк",
+                                             MessageBoxButton.OK,
+                                             MessageBoxType.Info);
+                        //return; // Прерываем дальнейшее выполнение
+                    }
+                }
+            }
+
+            recharge_note = "";
+            print_to_button = 1;
+            // Дополнительные проверки из вашего оригинального кода
+            if (_productsData.Count == 0)
+            {
+                await MessageBox.Show("Нет строк", "Проверки перед записью документа");
+                return;
+            }
+
+
+            if (await GetItsDeletedDocument() == 1)
+            {
+                await MessageBox.Show("Удаленный чек не может быть распечатан", "Проверка при печати", MessageBoxButton.OK, MessageBoxType.Error);
+                return;
+            }
+
+            TextBox InnText = this.FindControl<TextBox>("txtB_inn");
+            TextBox NameOrgText = this.FindControl<TextBox>("txtB_name");
+
+            // Проверка на null контролов
+            if (InnText == null || NameOrgText == null) return;
+
+            // Безопасное получение текста
+            string inn = (InnText.Text ?? "").Trim();
+            string name = (NameOrgText.Text ?? "").Trim();
+
+            // Проверка заполнения полей (только одно из двух заполнено)
+            bool onlyInnFilled = !string.IsNullOrEmpty(inn) && string.IsNullOrEmpty(name);
+            bool onlyNameFilled = string.IsNullOrEmpty(inn) && !string.IsNullOrEmpty(name);
+
+            if (onlyInnFilled || onlyNameFilled)
+            {
+                await MessageBox.Show("Если заполнен ИНН, то должно быть заполнено и наименование, и наоборот",
+                                     "Проверка при печати",
+                                     MessageBoxButton.OK,
+                                     MessageBoxType.Error);
+                return;
+            }
+
+
+
+            if (IsNewCheck)
+            {
+                //kitchen_print(this);
+                show_pay_form();
+            }
+            else
+            {
+                if (MainStaticClass.Use_Fiscall_Print)
+                {
+                    if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
+                    {
+                        if (!await ItcPrinted())
+                        {
+                            if (this.check_type.SelectedIndex == 0)
+                            {
+                                fiscall_print_pay(this.p_sum_doc);
+                            }
+                            else
+                            {
+                                //fiscall_print_disburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
+                            }
+                        }
+                    }
+                    else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+                    {
+                        if (!await ItcPrinted() || !await ItcPrintedP())
+                        {
+                            if (this.check_type.SelectedIndex == 0)
+                            {
+                                fiscall_print_pay(this.p_sum_doc);
+                            }
+                            else
+                            {
+                                //                fiscall_print_disburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
+                            }
+                        }
+
+                        //    }
+                    }
+
+
+                    //this.Close();
+                }
+            }
+
+        }
+
+        // Метод для показа Avalonia диалога из WinForms
+        //private async Task<bool?> ShowAvaloniaDialog(Pay payForm)
+        //{
+        //    try
+        //    {
+        //        // Создаем окно Avalonia для размещения UserControl
+        //        var dialogWindow = new Window
+        //        {
+        //            Title = "Оплата",
+        //            Width = 800,
+        //            Height = 600,
+        //            Content = payForm,
+        //            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+        //            CanResize = false, // Запрещаем изменение размера если нужно
+        //            SizeToContent = SizeToContent.Manual
+        //        };
+
+        //        // Добавляем кнопки в окно если нужно
+        //        // Или используем кнопки из вашего UserControl
+
+        //        // Показываем как диалоговое окно
+        //        return await dialogWindow.ShowDialog<bool?>(GetAvaloniaMainWindow());
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MainStaticClass.write_event_in_log($"Ошибка показа формы Avalonia: {ex.Message}", "Ошибка", numdoc.ToString());
+        //        return null;
+        //    }
+        //}
+
+        private async void show_pay_form()
+        {
+
+            MainStaticClass.write_event_in_log("Попытка перейти в окно оплаты", "Документ чек", numdoc.ToString());
+            pay_form.InitializeComponent();
+            pay_form.pay_bonus.Text = "0";
+            pay_form.pay_bonus.IsVisible = false;
+            pay_form.pay_bonus_many.Text = "0";
+            pay_form.pay_bonus.IsEnabled = false;
+
+            //listView_sertificates.Items.Clear();
+            //pay_form.listView_sertificates.Items.Clear();
+            pay_form.cc = this;
+            //DialogResult dr;
+
+            if (this.check_type.SelectedIndex == 0)
+            {
+
+                /*Копируем табличную часть один ListView в другой
+                 *  чтобы если оплата отменится и с чеком будут дальше работать
+                 *  отменить все расчитанные акции одним махом
+                 */
+                MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
+                //listview_original.Items.Clear();
+                //for (int x = 0; x < listView1.Items.Count; x++)
+                //{
+                //    ListViewItem lvi = (ListViewItem)listView1.Items[x].Clone();
+                //    lvi.SubItems[2].Tag = listView1.Items[x].SubItems[2].Tag;
+                //    listview_original.Items.Add(lvi);
+
+                //}
+                BackupProductsData();
+
+                MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
+
+                //DataTable dataTable = to_define_the_action_dt(true);//Обработка на дисконтные акции с использованием datatable 
+                //checkSumOnDocument(dataTable);Пока закомментирую проблема если есть карта клиента, надо отлаживать  
+                //
+
+                //рассчитанные данные в памяти по акциям теперь помещаем в листвью 
+                //listView1.Items.Clear();
+                //foreach (DataRow row in dataTable.Rows)
+                //{
+                //    ListViewItem lvi = new ListViewItem(row["tovar_code"].ToString());
+                //    lvi.Tag = row["tovar_code"].ToString();
+                //    lvi.SubItems.Add(row["tovar_name"].ToString());//Наименование                        
+                //    lvi.SubItems.Add(row["characteristic_name"].ToString());//Характеристика
+                //    lvi.SubItems[2].Tag = row["characteristic_code"].ToString();
+                //    lvi.SubItems.Add(row["quantity"].ToString());//Количество
+                //    //lvi.SubItems.Add(row["price"].ToString());//Цена без скидки
+                //    //lvi.SubItems.Add(row["price_at_discount"].ToString("F2"));//Цена Со скидкой
+                //    //lvi.SubItems.Add(row["sum_full"].ToString());//Сумма без скидки
+                //    //lvi.SubItems.Add(row["sum_at_discount"].ToString());//Сумма со скидкой
+                //    lvi.SubItems.Add(Convert.ToDecimal(row["price"]).ToString("F2"));//Цена без скидки
+                //    lvi.SubItems.Add(Convert.ToDecimal(row["price_at_discount"]).ToString("F2"));//Цена Со скидкой
+                //    lvi.SubItems.Add(Convert.ToDecimal(row["sum_full"]).ToString("F2"));//Сумма без скидки
+                //    lvi.SubItems.Add(Convert.ToDecimal(row["sum_at_discount"]).ToString("F2"));//Сумма со скидкой
+                //    lvi.SubItems.Add(row["action"].ToString());//Акционный документ
+                //    lvi.SubItems.Add(row["gift"].ToString());//Акционный документ
+                //    lvi.SubItems.Add(row["action2"].ToString());//Акционный документ
+                //    lvi.SubItems.Add(row["bonus_reg"].ToString());//Бонус
+                //    lvi.SubItems.Add(row["bonus_action"].ToString());//Бонус
+                //    lvi.SubItems.Add(row["bonus_action_b"].ToString());//Бонус
+                //    lvi.SubItems.Add(row["marking"].ToString());//Маркировка
+
+                //    listView1.Items.Add(lvi);
+                //}
+
+                selection_goods = false;
+
+                MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
+                //recalculate_all();
+                // КОНЕЦ ПРОВЕРОЧНЫЙ ПЕРЕСЧЕТ ПО АКЦИЯМ               
+
+                //MessageBox.Show(calculation_of_the_sum_of_the_document().ToString());
+                //MessageBox.Show(calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture));
+
+                pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
+
+                write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);//нужно для того чтобы в окне оплаты взять сумму из БД
+            }
+            else//Это возврат
+            {
+                pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
+            }
+
+            pay_form.txtB_cash_sum.Focus();
+
+            //При переходе в окно оплаты цены должны быть отрисованы
+            SendDataToCustomerScreen(1, 1, 1);
+
+            // Находим активное окно
+            Window parentWindow = null;
+
+            // Вариант 1: Через TopLevel
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel is Window currentWindow)
+            {
+                parentWindow = currentWindow;
+            }
+
+            // Вариант 2: Через Application
+            if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
+            }
+
+            // Создаем окно с правильным заголовком
+            var newWindow = new Window
+            {
+                Title = $"Чек № {this.numdoc} от {this.date_time_write}",
+                Width = 1200,
+                Height = 800,
+                Content = pay_form
+
+            };
+
+
+
+            // Устанавливаем позиционирование
+            if (parentWindow != null)
+            {
+                newWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+                // Показываем как диалог
+                await newWindow.ShowDialog(parentWindow);
+            }
+            else
+            {
+                newWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                newWindow.Show();
+            }
+
+            //dr = pay_form.ShowDialog();
+
+            //if (dr == DialogResult.OK)
+            //{
+            //    this.Close();
+            //}
+
+            this.txtB_search_product.Focus();
+            pay_form = new Pay();
+        }
+
+        public bool ValidateCheckSumAtDiscount()
+        {
+            bool result = true;
+            foreach (var product in _productsData)
+            {
+                if (product.SumAtDiscount <= 0)
+                {
+                    result = false;
+                    break;
+                }
+            }
+
+            return result;
+        }
+        /// <summary>
+        /// печть возвратной накладной
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public async void sale_cancellation_Click(string cash_money, string non_cash_money)
+        {
+            if (_productsData.Count == 0)
+            {
+                await MessageBox.Show(" Нет строк ", " Проверки перед записью документа ");
+                return;
+            }
+
+            if (MainStaticClass.Use_Fiscall_Print)
+            {
+                //fiscall_print_disburse(cash_money, non_cash_money);
+            }
+        }
+
+
+        public async Task<bool> it_is_paid(string pay, string sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
+        {
+            //Здесь необходимо добавить проверку на то что документ уже не новый
+            bool result = true;
+
+            if (IsNewCheck)
+            {
+                MainStaticClass.write_event_in_log(" Финальная запись документа ", "Документ чек", numdoc.ToString());
+                result = await write_new_document(pay, sum_doc, remainder, pay_bonus_many, last_rewrite, cash_money, non_cash_money, sertificate_money, "0");
+                //if (result)
+                //{
+                //    if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
+                //    {
+                //        if (workerThread != null)//При нажатии клавиши ESC уже могло все завершится
+                //        {
+                //            stop_com_barcode_scaner();
+                //            this.timer.Stop();
+                //            this.timer = null;
+                //            workerThread = null;
+                //            rd = null;
+                //            GC.Collect();
+                //        }
+                //    }
+                //}
+            }
+
+            if (result)
+            {                
+                if (MainStaticClass.Use_Fiscall_Print)
+                {
+                    MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
+                    fiscall_print_pay(pay);
+                }
+            }
+
+            return result;
+           
+        }
+
+        public decimal calculation_of_the_sum_of_the_document()
+        {
+            // В вашем коде есть вызовы этого метода, например:
+            // pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
+
+            decimal total = 0;
+            foreach (var product in _productsData)
+            {
+                total += product.SumAtDiscount;
+            }
+
+            return total;
+        }
+
+        /// <summary>
+        /// Получение сумм по типам оплаты для 3 типа налогообложения
+        /// расчет сумм идет перед записью и храниться в базе 
+        /// возвращаются суммы по формам оплаты только для 2 чека
+        /// </summary>
+        private async Task<double[]> get_cash_on_type_payment_3_new(double sum_cash, double sum_non_cashe, double sum_sertificate)
+        {
+            double[] result = new double[3];
+            result[0] = sum_cash;
+            result[1] = sum_non_cashe;
+            result[2] = sum_sertificate;
+
+            double[] result_variant_1 = new double[3];
+            result_variant_1[0] = sum_cash;
+            result_variant_1[1] = sum_non_cashe;
+            result_variant_1[2] = sum_sertificate;
+
+            try
+            {
+                // Часть 1: Товары без маркировки (длина маркировки < 14 символов)
+                double sum_print = 0;
+
+                // Заменяем: foreach (ListViewItem lvi in listView1.Items)
+                // На: foreach (var product in _productsData)
+                foreach (var product in _productsData)
+                {
+                    // lvi.SubItems[14].Text = продукт.Mark (колонка 14 = маркировка)
+                    // lvi.SubItems[7].Text = продукт.Sum (колонка 7 = сумма)
+                    if (product.Mark?.Trim().Length < 14)
+                    {
+                        sum_print += (double)product.Sum;
+                    }
+                }
+
+                if (result[0] > 0)
+                {
+                    if (result[0] >= sum_print)
+                    {
+                        result[0] = sum_print;
+                        sum_print = 0; // Вся сумма распределена
+                        result[1] = 0;
+                        result[2] = 0;
+                    }
+
+                    if (result[0] < sum_print)
+                    {
+                        sum_print = Math.Round(sum_print - result[0], 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+
+                if (result[1] > 0)
+                {
+                    if (result[1] >= sum_print)
+                    {
+                        result[1] = sum_print;
+                        sum_print = 0; // Вся сумма распределена
+                        result[2] = 0;
+                    }
+
+                    if (result[1] < sum_print)
+                    {
+                        sum_print = Math.Round(sum_print - result[1], 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+
+                if (result[2] > 0)
+                {
+                    if (result[2] >= sum_print)
+                    {
+                        result[2] = sum_print;
+                        sum_print = 0; // Вся сумма распределена
+                    }
+
+                    if (result[2] < sum_print)
+                    {
+                        sum_print = Math.Round(sum_print - result[2], 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+
+                result_variant_1[0] = Math.Round(result_variant_1[0] - result[0], 2, MidpointRounding.AwayFromZero);
+                result_variant_1[1] = Math.Round(result_variant_1[1] - result[1], 2, MidpointRounding.AwayFromZero);
+                result_variant_1[2] = Math.Round(result_variant_1[2] - result[2], 2, MidpointRounding.AwayFromZero);
+
+                result[0] = result_variant_1[0];
+                result[1] = result_variant_1[1];
+                result[2] = result_variant_1[2];
+
+                // Часть 2: Товары с маркировкой (длина маркировки > 13 символов)
+                sum_print = 0;
+
+                // Вторая итерация по товарам с маркировкой
+                foreach (var product in _productsData)
+                {
+                    // Проверка длины маркировки (> 13 символов)
+                    if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 13)
+                    {
+                        sum_print += (double)product.Sum;
+                    }
+                }
+
+                if (result[0] > 0)
+                {
+                    if (result[0] >= sum_print)
+                    {
+                        result[0] = sum_print;
+                        sum_print = 0; // Вся сумма распределена
+                        result[1] = 0;
+                        result[2] = 0;
+                    }
+
+                    if (result[0] < sum_print)
+                    {
+                        sum_print = Math.Round(sum_print - result[0], 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+
+                if (result[1] > 0)
+                {
+                    if (result[1] >= sum_print)
+                    {
+                        result[1] = sum_print;
+                        sum_print = 0; // Вся сумма распределена
+                        result[2] = 0;
+                    }
+
+                    if (result[1] < sum_print)
+                    {
+                        sum_print = Math.Round(sum_print - result[1], 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+
+                if (result[2] > 0)
+                {
+                    if (result[2] >= sum_print)
+                    {
+                        result[2] = sum_print;
+                        sum_print = 0; // Вся сумма распределена
+                    }
+
+                    if (result[2] < sum_print)
+                    {
+                        sum_print = Math.Round(sum_print - result[2], 2, MidpointRounding.AwayFromZero);
+                    }
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты: " + ex.Message,
+                                    "Ошибка БД",
+                                    MessageBoxButton.OK,
+                                    MessageBoxType.Error);
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты: " + ex.Message,
+                                    "Ошибка",
+                                    MessageBoxButton.OK,
+                                    MessageBoxType.Error);
+            }
+
+            return result;
+        }
+
+        public decimal calculation_of_the_discount_of_the_document()
+        {
+            // Этот метод, вероятно, рассчитывает общую сумму скидки
+            decimal totalDiscount = 0;
+            foreach (var product in _productsData)
+            {
+                decimal itemDiscount = (product.Sum - product.SumAtDiscount);
+                totalDiscount += itemDiscount;
+            }
+
+            return totalDiscount;
+        }
+
+        /// <summary>
+        /// процедура для записи обычного документа
+        /// </summary>
+        public async Task<bool> write_new_document(string pay, string sum_doc, string remainder, string pay_bonus_many,
+                                                  bool last_rewrite, string cash_money, string non_cash_money,
+                                                  string sertificate_money, string its_deleted, bool sendToScreen = true)
+        {
+            if ((sum_doc == "") || (sum_doc == "0"))
+            {
+                sum_doc = calculation_of_the_sum_of_the_document().ToString();
+            }
+            bonuses_it_is_written_off = Convert.ToDecimal(pay_bonus_many);
+            bool result = false;
+
+            // Проверяем общее количество строк (товары + сертификаты)
+            if (_productsData.Count == 0 && _certificatesData.Count == 0)
+            {
+                return result;
+            }
+
+            double[] sum1 = new double[3];
+            sum1[0] = 0;
+            sum1[1] = 0;
+            sum1[2] = 0;
+
+            if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+            {
+                if (last_rewrite)
+                {
+                    sum1 = await get_cash_on_type_payment_3_new(
+                        Convert.ToDouble(cash_money.Replace(".", ",")),
+                        Convert.ToDouble(non_cash_money.Replace(".", ",")),
+                        Convert.ToDouble(sertificate_money.Replace(".", ",")));
+                }
+            }
+
+            NpgsqlConnection conn = null;
+            NpgsqlTransaction tran = null;
+
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                tran = conn.BeginTransaction();
+                NpgsqlCommand command = new NpgsqlCommand(
+                    "DELETE FROM checks_table WHERE document_number=@num_doc;" +
+                    "DELETE FROM checks_header WHERE document_number=@num_doc;",
+                    conn);
+
+                command.Parameters.AddWithValue("num_doc", numdoc);
+                command.Transaction = tran;
+                command.ExecuteNonQuery();
+
+                date_time_write = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                command = new NpgsqlCommand("INSERT INTO checks_header(" +
+                                        "document_number," +
+                                        "date_time_start," +
+                                        "client," +
+                                        "cash_desk_number," +
+                                        "comment," +
+                                        "cash," +
+                                        "remainder," +
+                                        "date_time_write," +
+                                        "discount," +
+                                        "autor," +
+                                        "its_deleted," +
+                                        "action_num_doc," +
+                                        "check_type," +
+                                        "have_action," +
+                                        "bonuses_it_is_written_off," +
+                                        "is_sent," +
+                                        "cash_money," +
+                                        "non_cash_money," +
+                                        "sertificate_money," +
+                                        "id_transaction," +
+                                        //"bonus_is_on," +
+                                        "its_print," +
+                                        "id_transaction_sale," +
+                                        "clientInfo_vatin," +
+                                        "clientInfo_name," +
+                                        "id_sale," +
+                                        "sent_to_processing_center," +
+                                        "requisite," +
+                                        "bonuses_it_is_counted," +
+                                        //"viza_d,"+
+                                        "id_transaction_terminal," +
+                                        "system_taxation," +
+                                        "code_authorization_terminal," +
+                                        "cash_money1," +
+                                        "non_cash_money1," +
+                                        "sertificate_money1," +
+                                        "guid," +
+                                        //"guid1," +
+                                        "payment_by_sbp) VALUES(" +
+
+                                        "@document_number," +
+                                        "@date_time_start," +
+                                        "@client," +
+                                        "@cash_desk_number," +
+                                        "@comment," +
+                                        "@cash," +
+                                        "@remainder," +
+                                        "@date_time_write," +
+                                        "@discount," +
+                                        "@autor," +
+                                        "@its_deleted," +
+                                        "@action_num_doc," +
+                                        "@check_type," +
+                                        "@have_action," +
+                                        "@bonuses_it_is_written_off," +
+                                        "@is_sent," +
+                                        "@cash_money," +
+                                        "@non_cash_money," +
+                                        "@sertificate_money," +
+                                        "@id_transaction," +
+                                        //"@bonus_is_on," +
+                                        "@its_print," +
+                                        "@id_transaction_sale," +
+                                        "@clientInfo_vatin," +
+                                        "@clientInfo_name," +
+                                        "@id_sale," +
+                                        "@sent_to_processing_center," +
+                                        "@requisite," +
+                                        "@bonuses_it_is_counted," +
+                                        //"@checkBox_viza_d,"+
+                                        "@id_transaction_terminal," +
+                                        "@system_taxation," +
+                                        "@code_authorization_terminal," +
+                                        "@cash_money1," +
+                                        "@non_cash_money1," +
+                                        "@sertificate_money1," +
+                                        "@guid," +
+                                        //"@guid1," +
+                                        "@payment_by_sbp)", conn);
+
+                // Заполнение параметров заголовка (оставить как было)
+                command.Parameters.AddWithValue("document_number", numdoc);
+                command.Parameters.AddWithValue("date_time_start", Convert.ToDateTime(date_time_start.Text.Replace("Чек", "")));
+                command.Parameters.AddWithValue("client", Client.Tag?.ToString() ?? string.Empty);
+                command.Parameters.AddWithValue("cash_desk_number", Convert.ToInt16(num_cash.Tag.ToString()));
+                string commentValue = string.Empty;
+                if (!string.IsNullOrEmpty(Comment.Text))
+                {
+                    commentValue = Comment.Text.Trim().Replace("'", "");
+                }
+                command.Parameters.AddWithValue("comment", commentValue);
+                //command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc.Replace(",", ".")));
+                command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc));
+                command.Parameters.AddWithValue("remainder", Convert.ToDecimal(remainder));
+                command.Parameters.AddWithValue("date_time_write", Convert.ToDateTime(date_time_write));
+                command.Parameters.AddWithValue("discount", calculation_of_the_discount_of_the_document());
+                command.Parameters.AddWithValue("autor", User.Tag.ToString());
+
+                //if (its_deleted == "0")
+                //{
+                //    command.Parameters.AddWithValue("its_deleted", (last_rewrite ? 0 : 2).ToString());
+                //}
+                //else
+                //{
+                    command.Parameters.AddWithValue("its_deleted", Convert.ToDecimal(its_deleted));
+                //}
+
+                command.Parameters.AddWithValue("action_num_doc", action_num_doc.ToArray());
+                command.Parameters.AddWithValue("check_type", CheckType.SelectedIndex);
+                command.Parameters.AddWithValue("have_action", have_action);
+                command.Parameters.AddWithValue("bonuses_it_is_written_off",
+                    (CheckType.SelectedIndex == 1 ? Convert.ToDecimal(return_bonus) : Convert.ToDecimal(pay_bonus_many)));
+                command.Parameters.AddWithValue("is_sent", 0);
+                command.Parameters.AddWithValue("cash_money", Convert.ToDecimal(cash_money));
+                command.Parameters.AddWithValue("non_cash_money", Convert.ToDecimal(non_cash_money));
+                command.Parameters.AddWithValue("sertificate_money", Convert.ToDecimal(sertificate_money));
+                command.Parameters.AddWithValue("id_transaction", id_transaction);
+                command.Parameters.AddWithValue("its_print", false);
+                command.Parameters.AddWithValue("id_transaction_sale", id_transaction_sale);
+                command.Parameters.AddWithValue("clientInfo_vatin", txtB_inn.Text?.Trim() ?? string.Empty);
+                command.Parameters.AddWithValue("clientInfo_name", txtB_name.Text?.Trim() ?? string.Empty);
+                command.Parameters.AddWithValue("id_sale", id_sale.ToString());
+                command.Parameters.AddWithValue("requisite", 0);
+                command.Parameters.AddWithValue("bonuses_it_is_counted", Convert.ToDecimal(bonuses_it_is_counted));
+                command.Parameters.AddWithValue("id_transaction_terminal", id_transaction_terminal);
+                command.Parameters.AddWithValue("system_taxation", MainStaticClass.SystemTaxation);
+                command.Parameters.AddWithValue("code_authorization_terminal", code_authorization_terminal);
+                command.Parameters.AddWithValue("cash_money1", Convert.ToDecimal(sum1[0]));
+                command.Parameters.AddWithValue("non_cash_money1", Convert.ToDecimal(sum1[1]));
+                command.Parameters.AddWithValue("sertificate_money1", Convert.ToDecimal(sum1[2]));
+                command.Parameters.AddWithValue("guid", guid);
+                //command.Parameters.AddWithValue("guid1", guid1);
+                command.Parameters.AddWithValue("payment_by_sbp", payment_by_sbp);
+                command.Parameters.AddWithValue("sent_to_processing_center", 0);
+
+                command.Transaction = tran;
+                command.ExecuteNonQuery();
+
+                // ЗАМЕНА 1: Записываем товары из _productsData
+                int numstr = 0;
+                foreach (var product in _productsData)
+                {
+                    command = new NpgsqlCommand("INSERT INTO checks_table(" +
+                        "document_number, tovar_code, quantity, price, " +
+                        "price_at_a_discount, sum, sum_at_a_discount, numstr, action_num_doc, " +
+                        "action_num_doc1, action_num_doc2, bonus_standard, bonus_promotion, " +
+                        "promotion_b_mover, item_marker, guid) VALUES(" +
+                        "@document_number, @tovar_code, @quantity, @price, " +
+                        "@price_at_a_discount, @sum, @sum_at_a_discount, @numstr, @action_num_doc, " +
+                        "@action_num_doc1, @action_num_doc2, @bonus_standard, @bonus_promotion, " +
+                        "@promotion_b_mover, @item_marker, @guid)", conn);                   
+
+                    command.Parameters.AddWithValue("document_number", numdoc);
+                    command.Parameters.AddWithValue("tovar_code", product.Code);                    
+                    command.Parameters.AddWithValue("quantity", product.Quantity);
+                    command.Parameters.AddWithValue("price", product.Price);
+                    command.Parameters.AddWithValue("price_at_a_discount", product.PriceAtDiscount);
+                    command.Parameters.AddWithValue("sum", product.Sum);
+                    command.Parameters.AddWithValue("sum_at_a_discount", product.SumAtDiscount);
+                    command.Parameters.AddWithValue("numstr", numstr);
+                    command.Parameters.AddWithValue("action_num_doc", product.Action);
+                    command.Parameters.AddWithValue("action_num_doc1", product.Gift);
+                    command.Parameters.AddWithValue("action_num_doc2", product.Action2);
+                    command.Parameters.AddWithValue("bonus_standard", 0); // Нужно добавить поле в ProductItem
+                    command.Parameters.AddWithValue("bonus_promotion", 0); // Нужно добавить поле в ProductItem
+                    command.Parameters.AddWithValue("promotion_b_mover", 0); // Нужно добавить поле в ProductItem
+                    command.Parameters.AddWithValue("item_marker", (product.Mark ?? "0").Replace("'", "vasya2021"));
+                    command.Parameters.AddWithValue("guid", guid);
+
+                    command.Transaction = tran;
+                    command.ExecuteNonQuery();
+                    numstr++;
+                }
+
+                // ЗАМЕНА 2: Записываем сертификаты из _certificatesData
+                foreach (var certificate in _certificatesData)
+                {
+                    command = new NpgsqlCommand("INSERT INTO checks_table(" +
+                        "document_number, tovar_code, characteristic, quantity, price, " +
+                        "price_at_a_discount, sum, sum_at_a_discount, numstr, action_num_doc, " +
+                        "action_num_doc1, action_num_doc2, item_marker, guid) VALUES(" +
+                        "@document_number, @tovar_code, @characteristic, @quantity, @price, " +
+                        "@price_at_a_discount, @sum, @sum_at_a_discount, @numstr, @action_num_doc, " +
+                        "@action_num_doc1, @action_num_doc2, @item_marker, @guid)", conn);
+
+                    command.Parameters.AddWithValue("document_number", numdoc);
+                    command.Parameters.AddWithValue("tovar_code", certificate.Code);
+                    command.Parameters.AddWithValue("characteristic", "");
+                    command.Parameters.AddWithValue("quantity", "1");
+                    command.Parameters.AddWithValue("price", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
+                    command.Parameters.AddWithValue("price_at_a_discount", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
+                    command.Parameters.AddWithValue("sum", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
+                    command.Parameters.AddWithValue("sum_at_a_discount", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
+                    command.Parameters.AddWithValue("numstr", numstr.ToString());
+                    command.Parameters.AddWithValue("action_num_doc", "0");
+                    command.Parameters.AddWithValue("action_num_doc1", "0");
+                    command.Parameters.AddWithValue("action_num_doc2", "0");
+                    command.Parameters.AddWithValue("item_marker", certificate.Barcode);
+                    command.Parameters.AddWithValue("guid", guid);
+
+                    command.Transaction = tran;
+                    command.ExecuteNonQuery();
+                    numstr++;
+
+                    // Обновляем статус сертификата в локальной базе
+                    command = new NpgsqlCommand("UPDATE sertificates SET is_active = 0 WHERE code_tovar = @tovar_code", conn);
+                    command.Parameters.AddWithValue("tovar_code", certificate.Code);
+                    command.Transaction = tran;
+                    command.ExecuteNonQuery();
+                }
+
+                tran.Commit();
+                conn.Close();
+
+                if (sendToScreen)
+                {
+                    if (last_rewrite)
+                    {
+                        IsNewCheck = false;
+                        if (this.check_type.SelectedIndex == 0)
+                        {
+                            SendDataToCustomerScreen(0, 0, 0);
+                        }
+                    }
+                    else
+                    {
+                        IsNewCheck = true;
+                        if (this.check_type.SelectedIndex == 0)
+                        {
+                            SendDataToCustomerScreen(1, 0, 1);
+                        }
+                    }
+                    if (its_deleted == "1")
+                    {
+                        if (this.check_type.SelectedIndex == 0)
+                        {
+                            SendDataToCustomerScreen(0, 0, 0);
+                        }
+                    }
+                }
+                result = true;
+            }
+            catch (NpgsqlException ex)
+            {
+                if (tran != null)
+                {
+                    tran.Rollback();
+                }
+
+                await MessageBox.Show("Ошибка при записи документа " + ex.Message);
+                result = false;
+            }
+            catch (Exception ex)
+            {
+                if (tran != null)
+                {
+                    tran.Rollback();
+                }
+                await MessageBox.Show("Ошибка при записи документа " + ex.Message);
+                result = false;
+            }
+            finally
+            {
+                if (conn != null && conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            if (result)
+            {
+                MainStaticClass.Last_Write_Check = DateTime.Now;
+            }
+            return result;
+        }
+
+        public class CustomerScreen
+        {
+            public List<CheckPosition> ListCheckPositions { get; set; }
+            public int show_price { get; set; }
+        }
+
+        public class CheckPosition
+        {
+            public string NamePosition { get; set; }
+            public string Quantity { get; set; }
+            public string Price { get; set; }
+        }
+
+        /// <summary>
+        /// Если mode == 0 то тогда товары не передаются чек закрыт
+        /// mode == 1 Это отрисовка товаров 
+        /// Если show_price == 0 тогда цены не отображаются
+        /// отображаются номенклатура и количество
+        /// Если show_price == 1 тогда цены отображаются, пока 
+        /// этот режим будет доступен после перехода в окно оплаты
+        /// </summary>
+        /// <param name="mode"></param>
+        public async void SendDataToCustomerScreen(int mode, int show_price, int calculate_actionc)
+        {
+            try
+            {
+                if (_productsData.Count == 0)
+                {
+                    return;
+                }
+                //if ((MainStaticClass.UseOldProcessiingActions) || (!itsnew))
+                if ((mode == 1 && show_price == 1) || (mode == 0 && show_price == 0))
+                {
+                    CustomerScreen customerScreen = new CustomerScreen();
+                    customerScreen.show_price = show_price;
+                    customerScreen.ListCheckPositions = new List<CheckPosition>();
+                    if (mode == 1)
+                    {                       
+                        foreach (var product in _productsData)
+                        {
+                            CheckPosition checkPosition = new CheckPosition();
+                            checkPosition.NamePosition = product.Tovar;                // Наименование товара
+                            checkPosition.Quantity = product.Quantity.ToString();      // Количество
+                            checkPosition.Price = product.PriceAtDiscount.ToString();  // Цена со скидкой
+                            customerScreen.ListCheckPositions.Add(checkPosition);
+                        }
+                    }
+                    string message = JsonConvert.SerializeObject(customerScreen, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    SendUDPMessage(message);
+                }
+                else
+                {
+                    CustomerScreen customerScreen = new CustomerScreen();
+                    customerScreen.show_price = 1;
+                    customerScreen.ListCheckPositions = new List<CheckPosition>();
+                    DataTable dataTable = to_define_the_action_dt(false);
+                    //if (dataTable.Rows.Count > 0)
+                    //{
+                    this.txtB_total_sum.Text = "0";// calculation_of_the_sum_of_the_document().ToString() + " / " + Math.Round(Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)), 2).ToString("F2");//calculation_of_the_sum_of_the_document().ToString() +" / "+Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)).ToString("F2");
+                    //}
+                    //foreach (DataRow row in dataTable.Rows)
+                    //{
+                    //    //CheckPosition checkPosition = new CheckPosition();
+                    //    //checkPosition.NamePosition = row["tovar_name"].ToString();
+                    //    //checkPosition.Quantity = row["quantity"].ToString();
+                    //    //checkPosition.Price = row["price_at_discount"].ToString();
+                    //    //customerScreen.ListCheckPositions.Add(checkPosition);
+                    //}
+                    string message = JsonConvert.SerializeObject(customerScreen, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    SendUDPMessage(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Здесь происходит обработка по всем 
+        /// регулярным акциям течто со штрихкодом
+        /// и те что без штрихкода        
+        /// </summary>
+        /// <param name="show_messages"></param>
+        /// <returns></returns>
+        private DataTable to_define_the_action_dt(bool show_messages)
+        {
+            DataTable dataTable = null;
+            //if (!itsnew)
+            //{
+            //    return dataTable;
+            //}
+            //if (this.check_type.SelectedIndex > 0)
+            //{
+            //    return dataTable;
+            //}
+            //ProcessingOfActions processingOfActions = new ProcessingOfActions();
+            //processingOfActions.cc = this;
+            //action_num_doc = new List<int>();//При какждом пересчете список предвариетльно обнуляется
+
+
+            //processingOfActions.dt = processingOfActions.create_dt(listView1);
+            //processingOfActions.show_messages = show_messages;
+            //MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
+            //foreach (string barcode in action_barcode_list)
+            //{
+            //    processingOfActions.to_define_the_action_dt(barcode);
+            //}
+
+            //if (client.Tag != null)
+            //{
+            //    processingOfActions.to_define_the_action_personal_dt(this.client.Tag.ToString());
+            //}
+
+            //processingOfActions.to_define_the_action_dt();
+
+            //dataTable = processingOfActions.dt;
+
+            //if (show_messages)//если с показом сообщений, то это уже боевой режим 
+            //{
+            //    have_action = processingOfActions.have_action;
+            //}
+
+            return dataTable;
+        }
+
+        private async static void SendUDPMessage(string message)
+        {
+            UdpClient sender = new UdpClient(); // создаем UdpClient для отправки сообщений
+            try
+            {
+                byte[] data = Encoding.UTF8.GetBytes(message);
+                sender.Send(data, data.Length, "127.0.0.1", 12345); // отправка
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message);
+            }
+            finally
+            {
+                sender.Close();
             }
         }
 
@@ -490,24 +1629,26 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-/// Пересчитать все товары в чеке (аналог перебора listView1.Items)
-/// </summary>
-private void RecalculateAllProducts()
-{
-    MainStaticClass.write_event_in_log(" Начало пересчета ТЧ ", "Документ", numdoc.ToString());
-    
-    // Перебираем все товары в коллекции
-    foreach (var product in _productsData)
-    {
-        RecalculateProductSums(product);
-    }
-    
-    // Обновляем Grid с новыми данными
-    RefreshProductsGrid();
-    UpdateTotalSum();
-    
-    MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ ", "Документ", numdoc.ToString());
-}
+        /// Пересчитать все товары в чеке (аналог перебора listView1.Items)
+        /// </summary>
+        private async void RecalculateAllProducts()
+        {
+            MainStaticClass.write_event_in_log(" Начало пересчета ТЧ ", "Документ", numdoc.ToString());
+
+            // Перебираем все товары в коллекции
+            foreach (var product in _productsData)
+            {
+                RecalculateProductSums(product);
+            }
+
+            // Обновляем Grid с новыми данными
+            RefreshProductsGrid();
+            UpdateTotalSum();
+            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                               "0", "0", false, "0", "0", "0", "0");
+
+            MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ ", "Документ", numdoc.ToString());
+        }
 
         /// <summary>
         /// При вводе номера телефона
@@ -973,6 +2114,9 @@ private void RecalculateAllProducts()
                 // ВЫДЕЛЯЕМ СТРОКУ С УВЕЛИЧЕННЫМ ТОВАРОМ
                 SelectProductRow(productIndex);
 
+                // Устанавливаем фокус на ScrollViewer для обработки клавиатуры
+                _productsScrollViewer?.Focus();
+
                 return;
             }
 
@@ -1006,6 +2150,8 @@ private void RecalculateAllProducts()
 
             // Выделяем добавленную строку
             SelectProductRow(_productsData.Count - 1);
+
+            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");//нужно для того чтобы в окне оплаты взять сумму из БД
 
         }
 
@@ -1211,6 +2357,12 @@ private void RecalculateAllProducts()
 
                     // Прокручиваем к добавленной строке
                     ScrollToProductRow(gridRowIndex);
+
+                    // Устанавливаем фокус на ScrollViewer
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        _productsScrollViewer?.Focus();
+                    }, DispatcherPriority.Background);
                 }
                 catch (Exception ex)
                 {
@@ -1913,6 +3065,12 @@ private void RecalculateAllProducts()
                 // ПРОКРУЧИВАЕМ К ВЫДЕЛЕННОЙ СТРОКЕ
                 ScrollToSelectedRow(gridRowIndex);
 
+                // УСТАНАВЛИВАЕМ ФОКУС НА SCROLLVIEWER
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _productsScrollViewer?.Focus();
+                }, DispatcherPriority.Background);
+
                 Console.WriteLine($"✓ Выделена строка товаров {dataIndex}");
             }
             catch (Exception ex)
@@ -2172,7 +3330,7 @@ private void RecalculateAllProducts()
         }
 
         // Метод для увеличения количества (минимальное изменение)
-        private void IncreaseProductQuantity(int dataIndex)
+        private async void IncreaseProductQuantity(int dataIndex)
         {
             try
             {
@@ -2197,6 +3355,12 @@ private void RecalculateAllProducts()
                     UpdateTotalSum();
 
                     ShowQuantityEffect(dataIndex, true); // true = увеличение (зеленый)
+                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                   "0", "0", false, "0", "0", "0", "0");
+
+                    // ВОССТАНАВЛИВАЕМ ВЫДЕЛЕНИЕ И ФОКУС
+                    SelectProductRow(dataIndex);
+                    _productsScrollViewer?.Focus();
 
                     Console.WriteLine($"✓ Увеличено количество товара '{product.Tovar}' до {product.Quantity}");
                 }
@@ -2367,7 +3531,7 @@ private void RecalculateAllProducts()
                        
         
         // Метод для уменьшения количества (минимальное изменение)
-        private void DecreaseProductQuantity(int dataIndex)
+        private async void DecreaseProductQuantity(int dataIndex)
         {
             try
             {
@@ -2388,7 +3552,8 @@ private void RecalculateAllProducts()
 
                         // На эту:
                         ShowQuantityEffect(dataIndex, false); // false = уменьшение (желтый)
-
+                        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                      "0", "0", false, "0", "0", "0", "0");
                         Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
                     }
                     else
@@ -2495,6 +3660,18 @@ private void RecalculateAllProducts()
                 if (_selectedProductRowIndex >= _productsData.Count)
                     _selectedProductRowIndex = _productsData.Count - 1;
                 SelectProductRow(_selectedProductRowIndex);
+            }
+            else
+            {
+                ClearProductSelection();
+            }
+            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                               "0", "0", false, "0", "0", "0", "0");
+
+            // Выделяем следующую строку или снимаем выделение
+            if (_productsData.Count > 0)
+            {
+                _productsScrollViewer?.Focus();
             }
             else
             {
@@ -2942,7 +4119,7 @@ private void RecalculateAllProducts()
         /// <summary>
         /// Применяет изменения количества
         /// </summary>
-        private void ApplyQuantityChanges(ProductItem product, string quantityText, int dataIndex)
+        private async void ApplyQuantityChanges(ProductItem product, string quantityText, int dataIndex)
         {
             if (int.TryParse(quantityText, out int newQuantity) && newQuantity >= 1 && newQuantity <= 9999)
             {
@@ -2951,6 +4128,8 @@ private void RecalculateAllProducts()
                 UpdateProductRowInGrid(dataIndex);
                 UpdateTotalSum();
                 Console.WriteLine($"✓ Количество товара '{product.Tovar}' изменено на {product.Quantity}");
+                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                               "0", "0", false, "0", "0", "0", "0");
             }
             else
             {
@@ -3018,6 +4197,7 @@ private void RecalculateAllProducts()
                 if (NumCash != null)
                 {
                     NumCash.Text = $"КАССА № {MainStaticClass.CashDeskNumber}";
+                    NumCash.Tag = MainStaticClass.CashDeskNumber;
                     Console.WriteLine("✓ NumCash установлен");
                 }
 
@@ -3030,6 +4210,7 @@ private void RecalculateAllProducts()
                 if (User != null)
                 {
                     User.Text = MainStaticClass.Cash_Operator;
+                    User.Tag = MainStaticClass.Cash_Operator_Client_Code;
                     Console.WriteLine("✓ User установлен");
                 }
 
@@ -3085,6 +4266,348 @@ private void RecalculateAllProducts()
             qr_code_lenght.Add(127);
 
             Console.WriteLine($"✓ Инициализирован qr_code_lenght: {qr_code_lenght.Count} значений");
+        }
+
+        private async void pay_Click(object sender, EventArgs e)
+        {
+            //if (MainStaticClass.PrintingUsingLibraries == 1)
+            //{
+            //    if (MainStaticClass.GetFiscalsForbidden)
+            //    {
+            //        await MessageBox.Show("Вам запрещена печать на фискаольном регистраторое", "Проверки при печати", MessageBoxButton.OK, MessageBoxType.Error);
+            //        return;
+            //    }
+            //}
+
+
+            //if (IsNewCheck)
+            //{
+            //    // ПРОВЕРКА 1: Количество товаров в чеке (новый чек)
+            //    if (CheckType.SelectedIndex == 0) // Только для чека "Продажа"
+            //    {
+            //        int productCount = _productsData.Count; // Используем коллекцию данных
+
+            //        if (productCount < 3)
+            //        {
+            //            await MessageBox.Show("В чеке менее 3 строк, предложить покупателю доп.товар",
+            //                                 "В чеке менее 3 строк",
+            //                                 MessageBoxButton.OK,
+            //                                 MessageBoxType.Info);
+            //            return; // Прерываем дальнейшее выполнение
+            //        }
+            //    }
+            //}
+
+            //recharge_note = "";
+            //print_to_button = 1;
+            //// Дополнительные проверки из вашего оригинального кода
+            //if (_productsData.Count == 0)
+            //{
+            //    await MessageBox.Show("Нет строк", "Проверки перед записью документа");
+            //    return;
+            //}
+
+
+            //if (await GetItsDeletedDocument() == 1)
+            //{
+            //    await MessageBox.Show("Удаленный чек не может быть распечатан","Проверка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+            //    return;
+            //}
+
+            //TextBox InnText = GetRequiredControl<TextBox>("txtB_inn");
+            //TextBox NameOrgText = GetRequiredControl<TextBox>("txtB_name");
+
+            //// Проверка ИНН и Наименования
+            //if (!string.IsNullOrEmpty(InnText.Text.Trim()) || !string.IsNullOrEmpty(NameOrgText.Text.Trim()))
+            //{              
+            //        await MessageBox.Show("Если заполнен ИНН, то должно быть заполнено и наименование и наоборот","Проверка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+            //        return;
+            //}
+
+
+
+            //if (IsNewCheck)
+            //{
+            //    //kitchen_print(this);
+            //    //show_pay_form();
+            //}
+            //else
+            //{
+            //    if (MainStaticClass.Use_Fiscall_Print)
+            //    {
+            //        if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
+            //        {
+            //                    if (!await ItcPrinted())
+            //                    {
+            //                        if (this.check_type.SelectedIndex == 0)
+            //                        {
+            //                            fiscall_print_pay(this.p_sum_doc);
+            //                        }
+            //                        else
+            //                        {
+            //                            //fiscall_print_disburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
+            //                        }
+            //                    }
+            //                }
+            //                else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+            //            {
+            //                    if (!await ItcPrinted() || !await ItcPrintedP())
+            //                    {
+            //                        if (this.check_type.SelectedIndex == 0)
+            //                        {
+            //                            fiscall_print_pay(this.p_sum_doc);
+            //                        }
+            //                        else
+            //                        {
+            //            //                fiscall_print_disburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
+            //                        }
+            //                    }
+
+            //            //    }
+            //        }
+
+
+            //        //this.Close();
+            //    }
+            //}
+        }
+
+        /// <summary>
+        /// Фискальная Печать
+        /// регистрация продажного чека
+        /// </summary>
+        /// <param name="pay"></param>
+        private async void fiscall_print_pay(string pay)
+        {
+            if (MainStaticClass.SystemTaxation == 0)
+            {
+                await MessageBox.Show("В константах не определена система налогообложения, печать чеков невозможна");
+                return;
+            }
+
+            if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
+            {
+                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                {
+                    if (MainStaticClass.GetKithenPrint != "")
+                    {
+                        //Еще надо проверить форму оплаты, что только наличные 
+                        double[] type_payment = await get_cash_on_type_payment();
+                        if ((type_payment[1] == 0) && (type_payment[2] == 0))
+                        {
+                            //kitchen_print(this);
+                        }
+                    }
+                    else
+                    {
+                        printingUsingLibraries.print_sell_2_or_return_sell(this);
+                    }
+                }
+            }
+            else
+            {
+                if (print_to_button == 0)
+                {
+
+                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                    printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);//Если первый печатать без маркировки то очищается буфер в проверенных
+                    printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                }
+                else if (print_to_button == 1)
+                {
+                    if (this.checkBox_to_print_repeatedly.IsChecked==true)
+                    {
+                        new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
+                    }
+                    if (this.checkBox_to_print_repeatedly_p.IsChecked==true)
+                    {
+                        new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 1);
+                    }
+                }
+                closing = false;
+                //this.Close();
+            }
+        }
+
+        /// <summary>
+        /// Получение сумм по типам оплаты
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private async Task<double[]> get_cash_on_type_payment()
+        {
+            double[] result = new double[3];
+            result[0] = 0;
+            result[1] = 0;
+            result[2] = 0;
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+            try
+            {
+                conn.Open();
+                string query = "SELECT cash_money, non_cash_money, sertificate_money  FROM checks_header WHERE document_number=" + numdoc;
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                NpgsqlDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    result[0] = Convert.ToDouble(reader.GetDecimal(0));
+                    result[1] = Convert.ToDouble(reader.GetDecimal(1));
+                    result[2] = Convert.ToDouble(reader.GetDecimal(2));
+                }
+                reader.Close();
+                command.Dispose();
+                conn.Close();
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Функция возвращает значение флага напечатан для чека,
+        /// при ошибке получения вернется истина
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool>  ItcPrinted()
+        {
+            NpgsqlConnection conn = null;
+            NpgsqlCommand command = null;
+            bool result = true;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                string query = "SELECT its_print  FROM checks_header WHERE date_time_write = '" + this.date_time_write + "'";
+                command = new NpgsqlCommand(query, conn);
+                object result_query = command.ExecuteScalar();
+
+                if (result_query != DBNull.Value)
+                {
+                    result = Convert.ToBoolean(result_query);
+                }
+                else
+                {
+                    result = false;
+                }
+
+                conn.Close();
+
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show("Ошибка при получении флага распечатан " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("Ошибка при получении флага распечатан " + ex.Message);
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Функция возвращает значение флага напечатан для чека,
+        /// при ошибке получения вернется истина
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> ItcPrintedP()
+        {
+            NpgsqlConnection conn = null;
+            NpgsqlCommand command = null;
+            bool result = true;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                string query = "SELECT its_print_p  FROM checks_header WHERE date_time_write = '" + this.date_time_write + "'";
+                command = new NpgsqlCommand(query, conn);
+                object result_query = command.ExecuteScalar();
+
+                if (result_query != DBNull.Value)
+                {
+                    result = Convert.ToBoolean(result_query);
+                }
+                else
+                {
+                    result = false;
+                }
+
+                conn.Close();
+
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message);
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return result;
+        }
+
+        private async Task<int> GetItsDeletedDocument()
+        {
+            int result = 0;
+
+            NpgsqlConnection conn = null;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                string query = "SELECT checks_header.its_deleted FROM  checks_header where checks_header.date_time_write='"
+                    + date_time_write + "'";
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                result = Convert.ToInt16(command.ExecuteScalar());
+                conn.Close();
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                result = 1;
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                result = 1;
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return result;
         }
 
         private void UpdateTotalSum()
@@ -3297,10 +4820,10 @@ private void RecalculateAllProducts()
 
         #region Публичные методы для совместимости
 
-        public void CloseForm()
-        {
-            Closed?.Invoke(this, EventArgs.Empty);
-        }
+        //public void CloseForm()
+        //{
+        //    Closed?.Invoke(this, EventArgs.Empty);
+        //}
 
         #endregion
 

@@ -1,6 +1,7 @@
 ﻿using Atol.Drivers10.Fptr;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -225,6 +226,30 @@ namespace Cash8Avalon
         //        }
         //    });
         //}
+
+        public static async Task<string> GetAtolDriverVersion()
+        {
+            try
+            {
+                // Получаем путь к исполняемому файлу
+                string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                string directory = Path.GetDirectoryName(executablePath);
+
+                // Формируем полный путь к библиотеке
+                string dllPath = Path.Combine(directory, "Atol.Drivers10.Fptr.dll");
+
+                // Загружаем сборку и получаем версию
+                var assembly = System.Reflection.Assembly.LoadFrom(dllPath);
+                return assembly.GetName().Version.ToString();
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show($"Ошибка при получении версии: {ex.Message}",
+                                          "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);                
+
+                return "Версия не определена";
+            }
+        }
 
         private static async Task ShowFallbackDialog(string message, string title)
         {
@@ -3252,30 +3277,30 @@ namespace Cash8Avalon
         #endregion
 
 
-        private static string GetAtolDriverVersion()
-        {
-            try
-            {
-                // Получаем путь к исполняемому файлу
-                string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                string directory = Path.GetDirectoryName(executablePath);
+        //private static string GetAtolDriverVersion()
+        //{
+        //    try
+        //    {
+        //        // Получаем путь к исполняемому файлу
+        //        string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        //        string directory = Path.GetDirectoryName(executablePath);
 
-                // Формируем полный путь к библиотеке
-                string dllPath = Path.Combine(directory, "Atol.Drivers10.Fptr.dll");
+        //        // Формируем полный путь к библиотеке
+        //        string dllPath = Path.Combine(directory, "Atol.Drivers10.Fptr.dll");
 
-                // Загружаем сборку и получаем версию
-                var assembly = System.Reflection.Assembly.LoadFrom(dllPath);
-                return assembly.GetName().Version.ToString();
-            }
-            catch (Exception ex)
-            {
-                // Обработка ошибок
-                MessageBox.Show($"Ошибка при получении версии: {ex.Message}");
-                return "Версия не определена";
-            }
-        }
+        //        // Загружаем сборку и получаем версию
+        //        var assembly = System.Reflection.Assembly.LoadFrom(dllPath);
+        //        return assembly.GetName().Version.ToString();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Обработка ошибок
+        //        MessageBox.Show($"Ошибка при получении версии: {ex.Message}");
+        //        return "Версия не определена";
+        //    }
+        //}
 
-        public static bool SendResultGetData()
+        public async static Task<bool> SendResultGetData()
         {
             bool result = true;
 
@@ -3288,7 +3313,7 @@ namespace Cash8Avalon
             resultGetData.NumCash = MainStaticClass.CashDeskNumber.ToString();
             resultGetData.OSVersion = Environment.OSVersion.VersionString;
             resultGetData.VariantUsePrintingLibrary = MainStaticClass.variant_connect_fn.ToString();
-            resultGetData.VersionPrintingLibrary = GetAtolDriverVersion();
+            resultGetData.VersionPrintingLibrary = await GetAtolDriverVersion();
             //Запросим информацию про фискальный регистратор
             if (MainStaticClass.printing_using_libraries == 0)
             {
@@ -3331,7 +3356,7 @@ namespace Cash8Avalon
         /// и на нейт такая то версия программы
         /// </summary>
         /// <returns></returns>
-        public static bool SendOnlineStatus()
+        public async static Task<bool> SendOnlineStatus()
         {
             bool result = true;
 
@@ -3344,7 +3369,7 @@ namespace Cash8Avalon
             resultGetData.NumCash = MainStaticClass.CashDeskNumber.ToString();
             resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries.ToString();
             resultGetData.VariantUsePrintingLibrary = MainStaticClass.variant_connect_fn.ToString();
-            resultGetData.VersionPrintingLibrary = GetAtolDriverVersion();
+            resultGetData.VersionPrintingLibrary = await GetAtolDriverVersion();
             string data = JsonConvert.SerializeObject(resultGetData, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             data_encrypt = CryptorEngine.Encrypt(data, true, key);
             //using (var ds = MainStaticClass.get_ds())

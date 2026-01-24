@@ -532,48 +532,59 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"Открытие чека от {dateTimeWrite}");
 
-                // Создаем форму чека с передачей параметра в конструктор
-                var checkForm = new Cash_check();
-                checkForm.date_time_write = dateTimeWrite;
-                checkForm.OnFormLoaded();
+                // ИЗМЕНЕНИЕ 1: Создаем CashCheckWindow вместо Cash_check
+                var checkWindow = new Cash_check();
 
-                // Находим активное окно
+                // ИЗМЕНЕНИЕ 2: Передаем параметры (предполагая, что в CashCheckWindow есть аналогичные свойства)
+                checkWindow.date_time_write = dateTimeWrite; // Если сохранили свойство
+                checkWindow.OnFormLoaded(); // Если сохранили метод
+
+                // Находим активное окно (без изменений)
                 Window parentWindow = null;
 
-                // Вариант 1: Через TopLevel
+                // Вариант 1: Через TopLevel (без изменений)
                 var topLevel = TopLevel.GetTopLevel(this);
                 if (topLevel is Window currentWindow)
                 {
                     parentWindow = currentWindow;
                 }
 
-                // Вариант 2: Через Application
+                // Вариант 2: Через Application (без изменений)
                 if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // Создаем окно с правильным заголовком
-                var newWindow = new Window
-                {
-                    Title = $"Чек № {_checkItems[_selectedRowIndex].DocumentNumber} от {_checkItems[_selectedRowIndex].DateTimeWrite:dd.MM.yyyy HH:mm:ss}",
-                    Width = 1200,
-                    Height = 800,
-                    Content = checkForm
-                };
+                // ИЗМЕНЕНИЕ 3: Теперь работаем напрямую с checkWindow, а не создаем новое окно
+                checkWindow.Title = $"Чек № {_checkItems[_selectedRowIndex].DocumentNumber} от {_checkItems[_selectedRowIndex].DateTimeWrite:dd.MM.yyyy HH:mm:ss}";
+                checkWindow.Width = 1200;
+                checkWindow.Height = 800;
 
-                // Устанавливаем позиционирование
+                // Дополнительные настройки окна (по желанию)
+                checkWindow.CanResize = false;
+                checkWindow.CanMaximize = false;
+                checkWindow.CanMinimize = false;
+
+                // Устанавливаем позиционирование и показываем
                 if (parentWindow != null)
                 {
-                    newWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                    
-                    // Показываем как диалог
-                    await newWindow.ShowDialog(parentWindow);
+                    checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+                    // ИЗМЕНЕНИЕ 4: Показываем само checkWindow как диалог
+                    await checkWindow.ShowDialog(parentWindow);
                 }
                 else
                 {
-                    newWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    newWindow.Show();
+                    checkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    checkWindow.Show();
+                }
+
+                // Дополнительно: можно проверить результат после закрытия
+                bool? dialogResult = checkWindow.Tag as bool?;
+                if (dialogResult == true)
+                {
+                    Console.WriteLine("Чек успешно обработан");
+                    // Можно обновить список чеков если нужно
                 }
             }
             catch (Exception ex)
@@ -582,44 +593,7 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка при открытии чека: {ex.Message}");
             }
         }
-
-        //private async Task ShowErrorMessage(string message)
-        //{
-        //    // Простой способ показать сообщение об ошибке
-        //    var dialog = new Window
-        //    {
-        //        Title = "Ошибка",
-        //        Width = 400,
-        //        Height = 200,
-        //        WindowStartupLocation = WindowStartupLocation.CenterScreen,
-        //        Content = new StackPanel
-        //        {
-        //            Children =
-        //    {
-        //        new TextBlock
-        //        {
-        //            Text = message,
-        //            TextWrapping = TextWrapping.Wrap,
-        //            Margin = new Thickness(20)
-        //        },
-        //        new Button
-        //        {
-        //            Content = "OK",
-        //            Width = 100,
-        //            HorizontalAlignment = HorizontalAlignment.Center,
-        //            Margin = new Thickness(0, 10, 0, 20)
-        //        }
-        //    }
-        //        }
-        //    };
-
-        //    // Находим кнопку и добавляем обработчик
-        //    var button = ((StackPanel)dialog.Content).Children.OfType<Button>().First();
-        //    button.Click += (s, e) => dialog.Close();
-
-        //    await dialog.ShowDialog(null);
-        //}
-
+        
         #region Обработчики событий мыши и клавиатуры
 
         /// <summary>
@@ -731,6 +705,8 @@ namespace Cash8Avalon
 
             try
             {
+                // Все проверки остаются без изменений...
+
                 // Проверка даты на компьютере
                 if (DateTime.Now <= MainStaticClass.GetMinDateWork)
                 {
@@ -793,63 +769,68 @@ namespace Cash8Avalon
                 // Проверка времени с ФН
                 MainStaticClass.validate_date_time_with_fn(15);
 
-                // Создаем контрол для нового чека
+                // Создаем контрол для нового чека (без изменений)
                 var checkForm = new Cash_check();
 
-                // Настраиваем для нового чека (пустой)
+                // Настраиваем для нового чека (пустой) (без изменений)
                 checkForm.IsNewCheck = true; // Добавьте это свойство в класс Cash_check
                 checkForm.cashier = txtCashier.Text; // Передаем кассира
 
-                // Дополнительная инициализация для нового чека
-                //checkForm.InitializeForNewCheck(); // Создайте этот метод в Cash_check
+                // Дополнительная инициализация для нового чека (без изменений)
                 checkForm.OnFormLoaded();
 
-                // Находим активное окно
+                // Находим активное окно (без изменений)
                 Window parentWindow = null;
 
-                // Вариант 1: Через TopLevel
+                // Вариант 1: Через TopLevel (без изменений)
                 var topLevel = TopLevel.GetTopLevel(this);
                 if (topLevel is Window currentWindow)
                 {
                     parentWindow = currentWindow;
                 }
 
-                // Вариант 2: Через Application
+                // Вариант 2: Через Application (без изменений)
                 if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // Создаем окно с правильным заголовком
-                var newWindow = new Window
-                {
-                    Title = "Новый чек",
-                    Width = 1200,
-                    Height = 800,
-                    Content = checkForm
-                };
+                // === ИЗМЕНЕНИЕ ТОЛЬКО ЗДЕСЬ ===
+                // Теперь Cash_check уже является Window, поэтому:
+                // 1. Не создаем newWindow
+                // 2. Настраиваем само checkForm как окно
+                checkForm.Title = "Новый чек";
+                checkForm.Width = 1200;
+                checkForm.Height = 800;
+
+                // Убираем стандартные кнопки если нужно
+                checkForm.CanResize = false;
+                checkForm.CanMaximize = false;
+                checkForm.CanMinimize = false;
 
                 // Подписываемся на событие закрытия окна
-                //newWindow.Closed += (s, e) =>
-                //{
-                //    if (checkForm.CheckCreated) // Добавьте это свойство в Cash_check
-                //    {
-                //        LoadDocuments(); // Обновляем список после создания чека
-                //    }
-                //};
+                checkForm.Closed += (s, e) =>
+                {
+                    // Проверяем результат через Tag
+                    bool? dialogResult = checkForm.Tag as bool?;
+                    if (dialogResult == true) // Чек успешно создан
+                    {
+                        LoadDocuments(); // Обновляем список после создания чека
+                    }
+                };
 
                 // Устанавливаем позиционирование
                 if (parentWindow != null)
                 {
-                    newWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                    checkForm.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
                     // Показываем как диалог
-                    await newWindow.ShowDialog(parentWindow);
+                    await checkForm.ShowDialog(parentWindow);
                 }
                 else
                 {
-                    newWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    newWindow.Show();
+                    checkForm.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    checkForm.Show();
                 }
             }
             catch (Exception ex)

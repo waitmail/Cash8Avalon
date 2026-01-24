@@ -7,6 +7,7 @@ using System;
 using System.Data;
 using System.IO;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 
 namespace Cash8Avalon
@@ -72,6 +73,14 @@ namespace Cash8Avalon
                     }
                     MainStaticClass.loadConfig(configPath);
                     Console.WriteLine($"? Конфиг загружен: {configPath}");
+
+                    string version_program = await MainStaticClass.GetAtolDriverVersion();
+                    this.Title = "Касса   " + MainStaticClass.CashDeskNumber;
+                    this.Title += " | " + MainStaticClass.Nick_Shop;
+                    this.Title += " | " + MainStaticClass.version();
+                    this.Title += " | " + LoadDataWebService.last_date_download_tovars().ToString("yyyy-MM-dd hh:mm:ss");
+                    PrintingUsingLibraries printing = new PrintingUsingLibraries();
+                    this.Title += " | " + version_program;
 
                     // 3. Проверка обновлений (только если не A01)
                     if (MainStaticClass.Nick_Shop != "A01")
