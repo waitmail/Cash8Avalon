@@ -261,6 +261,7 @@ namespace Cash8Avalon
                         break;
 
                     case Key.Escape:
+                        e.Handled = true;
                         this.Close();                        
                         break;
 
