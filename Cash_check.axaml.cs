@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using Atol.Drivers10.Fptr;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
@@ -19,6 +20,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -27,6 +29,7 @@ using System.Xml.Linq;
 using static Cash8Avalon.Cash_check;
 using static Cash8Avalon.LoadDataWebService;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using AtolConstants = Atol.Drivers10.Fptr.Constants;
 
 
 namespace Cash8Avalon
@@ -104,7 +107,12 @@ namespace Cash8Avalon
         public double sale_non_cash_money = 0;
         public bool payment_by_sbp = false;
         public bool payment_by_sbp_sales = false;
-        
+
+        public event EventHandler Loaded;
+
+        public bool reopened = false;
+        public bool print_promo_picture = false;
+
 
         List<int> qr_code_lenght = new List<int>();
 
@@ -533,7 +541,7 @@ namespace Cash8Avalon
                     }
 
 
-                    //this.Close();
+                    this.Close();
                 }
             }
 
@@ -660,6 +668,19 @@ namespace Cash8Avalon
             //При переходе в окно оплаты цены должны быть отрисованы
             SendDataToCustomerScreen(1, 1, 1);
 
+            // Создаем окно оплаты
+            //var payWindow = new Pay();
+            //payWindow.InitializeComponent();
+
+            // Настраиваем данные в окне
+            pay_form.Title = "Оплата";
+            pay_form.Width = 800;  // Размеры как в XAML
+            pay_form.Height = 600;
+            pay_form.CanResize = false;  // Скорее всего это уже в XAML
+
+            // Устанавливаем сумму чека и другие данные
+            //payWindow.pay_sum.Text = calculation_of_the_discount_of_the_document().ToString("N2");  // Или через публичное свойство
+
             // Находим активное окно
             Window parentWindow = null;
 
@@ -676,38 +697,42 @@ namespace Cash8Avalon
                 parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
             }
 
-            // Создаем окно с правильным заголовком
-            var newWindow = new Window
+            // Подписываемся на событие закрытия если нужно
+            pay_form.Closed += (s, e) =>
             {
-                Title = $"Чек № {this.numdoc} от {this.date_time_write}",
-                Width = 1200,
-                Height = 800,
-                Content = pay_form
-
+                // Проверяем результат через Tag или другое свойство
+                bool? paymentSuccess = pay_form.Tag as bool?;
+                if (paymentSuccess == true)
+                {
+                    // Обработка успешной оплаты
+                    Console.WriteLine("Оплата прошла успешно");
+                }
             };
-
-
 
             // Устанавливаем позиционирование
             if (parentWindow != null)
             {
-                newWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
                 // Показываем как диалог
-                await newWindow.ShowDialog(parentWindow);
+                await pay_form.ShowDialog(parentWindow);
             }
             else
             {
-                newWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                newWindow.Show();
+                pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                pay_form.Show();
             }
 
             //dr = pay_form.ShowDialog();
 
             //if (dr == DialogResult.OK)
             //{
-            //    this.Close();
+            //    
             //}
+            if (Convert.ToBoolean(pay_form.Tag)==true)
+            {
+                this.Close();
+            }
 
             this.txtB_search_product.Focus();
             pay_form = new Pay();
@@ -1125,8 +1150,8 @@ namespace Cash8Avalon
                 }
                 command.Parameters.AddWithValue("comment", commentValue);
                 //command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc.Replace(",", ".")));
-                command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc));
-                command.Parameters.AddWithValue("remainder", Convert.ToDecimal(remainder));
+                command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc.Replace(".",",")));
+                command.Parameters.AddWithValue("remainder", Convert.ToDecimal(remainder.Replace(".",",")));
                 command.Parameters.AddWithValue("date_time_write", Convert.ToDateTime(date_time_write));
                 command.Parameters.AddWithValue("discount", calculation_of_the_discount_of_the_document());
                 command.Parameters.AddWithValue("autor", User.Tag.ToString());
@@ -1146,9 +1171,9 @@ namespace Cash8Avalon
                 command.Parameters.AddWithValue("bonuses_it_is_written_off",
                     (CheckType.SelectedIndex == 1 ? Convert.ToDecimal(return_bonus) : Convert.ToDecimal(pay_bonus_many)));
                 command.Parameters.AddWithValue("is_sent", 0);
-                command.Parameters.AddWithValue("cash_money", Convert.ToDecimal(cash_money));
-                command.Parameters.AddWithValue("non_cash_money", Convert.ToDecimal(non_cash_money));
-                command.Parameters.AddWithValue("sertificate_money", Convert.ToDecimal(sertificate_money));
+                command.Parameters.AddWithValue("cash_money", Convert.ToDecimal(cash_money.Replace(".", ",")));
+                command.Parameters.AddWithValue("non_cash_money", Convert.ToDecimal(non_cash_money.Replace(".", ",")));
+                command.Parameters.AddWithValue("sertificate_money", Convert.ToDecimal(sertificate_money.Replace(".", ",")));
                 command.Parameters.AddWithValue("id_transaction", id_transaction);
                 command.Parameters.AddWithValue("its_print", false);
                 command.Parameters.AddWithValue("id_transaction_sale", id_transaction_sale);
@@ -3963,7 +3988,9 @@ namespace Cash8Avalon
                 };
 
                 // Показываем окно
-                await dialog.ShowDialog(this.FindAncestorOfType<Window>());
+                // Показываем окно
+                var parentWindow = this is Window window ? window : this.FindAncestorOfType<Window>();
+                await dialog.ShowDialog(parentWindow);
             }
         }
 
@@ -4195,7 +4222,11 @@ namespace Cash8Avalon
                     CheckType.Items.Clear();
                     CheckType.Items.Add("Продажа");
                     CheckType.Items.Add("Возврат");
-                    CheckType.Items.Add("Коррекция");
+
+                    if (MainStaticClass.Code_right_of_user == 1 && MainStaticClass.PrintingUsingLibraries == 1)
+                    {
+                        CheckType.Items.Add("КоррекцияПродажи");
+                    }
                     CheckType.SelectedIndex = 0;
                     Console.WriteLine("✓ CheckType инициализирован");
                 }
@@ -4834,11 +4865,391 @@ namespace Cash8Avalon
 
         #endregion
 
-        public event EventHandler Loaded;
+        
 
-        protected virtual void OnLoaded()
+
+        private Int64 get_new_number_document()
         {
-            Loaded?.Invoke(this, EventArgs.Empty);
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+            conn.Open();
+            NpgsqlCommand command = new NpgsqlCommand();
+            command.Connection = conn;
+            //            command.CommandText = "SELECT COUNT(*) FROM checks_header";
+            command.CommandText = "SELECT nextval('checks_header_document_number_seq'::regclass);";
+            Int64 result = Convert.ToInt64(command.ExecuteScalar());
+            conn.Close();
+            MainStaticClass.write_event_in_log(" Получение номера для нового документа ", "Документ чек", result.ToString());
+            return result;
+        }
+
+
+        private void set_sale_disburse_button()
+        {
+            //if ((!itsnew) && (itc_printed()))
+            if (!IsNewCheck)//Если документ не новый он для чтения и там ничего менять нельзя
+            {
+                return;
+            }
+            //if (MainStaticClass.SelfServiceKiosk == 1)
+            //{
+            //    this.client.Text = "";
+            //    this.client.Tag = "";
+            //}
+            //else
+            //{ 
+            if (this.check_type.SelectedIndex == 1)
+            {
+                if (client.Tag != null)
+                {
+                    if (client.Tag.ToString().Trim() != "")//Выбрана дисконтная карта, тип документа изенен быть не может
+                    {
+                        MessageBox.Show(" Выбрана дисконтная карта, тип документа изменен быть не может ");
+                        this.check_type.SelectedIndex = 0;
+                        return;
+                    }
+                }
+            }
+            //}
+        }
+
+        private async void check_type_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (IsNewCheck)
+            {
+                this.check_type.IsEnabled = false;
+                if (check_type.SelectedIndex > 0)
+                {
+                    if (_productsData.Count > 0)
+                    {
+                        await MessageBox.Show("Тип чека необходимо выбирать перед добавлением строк");
+                        return;
+                    }
+                    btn_fill_on_sales.IsVisible = true;
+                    txtB_num_sales.IsVisible = true;
+                    //if (MainStaticClass.Code_right_of_user != 1)
+                    //{
+                    //inputbarcode.Enabled = false;
+                    txtB_search_product.IsEnabled = false;
+                    client_barcode.IsEnabled = false;
+                    //txtB_client_phone.Enabled = false;
+                    //}
+                }
+            }
+            set_sale_disburse_button();
+        }
+
+        protected virtual async Task OnLoaded()
+        {
+            this.num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
+            this.num_cash.Tag = MainStaticClass.CashDeskNumber;       
+         
+            //Создание таблицы для перераспределения акций
+            DataColumn dc = new DataColumn("Code", System.Type.GetType("System.Int32"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("Tovar", System.Type.GetType("System.String"));
+            table.Columns.Add(dc);           
+            dc = new DataColumn("Quantity", System.Type.GetType("System.Int32"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("Price", System.Type.GetType("System.Decimal"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("PriceAtDiscount", System.Type.GetType("System.Decimal"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("Sum", System.Type.GetType("System.Decimal"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("SumAtDiscount", System.Type.GetType("System.Decimal"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("Action", System.Type.GetType("System.Int32"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("Gift", System.Type.GetType("System.Int32"));
+            table.Columns.Add(dc);
+            dc = new DataColumn("Action2", System.Type.GetType("System.Int32"));
+            table.Columns.Add(dc);
+
+            //this.inputbarcode.Focus();
+            this.txtB_search_product.Focus();
+
+            if (MainStaticClass.GetVersionFn == 1)
+            {
+                checkBox_print_check.IsVisible = false;
+            }
+            checkBox_print_check.IsChecked = true;
+
+            if (IsNewCheck)
+            {
+                guid = Guid.NewGuid().ToString();
+                
+
+                checkBox_to_print_repeatedly.IsVisible = false;
+                //label9.Visible = false;
+                //label10.Visible = false;
+                //label11.Visible = false;
+                //label13.Visible = false;
+                txtB_non_cash_money.IsVisible = false;
+                txtB_sertificate_money.IsVisible = false;
+                txtB_cash_money.IsVisible = false;
+                txtB_bonus_money.IsVisible = false;
+
+                //inputbarcode.Focus();
+                this.txtB_search_product.Focus();
+
+
+                this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
+                this.Discount = 0;
+                this.user.Text = MainStaticClass.Cash_Operator;
+                this.user.Tag = MainStaticClass.Cash_Operator_Client_Code;//gaa поменять на инн
+                numdoc = get_new_number_document();
+                if (numdoc == 0)
+                {
+                    MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
+                    MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
+                    this.Close();
+                }
+                this.txtB_num_doc.Text = this.numdoc.ToString();
+                MainStaticClass.write_event_in_log(" Ввод нового документа ", "Документ чек", numdoc.ToString());
+                this.check_type.SelectedIndex = 0;
+                this.check_type.IsEnabled = true;
+                set_sale_disburse_button();
+            }
+            else
+            {
+                reopened = true;
+                checkBox_print_check.IsEnabled = false;
+                //Документ не новый поэтому запретим в нем ввод и изменение                
+                last_tovar.IsEnabled = false;
+                //txtB_email_telephone.Enabled = false;
+                txtB_inn.IsEnabled = false;
+                btn_get_name.IsEnabled = false;
+                //txtB_client_phone.Enabled = false;
+                txtB_name.IsEnabled = false;
+                comment.IsEnabled = false;
+                
+                int status = get_its_deleted_document();
+                if ((status == 0) || (status == 1))
+                {
+                    //this.type_pay.Enabled = false;
+                    //this.label4.Enabled = false;
+                    this.check_type.IsEnabled = false;
+                    //this.inputbarcode.Enabled = false;
+                    this.txtB_search_product.IsEnabled = false;
+                    this.client_barcode.IsEnabled = false;
+                    //this.sale_cancellation.Enabled = false;
+                    //this.inventory.Enabled = false;
+                    //this.comment.Enabled = false;
+                    //to_open_the_written_down_document();
+                    enable_print();
+                    if (MainStaticClass.Code_right_of_user != 1)
+                    {
+                        this.pay.IsEnabled = false;
+                    }
+                    //itsnew = true;
+                }
+                else if (status == 2)
+                {
+                    IsNewCheck = true;
+                    Discount = 0;
+                    //this.label4.Enabled = true;
+                    this.check_type.IsEnabled = true;
+                    //this.inputbarcode.Enabled = true;
+                    this.txtB_search_product.IsEnabled = true;
+                    this.client_barcode.IsEnabled = false;
+                    ToOpenTheWrittenDownDocument();
+                    get_old_document_Discount();
+                    check_type.IsEnabled = false;
+                    IsNewCheck = true;
+                }
+            }
+
+            //this.Top = 0;
+            //this.Left = 0;
+            //this.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height);
+            //this.panel2.Left = 0;
+            //this.listView2.Left = 20;
+
+            //this.panel2.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height / 2);
+            //this.listView2.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width - 50, SystemInformation.PrimaryMonitorSize.Height / 2 - 50);
+
+
+            if (IsNewCheck)
+            {
+                //first_start_com_barcode_scaner();
+                selection_goods = true;
+                //inputbarcode.Focus();
+                this.txtB_search_product.Focus();
+                //список допустимых длин qr кодов                
+                qr_code_lenght.Add(29);
+                qr_code_lenght.Add(30);
+                qr_code_lenght.Add(31);
+                qr_code_lenght.Add(32);
+                qr_code_lenght.Add(37);
+                qr_code_lenght.Add(40);
+                qr_code_lenght.Add(41);
+                qr_code_lenght.Add(76);
+                qr_code_lenght.Add(83);
+                qr_code_lenght.Add(115);
+                qr_code_lenght.Add(127);
+
+                if (MainStaticClass.PrintingUsingLibraries == 1)
+                {
+                    IFptr fptr = MainStaticClass.FPTR;
+
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
+
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
+                    fptr.queryData();
+                    if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
+                    {
+                        MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
+                    }
+                }
+            }
+            else
+            {
+                if (MainStaticClass.Use_Fiscall_Print)
+                {
+                    if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
+                    {
+                        if (await ItcPrinted())
+                        {
+                            this.pay.IsEnabled = false;
+                            this.checkBox_to_print_repeatedly.IsEnabled = false;
+                        }
+                    }
+                    else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+                    {
+                        if (await ItcPrinted())
+                        {
+                            this.checkBox_to_print_repeatedly.IsEnabled = false;
+                        }
+                        if (await ItcPrintedP())
+                        {
+                            this.checkBox_to_print_repeatedly_p.IsEnabled = false;
+                        }
+                        if (await ItcPrinted() && await this.ItcPrintedP())
+                        {
+                            this.pay.IsEnabled = false;
+                        }
+                    }
+                }
+            }          
+        }
+
+        private void enable_print()
+        {
+            if (MainStaticClass.SystemTaxation < 3)
+            {
+                checkBox_to_print_repeatedly.IsEnabled = true;
+                checkBox_to_print_repeatedly_p.IsEnabled = false;
+            }
+            else
+            {
+                int _checkBox_to_print_repeatedly_ = 0;
+                int _checkBox_to_print_repeatedly_p_ = 0;
+
+                foreach (ProductItem productItem in _productsData)
+                {
+                    if (productItem.Mark.Trim().Length > 13)
+                    {
+                        _checkBox_to_print_repeatedly_p_ = 1;//Здесь путаница, печатать не маркировку 
+                    }
+                    else
+                    {
+                        _checkBox_to_print_repeatedly_ = 1; //Здесь путаница, печатать маркировку 
+                    }
+                    if ((_checkBox_to_print_repeatedly_ == 1) && (_checkBox_to_print_repeatedly_p_ == 1))
+                    {
+                        break;
+                    }
+                }
+                if (_checkBox_to_print_repeatedly_ == 1)
+                {
+                    checkBox_to_print_repeatedly.IsEnabled = true;
+                }
+                if (_checkBox_to_print_repeatedly_p_ == 1)
+                {
+                    checkBox_to_print_repeatedly_p.IsEnabled = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void get_old_document_Discount()
+        {
+
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+            try
+            {
+                conn.Open();
+                NpgsqlCommand command = new NpgsqlCommand();
+                command.Connection = conn;
+                Discount = 0;
+                command.CommandText = "SELECT discount_types.discount_percent,clients.code,clients.name  FROM clients left join discount_types ON clients.discount_types_code= discount_types.code WHERE clients.code='" + client_barcode.Tag.ToString() + "'";
+                NpgsqlDataReader reader = command.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    Discount = Convert.ToDouble(reader.GetDecimal(0));
+                    Discount = Discount / 100;
+                }
+                reader.Close();
+                conn.Close();
+            }
+            catch (NpgsqlException)
+            {
+
+            }
+            catch (Exception)
+            {
+
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+        }
+
+        private int get_its_deleted_document()
+        {
+            int result = 0;
+
+            NpgsqlConnection conn = null;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                string query = "SELECT checks_header.its_deleted FROM  checks_header where checks_header.date_time_write='"
+                    + date_time_write + "'";
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                result = Convert.ToInt16(command.ExecuteScalar());
+                conn.Close();
+            }
+            catch (NpgsqlException ex)
+            {
+                MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                result = 1;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                result = 1;
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return result;
+
         }
 
         public void LoadForm()

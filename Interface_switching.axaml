@@ -1,53 +1,84 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d"
-             d:DesignWidth="500" 
-             d:DesignHeight="110" 
-             x:Class="Cash8Avalon.Interface_switching"> 
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="Cash8Avalon.Interface_switching"
+        Title="Авторизация"
+        Width="510"  
+        Height="170" 
+        MinWidth="510"
+        MinHeight="170"
+        MaxWidth="510"
+        MaxHeight="170"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF007ACC"  
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True">
     
-    <Grid Background="White"> <!-- Убрали Width и Height -->
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Заголовок авторизации -->
-        <TextBlock Grid.Row="0"
-                   x:Name="authorization"
-                   Text="АВТОРИЗАЦИЯ (введите пароль)"
-                   FontSize="12"
-                   FontWeight="Bold"
-                   Foreground="DarkGreen"
-                   HorizontalAlignment="Center"
-                   Margin="0,15,0,0"/> 
-        
-        <!-- Поле ввода пароля -->
-        <TextBox Grid.Row="1"
-                 x:Name="input_barcode"
-                 MaxLength="10"
-                 Width="229"
-                 Height="25" 
-                 Margin="136,10,136,5" 
-                 HorizontalAlignment="Center"
-                 VerticalAlignment="Center"
-                 PasswordChar="*"
-                 KeyUp="Input_barcode_KeyUp"/>
-        
-        <!-- Поле сообщения об ошибке -->
-        <TextBox Grid.Row="2"
-                 x:Name="fail_autorize"
-                 IsEnabled="False"
-                 IsReadOnly="True"
-                 FontSize="12"
-                 FontWeight="Bold"
-                 Background="#FFF8F8F8"
-                 BorderThickness="0"
-                 HorizontalAlignment="Stretch"
-                 HorizontalContentAlignment="Center"
-                 Margin="12,0,12,5" 
-                 TextAlignment="Center"/>
-    </Grid>
-</UserControl>
+    <!-- Внешняя синяя рамка -->
+    <Border BorderBrush="#FF007ACC" 
+            BorderThickness="3"
+            Background="White"
+            Margin="0">
+        <Grid>
+            <!-- Собственный заголовок -->
+            <Border Height="40"
+                    Background="#FF007ACC"
+                    VerticalAlignment="Top">
+                <TextBlock Text="Авторизация"
+                          Foreground="White"
+                          FontSize="14"
+                          FontWeight="Bold"
+                          VerticalAlignment="Center"
+                          Margin="15,0,0,0"/>
+            </Border>
+            
+            <!-- Основной контент (с отступом от заголовка) -->
+            <Grid Margin="0,40,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Заголовок авторизации -->
+                <TextBlock Grid.Row="0"
+                           x:Name="authorization"
+                           Text="АВТОРИЗАЦИЯ (введите пароль)"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           Foreground="DarkGreen"
+                           HorizontalAlignment="Center"
+                           Margin="0,15,0,0"/> 
+                
+                <!-- Поле ввода пароля -->
+                <TextBox Grid.Row="1"
+                         x:Name="input_barcode"
+                         MaxLength="10"
+                         Width="229"
+                         Height="25" 
+                         Margin="136,10,136,5" 
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         PasswordChar="*"
+                         KeyUp="Input_barcode_KeyUp"/>
+                
+                <!-- Поле сообщения об ошибке -->
+                <TextBox Grid.Row="2"
+                         x:Name="fail_autorize"
+                         IsEnabled="False"
+                         IsReadOnly="True"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         Background="#FFF8F8F8"
+                         BorderThickness="0"
+                         HorizontalAlignment="Stretch"
+                         HorizontalContentAlignment="Center"
+                         Margin="12,0,12,5" 
+                         TextAlignment="Center"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
