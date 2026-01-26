@@ -3,6 +3,7 @@ using Cash8Avalon;
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Drawing;
 using System.IO;
@@ -568,7 +569,7 @@ namespace Cash8Avalon
                         //    }
                         //}
 
-                        bool result_check_mark = check_marking_code(mark, check.numdoc.ToString(), ref check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                        bool result_check_mark = await check_marking_code(mark, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
                         if (!result_check_mark)
                         {
                             error = true;
@@ -1159,7 +1160,7 @@ namespace Cash8Avalon
                             //}
 
                             //string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-                            bool result_check_mark = check_marking_code(mark, check.numdoc.ToString(), ref check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                            bool result_check_mark = await check_marking_code(mark, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
                             if (!result_check_mark)
                             {
                                 error = true;
@@ -1279,17 +1280,19 @@ namespace Cash8Avalon
 
             //fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
 
-
-            if (check.txtB_email_telephone.Text.Trim().Length > 0)
+            if (check.txtB_email_telephone.Text != null)
             {
-                fptr.setParam(1008, check.txtB_email_telephone.Text);
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-            }
+                if (check.txtB_email_telephone.Text.Trim().Length > 0)
+                {
+                    fptr.setParam(1008, check.txtB_email_telephone.Text);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+                }
 
-            if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
-            {
-                fptr.setParam(1228, check.txtB_inn.Text);
-                fptr.setParam(1227, check.txtB_name.Text);
+                if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
+                {
+                    fptr.setParam(1228, check.txtB_inn.Text);
+                    fptr.setParam(1227, check.txtB_name.Text);
+                }
             }
 
             if (variant == 0)
@@ -1837,7 +1840,7 @@ namespace Cash8Avalon
             }
         }
 
-        public void print_pictures(List<string> numDocsAction)
+        public async void print_pictures(List<string> numDocsAction)
         {
             using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
             {
@@ -1858,12 +1861,12 @@ namespace Cash8Avalon
                 }
                 catch (NpgsqlException ex)
                 {
-                    MessageBox.Show($"Ошибка базы данных: {ex.Message}");
+                    await MessageBox.Show($"Ошибка базы данных: {ex.Message}");
                 }
                 catch (Exception ex)
                 {
                     // Общие ошибки
-                    MessageBox.Show($"Произошла ошибка: {ex.Message}");
+                    await MessageBox.Show($"Произошла ошибка: {ex.Message}");
                 }
             }
         }
@@ -1908,7 +1911,7 @@ namespace Cash8Avalon
             }
         }
 
-        public void CheckTaxationTypes()
+        public async void CheckTaxationTypes()
         {
             uint taxationTypes = 0;
             try
@@ -1948,12 +1951,12 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    MessageBox.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения");
+                    await MessageBox.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения");
+                await MessageBox.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения");
             }
         }
 
@@ -1999,7 +2002,7 @@ namespace Cash8Avalon
         }
 
 
-        public bool check_marking_code(string mark, string num_doc, ref Dictionary<string, uint> cdn_markers_result_check, int check_type)        
+        public async Task<bool> check_marking_code(string mark, string num_doc, Dictionary<string, uint> cdn_markers_result_check, int check_type)// ref Dictionary<string, uint> cdn_markers_result_check        
         {
             bool result = true;
             IFptr fptr = MainStaticClass.FPTR;
@@ -2049,7 +2052,7 @@ namespace Cash8Avalon
             {
                 result = false;
                 string error_decription = "check_marking_code Код ошибки = " + validationError + ";\r\nОписание ошибки " + fptr.errorDescription() + ";\r\n" + fptr.getParamString(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR_DESCRIPTION);
-                MessageBox.Show(error_decription, "Проверка кода маркировки");
+                await MessageBox.Show(error_decription, "Проверка кода маркировки");
                 MainStaticClass.write_event_in_log(error_decription, "Документ", num_doc);
                 fptr.declineMarkingCode();
                 //check_validation_error_422(validationError);

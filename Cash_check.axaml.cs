@@ -1240,6 +1240,50 @@ namespace Cash8Avalon
                 parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
             }
 
+            // Настройка размеров окна оплаты - ВАРИАНТ 3
+            if (parentWindow != null)
+            {
+                // Получаем размеры главного окна
+                double mainWidth = parentWindow.Bounds.Width;
+                double mainHeight = parentWindow.Bounds.Height;
+
+                // Проверяем, есть ли у родительского окна системные декорации
+                bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
+                bool payFormHasDecorations = pay_form.SystemDecorations != SystemDecorations.None;
+
+                // Примерная высота заголовка Windows
+                const double titleBarHeight = 35; // Среднее значение 30-40px
+
+                if (parentHasDecorations && !payFormHasDecorations)
+                {
+                    // Главное окно имеет системный заголовок, форма оплаты - нет
+                    // Форма оплаты будет ниже на высоту заголовка, поэтому нужно компенсировать
+                    pay_form.Width = mainWidth;
+                    pay_form.Height = mainHeight + titleBarHeight;
+
+                    Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
+                    Console.WriteLine($"Размеры: главное окно={mainHeight}px, форма оплаты={pay_form.Height}px");
+                }
+                else
+                {
+                    // Окна имеют одинаковый тип декораций
+                    pay_form.Width = mainWidth;
+                    pay_form.Height = mainHeight;
+                }
+
+                // Позиционируем по центру главного окна
+                pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+                Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
+            }
+            else
+            {
+                // Стандартные размеры если нет родительского окна
+                pay_form.Width = 1200;
+                pay_form.Height = 800;
+                pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+
             // Подписываемся на событие закрытия если нужно
             pay_form.Closed += (s, e) =>
             {
@@ -1252,17 +1296,14 @@ namespace Cash8Avalon
                 }
             };
 
-            // Устанавливаем позиционирование
+            // Показываем окно
             if (parentWindow != null)
             {
-                pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
                 // Показываем как диалог
                 await pay_form.ShowDialog(parentWindow);
             }
             else
             {
-                pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                 pay_form.Show();
             }
 
@@ -2626,7 +2667,7 @@ namespace Cash8Avalon
                 string imc = Convert.ToBase64String(textAsBytes);
 
                 PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                if (!printingUsingLibraries.check_marking_code(marking_code, this.numdoc.ToString(), ref this.cdn_markers_result_check, this.check_type.SelectedIndex))
+                if (!await printingUsingLibraries.check_marking_code(marking_code, this.numdoc.ToString(), this.cdn_markers_result_check, this.check_type.SelectedIndex))
                 {
                     error = true;
                     last_tovar.Text = barcode;
@@ -2639,7 +2680,7 @@ namespace Cash8Avalon
             if (this._productsTableGrid.RowDefinitions.Count - 1 > 70)//Превышен предел строк
             {
 
-                await MessageBox.Show("В одном чеке может быть максимум 70 строк.\r\n Tсли у покупателя еще есть тоовары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error);
 
                 last_tovar.Text = barcode;
                 await ShowTovarNotFoundWindow();

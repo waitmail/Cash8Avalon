@@ -124,7 +124,7 @@
         
         <!-- ОБЛАСТЬ ДЛЯ ТАБЛИЦЫ -->
         <Border Grid.Row="1" 
-                BorderBrush="Red" 
+                BorderBrush="BlueViolet" 
                 BorderThickness="2"
                 Margin="0,10,0,10"
                 Background="White"

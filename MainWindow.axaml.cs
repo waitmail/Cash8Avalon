@@ -18,9 +18,9 @@ namespace Cash8Avalon
         {
             InitializeComponent();
 
-#if DEBUG
-            this.AttachDevTools();
-#endif
+//#if DEBUG
+//            this.AttachDevTools();
+//#endif
         }
 
         protected override async void OnOpened(EventArgs e)

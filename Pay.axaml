@@ -5,367 +5,345 @@
         mc:Ignorable="d"
         x:Class="Cash8Avalon.Pay"
         Title="Оплата"
-        Width="800"
-        Height="600"
-        SystemDecorations="None"
         WindowStartupLocation="CenterScreen"
-        CanResize="False">
+        CanResize="False"
+        WindowState="Maximized"
+        SystemDecorations="None">
     
-    <!-- Внешняя синяя рамка -->
-    <Border BorderBrush="#FF007ACC" 
-            BorderThickness="3"
-            Background="White">
-        
-        <Grid>
-            <!-- Собственный заголовок -->
-            <Border Height="40"
-                    Background="#FF007ACC"
-                    VerticalAlignment="Top">
-                
-                <TextBlock Text="Оплата"
-                          Foreground="White"
-                          FontSize="14"
-                          FontWeight="Bold"
-                          VerticalAlignment="Center"
-                          Margin="15,0,0,0"/>
-            </Border>
+    <Viewbox Stretch="Uniform">
+        <Border BorderBrush="#FF007ACC" 
+                BorderThickness="3"
+                Background="White"
+                Width="800"
+                Height="600">
             
-            <!-- Основной контент (с отступом от заголовка) -->
-            <Grid Margin="0,40,0,0">
-                <Grid Background="{DynamicResource SystemControlBackgroundBrush}">
-                    <!-- Определение строк -->
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Бонусы по документу (скрыто) -->
-                        <RowDefinition Height="Auto"/> <!-- Бонусов всего (скрыто) -->
-                        <RowDefinition Height="10"/> <!-- Пустая строка -->
-                        <RowDefinition Height="Auto"/> <!-- Сумма чека -->
-                        <RowDefinition Height="Auto"/> <!-- Бонусы (скрыто) -->
-                        <RowDefinition Height="Auto"/> <!-- Сертификаты -->
-                        <RowDefinition Height="Auto"/> <!-- Карта оплаты -->
-                        <RowDefinition Height="Auto"/> <!-- Чекбоксы СБП -->
-                        <RowDefinition Height="Auto"/> <!-- Наличные -->
-                        <RowDefinition Height="Auto"/> <!-- Сдача -->
-                        <RowDefinition Height="Auto"/> <!-- Кнопки -->
-                        <RowDefinition Height="20"/> <!-- Маленький отступ снизу -->
-                    </Grid.RowDefinitions>
+            <Grid>
+                <Border Height="40"
+                        Background="#FF007ACC"
+                        VerticalAlignment="Top">
                     
-                    <!-- Определение колонок -->
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="40"/> <!-- Левый отступ -->
-                        <ColumnDefinition Width="Auto"/> <!-- Надписи -->
-                        <ColumnDefinition Width="*"/> <!-- Пространство между надписями и полями -->
-                        <ColumnDefinition Width="Auto"/> <!-- Чекбоксы -->
-                        <ColumnDefinition Width="10"/> <!-- Отступ между чекбоксами и полями -->
-                        <ColumnDefinition Width="Auto"/> <!-- Поля ввода рублей -->
-                        <ColumnDefinition Width="Auto"/> <!-- Запятая -->
-                        <ColumnDefinition Width="Auto"/> <!-- Поля ввода копеек -->
-                        <ColumnDefinition Width="Auto"/> <!-- Чекбокс вопроса -->
-                        <ColumnDefinition Width="40"/> <!-- Правый отступ -->
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- ==================== БОНУСЫ ПО ДОКУМЕНТУ (скрыто) ==================== -->
-                    <TextBlock x:Name="label4" 
-                              Grid.Row="0" Grid.Column="1"
-                              Text="Бонусы по документу"
-                              FontSize="27.75"
+                    <TextBlock Text="Оплата"
+                              Foreground="White"
+                              FontSize="14"
                               FontWeight="Bold"
                               VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,10,0,10"
-                              IsVisible="False"/>
-                              
-                    <TextBox x:Name="bonus_on_document"
-                            Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="3"
-                            FontSize="39.75"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            Foreground="Green"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Right"
-                            Width="319"
-                            Height="55"
-                            Margin="0,10,0,10"
-                            IsReadOnly="True"
-                            TextAlignment="Right"
-                            IsVisible="False"/>
-                    
-                    <!-- ==================== БОНУСОВ ВСЕГО (скрыто) ==================== -->
-                    <TextBlock x:Name="label5" 
-                              Grid.Row="1" Grid.Column="1"
-                              Text="Бонусов всего"
-                              FontSize="27.75"
-                              FontWeight="Bold"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,10,0,10"
-                              IsVisible="False"/>
-                              
-                    <TextBox x:Name="bonus_total_in_centr"
-                            Grid.Row="1" Grid.Column="5" Grid.ColumnSpan="3"
-                            FontSize="39.75"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            Foreground="Green"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Right"
-                            Width="320"
-                            Height="55"
-                            Margin="0,10,0,10"
-                            IsReadOnly="True"
-                            TextAlignment="Right"
-                            IsVisible="False"/>
-                    
-                    <!-- ==================== СУММА ЧЕКА ==================== -->
-                    <TextBlock x:Name="label1" 
-                              Grid.Row="3" Grid.Column="1"
-                              Text="СУММА ЧЕКА"
-                              FontSize="27.75"
-                              FontWeight="Bold"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,20,0,20"/>
-                              
-                    <TextBox x:Name="pay_sum" x:FieldModifier="public"
-                            Grid.Row="3" Grid.Column="5" Grid.ColumnSpan="3"
-                            FontSize="39.75"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            Foreground="Black"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Right"
-                            Width="320"
-                            Height="55"
-                            Margin="0,20,0,20"
-                            IsReadOnly="True"
-                            TextAlignment="Right"/>
-                    
-                    <!-- ==================== БОНУСЫ (скрыто) ==================== -->
-                    <TextBlock x:Name="label6" 
-                              Grid.Row="4" Grid.Column="1"
-                              Text="БОНУСЫ"
-                              FontSize="27.75"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,15,0,15"
-                              IsVisible="False"/>
-                              
-                    <!-- Контейнер для полей бонусов -->
-                    <Grid Grid.Row="4" Grid.Column="5" Grid.ColumnSpan="4"
-                          IsVisible="False">
+                              Margin="15,0,0,0"/>
+                </Border>
+                
+                <Grid Margin="0,40,0,0">
+                    <Grid Background="{DynamicResource SystemControlBackgroundBrush}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="20"/>
+                        </Grid.RowDefinitions>
+                        
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="40"/>
                         </Grid.ColumnDefinitions>
                         
-                        <TextBox x:Name="pay_bonus"
-                                x:FieldModifier="public"
-                                Grid.Column="0"
-                                FontSize="32.25"
+                        <TextBlock x:Name="label4" 
+                                  Grid.Row="0" Grid.Column="1"
+                                  Text="Бонусы по документу"
+                                  FontSize="27.75"
+                                  FontWeight="Bold"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,10,0,10"
+                                  IsVisible="False"/>
+                                  
+                        <TextBox x:Name="bonus_on_document"
+                                Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="3"
+                                FontSize="39.75"
                                 Background="{DynamicResource SystemControlDarkBrush}"
+                                Foreground="Green"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Right"
-                                Width="180"
+                                Width="319"
+                                Height="55"
+                                Margin="0,10,0,10"
+                                IsReadOnly="True"
+                                TextAlignment="Right"
+                                IsVisible="False"/>
+                        
+                        <TextBlock x:Name="label5" 
+                                  Grid.Row="1" Grid.Column="1"
+                                  Text="Бонусов всего"
+                                  FontSize="27.75"
+                                  FontWeight="Bold"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,10,0,10"
+                                  IsVisible="False"/>
+                                  
+                        <TextBox x:Name="bonus_total_in_centr"
+                                Grid.Row="1" Grid.Column="5" Grid.ColumnSpan="3"
+                                FontSize="39.75"
+                                Background="{DynamicResource SystemControlDarkBrush}"
+                                Foreground="Green"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Width="320"
+                                Height="55"
+                                Margin="0,10,0,10"
+                                IsReadOnly="True"
+                                TextAlignment="Right"
+                                IsVisible="False"/>
+                        
+                        <TextBlock x:Name="label1" 
+                                  Grid.Row="3" Grid.Column="1"
+                                  Text="СУММА ЧЕКА"
+                                  FontSize="27.75"
+                                  FontWeight="Bold"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,20,0,20"/>
+                                  
+                        <TextBox x:Name="pay_sum" x:FieldModifier="public"
+                                Grid.Row="3" Grid.Column="5" Grid.ColumnSpan="3"
+                                FontSize="39.75"
+                                Background="{DynamicResource SystemControlDarkBrush}"
+                                Foreground="Black"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Width="320"
+                                Height="55"
+                                Margin="0,20,0,20"
+                                IsReadOnly="True"
+                                TextAlignment="Right"/>
+                        
+                        <TextBlock x:Name="label6" 
+                                  Grid.Row="4" Grid.Column="1"
+                                  Text="БОНУСЫ"
+                                  FontSize="27.75"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,15,0,15"
+                                  IsVisible="False"/>
+                                  
+                        <Grid Grid.Row="4" Grid.Column="5" Grid.ColumnSpan="4"
+                              IsVisible="False">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBox x:Name="pay_bonus"
+                                    x:FieldModifier="public"
+                                    Grid.Column="0"
+                                    FontSize="32.25"
+                                    Background="{DynamicResource SystemControlDarkBrush}"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right"
+                                    Width="180"
+                                    Height="56"
+                                    Margin="0,15,10,15"
+                                    IsEnabled="False"
+                                    TextAlignment="Right"/>
+                                    
+                            <TextBox x:Name="pay_bonus_many"
+                                    x:FieldModifier="public"
+                                    Grid.Column="2"
+                                    FontSize="32.25"
+                                    Background="{DynamicResource SystemControlDarkBrush}"
+                                    Foreground="Blue"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right"
+                                    Width="135"
+                                    Height="49"
+                                    Margin="0,15,0,15"
+                                    IsEnabled="False"
+                                    TextAlignment="Right"/>
+                        </Grid>
+                        
+                        <TextBlock x:Name="label7" 
+                                  Grid.Row="5" Grid.Column="1"
+                                  Text="СЕРТИФИКАТЫ"
+                                  FontSize="27.75"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,15,0,15"/>
+                                  
+                        <TextBox x:Name="sertificates_sum"
+                                Grid.Row="5" Grid.Column="5" Grid.ColumnSpan="3"
+                                FontSize="39.75"
+                                Background="{DynamicResource SystemControlDarkBrush}"
+                                Foreground="Green"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Width="320"
+                                Height="55"
+                                Margin="0,15,0,15"
+                                IsReadOnly="True"
+                                TextAlignment="Right"/>
+                        
+                        <TextBlock x:Name="label8" 
+                                  Grid.Row="6" Grid.Column="1"
+                                  Text="КАРТА ОПЛАТЫ"
+                                  FontSize="24"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,15,0,15"/>
+                        
+                        <CheckBox x:Name="checkBox_payment_by_sbp"
+                                 Grid.Row="6" Grid.Column="3"
+                                 Content="СБП"
+                                 FontSize="21.75"
+                                 VerticalAlignment="Center"
+                                 HorizontalAlignment="Right"
+                                 Width="96"
+                                 Height="43"
+                                 IsVisible="True"/>
+                        
+                        <TextBox x:Name="non_cash_sum"
+                                Grid.Row="6" Grid.Column="5"
+                                FontSize="32.25"
+                                Background="{DynamicResource SystemControlDarkBrush}"
+                                VerticalAlignment="Bottom"
+                                HorizontalAlignment="Right"
+                                Width="243"
                                 Height="56"
-                                Margin="0,15,10,15"
-                                IsEnabled="False"
+                                Margin="0,15,0,15"
                                 TextAlignment="Right"/>
                                 
-                        <TextBox x:Name="pay_bonus_many"
-                                x:FieldModifier="public"
-                                Grid.Column="2"
+                        <TextBlock x:Name="label9" 
+                                  Grid.Row="6" Grid.Column="6"
+                                  Text=","
+                                  FontSize="26.25"
+                                  VerticalAlignment="Bottom"
+                                  HorizontalAlignment="Center"
+                                  Margin="5,0,5,10"
+                                  Height="56"/>
+                                  
+                        <TextBox x:Name="non_cash_sum_kop"
+                                Grid.Row="6" Grid.Column="7"
                                 FontSize="32.25"
                                 Background="{DynamicResource SystemControlDarkBrush}"
-                                Foreground="Blue"
-                                VerticalAlignment="Center"
+                                VerticalAlignment="Bottom"
                                 HorizontalAlignment="Right"
-                                Width="135"
-                                Height="49"
+                                Width="54"
+                                Height="56"
                                 Margin="0,15,0,15"
                                 IsEnabled="False"
-                                TextAlignment="Right"/>
-                    </Grid>
-                    
-                    <!-- ==================== СЕРТИФИКАТЫ ==================== -->
-                    <TextBlock x:Name="label7" 
-                              Grid.Row="5" Grid.Column="1"
-                              Text="СЕРТИФИКАТЫ"
-                              FontSize="27.75"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,15,0,15"/>
-                              
-                    <TextBox x:Name="sertificates_sum"
-                            Grid.Row="5" Grid.Column="5" Grid.ColumnSpan="3"
-                            FontSize="39.75"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            Foreground="Green"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Right"
-                            Width="320"
-                            Height="55"
-                            Margin="0,15,0,15"
-                            IsReadOnly="True"
-                            TextAlignment="Right"/>
-                    
-                    <!-- ==================== КАРТА ОПЛАТЫ ==================== -->
-                    <TextBlock x:Name="label8" 
-                              Grid.Row="6" Grid.Column="1"
-                              Text="КАРТА ОПЛАТЫ"
-                              FontSize="24"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,15,0,15"/>
-                    
-                    <!-- ==================== ЧЕКБОКСЫ ==================== -->
-                    <CheckBox x:Name="checkBox_payment_by_sbp"
-                             Grid.Row="6" Grid.Column="3"
-                             Content="СБП"
-                             FontSize="21.75"
-                             VerticalAlignment="Center"
-                             HorizontalAlignment="Right"
-                             Width="96"
-                             Height="43"
-                             IsVisible="True"/>
-                    
-                    <!-- ==================== ПОЛЯ ДЛЯ КАРТЫ ОПЛАТЫ ==================== -->
-                    <!-- Поле для рублей -->
-                    <TextBox x:Name="non_cash_sum"
-                            Grid.Row="6" Grid.Column="5"
-                            FontSize="32.25"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            VerticalAlignment="Bottom"
-                            HorizontalAlignment="Right"
-                            Width="243"
-                            Height="56"
-                            Margin="0,15,0,15"
-                            TextAlignment="Right"/>
-                            
-                    <!-- Запятая (выравнивание по нижнему краю) -->
-                    <TextBlock x:Name="label9" 
-                              Grid.Row="6" Grid.Column="6"
-                              Text=","
-                              FontSize="26.25"
-                              VerticalAlignment="Bottom"
-                              HorizontalAlignment="Center"
-                              Margin="5,0,5,10"
-                              Height="56"/>
-                              
-                    <!-- Поле для копеек -->
-                    <TextBox x:Name="non_cash_sum_kop"
-                            Grid.Row="6" Grid.Column="7"
-                            FontSize="32.25"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            VerticalAlignment="Bottom"
-                            HorizontalAlignment="Right"
-                            Width="54"
-                            Height="56"
-                            Margin="0,15,0,15"
-                            IsEnabled="False"
-                            TextAlignment="Right"
-                            Text="0"/>
-                            
-                    <!-- Чекбокс вопроса -->
-                    <CheckBox x:Name="checkBox_do_not_send_payment_to_the_terminal"
-                             Grid.Row="6" Grid.Column="8"
-                             Content="?"
-                             VerticalAlignment="Center"
-                             HorizontalAlignment="Left"
-                             Margin="10,15,0,15"
-                             Width="32"
-                             Height="17"
-                             IsVisible="True"/>
-                    
-                    <!-- ==================== НАЛИЧНЫЕ ==================== -->
-                    <TextBlock x:Name="label2" 
-                              Grid.Row="8" Grid.Column="1"
-                              Text="НАЛИЧНЫЕ"
-                              FontSize="27.75"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,20,0,20"/>
-                              
-                    <TextBox x:Name="txtB_cash_sum"
-                            Grid.Row="8" Grid.Column="5" Grid.ColumnSpan="3"
-                            FontSize="32.25"
-                            Background="{DynamicResource SystemControlDarkBrush}"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Right"
-                            Width="319"
-                            Height="56"
-                            Margin="0,20,0,20"
-                            TextAlignment="Right"/>
-                    
-                    <!-- ==================== СДАЧА ==================== -->
-                    <TextBlock x:Name="label3" 
-                              Grid.Row="9" Grid.Column="1"
-                              Text="СДАЧА"
-                              FontSize="27.75"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Left"
-                              Margin="0,15,0,15"/>
-                              
-                    <TextBox x:Name="remainder"
-        Grid.Row="9" Grid.Column="5" Grid.ColumnSpan="3"
-        FontSize="32.25"
-        Background="{DynamicResource SystemControlDarkBrush}"
-        VerticalAlignment="Center"
-        HorizontalAlignment="Right"
-        Width="319"
-        Height="56"
-        Margin="0,15,0,15"
-        IsReadOnly="True"
-        TextAlignment="Right"
-        Padding="0,0,10,0"/>
-                    
-                    <!-- ==================== КНОПКИ ==================== -->
-                    <Grid Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="10"
-                          Background="{DynamicResource SystemControlBackgroundBrush}"
-                          Margin="0,20,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/> <!-- Левый отступ -->
-                            <ColumnDefinition Width="Auto"/> <!-- Кнопка F5 -->
-                            <ColumnDefinition Width="35"/> <!-- Пространство между кнопками -->
-                            <ColumnDefinition Width="Auto"/> <!-- Кнопка F12 -->
-                            <ColumnDefinition Width="*"/> <!-- Пространство справа -->
-                        </Grid.ColumnDefinitions>
+                                TextAlignment="Right"
+                                Text="0"/>
+                                
+                        <CheckBox x:Name="checkBox_do_not_send_payment_to_the_terminal"
+                                 Grid.Row="6" Grid.Column="8"
+                                 Content="?"
+                                 VerticalAlignment="Center"
+                                 HorizontalAlignment="Left"
+                                 Margin="10,15,0,15"
+                                 Width="32"
+                                 Height="17"
+                                 IsVisible="True"/>
                         
-                        <!-- Кнопка F5 смещена левее -->
-                        <Button x:Name="button1"
-                               Grid.Column="1"
-                               Content="Вернуться в документ (F5)"
-                               FontSize="18"
-                               Background="LightGray"
-                               Foreground="Black"
-                               BorderBrush="DarkGray"
-                               BorderThickness="1"
-                               HorizontalContentAlignment="Center"
-                               VerticalContentAlignment="Center"
-                               Width="320" 
-                               Height="60"
-                               HorizontalAlignment="Left"/>
-                               
-                        <!-- Кнопка F12 смещена левее -->
-                        <Button x:Name="button_pay"
-                               Grid.Column="3"
-                               Content="Подтвердить оплату (F12)"
-                               FontSize="18"
-                               Background="LightGray"
-                               Foreground="Red"
-                               BorderBrush="DarkGray"
-                               BorderThickness="1"
-                               HorizontalContentAlignment="Center"
-                               VerticalContentAlignment="Center"
-                               Width="320" 
-                               Height="60"
-                               HorizontalAlignment="Left"/>
+                        <TextBlock x:Name="label2" 
+                                  Grid.Row="8" Grid.Column="1"
+                                  Text="НАЛИЧНЫЕ"
+                                  FontSize="27.75"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,20,0,20"/>
+                                  
+                        <TextBox x:Name="txtB_cash_sum"
+                                Grid.Row="8" Grid.Column="5" Grid.ColumnSpan="3"
+                                FontSize="32.25"
+                                Background="{DynamicResource SystemControlDarkBrush}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Width="319"
+                                Height="56"
+                                Margin="0,20,0,20"
+                                TextAlignment="Right"/>
+                        
+                        <TextBlock x:Name="label3" 
+                                  Grid.Row="9" Grid.Column="1"
+                                  Text="СДАЧА"
+                                  FontSize="27.75"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,15,0,15"/>
+                                  
+                        <TextBox x:Name="remainder"
+                                Grid.Row="9" Grid.Column="5" Grid.ColumnSpan="3"
+                                FontSize="32.25"
+                                Background="{DynamicResource SystemControlDarkBrush}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Width="319"
+                                Height="56"
+                                Margin="0,15,0,15"
+                                TextAlignment="Right"
+                                Padding="0,0,10,0"/>
+                        
+                        <Grid Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="10"
+                              Background="{DynamicResource SystemControlBackgroundBrush}"
+                              Margin="0,20,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="35"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Button x:Name="button1"
+                                   Grid.Column="1"
+                                   Content="Вернуться в документ (F5)"
+                                   FontSize="18"
+                                   Background="LightGray"
+                                   Foreground="Black"
+                                   BorderBrush="DarkGray"
+                                   BorderThickness="1"
+                                   HorizontalContentAlignment="Center"
+                                   VerticalContentAlignment="Center"
+                                   Width="320" 
+                                   Height="60"
+                                   HorizontalAlignment="Left"/>
+                                   
+                            <Button x:Name="button_pay"
+                                   Grid.Column="3"
+                                   Content="Подтвердить оплату (F12)"
+                                   FontSize="18"
+                                   Background="LightGray"
+                                   Foreground="Red"
+                                   BorderBrush="DarkGray"
+                                   BorderThickness="1"
+                                   HorizontalContentAlignment="Center"
+                                   VerticalContentAlignment="Center"
+                                   Width="320" 
+                                   Height="60"
+                                   HorizontalAlignment="Left"/>
+                        </Grid>
+                        
+                        <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="10"
+                                  Height="1" 
+                                  Fill="LightGray" 
+                                  Margin="40,0,40,0"
+                                  VerticalAlignment="Center"/>
                     </Grid>
-                    
-                    <!-- Разделительная линия над полем "Сдача" -->
-                    <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="10"
-                              Height="1" 
-                              Fill="LightGray" 
-                              Margin="40,0,40,0"
-                              VerticalAlignment="Center"/>
                 </Grid>
             </Grid>
-        </Grid>
-    </Border>
+        </Border>
+    </Viewbox>
 </Window>

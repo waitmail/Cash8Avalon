@@ -206,13 +206,16 @@ namespace Cash8Avalon
                     {
                         BorderBrush = Brushes.Gray,
                         BorderThickness = new Thickness(0, 0, 1, 2),
-                        Background = Brushes.LightGray,
+                        Background = Brushes.LightBlue, // ИЗМЕНЕНО: LightBlue вместо LightGray
                         Child = new TextBlock
                         {
                             Text = headers[i],
                             FontWeight = FontWeight.Bold,
+                            FontSize = 12, // Добавьте, как в Cash_check
                             Margin = new Thickness(5, 0),
-                            VerticalAlignment = VerticalAlignment.Center
+                            VerticalAlignment = VerticalAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center, // Добавьте выравнивание по центру
+                            Foreground = Brushes.DarkBlue // Добавьте темно-синий цвет текста
                         }
                     };
 
@@ -221,7 +224,7 @@ namespace Cash8Avalon
                     _tableGrid.Children.Add(headerBorder);
                 }
 
-                Console.WriteLine("✓ Заголовки созданы");
+                Console.WriteLine("✓ Заголовки созданы (светло-голубые, как в Cash_check)");
             }
             catch (Exception ex)
             {
@@ -240,7 +243,7 @@ namespace Cash8Avalon
                 _tableGrid.RowDefinitions.Add(new RowDefinition(30, GridUnitType.Pixel));
 
                 // Определяем цвет фона строки (чередование)
-                var rowBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
+                var rowBackground = (dataRowIndex % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
 
                 // Создаем Border для всей строки (для выделения)
                 var rowBorder = new Border
@@ -533,49 +536,87 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"Открытие чека от {dateTimeWrite}");
 
-                // ИЗМЕНЕНИЕ 1: Создаем CashCheckWindow вместо Cash_check
+                // Создаем окно чека
                 var checkWindow = new Cash_check();
 
-                // ИЗМЕНЕНИЕ 2: Передаем параметры (предполагая, что в CashCheckWindow есть аналогичные свойства)
-                checkWindow.date_time_write = dateTimeWrite; // Если сохранили свойство
+                // Передаем параметры
+                checkWindow.date_time_write = dateTimeWrite;
                 checkWindow.IsNewCheck = false;
 
-                checkWindow.OnFormLoaded(); // Если сохранили метод
+                checkWindow.OnFormLoaded();
 
-                // Находим активное окно (без изменений)
+                // Находим активное окно
                 Window parentWindow = null;
 
-                // Вариант 1: Через TopLevel (без изменений)
+                // Вариант 1: Через TopLevel
                 var topLevel = TopLevel.GetTopLevel(this);
                 if (topLevel is Window currentWindow)
                 {
                     parentWindow = currentWindow;
                 }
 
-                // Вариант 2: Через Application (без изменений)
+                // Вариант 2: Через Application
                 if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // ИЗМЕНЕНИЕ 3: Теперь работаем напрямую с checkWindow, а не создаем новое окно
-                checkWindow.Title = $"Чек № {_checkItems[_selectedRowIndex].DocumentNumber} от {_checkItems[_selectedRowIndex].DateTimeWrite:dd.MM.yyyy HH:mm:ss}";
-                checkWindow.Width = 1200;
-                checkWindow.Height = 800;
+                // Настройка размеров окна чека - ВАРИАНТ 3
+                if (parentWindow != null)
+                {
+                    // Получаем размеры главного окна
+                    double mainWidth = parentWindow.Bounds.Width;
+                    double mainHeight = parentWindow.Bounds.Height;
 
-                // Дополнительные настройки окна (по желанию)
+                    // Проверяем, есть ли у родительского окна системные декорации
+                    bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
+                    bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
+
+                    // Примерная высота заголовка Windows
+                    const double titleBarHeight = 35; // Среднее значение 30-40px
+
+                    if (parentHasDecorations && !checkHasDecorations)
+                    {
+                        // Главное окно имеет системный заголовок, чек - нет
+                        // Чек будет ниже на высоту заголовка, поэтому нужно компенсировать
+                        checkWindow.Width = mainWidth;
+                        checkWindow.Height = mainHeight + titleBarHeight;
+
+                        Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
+                        Console.WriteLine($"Размеры: главное окно={mainHeight}px, чек окно={checkWindow.Height}px");
+                    }
+                    else
+                    {
+                        // Окна имеют одинаковый тип декораций
+                        checkWindow.Width = mainWidth;
+                        checkWindow.Height = mainHeight;
+                    }
+
+                    // Позиционируем по центру главного окна
+                    checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+                    Console.WriteLine($"Размеры окна чека: {checkWindow.Width}x{checkWindow.Height}");
+                }
+                else
+                {
+                    // Стандартные размеры если нет родительского окна
+                    checkWindow.Width = 1200;
+                    checkWindow.Height = 800;
+                    checkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                }
+
+                // Настройка свойств окна
+                checkWindow.Title = $"Чек № {_checkItems[_selectedRowIndex].DocumentNumber} от {_checkItems[_selectedRowIndex].DateTimeWrite:dd.MM.yyyy HH:mm:ss}";
                 checkWindow.CanResize = false;
                 checkWindow.CanMaximize = false;
                 checkWindow.CanMinimize = false;
-                
-
 
                 // Устанавливаем позиционирование и показываем
                 if (parentWindow != null)
                 {
                     checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-                    // ИЗМЕНЕНИЕ 4: Показываем само checkWindow как диалог
+                    // Показываем как диалог
                     await checkWindow.ShowDialog(parentWindow);
                 }
                 else
@@ -598,7 +639,7 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка при открытии чека: {ex.Message}");
             }
         }
-        
+
         #region Обработчики событий мыши и клавиатуры
 
         /// <summary>
@@ -774,78 +815,129 @@ namespace Cash8Avalon
                 // Проверка времени с ФН
                 MainStaticClass.validate_date_time_with_fn(15);
 
-                // Создаем контрол для нового чека (без изменений)
-                var checkForm = new Cash_check();
+                // Создаем окно для нового чека
+                var checkWindow = new Cash_check();
 
-                // Настраиваем для нового чека (пустой) (без изменений)
-                checkForm.IsNewCheck = true; // Добавьте это свойство в класс Cash_check
-                checkForm.cashier = txtCashier.Text; // Передаем кассира
+                // Настраиваем для нового чека
+                checkWindow.IsNewCheck = true;
+                checkWindow.cashier = txtCashier.Text;
 
-                // Дополнительная инициализация для нового чека (без изменений)
-                checkForm.OnFormLoaded();
+                // Дополнительная инициализация для нового чека
+                checkWindow.OnFormLoaded();
 
-                // Находим активное окно (без изменений)
+                // Находим активное окно
                 Window parentWindow = null;
 
-                // Вариант 1: Через TopLevel (без изменений)
+                // Вариант 1: Через TopLevel
                 var topLevel = TopLevel.GetTopLevel(this);
                 if (topLevel is Window currentWindow)
                 {
                     parentWindow = currentWindow;
                 }
 
-                // Вариант 2: Через Application (без изменений)
+                // Вариант 2: Через Application
                 if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // === ИЗМЕНЕНИЕ ТОЛЬКО ЗДЕСЬ ===
-                // Теперь Cash_check уже является Window, поэтому:
-                // 1. Не создаем newWindow
-                // 2. Настраиваем само checkForm как окно
-                checkForm.Title = "Новый чек";
-                checkForm.Width = 1200;
-                checkForm.Height = 800;
+                // Настройка размеров окна чека - ВАРИАНТ 3
+                if (parentWindow != null)
+                {
+                    // Получаем размеры главного окна
+                    double mainWidth = parentWindow.Bounds.Width;
+                    double mainHeight = parentWindow.Bounds.Height;
 
-                // Убираем стандартные кнопки если нужно
-                checkForm.CanResize = false;
-                checkForm.CanMaximize = false;
-                checkForm.CanMinimize = false;
+                    // Проверяем, есть ли у родительского окна системные декорации
+                    bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
+                    bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
+
+                    // Примерная высота заголовка Windows
+                    const double titleBarHeight = 35; // Среднее значение 30-40px
+
+                    if (parentHasDecorations && !checkHasDecorations)
+                    {
+                        // Главное окно имеет системный заголовок, чек - нет
+                        // Чек будет ниже на высоту заголовка, поэтому нужно компенсировать
+                        checkWindow.Width = mainWidth;
+                        checkWindow.Height = mainHeight + titleBarHeight;
+
+                        Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
+                        Console.WriteLine($"Размеры: главное окно={mainHeight}px, чек окно={checkWindow.Height}px");
+                    }
+                    else
+                    {
+                        // Окна имеют одинаковый тип декораций
+                        checkWindow.Width = mainWidth;
+                        checkWindow.Height = mainHeight;
+                    }
+
+                    // Позиционируем по центру главного окна
+                    checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+                    Console.WriteLine($"Размеры окна чека: {checkWindow.Width}x{checkWindow.Height}");
+                }
+                else
+                {
+                    // Стандартные размеры если нет родительского окна
+                    checkWindow.Width = 1200;
+                    checkWindow.Height = 800;
+                    checkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                }
+
+                // Настройка свойств окна
+                checkWindow.Title = "Новый чек";
+                checkWindow.CanResize = false;
+                checkWindow.CanMaximize = false;
+                checkWindow.CanMinimize = false;
 
                 // Подписываемся на событие закрытия окна
-                checkForm.Closed += (s, e) =>
+                checkWindow.Closed += (s, e) =>
                 {
                     // Проверяем результат через Tag
-                    bool? dialogResult = checkForm.Tag as bool?;
+                    bool? dialogResult = checkWindow.Tag as bool?;
                     if (dialogResult == true) // Чек успешно создан
                     {
                         LoadDocuments(); // Обновляем список после создания чека
                     }
                 };
 
-                // Устанавливаем позиционирование
+                // ВАЖНО: Добавляем обработчик события загрузки окна
+                checkWindow.Loaded += (s, e) =>
+                {
+                    Console.WriteLine("Окно чека загружено и отображается");
+                };
+
+                // Показываем окно
                 if (parentWindow != null)
                 {
-                    checkForm.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-                    // Показываем как диалог
-                    await checkForm.ShowDialog(parentWindow);
+                    // Показываем как диалог (модальное окно)
+                    await checkWindow.ShowDialog(parentWindow);
                 }
                 else
                 {
-                    checkForm.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    checkForm.Show();
+                    // Показываем как немодальное окно
+                    checkWindow.Show();
+
+                    // Если нужно ждать закрытия, можно использовать TaskCompletionSource
+                    var tcs = new TaskCompletionSource<bool>();
+                    checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
+                    await tcs.Task;
                 }
+
+                // Обновляем список документов
                 LoadDocuments();
+
+                Console.WriteLine("Окно чека закрыто, обновляем список документов");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании нового чека: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
                 await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
             }
         }
-             
+
         private async Task<bool> AllIsFilled()
         {
             bool result = true;

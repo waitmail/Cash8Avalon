@@ -434,11 +434,11 @@
                         
                         <!-- Период выгрузки (в 2 строки) -->
                         <TextBlock Grid.Column="0"
-                                   Text="Период выгрузки&#x0a;в Центр&#x0a;(в минутах):"
+                                   Text="Период выгрузки&#x0a;в Центр;(в минутах):"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"
                                    Margin="10,0,5,0"
-                                   Width="120"
+                                   Width="150"
                                    FontFamily="Segoe UI" />
                         
                         <TextBox Grid.Column="1"
@@ -449,11 +449,11 @@
                         
                         <!-- Дата загрузки карточек (в 3 строки) -->
                         <TextBlock Grid.Column="2"
-                                   Text="Дата последней&#x0a;загрузки карточек&#x0a;покупателей:"
+                                   Text="Дата последней загрузки&#x0a;карточекпокупателей:"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"
                                    Margin="10,0,5,0"
-                                   Width="150"
+                                   Width="180"
                                    FontFamily="Segoe UI" />
                         
                         <TextBox Grid.Column="3"
@@ -464,13 +464,60 @@
                                  FontFamily="Segoe UI" />
                     </Grid>
                     
-                    <!-- Кнопки внизу - расположены по центру -->
-                    <StackPanel Grid.Row="7"
+                    <!-- ===== НАСТРОЙКИ ПИОТ (новая строка) ===== -->
+                    <Grid Grid.Row="7"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="4"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Чекбокс Включить ПИот -->
+                        <CheckBox Grid.Column="0"
+                                  x:Name="checkBox_includePIot_bottom"
+                                  Content="Включить ПИот"
+                                  VerticalAlignment="Center"
+                                  Margin="5,0,15,0"
+                                  FontFamily="Segoe UI" />
+                        
+                        <!-- Лейбл Путь к ПИот -->
+                        <TextBlock Grid.Column="1"
+                                   Text="Путь к ПИот:"
+                                   VerticalAlignment="Center"
+                                   Margin="5,0,5,0"
+                                   FontFamily="Segoe UI" />
+                        
+                        <!-- Текстовое поле для URL ПИот -->
+                        <TextBox Grid.Column="2"
+                                 x:Name="txtB_piot_url"
+                                 VerticalAlignment="Center"
+                                 Margin="5,0,10,0"
+                                 FontFamily="Segoe UI"
+                                 ToolTip.Tip="URL для подключения к системе ПИот" />
+                        
+                        <!-- Кнопка проверки подключения -->
+                        <Button Grid.Column="3"
+                                x:Name="btn_check_piot"
+                                Content="Проверить подключение"
+                                Width="220"
+                                Height="35"
+                                VerticalAlignment="Center"
+                                Margin="5,0,5,0"
+                                FontFamily="Segoe UI"
+                                ToolTip.Tip="Проверить подключение и корректность настроек ПИот" />
+                    </Grid>
+                    
+                    <!-- ===== КНОПКИ ВНИЗУ ===== -->
+                    <StackPanel Grid.Row="8"
                                 Grid.Column="0"
                                 Grid.ColumnSpan="4"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Center"
-                                Margin="0,10,0,0">
+                                Margin="0,15,0,0">
                         
                         <Button x:Name="write"
                                 Content="Записать"
