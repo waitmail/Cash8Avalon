@@ -119,7 +119,7 @@
                                   
                         <TextBox x:Name="pay_sum" x:FieldModifier="public"
                                 Grid.Row="3" Grid.Column="5" Grid.ColumnSpan="3"
-                                FontSize="39.75"
+                                FontSize="32.75"
                                 Background="{DynamicResource SystemControlDarkBrush}"
                                 Foreground="Black"
                                 VerticalAlignment="Center"
@@ -185,7 +185,7 @@
                                   
                         <TextBox x:Name="sertificates_sum"
                                 Grid.Row="5" Grid.Column="5" Grid.ColumnSpan="3"
-                                FontSize="39.75"
+                                FontSize="32.75"
                                 Background="{DynamicResource SystemControlDarkBrush}"
                                 Foreground="Green"
                                 VerticalAlignment="Center"
@@ -294,6 +294,7 @@
                                 Height="56"
                                 Margin="0,15,0,15"
                                 TextAlignment="Right"
+								IsReadOnly="True"
                                 Padding="0,0,10,0"/>
                         
                         <Grid Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="10"

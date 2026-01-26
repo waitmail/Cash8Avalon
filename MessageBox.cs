@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using System;
 using System.Threading.Tasks;
 
@@ -198,9 +199,44 @@ public static class MessageBox
     }
 
     // СОЗДАНИЕ КНОПКИ
+    //private static Button CreateButton(string content, MessageBoxResult buttonResult,
+    //                                   bool isDefault, Window dialog,
+    //                                   TaskCompletionSource<MessageBoxResult> tcs)
+    //{
+    //    var button = new Button
+    //    {
+    //        Content = content,
+    //        Width = 80,
+    //        Height = 30,
+    //        HorizontalAlignment = HorizontalAlignment.Center
+    //    };
+
+    //    button.Click += (s, e) =>
+    //    {
+    //        tcs.TrySetResult(buttonResult);
+    //        dialog.Close();
+    //    };
+
+    //    if (isDefault)
+    //    {
+    //        // ОБРАБОТКА ENTER
+    //        dialog.KeyDown += (s, e) =>
+    //        {
+    //            if (e.Key == Avalonia.Input.Key.Enter)
+    //            {
+    //                e.Handled = true;
+    //                tcs.TrySetResult(buttonResult);
+    //                dialog.Close();
+    //            }
+    //        };
+    //    }
+
+    //    return button;
+    //}
+
     private static Button CreateButton(string content, MessageBoxResult buttonResult,
-                                       bool isDefault, Window dialog,
-                                       TaskCompletionSource<MessageBoxResult> tcs)
+                                   bool isDefault, Window dialog,
+                                   TaskCompletionSource<MessageBoxResult> tcs)
     {
         var button = new Button
         {
@@ -216,13 +252,27 @@ public static class MessageBox
             dialog.Close();
         };
 
+        // УСТАНАВЛИВАЕМ ФОКУС НА КНОПКУ ПО УМОЛЧАНИЮ ПРИ ОТКРЫТИИ ОКНА
         if (isDefault)
         {
-            // ОБРАБОТКА ENTER
+            dialog.Opened += (s, e) =>
+            {
+                // Используем Dispatcher чтобы установить фокус после полной загрузки
+                Dispatcher.UIThread.Post(() =>
+                {
+                    button.Focus();
+                }, DispatcherPriority.Input);
+            };
+        }
+
+        // ОБРАБОТКА ENTER для кнопки по умолчанию
+        if (isDefault)
+        {
             dialog.KeyDown += (s, e) =>
             {
                 if (e.Key == Avalonia.Input.Key.Enter)
                 {
+                    e.Handled = true; // ВАЖНО для Linux!
                     tcs.TrySetResult(buttonResult);
                     dialog.Close();
                 }

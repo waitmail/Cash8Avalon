@@ -21,6 +21,7 @@ using System.Data;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection.Emit;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -212,7 +213,7 @@ namespace Cash8Avalon
                 // 5. Дополнительный глобальный обработчик для F7
                 this.AddHandler(KeyDownEvent, OnGlobalKeyDownForForm, RoutingStrategies.Tunnel);
 
-                this.Closed += Cash_check_Closed;
+                //this.Closed += Cash_check_Closed;
 
                 Console.WriteLine("✓ Конструктор завершен успешно");
             }
@@ -768,10 +769,7 @@ namespace Cash8Avalon
             }
         }
 
-        private void Cash_check_Closed(object? sender, EventArgs e)
-        {
-            
-        }
+        
 
         public double Discount
         {
@@ -1284,9 +1282,11 @@ namespace Cash8Avalon
                 pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }
 
+            //EventHandler handler = null;
             // Подписываемся на событие закрытия если нужно
             pay_form.Closed += (s, e) =>
             {
+                //pay_form.Closed -= handler;
                 // Проверяем результат через Tag или другое свойство
                 bool? paymentSuccess = pay_form.Tag as bool?;
                 if (paymentSuccess == true)
@@ -1295,6 +1295,8 @@ namespace Cash8Avalon
                     Console.WriteLine("Оплата прошла успешно");
                 }
             };
+
+            //pay_form.Closed += handler;
 
             // Показываем окно
             if (parentWindow != null)
@@ -1306,20 +1308,16 @@ namespace Cash8Avalon
             {
                 pay_form.Show();
             }
-
-            //dr = pay_form.ShowDialog();
-
-            //if (dr == DialogResult.OK)
-            //{
-            //    
-            //}
-            if (Convert.ToBoolean(pay_form.Tag)==true)
+                        
+            if (Convert.ToBoolean(pay_form.Tag) == true)
             {
                 this.Close();
             }
-
-            this.txtB_search_product.Focus();
-            pay_form = new Pay();
+            else
+            {
+                this.txtB_search_product.Focus();
+                pay_form = new Pay();
+            }
         }
 
         public bool ValidateCheckSumAtDiscount()
@@ -5276,30 +5274,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при обновлении общей суммы: {ex.Message}");
             }
         }
-
-        //private void DebugGridInfo()
-        //{
-        //    Console.WriteLine("\n=== Отладочная информация Grid ===");
-
-        //    Console.WriteLine($"Grid товаров: {_productsTableGrid != null}");
-        //    if (_productsTableGrid != null)
-        //    {
-        //        Console.WriteLine($"  - Колонок: {_productsTableGrid.ColumnDefinitions.Count}");
-        //        Console.WriteLine($"  - Строк: {_productsTableGrid.RowDefinitions.Count}");
-        //        Console.WriteLine($"  - Записей: {_productsData.Count}");
-        //    }
-
-        //    Console.WriteLine($"\nGrid сертификатов: {_certificatesTableGrid != null}");
-        //    if (_certificatesTableGrid != null)
-        //    {
-        //        Console.WriteLine($"  - Колонок: {_certificatesTableGrid.ColumnDefinitions.Count}");
-        //        Console.WriteLine($"  - Строк: {_certificatesTableGrid.RowDefinitions.Count}");
-        //        Console.WriteLine($"  - Записей: {_certificatesData.Count}");
-        //    }
-
-        //    Console.WriteLine("=== Конец отладочной информации ===\n");
-        //}
-
+        
         // Метод для открытия записанного документа (аналог старого метода)
         private void ToOpenTheWrittenDownDocument()
         {
