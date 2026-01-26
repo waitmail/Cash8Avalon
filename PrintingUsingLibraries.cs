@@ -8,6 +8,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using static Cash8Avalon.Cash_check;
+
 
 //using System.Windows.Forms;
 using AtolConstants = Atol.Drivers10.Fptr.Constants;
@@ -436,7 +438,7 @@ namespace Cash8Avalon
         //    }
         //}
 
-        private void print_fiscal_advertisement(IFptr fptr)
+        private async void print_fiscal_advertisement(IFptr fptr)
         {
             NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
             string s = ""; //int length = 0;
@@ -502,11 +504,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show("Ошибки при выводе рекламного текста " + ex.Message);
+                await MessageBox.Show("Ошибки при выводе рекламного текста " + ex.Message);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибки при выводе рекламного текста " + ex.Message);
+                await MessageBox.Show("Ошибки при выводе рекламного текста " + ex.Message);
             }
             finally
             {
@@ -518,1147 +520,1150 @@ namespace Cash8Avalon
 
         }
 
-        public void print_sell_2_or_return_sell(Cash_check check)
+        public async void print_sell_2_or_return_sell(Cash_check check)
         {
-            //    bool error = false;
+            bool error = false;
 
-            //    IFptr fptr = MainStaticClass.FPTR;
-            //    if (!fptr.isOpened())
-            //    {
-            //        fptr.open();
-            //    }
+            IFptr fptr = MainStaticClass.FPTR;
+            if (!fptr.isOpened())
+            {
+                fptr.open();
+            }
 
-            //    //if (!check.print_promo_picture)
-            //    //{
-            //    //    get_actions_num_doc(check);//Печать акционных картинок
-            //    //    check.print_promo_picture = true;
-            //    //}
-
-
-            //    if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)//для возвратов и красных чеков старая схема
-            //    {
-            //        //здесь необходимо выполнить запрос на cdn
-            //        ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
-
-            //        fptr.clearMarkingCodeValidationResult();
-            //        check.cdn_markers_result_check.Clear();//если мы здесь предыдущие проверки очищаем
-            //        foreach (ListViewItem lvi in check.listView1.Items)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length > 13)
-            //            {
-
-            //                string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-
-            //                if (InventoryManager.completeDictionaryProductData)
-            //                {
-            //                    productData = InventoryManager.GetItem(Convert.ToInt64(lvi.SubItems[0].Text.Trim()));
-            //                }
-            //                else
-            //                {
-            //                    productData = check.GetProductDataInDB(lvi.SubItems[0].Text.Trim());
-            //                }
-
-            //                if (productData.IsCDNCheck())//&& check.check_type.SelectedIndex == 0 
-            //                {
-            //                    if (!MainStaticClass.cdn_check(productData, mark, lvi, check))
-            //                    {
-            //                        error = true;
-            //                    }
-            //                }
-
-            //                bool result_check_mark = check_marking_code(mark, check.numdoc.ToString(), ref check.cdn_markers_result_check, check.check_type.SelectedIndex);
-            //                if (!result_check_mark)
-            //                {
-            //                    error = true;
-            //                }
-            //            }
-            //        }
-            //    }
-
-            //    if (error)
-            //    {
-            //        return;
-            //    }
+            //if (!check.print_promo_picture)
+            //{
+            //    get_actions_num_doc(check);//Печать акционных картинок
+            //    check.print_promo_picture = true;
+            //}
 
 
-            //    fptr.setParam(1021, MainStaticClass.Cash_Operator);
-            //    fptr.setParam(1203, MainStaticClass.CashOperatorInn);
-            //    fptr.operatorLogin();
+            if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)//для возвратов и красных чеков старая схема
+            {
+                //здесь необходимо выполнить запрос на cdn
+                ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
 
-            //    print_terminal_check(fptr, check);
+                fptr.clearMarkingCodeValidationResult();
+                check.cdn_markers_result_check.Clear();//если мы здесь предыдущие проверки очищаем
+                foreach (ProductItem productItem in check._productsData)
+                {
+                    if (productItem.Mark.Trim().Length > 13)
+                    {
 
-            //    // Открытие чека (с передачей телефона получателя)
-            //    if (check.check_type.SelectedIndex == 0)
-            //    {
-            //        get_actions_num_doc(check);//Печать акционных картинок
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
-            //    }
-            //    else if (check.check_type.SelectedIndex == 1)
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
-            //    }
-            //    else if (check.check_type.SelectedIndex == 2)
-            //    {
+                        string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
 
-            //        //fptr.setParam(1177, "Служебная записка");
-            //        fptr.setParam(1178, check.sale_date);//Дата продажи
-            //        //if (check.tax_order.Trim().Length != 0)
-            //        //{
-            //        //fptr.setParam(1179, check.tax_order);//Номер предписания
-            //        fptr.setParam(1179, "0");//Номер предписания
-            //        //}
+                        if (InventoryManager.completeDictionaryProductData)
+                        {
+                            productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
+                        }
+                        else
+                        {
+                            productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
+                        }
 
-            //        //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
+                        //if (productData.IsCDNCheck())//&& check.check_type.SelectedIndex == 0 
+                        //{
+                        //    if (!MainStaticClass.cdn_check(productData, mark, lvi, check))
+                        //    {
+                        //        error = true;
+                        //    }
+                        //}
 
-            //        //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
-            //        fptr.utilFormTlv();
+                        bool result_check_mark = check_marking_code(mark, check.numdoc.ToString(), ref check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                        if (!result_check_mark)
+                        {
+                            error = true;
+                        }
+                    }
+                }
+            }
 
-            //        byte[] correctionInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //        fptr.setParam(1174, correctionInfo);
+            if (error)
+            {
+                return;
+            }
 
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_CORRECTION);
+
+            fptr.setParam(1021, MainStaticClass.Cash_Operator);
+            fptr.setParam(1203, MainStaticClass.CashOperatorInn);
+            fptr.operatorLogin();
+
+            print_terminal_check(fptr, check);
+
+            // Открытие чека (с передачей телефона получателя)
+            if (check.check_type.SelectedIndex == 0)
+            {
+                get_actions_num_doc(check);//Печать акционных картинок
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
+            }
+            else if (check.check_type.SelectedIndex == 1)
+            {
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
+            }
+            else if (check.check_type.SelectedIndex == 2)
+            {
+
+                //fptr.setParam(1177, "Служебная записка");
+                fptr.setParam(1178, check.sale_date);//Дата продажи
+                                                     //if (check.tax_order.Trim().Length != 0)
+                                                     //{
+                                                     //fptr.setParam(1179, check.tax_order);//Номер предписания
+                fptr.setParam(1179, "0");//Номер предписания
+                                         //}
+
+                //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
+
+                //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
+                fptr.utilFormTlv();
+
+                byte[] correctionInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+                fptr.setParam(1174, correctionInfo);
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_CORRECTION);
 
 
 
-            //        if (check.tax_order == "")
-            //        {
-            //            fptr.setParam(1173, 0);
-            //        }
-            //        else
-            //        {
-            //            fptr.setParam(1173, 1);
-            //        }
-            //    }
+                if (check.tax_order == "")
+                {
+                    fptr.setParam(1173, 0);
+                }
+                else
+                {
+                    fptr.setParam(1173, 1);
+                }
+            }
 
-            //    if (check.txtB_email_telephone.Text.Trim().Length > 0)
-            //    {
-            //        fptr.setParam(1008, check.txtB_email_telephone.Text);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-            //    }
+            if (check.txtB_email_telephone.Text != null)
+            {
+                if (check.txtB_email_telephone.Text.Trim().Length > 0)
+                {
+                    fptr.setParam(1008, check.txtB_email_telephone.Text);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+                }
 
-            //    if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
-            //    {
-            //        fptr.setParam(1228, check.txtB_inn.Text);
-            //        fptr.setParam(1227, check.txtB_name.Text);
-            //    }
+                if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
+                {
+                    fptr.setParam(1228, check.txtB_inn.Text);
+                    fptr.setParam(1227, check.txtB_name.Text);
+                }
+            }
 
-            //    if (MainStaticClass.SystemTaxation == 1)
-            //    {
-            //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_OSN);
-            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 1 LIBFPTR_TT_OSN", "print_sell_2_or_return_sell", check.numdoc.ToString());
-            //    }
-            //    else if (MainStaticClass.SystemTaxation == 2)
+            if (MainStaticClass.SystemTaxation == 1)
+            {
+                fptr.setParam(1055, AtolConstants.LIBFPTR_TT_OSN);
+                MainStaticClass.write_event_in_log("SNO SystemTaxation == 1 LIBFPTR_TT_OSN", "print_sell_2_or_return_sell", check.numdoc.ToString());
+            }
+            else if (MainStaticClass.SystemTaxation == 2)
+            {
+                fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
+                MainStaticClass.write_event_in_log("SNO SystemTaxation == 2 LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_or_return_sell", check.numdoc.ToString());
+            }
+            else if (MainStaticClass.SystemTaxation == 4)
+            {
+                fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
+                MainStaticClass.write_event_in_log("SNO SystemTaxation == 4 LIBFPTR_TT_USN_INCOME", "print_sell_2_or_return_sell", check.numdoc.ToString());
+            }
+
+            if (fptr.openReceipt() != 0)
+            {
+                await MessageBox.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
+                        "Ошибка открытия чека", MessageBoxButton.OK, MessageBoxType.Error);
+                MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                //fptr.close();
+                if (fptr.errorCode() == 82)
+                {
+                    fptr.cancelReceipt();
+                    await MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                }
+                return;
+            }
+
+            foreach (ProductItem productItem in check._productsData)
+            {
+                if (MainStaticClass.its_excise(productItem.Code.ToString().Trim()) == 0)
+                {
+                    if (productItem.Mark.Trim().Length <= 13)//код маркировки не заполнен
+                    {
+                        fptr.setParam(1212, 32);
+                    }
+                    else
+                    {
+                        string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
+
+                        Cash_check.Requisite1260 requisite1260;
+
+                        if (check.verifyCDN.TryGetValue(mark, out requisite1260))
+                        {
+                            fptr.setParam(1262, requisite1260.req1262);
+                            fptr.setParam(1263, requisite1260.req1263);
+                            fptr.setParam(1264, requisite1260.req1264);
+                            fptr.setParam(1265, requisite1260.req1265);
+                            fptr.utilFormTlv();
+                            byte[] industryInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+                            fptr.setParam(1260, industryInfo);
+                            //fptr.setParam(1011, AtolConstants.LIBFPTR_TIME_ZONE_2);
+                        }
+
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE, mark);
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_TYPE, AtolConstants.LIBFPTR_MCT12_AUTO);
+                        if ((check.check_type.SelectedIndex == 0) || (check.check_type.SelectedIndex == 2))
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
+                        }
+                        else if (check.check_type.SelectedIndex == 1)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_RETURN);
+                        }
+                        uint result_check = 0;
+                        if (check.cdn_markers_result_check.ContainsKey(mark))
+                        {
+                            result_check = check.cdn_markers_result_check[mark];
+                        }
+                        else
+                        {
+                            await MessageBox.Show("Код маркировки " + mark + " не найден в проверенных","Проверка по маркировке",MessageBoxButton.OK,MessageBoxType.Error);
+                        }
+
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim());
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, result_check);
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0);
+                    }
+                    //}
+                }
+                else
+                {
+                    fptr.setParam(1212, 2);//под акцизный товар
+                }
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim());
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PRICE, productItem.PriceAtDiscount.ToString().Replace(",", "."));
+                if (MainStaticClass.check_fractional_tovar(productItem.Code.ToString().Trim()) == "piece")
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_PIECE);
+                }
+                else
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_KILOGRAM);
+                }
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_QUANTITY, productItem.Quantity.ToString().Replace(",", "."));
+                int stavka_nds = MainStaticClass.get_tovar_nds(productItem.Code.ToString().Trim());
+                                
+                if (MainStaticClass.SystemTaxation == 1)
+                {
+                    if (stavka_nds == 0)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT0);
+                    }
+                    else if (stavka_nds == 10)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT10);
+                    }
+                    else if (stavka_nds == 18)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT20);
+                    }
+                    else if (stavka_nds == 20)
+                    {
+                        if (DateTime.Now.Year >= 2026)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
+                        }
+                        else
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT20);
+                        }
+                    }
+                    else if (stavka_nds == 22)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
+                    }
+                    else
+                    {
+                        await MessageBox.Show("Неизвестная ставка ндс","Проверка ставки ндс",MessageBoxButton.OK,MessageBoxType.Error);
+                        error = true;
+                    }
+                    if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT120);
+                    }
+                }
+                else
+                {
+                    if (MainStaticClass.GetNdsIp == 0)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
+                    }
+                    else if (MainStaticClass.GetNdsIp == 5)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
+                    }
+                    else if (MainStaticClass.GetNdsIp == 7)
+                    {
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
+                    }
+                }
+
+                //Проверка на сертификат
+                if (check.check_type.SelectedIndex == 0)
+                {
+                    if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
+                    {
+                        fptr.setParam(1214, 3);
+                    }
+                    else
+                    {
+                        fptr.setParam(1214, 4);
+                    }
+                }
+
+                fptr.registration();
+                if (fptr.errorCode() > 0)
+                {
+                    await MessageBox.Show("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
+                        "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+                    MainStaticClass.WriteRecordErrorLog("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() + "\r\n " + fptr.errorDescription().ToString(), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                    error = true;
+                    fptr.cancelReceipt();
+                    break;
+                }
+            }
+
+            if (error)
+            {
+                return;
+            }
+
+            // Регистрация итога (отбрасываем копейки)
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
+            fptr.receiptTotal();
+
+            double[] get_result_payment = MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString());
+            if (get_result_payment[0] != 0)//Наличные
+            {
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_CASH);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[0]);
+                fptr.payment();
+            }
+            if (get_result_payment[1] != 0)
+            {
+                //так было раньше
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                //fptr.payment();
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                fptr.payment();
+                //Это новое добавлено для безналичной оплаты
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ADD_INFO);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_PAYMENT_METHOD, 0);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ID, "123");
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ADD_INFO, "Сведения");
+                //fptr.payment();
+
+            }
+            if (get_result_payment[2] != 0)
+            {
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_PREPAID);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[2]);
+                fptr.payment();
+            }
+            string s = "";
+            if (check.check_type.SelectedIndex == 0)//это продажа
+            {
+                if (check.Discount != 0)
+                {
+                    //fptr.beginNonfiscalDocument();
+                    //s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + " " + MainStaticClass.get_currency();
+                    s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + "руб. ";
+
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                    fptr.printText();
+
+                    if (check.client.Tag != null)
+                    {
+                        if (check.client.Tag == check.user.Tag)
+                        {
+                            s = "ДК: стандартная скидка";
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+                            fptr.printText();
+                        }
+                        else
+                        {
+                            s = "ДК: " + check.client.Tag.ToString();
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+                            fptr.printText();
+                        }
+                    }
+                }
+            }
+
+            s = MainStaticClass.Nick_Shop + "-" + MainStaticClass.CashDeskNumber.ToString() + "-" + check.numdoc.ToString();// +" кассир " + this.cashier;
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+            fptr.printText();
+
+            print_fiscal_advertisement(fptr);
+
+            //MessageBox.Show(fptr.errorCode().ToString());
+            fptr.setParam(1085, "NumCheckShop");
+            fptr.setParam(1086, s);
+            fptr.utilFormTlv();
+            byte[] userAttribute = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+            fptr.setNonPrintableParam(1084, userAttribute);
+            //MessageBox.Show(fptr.errorCode().ToString());
+
+            // Закрытие чека
+            if (fptr.errorCode() > 0)
+            {
+                await MessageBox.Show("При печати чека произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
+                    "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+                error = true;
+                fptr.cancelReceipt();
+                return;
+            }
+            else
+            {
+                //get_actions_num_doc(check);//Печать акционных картинок
+                fptr.closeReceipt();
+            }
+
+            while (fptr.checkDocumentClosed() < 0)
+            {
+                // Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
+                await MessageBox.Show(fptr.errorCode().ToString() + " " + fptr.errorDescription(), " Ошибка при печати чека ");
+                MainStaticClass.WriteRecordErrorLog(fptr.errorCode().ToString() + fptr.errorDescription().ToString(), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                if (await MessageBox.Show(" Продолжать попытки печати чека ", "Ошибка при печати чека", MessageBoxButton.YesNo, MessageBoxType.Error) == MessageBoxResult.Yes)
+                {
+                    continue;
+                }
+                else
+                {
+                    error = true;
+                    break;
+                }
+            }
+
+            if ((!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_CLOSED)) || (error))
+            {
+                // Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
+                fptr.cancelReceipt();
+                await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                error = true;
+                //fptr.close();
+                return;
+            }
+
+            if (!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_PRINTED))
+            {
+                // Можно сразу вызвать метод допечатывания документа, он завершится с ошибкой, если это невозможно
+                while (fptr.continuePrint() < 0)
+                {
+                    // Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
+                    await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                    //*********************************
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHORT_STATUS);
+                    fptr.queryData();
+                    bool isPaperPresent = fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_RECEIPT_PAPER_PRESENT);
+                    if (!isPaperPresent)
+                    {
+                        await MessageBox.Show("В ФР закончилась бумага.","Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    }
+                    //*********************************
+                    continue;
+                }
+            }
+            //s = MainStaticClass.Nick_Shop + "-" + MainStaticClass.CashDeskNumber.ToString() + "-" + check.numdoc.ToString();// +" кассир " + this.cashier;
+            //fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+            //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+            //fptr.printText();
+            //print_fiscal_advertisement(fptr);
+
+            // Завершение работы
+            //fptr.close();
+            if (!error)
+            {
+                MainStaticClass.its_print(check.numdoc.ToString());
+                check.closing = false;
+                check.Close();
+            }
+            else
+            {
+                await MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека",MessageBoxButton.OK,MessageBoxType.Error);
+                MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                fptr.cancelReceipt();
+            }
+
+
+
+            //if (MainStaticClass.GetVariantConnectFN == 1)
+            //{
+            //    fptr.close();
+            //}
+            //print_promo();
+        }
+
+        public async void print_sell_2_3_or_return_sell(Cash_check check, int variant)
+        {
+
+            bool error = false;
+
+            IFptr fptr = MainStaticClass.FPTR;            
+            if (!fptr.isOpened())
+            {
+                fptr.open();
+            }
+
+            if (!check.print_promo_picture)
+            {
+                get_actions_num_doc(check);//Печать акционных картинок
+                check.print_promo_picture = true;
+            }
+
+            //fptr.setParam(1021, MainStaticClass.Cash_Operator);
+            //fptr.setParam(1203, MainStaticClass.CashOperatorInn);
+            //fptr.operatorLogin();
+
+
+            //print_terminal_check(fptr, check);
+            //if (variant == 0)
+            //{
+            //    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
+            //    MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+            //}
+            //else if (variant == 1)
+            //{
+            //    if (MainStaticClass.SystemTaxation == 3)
             //    {
             //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
-            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 2 LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_or_return_sell", check.numdoc.ToString());
+            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
             //    }
-            //    else if (MainStaticClass.SystemTaxation == 4)
+            //    else if (MainStaticClass.SystemTaxation == 5)
             //    {
             //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
-            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 4 LIBFPTR_TT_USN_INCOME", "print_sell_2_or_return_sell", check.numdoc.ToString());
-            //    }
-
-            //    if (fptr.openReceipt() != 0)
-            //    {
-            //        MessageBox.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
-            //                "Ошибка откртия чека", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            //        MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        //fptr.close();
-            //        if (fptr.errorCode() == 82)
-            //        {
-            //            fptr.cancelReceipt();
-            //            MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека");
-            //        }
-            //        return;
-            //    }
-
-            //    foreach (ListViewItem lvi in check.listView1.Items)
-            //    {
-            //        if (MainStaticClass.its_excise(lvi.SubItems[0].Text.Trim()) == 0)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length <= 13)//код маркировки не заполнен
-            //            {
-            //                fptr.setParam(1212, 32);
-            //            }
-            //            else
-            //            {
-            //                string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-
-            //                Cash_check.Requisite1260 requisite1260;
-
-            //                if (check.verifyCDN.TryGetValue(mark, out requisite1260))
-            //                {
-            //                    fptr.setParam(1262, requisite1260.req1262);
-            //                    fptr.setParam(1263, requisite1260.req1263);
-            //                    fptr.setParam(1264, requisite1260.req1264);
-            //                    fptr.setParam(1265, requisite1260.req1265);
-            //                    fptr.utilFormTlv();
-            //                    byte[] industryInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //                    fptr.setParam(1260, industryInfo);
-            //                    //fptr.setParam(1011, AtolConstants.LIBFPTR_TIME_ZONE_2);
-            //                }
-
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE, mark);
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_TYPE, AtolConstants.LIBFPTR_MCT12_AUTO);
-            //                if ((check.check_type.SelectedIndex == 0) || (check.check_type.SelectedIndex == 2))
-            //                {
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
-            //                }
-            //                else if (check.check_type.SelectedIndex == 1)
-            //                {
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_RETURN);
-            //                }
-            //                uint result_check = 0;
-            //                if (check.cdn_markers_result_check.ContainsKey(mark))
-            //                {
-            //                    result_check = check.cdn_markers_result_check[mark];
-            //                }
-            //                else
-            //                {
-            //                    MessageBox.Show("Код маркировки " + mark + " не найден в проверенных");
-            //                }
-
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim());
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, result_check);
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0);
-            //            }
-            //            //}
-            //        }
-            //        else
-            //        {
-            //            fptr.setParam(1212, 2);//подакцизеый товар
-            //        }
-
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim());
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PRICE, lvi.SubItems[5].Text.Replace(",", "."));
-            //        if (MainStaticClass.check_fractional_tovar(lvi.SubItems[0].Text.Trim()) == "piece")
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_PIECE);
-            //        }
-            //        else
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_KILOGRAM);
-            //        }
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_QUANTITY, lvi.SubItems[3].Text.Replace(",", "."));
-            //        int stavka_nds = MainStaticClass.get_tovar_nds(lvi.SubItems[0].Text.Trim());
-            //        //nomer_naloga = 0;
-            //        //MainStaticClass.use
-            //        if (MainStaticClass.SystemTaxation == 1)
-            //        {
-            //            if (stavka_nds == 0)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT0);
-            //            }
-            //            else if (stavka_nds == 10)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT10);
-            //            }
-            //            else if (stavka_nds == 18)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT20);
-            //            }
-            //            else if (stavka_nds == 20)
-            //            {
-            //                if (DateTime.Now.Year >= 2026)
-            //                {
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
-            //                }
-            //                else
-            //                {
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT20);
-            //                }
-            //            }
-            //            else if (stavka_nds == 22)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
-            //            }
-            //            else
-            //            {
-            //                MessageBox.Show("Неизвестная ставка ндс");
-            //                error = true;
-            //            }
-            //            if (MainStaticClass.its_certificate(lvi.SubItems[0].Text.Trim()))
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT120);
-            //            }
-            //        }
-            //        else
-            //        {
-            //            if (MainStaticClass.GetNdsIp == 0)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
-            //            }
-            //            else if (MainStaticClass.GetNdsIp == 5)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
-            //            }
-            //            else if (MainStaticClass.GetNdsIp == 7)
-            //            {
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
-            //            }
-            //        }
-
-            //        //Проверка на сертификат
-            //        if (check.check_type.SelectedIndex == 0)
-            //        {
-            //            if (MainStaticClass.its_certificate(lvi.SubItems[0].Text.Trim()))
-            //            {
-            //                fptr.setParam(1214, 3);
-            //            }
-            //            else
-            //            {
-            //                fptr.setParam(1214, 4);
-            //            }
-            //        }
-
-            //        fptr.registration();
-            //        if (fptr.errorCode() > 0)
-            //        {
-            //            MessageBox.Show("При печати позиции " + lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-            //                "\r\n " + fptr.errorDescription().ToString());
-            //            MainStaticClass.WriteRecordErrorLog("При печати позиции " + lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() + "\r\n " + fptr.errorDescription().ToString(), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //            error = true;
-            //            fptr.cancelReceipt();
-            //            break;
-            //        }
-            //    }
-
-            //    if (error)
-            //    {
-            //        return;
-            //    }
-
-            //    // Регистрация итога (отбрасываем копейки)
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
-            //    fptr.receiptTotal();
-
-            //    double[] get_result_payment = MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString());
-            //    if (get_result_payment[0] != 0)//Наличные
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_CASH);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[0]);
-            //        fptr.payment();
-            //    }
-            //    if (get_result_payment[1] != 0)
-            //    {
-            //        //так было раньше
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
-            //        //fptr.payment();
-
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
-            //        fptr.payment();
-            //        //Это новое добавлено для безналичной оплаты
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ADD_INFO);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_PAYMENT_METHOD, 0);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ID, "123");
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ADD_INFO, "Сведения");
-            //        //fptr.payment();
-
-            //    }
-            //    if (get_result_payment[2] != 0)
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_PREPAID);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[2]);
-            //        fptr.payment();
-            //    }
-            //    string s = "";
-            //    if (check.check_type.SelectedIndex == 0)//это продажа
-            //    {
-            //        if (check.Discount != 0)
-            //        {
-            //            //fptr.beginNonfiscalDocument();
-            //            //s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + " " + MainStaticClass.get_currency();
-            //            s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + "руб. ";
-
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
-            //            fptr.printText();
-
-            //            if (check.client.Tag != null)
-            //            {
-            //                if (check.client.Tag == check.user.Tag)
-            //                {
-            //                    s = "ДК: стандартная скидка";
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //                    fptr.printText();
-            //                }
-            //                else
-            //                {
-            //                    s = "ДК: " + check.client.Tag.ToString();
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //                    fptr.printText();
-            //                }
-            //            }
-            //        }
-            //    }
-
-            //    s = MainStaticClass.Nick_Shop + "-" + MainStaticClass.CashDeskNumber.ToString() + "-" + check.numdoc.ToString();// +" кассир " + this.cashier;
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //    fptr.printText();
-
-            //    print_fiscal_advertisement(fptr);
-
-            //    //MessageBox.Show(fptr.errorCode().ToString());
-            //    fptr.setParam(1085, "NumCheckShop");
-            //    fptr.setParam(1086, s);
-            //    fptr.utilFormTlv();
-            //    byte[] userAttribute = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //    fptr.setNonPrintableParam(1084, userAttribute);
-            //    //MessageBox.Show(fptr.errorCode().ToString());
-
-            //    // Закрытие чека
-            //    if (fptr.errorCode() > 0)
-            //    {
-            //        MessageBox.Show("При печати чека произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-            //            "\r\n " + fptr.errorDescription().ToString());
-            //        error = true;
-            //        fptr.cancelReceipt();
-            //        return;
-            //    }
-            //    else
-            //    {
-            //        //get_actions_num_doc(check);//Печать акционных картинок
-            //        fptr.closeReceipt();
-            //    }
-
-            //    while (fptr.checkDocumentClosed() < 0)
-            //    {
-            //        // Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
-            //        MessageBox.Show(fptr.errorCode().ToString() + " " + fptr.errorDescription(), " Ошибка при печати чека ");
-            //        MainStaticClass.WriteRecordErrorLog(fptr.errorCode().ToString() + fptr.errorDescription().ToString(), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        if (MessageBox.Show(" Продолжать попытки печати чека ", "Ошибка при печати чека", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
-            //        {
-            //            continue;
-            //        }
-            //        else
-            //        {
-            //            error = true;
-            //            break;
-            //        }
-            //    }
-
-            //    if ((!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_CLOSED)) || (error))
-            //    {
-            //        // Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
-            //        fptr.cancelReceipt();
-            //        MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()));
-            //        MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        error = true;
-            //        //fptr.close();
-            //        return;
-            //    }
-
-            //    if (!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_PRINTED))
-            //    {
-            //        // Можно сразу вызвать метод допечатывания документа, он завершится с ошибкой, если это невозможно
-            //        while (fptr.continuePrint() < 0)
-            //        {
-            //            // Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
-            //            MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()));
-            //            MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //            //*********************************
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHORT_STATUS);
-            //            fptr.queryData();
-            //            bool isPaperPresent = fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_RECEIPT_PAPER_PRESENT);
-            //            if (!isPaperPresent)
-            //            {
-            //                MessageBox.Show("В ФР закончилась бумага.");
-            //            }
-            //            //*********************************
-            //            continue;
-            //        }
-            //    }
-            //    //s = MainStaticClass.Nick_Shop + "-" + MainStaticClass.CashDeskNumber.ToString() + "-" + check.numdoc.ToString();// +" кассир " + this.cashier;
-            //    //fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //    //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //    //fptr.printText();
-            //    //print_fiscal_advertisement(fptr);
-
-            //    // Завершение работы
-            //    //fptr.close();
-            //    if (!error)
-            //    {
-            //        MainStaticClass.its_print(check.numdoc.ToString());
-            //        check.closing = false;
-            //        check.Close();
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека");
-            //        MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        fptr.cancelReceipt();
-            //    }
+            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+            //    }                
+            //}
+            //else
+            //{
+            //    MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
+            //    return;
+            //}
 
 
+            if (variant == 0)
+            {
+                //if (check.to_print_certainly == 1)
+                //{
+                //    MainStaticClass.delete_document_wil_be_printed(check.numdoc.ToString(), variant);
+                //}
 
-            //    //if (MainStaticClass.GetVariantConnectFN == 1)
-            //    //{
-            //    //    fptr.close();
-            //    //}
-            //    //print_promo();
+                //if (MainStaticClass.get_document_wil_be_printed(check.numdoc.ToString()) != 0)
+                //{
+                //    MessageBox.Show("Этот чек уже был успешно отправлен на печать");
+                //    return;
+                //}
+                //здесь проверяем есть ли строки
+                int count_string = 0;
+                foreach (ProductItem productItem in check._productsData)
+                {
+                    if (productItem.Mark.Trim().Length <= 13)
+                    {
+                        count_string++;
+                    }
+                }
+                if (count_string == 0)
+                {
+                    //здесь необходимо поставить флаг распечатан
+                    check.its_print_p(variant);
+                    return;
+                }
+
+            }
+            else if (variant == 1)
+            {
+                fptr.openDrawer();
+                //здесь проверяем есть ли строки
+
+                //if (check.to_print_certainly_p == 1)
+                //{
+                //    MainStaticClass.delete_document_wil_be_printed(check.numdoc.ToString(), variant);
+                //}
+
+                //if (MainStaticClass.get_document_wil_be_printed(check.numdoc.ToString(), variant) != 0)
+                //{
+                //    MessageBox.Show("Этот чек уже был успешно отправлен на печать");
+                //    return;
+                //}
+                int count_string = 0;
+                foreach (ProductItem productItem in check._productsData)
+                {
+                    if (productItem.Mark.Trim().Length > 13)
+                    {
+                        count_string++;
+                    }
+                }
+                if (count_string == 0)
+                {
+                    //здесь необходимо поставить флаг распечатан
+                    check.its_print_p(variant);
+                    //if (MainStaticClass.GetVariantConnectFN == 1)
+                    //{
+                    //    fptr.close();
+                    //}
+                    return;
+                }
+
+                if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)//для возвратов и красных чеков старая схема
+                {
+                    //здесь необходимо выполнить запрос на cdn
+                    ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
+
+                    fptr.clearMarkingCodeValidationResult();
+                    check.cdn_markers_result_check.Clear();//если мы здесь предыдущие проверки очищаем
+                    foreach (ProductItem productItem in check._productsData)
+                    {
+                        if (productItem.Mark.Trim().Length > 13)
+                        {
+                            //if (cdn_check(lvi.SubItems[0].Text.Trim(), check.numdoc.ToString()))
+                            //{
+                            //    continue;
+                            //}
+
+                            string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
+
+                            if (InventoryManager.completeDictionaryProductData)
+                            {
+                                productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
+                            }
+                            else
+                            {
+                                productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
+                            }
+
+                            //if (productData.IsCDNCheck())// && check.check_type.SelectedIndex == 0)
+                            //{
+                            //    if (!MainStaticClass.cdn_check(productData, mark, lvi, check))
+                            //    {
+                            //        error = true;
+                            //    }
+                            //}
+
+                            //string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
+                            bool result_check_mark = check_marking_code(mark, check.numdoc.ToString(), ref check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                            if (!result_check_mark)
+                            {
+                                error = true;
+                            }
+                        }
+                    }
+                }
             }
 
-            public void print_sell_2_3_or_return_sell(Cash_check check, int variant)
+            if (error)
+            {
+                return;
+            }
+
+
+            fptr.setParam(1021, MainStaticClass.Cash_Operator);
+            fptr.setParam(1203, MainStaticClass.CashOperatorInn);
+            fptr.operatorLogin();
+
+            print_terminal_check(fptr, check);
+            //if (variant == 0)
+            //{
+            //    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
+            //    MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+            //}
+            //else if (variant == 1)
+            //{
+            //    if (MainStaticClass.SystemTaxation == 3)
+            //    {
+            //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
+            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+            //    }
+            //    else if (MainStaticClass.SystemTaxation == 5)
+            //    {
+            //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
+            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+            //    }
+            //}
+            //else
+            //{
+            //    MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
+            //    return;
+            //}
+
+
+            if (check.check_type.SelectedIndex == 0)// || (check.check_type.SelectedIndex == 2))
+            {
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
+            }
+            else if (check.check_type.SelectedIndex == 1)
+            {
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
+            }
+            else if (check.check_type.SelectedIndex == 2)
+            {
+                ////fptr.setParam(1177, "Служебная записка");
+                //fptr.setParam(1178, check.sale_date);//Дата продажи
+                //if (check.tax_order.Trim().Length != 0)
+                //{
+                //    fptr.setParam(1179, check.tax_order);//Номер предписания
+                //}
+
+                //fptr.utilFormTlv();
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_CORRECTION);
+
+                //byte[] correctionInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+                //if (check.tax_order == "")
+                //{
+                //    fptr.setParam(1173, 0);
+                //}
+                //else
+                //{
+                //    fptr.setParam(1173, 1);
+                //}
+                ////fptr.setParam(1174, correctionInfo);
+
+                //fptr.setParam(1177, "Служебная записка");
+                fptr.setParam(1178, check.sale_date);//Дата продажи
+                                                     //if (check.tax_order.Trim().Length != 0)
+                                                     //{
+                                                     //fptr.setParam(1179, check.tax_order);//Номер предписания
+                fptr.setParam(1179, "0");//Номер предписания
+                                         //}
+
+                //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
+
+                //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
+                fptr.utilFormTlv();
+
+                byte[] correctionInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+                fptr.setParam(1174, correctionInfo);
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_CORRECTION);
+
+                if (check.tax_order == "")
+                {
+                    fptr.setParam(1173, 0);
+                }
+                else
+                {
+                    fptr.setParam(1173, 1);
+                }
+
+            }
+
+            // bool closing = false;
+
+            // Открытие чека (с передачей телефона получателя)
+            //if (check.check_type.SelectedIndex == 0)
+            //{
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
+            //}
+            //else
+            //{
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
+            //}
+
+            //fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+
+
+            if (check.txtB_email_telephone.Text.Trim().Length > 0)
+            {
+                fptr.setParam(1008, check.txtB_email_telephone.Text);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+            }
+
+            if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
+            {
+                fptr.setParam(1228, check.txtB_inn.Text);
+                fptr.setParam(1227, check.txtB_name.Text);
+            }
+
+            if (variant == 0)
+            {
+                fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
+                MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+            }
+            else if (variant == 1)
+            {
+                if (MainStaticClass.SystemTaxation == 3)
+                {
+                    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
+                    MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+                }
+                else if (MainStaticClass.SystemTaxation == 5)
+                {
+                    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
+                    MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
+                }
+            }
+            else
+            {
+                await MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
+                return;
+            }
+
+
+            //fptr.closeReceipt();//.cancelReceipt();//
+            if (fptr.openReceipt() != 0)
+            {
+                await MessageBox.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
+                        "Ошибка откртия чека", MessageBoxButton.OK, MessageBoxType.Error);
+                MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                //fptr.close();
+                if (fptr.errorCode() == 82)
+                {
+                    fptr.cancelReceipt();
+                    await MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                }
+                return;
+            }
+
+
+
+            foreach (ProductItem productItem in check._productsData)
             {
 
-            //    bool error = false;
-
-            //    IFptr fptr = MainStaticClass.FPTR;
-            //    //setConnectSetting(fptr);
-            //    if (!fptr.isOpened())
-            //    {
-            //        fptr.open();
-            //    }
-
-            //    if (!check.print_promo_picture)
-            //    {
-            //        get_actions_num_doc(check);//Печать акционных картинок
-            //        check.print_promo_picture = true;
-            //    }
-
-            //    //fptr.setParam(1021, MainStaticClass.Cash_Operator);
-            //    //fptr.setParam(1203, MainStaticClass.CashOperatorInn);
-            //    //fptr.operatorLogin();
-
-
-            //    //print_terminal_check(fptr, check);
-            //    //if (variant == 0)
-            //    //{
-            //    //    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
-            //    //    MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    //}
-            //    //else if (variant == 1)
-            //    //{
-            //    //    if (MainStaticClass.SystemTaxation == 3)
-            //    //    {
-            //    //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
-            //    //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    //    }
-            //    //    else if (MainStaticClass.SystemTaxation == 5)
-            //    //    {
-            //    //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
-            //    //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    //    }                
-            //    //}
-            //    //else
-            //    //{
-            //    //    MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
-            //    //    return;
-            //    //}
-
-
-            //    if (variant == 0)
-            //    {
-            //        //if (check.to_print_certainly == 1)
-            //        //{
-            //        //    MainStaticClass.delete_document_wil_be_printed(check.numdoc.ToString(), variant);
-            //        //}
-
-            //        //if (MainStaticClass.get_document_wil_be_printed(check.numdoc.ToString()) != 0)
-            //        //{
-            //        //    MessageBox.Show("Этот чек уже был успешно отправлен на печать");
-            //        //    return;
-            //        //}
-            //        //здесь проверяем есть ли строки
-            //        int count_string = 0;
-            //        foreach (ListViewItem lvi in check.listView1.Items)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length <= 13)
-            //            {
-            //                count_string++;
-            //            }
-            //        }
-            //        if (count_string == 0)
-            //        {
-            //            //здесь необходимо поставить флаг распечатан
-            //            check.its_print_p(variant);
-            //            return;
-            //        }
-
-            //    }
-            //    else if (variant == 1)
-            //    {
-            //        fptr.openDrawer();
-            //        //здесь проверяем есть ли строки
-
-            //        //if (check.to_print_certainly_p == 1)
-            //        //{
-            //        //    MainStaticClass.delete_document_wil_be_printed(check.numdoc.ToString(), variant);
-            //        //}
-
-            //        //if (MainStaticClass.get_document_wil_be_printed(check.numdoc.ToString(), variant) != 0)
-            //        //{
-            //        //    MessageBox.Show("Этот чек уже был успешно отправлен на печать");
-            //        //    return;
-            //        //}
-            //        int count_string = 0;
-            //        foreach (ListViewItem lvi in check.listView1.Items)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length > 13)
-            //            {
-            //                count_string++;
-            //            }
-            //        }
-            //        if (count_string == 0)
-            //        {
-            //            //здесь необходимо поставить флаг распечатан
-            //            check.its_print_p(variant);
-            //            //if (MainStaticClass.GetVariantConnectFN == 1)
-            //            //{
-            //            //    fptr.close();
-            //            //}
-            //            return;
-            //        }
-
-            //        if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)//для возвратов и красных чеков старая схема
-            //        {
-            //            //здесь необходимо выполнить запрос на cdn
-            //            ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
-
-            //            fptr.clearMarkingCodeValidationResult();
-            //            check.cdn_markers_result_check.Clear();//если мы здесь предыдущие проверки очищаем
-            //            foreach (ListViewItem lvi in check.listView1.Items)
-            //            {
-            //                if (lvi.SubItems[14].Text.Trim().Length > 13)
-            //                {
-            //                    //if (cdn_check(lvi.SubItems[0].Text.Trim(), check.numdoc.ToString()))
-            //                    //{
-            //                    //    continue;
-            //                    //}
-
-            //                    string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-
-            //                    if (InventoryManager.completeDictionaryProductData)
-            //                    {
-            //                        productData = InventoryManager.GetItem(Convert.ToInt64(lvi.SubItems[0].Text.Trim()));
-            //                    }
-            //                    else
-            //                    {
-            //                        productData = check.GetProductDataInDB(lvi.SubItems[0].Text.Trim());
-            //                    }
-
-            //                    if (productData.IsCDNCheck())// && check.check_type.SelectedIndex == 0)
-            //                    {
-            //                        if (!MainStaticClass.cdn_check(productData, mark, lvi, check))
-            //                        {
-            //                            error = true;
-            //                        }
-            //                    }
-
-            //                    //string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-            //                    bool result_check_mark = check_marking_code(mark, check.numdoc.ToString(), ref check.cdn_markers_result_check, check.check_type.SelectedIndex);
-            //                    if (!result_check_mark)
-            //                    {
-            //                        error = true;
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-
-            //    if (error)
-            //    {
-            //        return;
-            //    }
-
-
-            //    fptr.setParam(1021, MainStaticClass.Cash_Operator);
-            //    fptr.setParam(1203, MainStaticClass.CashOperatorInn);
-            //    fptr.operatorLogin();
-
-            //    print_terminal_check(fptr, check);
-            //    //if (variant == 0)
-            //    //{
-            //    //    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
-            //    //    MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    //}
-            //    //else if (variant == 1)
-            //    //{
-            //    //    if (MainStaticClass.SystemTaxation == 3)
-            //    //    {
-            //    //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
-            //    //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    //    }
-            //    //    else if (MainStaticClass.SystemTaxation == 5)
-            //    //    {
-            //    //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
-            //    //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    //    }
-            //    //}
-            //    //else
-            //    //{
-            //    //    MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
-            //    //    return;
-            //    //}
-
-
-            //    if (check.check_type.SelectedIndex == 0)// || (check.check_type.SelectedIndex == 2))
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
-            //    }
-            //    else if (check.check_type.SelectedIndex == 1)
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
-            //    }
-            //    else if (check.check_type.SelectedIndex == 2)
-            //    {
-            //        ////fptr.setParam(1177, "Служебная записка");
-            //        //fptr.setParam(1178, check.sale_date);//Дата продажи
-            //        //if (check.tax_order.Trim().Length != 0)
-            //        //{
-            //        //    fptr.setParam(1179, check.tax_order);//Номер предписания
-            //        //}
-
-            //        //fptr.utilFormTlv();
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_CORRECTION);
-
-            //        //byte[] correctionInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //        //if (check.tax_order == "")
-            //        //{
-            //        //    fptr.setParam(1173, 0);
-            //        //}
-            //        //else
-            //        //{
-            //        //    fptr.setParam(1173, 1);
-            //        //}
-            //        ////fptr.setParam(1174, correctionInfo);
-
-            //        //fptr.setParam(1177, "Служебная записка");
-            //        fptr.setParam(1178, check.sale_date);//Дата продажи
-            //        //if (check.tax_order.Trim().Length != 0)
-            //        //{
-            //        //fptr.setParam(1179, check.tax_order);//Номер предписания
-            //        fptr.setParam(1179, "0");//Номер предписания
-            //        //}
-
-            //        //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
-
-            //        //fptr.setParam(1179, "2.15-15/00373 от 12.01.2024");//Номер предписания
-            //        fptr.utilFormTlv();
-
-            //        byte[] correctionInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //        fptr.setParam(1174, correctionInfo);
-
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_CORRECTION);
-
-            //        if (check.tax_order == "")
-            //        {
-            //            fptr.setParam(1173, 0);
-            //        }
-            //        else
-            //        {
-            //            fptr.setParam(1173, 1);
-            //        }
-
-            //    }
-
-            //    // bool closing = false;
-
-            //    // Открытие чека (с передачей телефона получателя)
-            //    //if (check.check_type.SelectedIndex == 0)
-            //    //{
-            //    //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
-            //    //}
-            //    //else
-            //    //{
-            //    //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
-            //    //}
-
-            //    //fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-
-
-            //    if (check.txtB_email_telephone.Text.Trim().Length > 0)
-            //    {
-            //        fptr.setParam(1008, check.txtB_email_telephone.Text);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-            //    }
-
-            //    if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
-            //    {
-            //        fptr.setParam(1228, check.txtB_inn.Text);
-            //        fptr.setParam(1227, check.txtB_name.Text);
-            //    }
-
-            //    if (variant == 0)
-            //    {
-            //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
-            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    }
-            //    else if (variant == 1)
-            //    {
-            //        if (MainStaticClass.SystemTaxation == 3)
-            //        {
-            //            fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
-            //            MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //        }
-            //        else if (MainStaticClass.SystemTaxation == 5)
-            //        {
-            //            fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
-            //            MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //        }
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
-            //        return;
-            //    }
-
-
-            //    //fptr.closeReceipt();//.cancelReceipt();//
-            //    if (fptr.openReceipt() != 0)
-            //    {
-            //        MessageBox.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
-            //                "Ошибка откртия чека", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            //        MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        //fptr.close();
-            //        if (fptr.errorCode() == 82)
-            //        {
-            //            fptr.cancelReceipt();
-            //            MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека");
-            //        }
-            //        return;
-            //    }
-
-
-
-            //    foreach (ListViewItem lvi in check.listView1.Items)
-            //    {
-
-            //        if (variant == 0)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length > 13)
-            //            {
-            //                continue;
-            //            }
-            //        }
-            //        else if (variant == 1)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length < 14)
-            //            {
-            //                continue;
-            //            }
-            //        }
-
-            //        if (MainStaticClass.its_excise(lvi.SubItems[0].Text.Trim()) == 0)
-            //        {
-            //            if (lvi.SubItems[14].Text.Trim().Length <= 13)//код маркировки не заполнен
-            //            {
-            //                fptr.setParam(1212, 32);
-            //            }
-            //            else
-            //            {
-
-            //                //if (!cdn_check(lvi.SubItems[0].Text.Trim(), check.numdoc.ToString()))
-            //                //{
-            //                //string marker_code = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-            //                //byte[] textAsBytes = System.Text.Encoding.Default.GetBytes(marker_code);
-            //                //string mark = Convert.ToBase64String(textAsBytes);
-            //                string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-            //                Cash_check.Requisite1260 requisite1260;
-
-            //                if (check.verifyCDN.TryGetValue(mark, out requisite1260))
-            //                {
-            //                    fptr.setParam(1262, requisite1260.req1262);
-            //                    fptr.setParam(1263, requisite1260.req1263);
-            //                    fptr.setParam(1264, requisite1260.req1264);
-            //                    fptr.setParam(1265, requisite1260.req1265);
-            //                    fptr.utilFormTlv();
-            //                    byte[] industryInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //                    fptr.setParam(1260, industryInfo);
-            //                    //fptr.setParam(1011, AtolConstants.LIBFPTR_TIME_ZONE_2);
-            //                }
-
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE, mark);
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_TYPE, AtolConstants.LIBFPTR_MCT12_AUTO);
-            //                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
-            //                if ((check.check_type.SelectedIndex == 0) || (check.check_type.SelectedIndex == 2))
-            //                {
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
-            //                }
-            //                else if (check.check_type.SelectedIndex == 1)
-            //                {
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_RETURN);
-            //                }
-            //                uint result_check = 0;
-            //                if (check.cdn_markers_result_check.ContainsKey(mark))
-            //                {
-            //                    result_check = check.cdn_markers_result_check[mark];
-            //                }
-            //                else
-            //                {
-            //                    MessageBox.Show("Код маркировки " + mark + " не найден в проверенных");
-            //                }
-
-            //                //Cash_check.Requisite1260 requisite1260;
-
-            //                //if (check.verifyCDN.TryGetValue(mark, out requisite1260))
-            //                //{
-            //                //    fptr.setParam(1262, requisite1260.req1262);
-            //                //    fptr.setParam(1263, requisite1260.req1263);
-            //                //    fptr.setParam(1264, requisite1260.req1264);
-            //                //    fptr.setParam(1265, requisite1260.req1265);
-            //                //    fptr.utilFormTlv();
-            //                //    byte[] industryInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //                //    fptr.setParam(1260, industryInfo);
-            //                //}
-
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, result_check);
-            //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0);
-            //                //}
-            //            }
-            //        }
-            //        else
-            //        {
-            //            fptr.setParam(1212, 2);//подакцизеый товар
-            //        }
-
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim());
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PRICE, lvi.SubItems[5].Text.Replace(",", "."));
-            //        if (MainStaticClass.check_fractional_tovar(lvi.SubItems[0].Text.Trim()) == "piece")
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_PIECE);
-            //        }
-            //        else
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_KILOGRAM);
-            //        }
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_QUANTITY, lvi.SubItems[3].Text.Replace(",", "."));
-
-            //        if (MainStaticClass.GetNdsIp == 0)
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
-            //        }
-            //        else if (MainStaticClass.GetNdsIp == 1)
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
-            //        }
-            //        else if (MainStaticClass.GetNdsIp == 2)
-            //        {
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
-            //        }
-
-            //        //Проверка на сертификат
-            //        if (check.check_type.SelectedIndex == 0)
-            //        {
-            //            if (MainStaticClass.its_certificate(lvi.SubItems[0].Text.Trim()))
-            //            {
-            //                fptr.setParam(1214, 3);
-            //            }
-            //            else
-            //            {
-            //                fptr.setParam(1214, 4);
-            //            }
-            //        }
-
-            //        fptr.registration();
-            //        if (fptr.errorCode() > 0)
-            //        {
-            //            MessageBox.Show("При печати позиции " + lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-            //                "\r\n " + fptr.errorDescription().ToString());
-            //            error = true;
-            //            fptr.cancelReceipt();
-            //            MainStaticClass.WriteRecordErrorLog("При печати позиции " + lvi.SubItems[0].Text.Trim() + " " + lvi.SubItems[1].Text.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-            //                "\r\n " + fptr.errorDescription().ToString(), "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //            //fptr.resetError();
-            //            break;
-            //        }
-            //    }
-
-            //    // Регистрация итога (отбрасываем копейки)
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
-            //    fptr.receiptTotal();
-
-            //    double[] get_result_payment = check.get_summ1_systemtaxation3(variant);//MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString());
-            //    if (get_result_payment[0] != 0)//Наличные
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_CASH);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[0]);
-            //        fptr.payment();
-            //    }
-            //    if (get_result_payment[1] != 0)
-            //    {
-            //        //так было раньше
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
-            //        //fptr.payment();
-
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
-            //        fptr.payment();
-
-            //        ////Это новое добавлено для безналичной оплаты
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ADD_INFO);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_PAYMENT_METHOD, 0);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ID, "123");
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ADD_INFO, "Сведения");
-            //        //fptr.payment();
-            //    }
-            //    if (get_result_payment[2] != 0)
-            //    {
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_PREPAID);
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[2]);
-            //        fptr.payment();
-            //    }
-            //    string s = "";
-            //    if (check.check_type.SelectedIndex == 0)//это продажа
-            //    {
-            //        if (check.Discount != 0)
-            //        {
-            //            //s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + " руб. " + MainStaticClass.get_currency();
-            //            s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + " руб. ";
-            //            fptr.beginNonfiscalDocument();
-
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
-            //            fptr.printText();
-
-            //            if (check.client.Tag != null)
-            //            {
-            //                if (check.client.Tag == check.user.Tag)
-            //                {
-            //                    s = "ДК: стандартная скидка";
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //                    fptr.printText();
-            //                }
-            //                else
-            //                {
-            //                    s = "ДК: " + check.client.Tag.ToString();
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //                    fptr.printText();
-            //                }
-            //            }
-            //        }
-            //    }
-
-            //    s = MainStaticClass.Nick_Shop + "-" + MainStaticClass.CashDeskNumber.ToString() + "-" + check.numdoc.ToString();// +" кассир " + this.cashier;
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
-            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
-            //    fptr.printText();
-            //    print_fiscal_advertisement(fptr);
-
-            //    fptr.setParam(1085, "NumCheckShop");
-            //    fptr.setParam(1086, s);
-            //    fptr.utilFormTlv();
-            //    byte[] userAttribute = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
-            //    fptr.setNonPrintableParam(1084, userAttribute);
-
-
-
-
-            //    // Закрытие чека
-            //    if (fptr.errorCode() > 0)
-            //    {
-            //        MessageBox.Show("При печати чека произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-            //            "\r\n " + fptr.errorDescription().ToString());
-            //        MainStaticClass.WriteRecordErrorLog($"Ошибка при закрытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        error = true;
-            //        fptr.cancelReceipt();
-            //        return;
-            //    }
-            //    else
-            //    {
-            //        //print_promo();
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_SCALE_PERCENT, 150);
-
-            //        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_FILENAME, "C:\\2025-05-13_10-30.png");
-            //        //fptr.printPicture();
-            //        //if (!check.print_promo_picture)
-            //        //{
-            //        //    get_actions_num_doc(check);//Печать акционных картинок
-            //        //    check.print_promo_picture = true;
-            //        //}
-
-            //        fptr.closeReceipt();
-            //    }
-
-            //    while (fptr.checkDocumentClosed() < 0)
-            //    {
-            //        // Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
-            //        MessageBox.Show(fptr.errorCode().ToString() + " " + fptr.errorDescription(), " Ошибка при печати чека ");
-            //        MainStaticClass.WriteRecordErrorLog($"Ошибка при закрытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //        if (MessageBox.Show(" Продолжать попытки печати чека ", "Ошибка при печати чека", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
-            //        {
-            //            continue;
-            //        }
-            //        else
-            //        {
-            //            error = true;
-            //            break;
-            //        }
-            //    }
-
-            //    if ((!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_CLOSED)) || (error))
-            //    {
-            //        // Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
-            //        fptr.cancelReceipt();
-            //        //fptr.close();
-            //        return;
-            //    }
-
-            //    if (!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_PRINTED))
-            //    {
-            //        // Можно сразу вызвать метод допечатывания документа, он завершится с ошибкой, если это невозможно
-            //        while (fptr.continuePrint() < 0)
-            //        {
-            //            // Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
-            //            MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()));
-            //            MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-            //            continue;
-            //        }
-            //    }
-
-            //    if (!error)
-            //    {
-
-            //        check.its_print_p(variant);
-            //        if (variant == 1)
-            //        {
-            //            check.Close();
-            //        }
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека");
-            //        fptr.cancelReceipt();
-            //    }
+                if (variant == 0)
+                {
+                    if (productItem.Mark.Trim().Length > 13)
+                    {
+                        continue;
+                    }
+                }
+                else if (variant == 1)
+                {
+                    if (productItem.Mark.Trim().Length < 14)
+                    {
+                        continue;
+                    }
+                }
+
+                if (MainStaticClass.its_excise(productItem.Code.ToString().Trim()) == 0)
+                {
+                    if (productItem.Mark.Trim().Length <= 13)//код маркировки не заполнен
+                    {
+                        fptr.setParam(1212, 32);
+                    }
+                    else
+                    {
+
+                        //if (!cdn_check(lvi.SubItems[0].Text.Trim(), check.numdoc.ToString()))
+                        //{
+                        //string marker_code = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
+                        //byte[] textAsBytes = System.Text.Encoding.Default.GetBytes(marker_code);
+                        //string mark = Convert.ToBase64String(textAsBytes);
+                        string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
+                        Cash_check.Requisite1260 requisite1260;
+
+                        if (check.verifyCDN.TryGetValue(mark, out requisite1260))
+                        {
+                            fptr.setParam(1262, requisite1260.req1262);
+                            fptr.setParam(1263, requisite1260.req1263);
+                            fptr.setParam(1264, requisite1260.req1264);
+                            fptr.setParam(1265, requisite1260.req1265);
+                            fptr.utilFormTlv();
+                            byte[] industryInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+                            fptr.setParam(1260, industryInfo);
+                            //fptr.setParam(1011, AtolConstants.LIBFPTR_TIME_ZONE_2);
+                        }
+
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE, mark);
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_TYPE, AtolConstants.LIBFPTR_MCT12_AUTO);
+                        //fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
+                        if ((check.check_type.SelectedIndex == 0) || (check.check_type.SelectedIndex == 2))
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
+                        }
+                        else if (check.check_type.SelectedIndex == 1)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_RETURN);
+                        }
+                        uint result_check = 0;
+                        if (check.cdn_markers_result_check.ContainsKey(mark))
+                        {
+                            result_check = check.cdn_markers_result_check[mark];
+                        }
+                        else
+                        {
+                            await MessageBox.Show("Код маркировки " + mark + " не найден в проверенных");
+                        }
+
+                        //Cash_check.Requisite1260 requisite1260;
+
+                        //if (check.verifyCDN.TryGetValue(mark, out requisite1260))
+                        //{
+                        //    fptr.setParam(1262, requisite1260.req1262);
+                        //    fptr.setParam(1263, requisite1260.req1263);
+                        //    fptr.setParam(1264, requisite1260.req1264);
+                        //    fptr.setParam(1265, requisite1260.req1265);
+                        //    fptr.utilFormTlv();
+                        //    byte[] industryInfo = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+                        //    fptr.setParam(1260, industryInfo);
+                        //}
+
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, result_check);
+                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0);
+                        //}
+                    }
+                }
+                else
+                {
+                    fptr.setParam(1212, 2);//подакцизеый товар
+                }
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim());
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PRICE, productItem.PriceAtDiscount.ToString().Replace(",", "."));
+                if (MainStaticClass.check_fractional_tovar(productItem.Code.ToString().Trim()) == "piece")
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_PIECE);
+                }
+                else
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_KILOGRAM);
+                }
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_QUANTITY, productItem.Quantity.ToString().Replace(",", "."));
+
+                if (MainStaticClass.GetNdsIp == 0)
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
+                }
+                else if (MainStaticClass.GetNdsIp == 1)
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
+                }
+                else if (MainStaticClass.GetNdsIp == 2)
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
+                }
+
+                //Проверка на сертификат
+                if (check.check_type.SelectedIndex == 0)
+                {
+                    if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
+                    {
+                        fptr.setParam(1214, 3);
+                    }
+                    else
+                    {
+                        fptr.setParam(1214, 4);
+                    }
+                }
+
+                fptr.registration();
+                if (fptr.errorCode() > 0)
+                {
+                    await MessageBox.Show("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
+                        "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    error = true;
+                    fptr.cancelReceipt();
+                    MainStaticClass.WriteRecordErrorLog("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
+                        "\r\n " + fptr.errorDescription().ToString(), "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                    //fptr.resetError();
+                    break;
+                }
             }
 
-            /// <summary>
-            /// Преобразует шестнадцатеричную строку в массив байтов.
-            /// </summary>
-            /// <param name="hexString">Шестнадцатеричная строка.</param>
-            /// <returns>Массив байтов.</returns>
-            static byte[] HexStringToByteArray(string hexString)
-        {
-            int length = hexString.Length;
-            byte[] byteArray = new byte[length / 2];
+            // Регистрация итога (отбрасываем копейки)
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
+            fptr.receiptTotal();
 
-            for (int i = 0; i < length; i += 2)
+            double[] get_result_payment = check.get_summ1_systemtaxation3(variant);//MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString());
+            if (get_result_payment[0] != 0)//Наличные
             {
-                // Преобразуем каждую пару символов в байт
-                byteArray[i / 2] = Convert.ToByte(hexString.Substring(i, 2), 16);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_CASH);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[0]);
+                fptr.payment();
+            }
+            if (get_result_payment[1] != 0)
+            {
+                //так было раньше
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                //fptr.payment();
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                fptr.payment();
+
+                ////Это новое добавлено для безналичной оплаты
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ADD_INFO);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_PAYMENT_METHOD, 0);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ID, "123");
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ELECTRONICALLY_ADD_INFO, "Сведения");
+                //fptr.payment();
+            }
+            if (get_result_payment[2] != 0)
+            {
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_PREPAID);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[2]);
+                fptr.payment();
+            }
+            string s = "";
+            if (check.check_type.SelectedIndex == 0)//это продажа
+            {
+                if (check.Discount != 0)
+                {
+                    //s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + " руб. " + MainStaticClass.get_currency();
+                    s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + " руб. ";
+                    fptr.beginNonfiscalDocument();
+
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                    fptr.printText();
+
+                    if (check.client.Tag != null)
+                    {
+                        if (check.client.Tag == check.user.Tag)
+                        {
+                            s = "ДК: стандартная скидка";
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+                            fptr.printText();
+                        }
+                        else
+                        {
+                            s = "ДК: " + check.client.Tag.ToString();
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+                            fptr.printText();
+                        }
+                    }
+                }
             }
 
-            return byteArray;
+            s = MainStaticClass.Nick_Shop + "-" + MainStaticClass.CashDeskNumber.ToString() + "-" + check.numdoc.ToString();// +" кассир " + this.cashier;
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
+            fptr.printText();
+            print_fiscal_advertisement(fptr);
+
+            fptr.setParam(1085, "NumCheckShop");
+            fptr.setParam(1086, s);
+            fptr.utilFormTlv();
+            byte[] userAttribute = fptr.getParamByteArray(AtolConstants.LIBFPTR_PARAM_TAG_VALUE);
+            fptr.setNonPrintableParam(1084, userAttribute);
+
+
+
+
+            // Закрытие чека
+            if (fptr.errorCode() > 0)
+            {
+                await MessageBox.Show("При печати чека произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
+                    "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+                MainStaticClass.WriteRecordErrorLog($"Ошибка при закрытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                error = true;
+                fptr.cancelReceipt();
+                return;
+            }
+            else
+            {
+                //print_promo();
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_SCALE_PERCENT, 150);
+
+                //fptr.setParam(AtolConstants.LIBFPTR_PARAM_FILENAME, "C:\\2025-05-13_10-30.png");
+                //fptr.printPicture();
+                //if (!check.print_promo_picture)
+                //{
+                //    get_actions_num_doc(check);//Печать акционных картинок
+                //    check.print_promo_picture = true;
+                //}
+
+                fptr.closeReceipt();
+            }
+
+            while (fptr.checkDocumentClosed() < 0)
+            {
+                // Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
+                await MessageBox.Show(fptr.errorCode().ToString() + " " + fptr.errorDescription(), " Ошибка при печати чека ",MessageBoxButton.OK,MessageBoxType.Error);
+                MainStaticClass.WriteRecordErrorLog($"Ошибка при закрытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                if (await MessageBox.Show(" Продолжать попытки печати чека ", "Ошибка при печати чека", MessageBoxButton.YesNo, MessageBoxType.Error) == MessageBoxResult.Yes)
+                {
+                    continue;
+                }
+                else
+                {
+                    error = true;
+                    break;
+                }
+            }
+
+            if ((!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_CLOSED)) || (error))
+            {
+                // Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
+                fptr.cancelReceipt();
+                //fptr.close();
+                return;
+            }
+
+            if (!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_PRINTED))
+            {
+                // Можно сразу вызвать метод для того чтобы допечатать документ и он завершится с ошибкой, если это невозможно
+                while (fptr.continuePrint() < 0)
+                {
+                    // Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
+                    await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
+                    continue;
+                }
+            }
+
+            if (!error)
+            {
+
+                check.its_print_p(variant);
+                if (variant == 1)
+                {
+                    check.Close();
+                }
+            }
+            else
+            {
+                await MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека",MessageBoxButton.OK,MessageBoxType.Error);
+                fptr.cancelReceipt();
+            }
         }
+
+       
+
+        ///// <summary>
+        ///// Преобразует шестнадцатеричную строку в массив байтов.
+        ///// </summary>
+        ///// <param name="hexString">Шестнадцатеричная строка.</param>
+        ///// <returns>Массив байтов.</returns>
+        //static byte[] HexStringToByteArray(string hexString)
+        //{
+        //    int length = hexString.Length;
+        //    byte[] byteArray = new byte[length / 2];
+
+        //    for (int i = 0; i < length; i += 2)
+        //    {
+        //        // Преобразуем каждую пару символов в байт
+        //        byteArray[i / 2] = Convert.ToByte(hexString.Substring(i, 2), 16);
+        //    }
+
+        //    return byteArray;
+        //}
 
 
         /// <summary>
@@ -1671,7 +1676,7 @@ namespace Cash8Avalon
         /// 1, если запись успешно добавлена,
         /// -1 в случае ошибки.
         /// </returns>
-        public int InsertRecordPictureNumber(int idFR, short objectType, int idObject)
+        public async Task<int> InsertRecordPictureNumber(int idFR, short objectType, int idObject)
         {
             // SQL-запрос для вставки новой записи
             string query = @"
@@ -1704,7 +1709,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 // Логируем ошибку
-                MessageBox.Show($"Ошибка при добавлении записи в таблицу: {ex.Message}");
+                await MessageBox.Show($"Ошибка при добавлении записи в таблицу: {ex.Message}");
                 return -1; // Возвращаем -1 в случае ошибки
             }
         }
@@ -1720,7 +1725,7 @@ namespace Cash8Avalon
         /// 0, если записи нет,
         /// -1 в случае ошибки.
         /// </returns>
-        public int CheckRecordExists(int idObject, short objectType)
+        public async Task<int> CheckRecordExists(int idObject, short objectType)
         {
             // SQL-запрос для получения id_f_r
             string query = @"
@@ -1760,7 +1765,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 // Логируем ошибку
-                MessageBox.Show($"Ошибка при проверке соответствия записи в бд: {ex.Message}");
+                await MessageBox.Show($"Ошибка при проверке соответствия записи в бд: {ex.Message}");
                 return -1; // Возвращаем -1 в случае ошибки
             }
         }

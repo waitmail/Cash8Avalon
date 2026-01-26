@@ -12,6 +12,7 @@ using Avalonia.VisualTree;
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -537,6 +538,8 @@ namespace Cash8Avalon
 
                 // ИЗМЕНЕНИЕ 2: Передаем параметры (предполагая, что в CashCheckWindow есть аналогичные свойства)
                 checkWindow.date_time_write = dateTimeWrite; // Если сохранили свойство
+                checkWindow.IsNewCheck = false;
+
                 checkWindow.OnFormLoaded(); // Если сохранили метод
 
                 // Находим активное окно (без изменений)
@@ -834,6 +837,7 @@ namespace Cash8Avalon
                     checkForm.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                     checkForm.Show();
                 }
+                LoadDocuments();
             }
             catch (Exception ex)
             {
@@ -841,7 +845,7 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
             }
         }
-
+             
         private async Task<bool> AllIsFilled()
         {
             bool result = true;
