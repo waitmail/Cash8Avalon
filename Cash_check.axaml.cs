@@ -158,7 +158,7 @@ namespace Cash8Avalon
         {
             public int Code { get; set; }
             public string Tovar { get; set; } = string.Empty;
-            public int Quantity { get; set; }
+            public decimal Quantity { get; set; }
             public decimal Price { get; set; }
             public decimal PriceAtDiscount { get; set; }
             public decimal Sum { get; set; }
@@ -313,7 +313,7 @@ namespace Cash8Avalon
                 //comment.IsEnabled = false;
                 
 
-                int status = get_its_deleted_document();
+                int status = await get_its_deleted_document();
                 if ((status == 0) || (status == 1))
                 {
                     
@@ -633,7 +633,7 @@ namespace Cash8Avalon
                 numdoc = get_new_number_document();
                 if (numdoc == 0)
                 {
-                    MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
+                    await MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номера документа",MessageBoxButton.OK,MessageBoxType.Error);
                     MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
                     this.Close();
                 }
@@ -656,7 +656,7 @@ namespace Cash8Avalon
                 txtB_name.IsEnabled = false;
                 comment.IsEnabled = false;
 
-                int status = get_its_deleted_document();
+                int status = await get_its_deleted_document();
                 if ((status == 0) || (status == 1))
                 {
                     //this.type_pay.Enabled = false;
@@ -1153,38 +1153,10 @@ namespace Cash8Avalon
 
                 MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
 
-                //DataTable dataTable = to_define_the_action_dt(true);//Обработка на дисконтные акции с использованием datatable 
-                //checkSumOnDocument(dataTable);Пока закомментирую проблема если есть карта клиента, надо отлаживать  
-                //
+                DataTable dataTable = await to_define_the_action_dt(true);//Обработка на дисконтные акции с использованием datatable 
 
-                //рассчитанные данные в памяти по акциям теперь помещаем в листвью 
-                //listView1.Items.Clear();
-                //foreach (DataRow row in dataTable.Rows)
-                //{
-                //    ListViewItem lvi = new ListViewItem(row["tovar_code"].ToString());
-                //    lvi.Tag = row["tovar_code"].ToString();
-                //    lvi.SubItems.Add(row["tovar_name"].ToString());//Наименование                        
-                //    lvi.SubItems.Add(row["characteristic_name"].ToString());//Характеристика
-                //    lvi.SubItems[2].Tag = row["characteristic_code"].ToString();
-                //    lvi.SubItems.Add(row["quantity"].ToString());//Количество
-                //    //lvi.SubItems.Add(row["price"].ToString());//Цена без скидки
-                //    //lvi.SubItems.Add(row["price_at_discount"].ToString("F2"));//Цена Со скидкой
-                //    //lvi.SubItems.Add(row["sum_full"].ToString());//Сумма без скидки
-                //    //lvi.SubItems.Add(row["sum_at_discount"].ToString());//Сумма со скидкой
-                //    lvi.SubItems.Add(Convert.ToDecimal(row["price"]).ToString("F2"));//Цена без скидки
-                //    lvi.SubItems.Add(Convert.ToDecimal(row["price_at_discount"]).ToString("F2"));//Цена Со скидкой
-                //    lvi.SubItems.Add(Convert.ToDecimal(row["sum_full"]).ToString("F2"));//Сумма без скидки
-                //    lvi.SubItems.Add(Convert.ToDecimal(row["sum_at_discount"]).ToString("F2"));//Сумма со скидкой
-                //    lvi.SubItems.Add(row["action"].ToString());//Акционный документ
-                //    lvi.SubItems.Add(row["gift"].ToString());//Акционный документ
-                //    lvi.SubItems.Add(row["action2"].ToString());//Акционный документ
-                //    lvi.SubItems.Add(row["bonus_reg"].ToString());//Бонус
-                //    lvi.SubItems.Add(row["bonus_action"].ToString());//Бонус
-                //    lvi.SubItems.Add(row["bonus_action_b"].ToString());//Бонус
-                //    lvi.SubItems.Add(row["marking"].ToString());//Маркировка
-
-                //    listView1.Items.Add(lvi);
-                //}
+                _productsData = CreateProductsFromDataTable(dataTable);
+                await RecalculateAllProducts(false);              
 
                 selection_goods = false;
 
@@ -1318,6 +1290,24 @@ namespace Cash8Avalon
                 this.txtB_search_product.Focus();
                 pay_form = new Pay();
             }
+        }
+
+        /*Оплата отменена
+        *загружаем старое состояние табличной части которое было до расчета акций
+        *
+        */
+        public async void cancel_action()
+        {
+
+            if (check_type.SelectedIndex != 0)
+            {
+                return;
+            }
+
+            selection_goods = true;
+
+            RestoreProductsData();
+            await RecalculateAllProducts();
         }
 
         public bool ValidateCheckSumAtDiscount()
@@ -2033,7 +2023,7 @@ namespace Cash8Avalon
                     CustomerScreen customerScreen = new CustomerScreen();
                     customerScreen.show_price = 1;
                     customerScreen.ListCheckPositions = new List<CheckPosition>();
-                    DataTable dataTable = to_define_the_action_dt(false);
+                    DataTable dataTable = await to_define_the_action_dt(false);
                     //if (dataTable.Rows.Count > 0)
                     //{
                     this.txtB_total_sum.Text = "0";// calculation_of_the_sum_of_the_document().ToString() + " / " + Math.Round(Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)), 2).ToString("F2");//calculation_of_the_sum_of_the_document().ToString() +" / "+Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)).ToString("F2");
@@ -2063,45 +2053,72 @@ namespace Cash8Avalon
         /// </summary>
         /// <param name="show_messages"></param>
         /// <returns></returns>
-        private DataTable to_define_the_action_dt(bool show_messages)
+        private async Task<DataTable> to_define_the_action_dt(bool show_messages)
         {
-            DataTable dataTable = null;
-            //if (!itsnew)
-            //{
-            //    return dataTable;
-            //}
-            //if (this.check_type.SelectedIndex > 0)
-            //{
-            //    return dataTable;
-            //}
-            //ProcessingOfActions processingOfActions = new ProcessingOfActions();
-            //processingOfActions.cc = this;
-            //action_num_doc = new List<int>();//При какждом пересчете список предвариетльно обнуляется
+            DataTable? dataTable = null;
+            if (!IsNewCheck)
+            {
+                return dataTable;
+            }
+            if (this.check_type.SelectedIndex > 0)
+            {
+                return dataTable;
+            }
+            ProcessingOfActions processingOfActions = new ProcessingOfActions();
+            processingOfActions.cc = this;
+            action_num_doc = new List<int>();//При каждом пересчете список предварительно обнуляется
 
+            processingOfActions.dt = processingOfActions.CreateDataTableFromProducts(_productsData);
+            processingOfActions.show_messages = show_messages;
+            MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
+            foreach (string barcode in action_barcode_list)
+            {
+                processingOfActions.to_define_the_action_dt(barcode);
+            }
 
-            //processingOfActions.dt = processingOfActions.create_dt(listView1);
-            //processingOfActions.show_messages = show_messages;
-            //MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
-            //foreach (string barcode in action_barcode_list)
-            //{
-            //    processingOfActions.to_define_the_action_dt(barcode);
-            //}
+            if (client.Tag != null)
+            {
+                processingOfActions.to_define_the_action_personal_dt(this.client.Tag.ToString());
+            }
 
-            //if (client.Tag != null)
-            //{
-            //    processingOfActions.to_define_the_action_personal_dt(this.client.Tag.ToString());
-            //}
+            await processingOfActions.to_define_the_action_dt();
 
-            //processingOfActions.to_define_the_action_dt();
+            dataTable = processingOfActions.dt;
 
-            //dataTable = processingOfActions.dt;
-
-            //if (show_messages)//если с показом сообщений, то это уже боевой режим 
-            //{
-            //    have_action = processingOfActions.have_action;
-            //}
+            if (show_messages)//если с показом сообщений, то это уже боевой режим 
+            {
+                have_action = processingOfActions.have_action;
+            }
 
             return dataTable;
+        }
+
+        public List<ProductItem> CreateProductsFromDataTable(DataTable dt)
+        {
+            var products = new List<ProductItem>();
+
+            foreach (DataRow row in dt.Rows)
+            {
+                // Проверяем на null значения
+                var product = new ProductItem
+                {
+                    Code = row["tovar_code"] != DBNull.Value ? Convert.ToInt32(row["tovar_code"]) : 0,
+                    Tovar = row["tovar_name"] != DBNull.Value ? row["tovar_name"].ToString() : string.Empty,
+                    Quantity = row["quantity"] != DBNull.Value ? Convert.ToDecimal(row["quantity"]) : 0,
+                    Price = row["price"] != DBNull.Value ? Convert.ToDecimal(row["price"]) : 0,
+                    PriceAtDiscount = row["price_at_discount"] != DBNull.Value ? Convert.ToDecimal(row["price_at_discount"]) : 0,
+                    Sum = row["sum_full"] != DBNull.Value ? Convert.ToDecimal(row["sum_full"]) : 0,
+                    SumAtDiscount = row["sum_at_discount"] != DBNull.Value ? Convert.ToDecimal(row["sum_at_discount"]) : 0,
+                    Action = row["action"] != DBNull.Value ? Convert.ToInt32(row["action"]) : 0,
+                    Gift = row["gift"] != DBNull.Value ? Convert.ToInt32(row["gift"]) : 0,
+                    Action2 = row["action2"] != DBNull.Value ? Convert.ToInt32(row["action2"]) : 0,
+                    Mark = row["marking"] != DBNull.Value ? row["marking"].ToString() : "0"
+                };
+
+                products.Add(product);
+            }
+
+            return products;
         }
 
         private async static void SendUDPMessage(string message)
@@ -2307,7 +2324,7 @@ namespace Cash8Avalon
         /// <summary>
         /// Пересчитать все товары в чеке (аналог перебора listView1.Items)
         /// </summary>
-        private async void RecalculateAllProducts()
+        private async Task RecalculateAllProducts(bool write=true)
         {
             MainStaticClass.write_event_in_log(" Начало пересчета ТЧ ", "Документ", numdoc.ToString());
 
@@ -2320,8 +2337,11 @@ namespace Cash8Avalon
             // Обновляем Grid с новыми данными
             RefreshProductsGrid();
             UpdateTotalSum();
-            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                               "0", "0", false, "0", "0", "0", "0");
+            if (write)
+            {
+                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                   "0", "0", false, "0", "0", "0", "0");
+            }
 
             MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ ", "Документ", numdoc.ToString());
         }
@@ -4978,7 +4998,7 @@ namespace Cash8Avalon
                     }
                     else
                     {
-                        printingUsingLibraries.print_sell_2_or_return_sell(this);
+                        await printingUsingLibraries.print_sell_2_or_return_sell(this);
                     }
                 }
             }
@@ -5799,7 +5819,7 @@ namespace Cash8Avalon
             }
         }
 
-        private int get_its_deleted_document()
+        private async Task<int> get_its_deleted_document()
         {
             int result = 0;
 
@@ -5816,12 +5836,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
                 result = 1;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
                 result = 1;
             }
             finally

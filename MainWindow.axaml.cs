@@ -46,7 +46,7 @@ namespace Cash8Avalon
                 loginSuccess = false;
                 loginWindow.Close();
             };
-
+            //loginWindow.input_barcode.Focus();
             // Показываем как модальное окно
             await loginWindow.ShowDialog(this);
 
@@ -116,7 +116,8 @@ namespace Cash8Avalon
                     {
                         if (MainStaticClass.Use_Fiscall_Print)
                         {
-                            //await GetShiftStatus();
+                            printing = new PrintingUsingLibraries();
+                            await printing.getShiftStatus();
                         }
 
                         // Проверка даты/времени с ФН
@@ -125,8 +126,7 @@ namespace Cash8Avalon
                         // Проверка системы налогообложения
                         if (MainStaticClass.SystemTaxation == 0)
                         {
-                            //await ShowWarningMessage(
-                            //    "У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!");
+                            await MessageBox.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!","Проверка системы налогообложения",MessageBoxButton.OK,MessageBoxType.Error);
                         }
 
                         // Проверка версии ФН
@@ -134,7 +134,7 @@ namespace Cash8Avalon
                         MainStaticClass.check_version_fn(ref restart, ref error);
                         if (!error && restart)
                         {
-                            //await ShowErrorMessage("У вас неверно была установлена версия ФН, необходим перезапуск программы");
+                            await MessageBox.Show("У вас неверно была установлена версия ФН, необходим перезапуск программы","Проверка версии ФН",MessageBoxButton.OK,MessageBoxType.Error);
                             this.Close();
                             return;
                         }
@@ -146,12 +146,10 @@ namespace Cash8Avalon
                     // 11. Загрузка бонусных клиентов и CDN
                     if (MainStaticClass.CashDeskNumber != 9)
                     {
-                        //await LoadBonusClients();
-
+                        _ = loadBonusClients();
                         if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                         {
-                            //await ShowWarningMessage(
-                            //    "В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!");
+                            await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!","Проверка cdn токена",MessageBoxButton.OK,MessageBoxType.Error);
                         }
                         else
                         {
@@ -160,7 +158,7 @@ namespace Cash8Avalon
                     }
 
                     // 12. Проверка файлов и папок
-                    //CheckFilesAndFolders();
+                    CheckFilesAndFolders();
 
                     // 13. Отправка статуса открытия магазина
                     //await SendShopStatus(true);
@@ -182,6 +180,82 @@ namespace Cash8Avalon
                 // Закрываем главное окно при отмене
                 this.Close();
             }
+        }
+
+        private async Task CheckFilesAndFolders()
+        {
+            try
+            {
+                // Получаем путь к директории приложения
+                string startupPath = AppContext.BaseDirectory;
+                string folderPathPictures = Path.Combine(startupPath, "Pictures2");
+
+                await Task.Run(() =>
+                {
+                    if (!Directory.Exists(folderPathPictures))
+                    {
+                        Directory.CreateDirectory(folderPathPictures);
+                        Console.WriteLine($"Папка создана: {folderPathPictures}");
+                    }
+                    else
+                    {
+                        // Очистка папки
+                        ClearFolder(folderPathPictures);
+                        Console.WriteLine($"Папка очищена: {folderPathPictures}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка/создание файлов и папок");
+
+                // Асинхронный MessageBox
+                await MessageBox.Show($"Ошибка при работе с папкой Pictures2: {ex.Message}", "Ошибка");
+            }
+        }
+
+        private async Task ClearFolder(string folderPath)
+        {
+            try
+            {
+                // Удаляем все файлы
+                foreach (string file in Directory.GetFiles(folderPath))
+                {
+                    try
+                    {
+                        File.Delete(file);
+                        //Console.WriteLine($"Удален файл: {file}");
+                    }
+                    catch (Exception ex)
+                    {
+                        await MessageBox.Show($"Не удалось удалить файл {file}: {ex.Message}");
+                    }
+                }
+
+                // Удаляем все подпапки
+                foreach (string subFolder in Directory.GetDirectories(folderPath))
+                {
+                    try
+                    {
+                        Directory.Delete(subFolder, true); // true - рекурсивное удаление
+                        //MessageBox.ShowriteLine($"Удалена папка: {subFolder}");
+                    }
+                    catch (Exception ex)
+                    {
+                        await MessageBox.Show($"Не удалось удалить папку {subFolder}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Ошибка при очистке папки {folderPath}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task loadBonusClients()
+        {
+            LoadDataWebService ld = new LoadDataWebService();
+            await Task.Run(() => ld.load_bonus_clients(false));            
         }
 
         private async Task<int> check_system_taxation()

@@ -12,8 +12,23 @@ using System.Text.RegularExpressions;
 
 namespace Cash8Avalon
 {
+
+    public enum DialogResult
+    {
+        None = 0,
+        OK = 1,
+        Cancel = 2,
+        Abort = 3,
+        Retry = 4,
+        Ignore = 5,
+        Yes = 6,
+        No = 7
+    }
     public partial class InputActionBarcode : Window
     {
+
+       
+
         // Объявляем поля для элементов управления
         private TextBox? _inputBarcodeTextBox;
         private TextBlock? _authorizationTextBlock;
@@ -29,7 +44,7 @@ namespace Cash8Avalon
          * 6.вызов для ввода QR - кода маркера товара
          */
         public Cash_check caller = null;
-        //public ProcessingOfActions caller2 = null;
+        public ProcessingOfActions caller2 = null;
         //public CheckActions caller3 = null;
         public DataTable dtCopy = null;
 
@@ -335,13 +350,13 @@ namespace Cash8Avalon
                     return;
                 }
                 /////////////////////////////////////////////////ЭТО НАДО ВСЕ ПРОВЕРИТЬ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //Здесь проверяем, на отсутствие символов кирилицы
+                //Здесь проверяем, на отсутствие символов кириллицы
                 //Regex reg = new Regex(@"^([^а-яА-Я]+)$");
                 //System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(e.KeyChar.ToString(), "[а-яА-Я]");
                 Regex reg = new Regex("[а-яА-ЯёЁ]");
                 if (reg.IsMatch(_inputBarcodeTextBox.Text.Trim()))
                 {
-                    await MessageBox.Show("Обнаружены кирилличиские символы,ПЕРЕКЛЮЧИТЕ ЯЗЫК ВВОДА НА АНГЛИЙСКИЙ И ПОВТОРИТЕ ВВОД КОДА МАРКИРОВКИ ЕЩЕ РАЗ");
+                    await MessageBox.Show("Обнаружены кириллические символы,ПЕРЕКЛЮЧИТЕ ЯЗЫК ВВОДА НА АНГЛИЙСКИЙ И ПОВТОРИТЕ ВВОД КОДА МАРКИРОВКИ ЕЩЕ РАЗ");
                     _inputBarcodeTextBox.Text = "";
                     return;
                 }

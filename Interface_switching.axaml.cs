@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Npgsql;
 using System;
 using System.Linq;
@@ -18,6 +19,7 @@ namespace Cash8Avalon
         Thread workerThread = null;
         public int caller_type = 0;
         public Cash_check cc = null;
+        //private TextBox InputBarcode = null;
 
         public Interface_switching()
         {
@@ -29,9 +31,48 @@ namespace Cash8Avalon
             this.SizeToContent = SizeToContent.WidthAndHeight;
             this.Title = "Авторизация";
 
-            // Фокус на поле ввода при загрузке
+            //// Фокус на поле ввода при загрузке
+            //InputBarcode = this.FindControl<TextBox>("input_barcode");
+            //InputBarcode?.Focus();
+            //InputBarcode.SelectAll();
+            this.Loaded += OnWindowLoaded;
+        }
+
+        private void OnWindowLoaded(object sender, RoutedEventArgs e)
+        {
+            // Небольшая задержка для гарантии
+            Dispatcher.UIThread.Post(() =>
+            {
+                SetFocusToInput();
+            }, DispatcherPriority.Render);
+        }
+
+        private void SetFocusToInput()
+        {
             var inputBarcode = this.FindControl<TextBox>("input_barcode");
-            inputBarcode?.Focus();
+            if (inputBarcode != null)
+            {
+                // Пробуем несколько способов
+                bool focused = inputBarcode.Focus();
+
+                if (!focused)
+                {
+                    // Если не получилось сразу, пробуем с задержкой
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        inputBarcode.Focus();
+                        inputBarcode.CaretIndex = 0;
+
+                        // Также можно выбрать весь текст
+                        inputBarcode.SelectAll();
+                    }, DispatcherPriority.Render);
+                }
+                else
+                {
+                    inputBarcode.CaretIndex = 0;
+                    inputBarcode.SelectAll();
+                }
+            }
         }
 
         private void InitializeComponent()

@@ -144,7 +144,7 @@ namespace Cash8Avalon
         }
 
 
-        public void getShiftStatus()
+        public async Task getShiftStatus()
         {
             IFptr fptr = MainStaticClass.FPTR;
             //setConnectSetting(fptr);
@@ -163,7 +163,7 @@ namespace Cash8Avalon
                 //if ((DateTime.Now - dateTime).TotalHours > 0)
                 //{
                 //MessageBox.Show(" Период открытой смены превысил 24 часа !!!\r\n СНИМИТЕ Z-ОТЧЁТ. ЕСЛИ СОМНЕВАЕТЕСЬ В ЧЁМ-ТО, ТО ВСЁ РАВНО СНИМИТЕ Z-ОТЧЁТ");
-                MessageBox.Show(" Период открытой смены превысил 24 часа!\r\nСмена будет закрыта автоматически!\r\n" +
+                await MessageBox.Show(" Период открытой смены превысил 24 часа!\r\nСмена будет закрыта автоматически!\r\n" +
                     "В ИТ отдел звонить не надо, если хотите кому нибудь позвонить, звоните в бухгалтерию");
                 reportZ();
                 //}
@@ -521,7 +521,7 @@ namespace Cash8Avalon
 
         }
 
-        public async void print_sell_2_or_return_sell(Cash_check check)
+        public async Task print_sell_2_or_return_sell(Cash_check check)
         {
             bool error = false;
 
