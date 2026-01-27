@@ -1156,7 +1156,7 @@ namespace Cash8Avalon
                 DataTable dataTable = await to_define_the_action_dt(true);//Обработка на дисконтные акции с использованием datatable 
 
                 _productsData = CreateProductsFromDataTable(dataTable);
-                await RecalculateAllProducts(false);              
+                await RecalculateAllProducts(true);              
 
                 selection_goods = false;
 
@@ -2337,11 +2337,11 @@ namespace Cash8Avalon
             // Обновляем Grid с новыми данными
             RefreshProductsGrid();
             UpdateTotalSum();
-            if (write)
-            {
-                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                                   "0", "0", false, "0", "0", "0", "0");
-            }
+            //if (write)
+            //{
+            //    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+            //                       "0", "0", false, "0", "0", "0", "0");
+            //}
 
             MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ ", "Документ", numdoc.ToString());
         }
