@@ -212,7 +212,8 @@
                                  HorizontalAlignment="Right"
                                  Width="96"
                                  Height="43"
-                                 IsVisible="True"/>
+                                 Opacity="0"
+                                 IsHitTestVisible="False"/>
                         
                         <TextBox x:Name="non_cash_sum"
                                 Grid.Row="6" Grid.Column="5"
@@ -247,7 +248,7 @@
                                 TextAlignment="Right"
                                 Text="0"/>
                                 
-                        <CheckBox x:Name="checkBox_do_not_send_payment_to_the_terminal"
+                       <CheckBox x:Name="checkBox_do_not_send_payment_to_the_terminal"
                                  Grid.Row="6" Grid.Column="8"
                                  Content="?"
                                  VerticalAlignment="Center"
@@ -255,7 +256,8 @@
                                  Margin="10,15,0,15"
                                  Width="32"
                                  Height="17"
-                                 IsVisible="True"/>
+                                 Opacity="0"
+                                 IsHitTestVisible="False"/>
                         
                         <TextBlock x:Name="label2" 
                                   Grid.Row="8" Grid.Column="1"

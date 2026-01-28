@@ -19,6 +19,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
@@ -72,7 +73,8 @@ namespace Cash8Avalon
         public string p_sum_doc = "";
         public string p_remainder = "";
         public string p_discount = "0";
-        Thread workerThread = null;
+        public HttpWebRequest request = null;
+        //Thread workerThread = null;
         private DateTime start_action = DateTime.Now;
 
         private DataTable table = new DataTable();
@@ -2402,7 +2404,7 @@ namespace Cash8Avalon
                 }
                 //Пересчет ТЧ в любом случае
                 MainStaticClass.write_event_in_log(" Начало пересчета ТЧ " + phone_number, " Документ ", numdoc.ToString());
-                RecalculateAllProducts();
+                await RecalculateAllProducts();
                 MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ " + phone_number, " Документ ", numdoc.ToString());
             }
             catch (NpgsqlException ex)
@@ -2637,8 +2639,8 @@ namespace Cash8Avalon
 
                 //ПОЗЖЕ будет понятно ЧТО включать 
 
-                //if (productData.IsCDNCheck())
-                //{
+                if (productData.IsCDNCheck())
+                {
                 //    if (MainStaticClass.IncludedPiot)
                 //    {
                 //        //if (ValidatePiotAgainstFiscalData())
@@ -2662,22 +2664,24 @@ namespace Cash8Avalon
                 //    }
                 //    else
                 //    {
-                //        if (!MainStaticClass.cdn_check(productData, mark_str, lvi, this))
-                //        {
-                //            last_tovar.Text = barcode;
-                //            Tovar_Not_Found t_n_f = new Tovar_Not_Found();
-                //            t_n_f.textBox1.Text = "Код маркировки не прошел проверку на CDN";
-                //            t_n_f.textBox1.Font = new Font("Microsoft Sans Serif", 22);
-                //            t_n_f.label1.Text = " Возможно, что проблемы с доступом к CDN серверам.";
-                //            t_n_f.ShowDialog();
-                //            t_n_f.Dispose();
-                //            return;
-                //        }
-                //        else
-                //        {
-                //            cdn_vrifyed = true;
-                //        }
-                //    }
+                        if (!await MainStaticClass.cdn_check(productData, marking_code, this))
+                        {
+                        await ShowTovarNotFoundWindow();
+                        return;
+                        //            last_tovar.Text = barcode;
+                        //            Tovar_Not_Found t_n_f = new Tovar_Not_Found();
+                        //            t_n_f.textBox1.Text = "Код маркировки не прошел проверку на CDN";
+                        //            t_n_f.textBox1.Font = new Font("Microsoft Sans Serif", 22);
+                        //            t_n_f.label1.Text = " Возможно, что проблемы с доступом к CDN серверам.";
+                        //            t_n_f.ShowDialog();
+                        //            t_n_f.Dispose();
+                        //            return;
+                    }
+                        else
+                        {
+                            //cdn_vrifyed = true;
+                        }
+                    }
                 //}
 
 

@@ -253,9 +253,9 @@ namespace Cash8Avalon
                 return false;
             }
 
-            progressBar1.Maximum = clients.list_clients.Count;
-            progressBar1.Minimum = 0;
-            progressBar1.Value = 0;
+            //progressBar1.Maximum = clients.list_clients.Count;
+            //progressBar1.Minimum = 0;
+            //progressBar1.Value = 0;
 
             NpgsqlConnection conn = null;
             NpgsqlTransaction tran = null;
@@ -310,14 +310,14 @@ namespace Cash8Avalon
                         command.ExecuteNonQuery();
                     }
 
-                    progressBar1.Value++;
-                    if (progressBar1.Value % 1000 == 0)
-                    {
-                        //this.Refresh();
-                        //this.Update();
-                        //progressBar1.Refresh();
-                        //progressBar1.Update();
-                    }
+                    //progressBar1.Value++;
+                    //if (progressBar1.Value % 1000 == 0)
+                    //{
+                    //    //this.Refresh();
+                    //    //this.Update();
+                    //    //progressBar1.Refresh();
+                    //    //progressBar1.Update();
+                    //}
                 }
 
                 query = "UPDATE constants SET last_date_download_bonus_clients='" + local_last_date_download_bonus_clients + "'";
@@ -366,7 +366,7 @@ namespace Cash8Avalon
                 }
             }
 
-            if (progressBar1.Maximum < 50000)
+            if (clients.list_clients.Count < 50000)
             {
                 result = false;
             }

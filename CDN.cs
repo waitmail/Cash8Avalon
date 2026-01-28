@@ -563,10 +563,10 @@ namespace Cash8Avalon
             return result_check;
         }
 
-        public bool cdn_check_marker_code(List<string> codes, string mark_str, Int64 numdoc, ref HttpWebRequest request, string mark_str_cdn, Dictionary<string, string> d_tovar, Cash_check cash_Check, ProductData productData)
+        public async Task<bool> cdn_check_marker_code(List<string> codes, string mark_str, Int64 numdoc, HttpWebRequest request, string mark_str_cdn, Dictionary<string, string> d_tovar, Cash_check cash_Check, ProductData productData)
         {
 
-            MainStaticClass.write_cdn_log(" Начало проверки на CDN ", numdoc.ToString(), codes[0].ToString(), "0");
+            await MainStaticClass.write_cdn_log(" Начало проверки на CDN ", numdoc.ToString(), codes[0].ToString(), "0");
             StringBuilder sb = new StringBuilder();
             int error_5000 = 0;
             bool result_check = false;
@@ -576,11 +576,11 @@ namespace Cash8Avalon
 
             if (cdn_list == null || cdn_list.hosts.Count == 0)
             {
-                MainStaticClass.write_cdn_log("Нет доступных CDN площадок для проверки кода маркировки, пробуем еще раз check_marker_code", numdoc.ToString(), codes[0].ToString(), "2");
+                await MainStaticClass.write_cdn_log("Нет доступных CDN площадок для проверки кода маркировки, пробуем еще раз check_marker_code", numdoc.ToString(), codes[0].ToString(), "2");
                 cdn_list = MainStaticClass.CDN_List;
                 if (cdn_list == null || cdn_list.hosts.Count == 0)
                 {
-                    MainStaticClass.write_cdn_log("Список CDN серверов пустой после 2-й попытки check_marker_code ", numdoc.ToString(), codes[0].ToString(), "2");
+                    await MainStaticClass.write_cdn_log("Список CDN серверов пустой после 2-й попытки check_marker_code ", numdoc.ToString(), codes[0].ToString(), "2");
                     return result_check;
                 }
             }
@@ -651,7 +651,7 @@ namespace Cash8Avalon
                             {
                                 string responseFromServer = reader.ReadToEnd();
                                 //Записываем лог 
-                                MainStaticClass.write_cdn_log(responseFromServer, numdoc.ToString(), codes[0].ToString(), "1");
+                                await MainStaticClass.write_cdn_log(responseFromServer, numdoc.ToString(), codes[0].ToString(), "1");
                                 answer_check_mark = JsonConvert.DeserializeObject<AnswerCheckMark>(responseFromServer);
                             }
                         }
@@ -672,11 +672,11 @@ namespace Cash8Avalon
                                 {
                                     if (!productData.RrNotControlOwner())
                                     {
-                                        MessageBox.Show(" Исключения групп маркрировки  23|8|15 \r\n Текущая группа маркировки  " + answer_check_mark.codes[0].groupIds[0].ToString());
+                                        await MessageBox.Show(" Исключения групп маркировки  23|8|15 \r\n Текущая группа маркировки  " + answer_check_mark.codes[0].groupIds[0].ToString());
                                         //if (cash_Check.check_type.SelectedIndex == 0)
                                         //{
                                         //    //MessageBox.Show("Код маркировки " + answer_check_mark.codes[0].gtin + " Вы не являетесь владельцем " + s, "CDN проверка");
-                                        //    sb.AppendLine("Вы не являетесь владельцем!".ToUpper());
+                                        sb.AppendLine("Вы не являетесь владельцем!".ToUpper());
                                         //    //MainStaticClass.write_event_in_log("CDN Код маркировки " + mark_str_cdn + " Вы не являетесь владельцем ", "Документ чек", numdoc.ToString());
                                         //    MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + " Вы не являетесь владельцем ", numdoc.ToString(), codes[0].ToString(), "1");
                                         //}
@@ -695,18 +695,18 @@ namespace Cash8Avalon
                             if ((!answer_check_mark.codes[0].realizable) && (!answer_check_mark.codes[0].sold))
                             {
                                 sb.AppendLine("Нет информации о вводе в оборот!".ToUpper());
-                                MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + " нет информации о вводе в оборот. ", numdoc.ToString(), codes[0].ToString(), "1");
+                                await MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + " нет информации о вводе в оборот. ", numdoc.ToString(), codes[0].ToString(), "1");
                             }
                         }
                         if (!answer_check_mark.codes[0].utilised)
                         {
                             sb.AppendLine("Эмитирован, но нет информации о его нанесении!".ToUpper());
-                            MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + " эмитирован, но нет информации о его нанесении. ", numdoc.ToString(), codes[0].ToString(), "1");
+                            await MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + " эмитирован, но нет информации о его нанесении. ", numdoc.ToString(), codes[0].ToString(), "1");
                         }
                         if (!answer_check_mark.codes[0].verified)
                         {
                             sb.AppendLine("Не пройдена криптографическая проверка!".ToUpper());
-                            MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + "  не пройдена криптографическая проверка.", numdoc.ToString(), codes[0].ToString(), "1");
+                            await MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + "  не пройдена криптографическая проверка.", numdoc.ToString(), codes[0].ToString(), "1");
                         }
                         if (answer_check_mark.codes[0].sold)
                         {
@@ -719,14 +719,14 @@ namespace Cash8Avalon
                         if (answer_check_mark.codes[0].isBlocked)
                         {
                             sb.AppendLine("Заблокирован по решению ОГВ!".ToUpper());
-                            MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + "  заблокирован по решению ОГВ.", numdoc.ToString(), codes[0].ToString(), "1");
+                            await MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + "  заблокирован по решению ОГВ.", numdoc.ToString(), codes[0].ToString(), "1");
                         }
                         if (answer_check_mark.codes[0].expireDate.Year > 2000)
                         {
                             if (answer_check_mark.codes[0].expireDate < DateTime.Now)
                             {
                                 sb.AppendLine("Истек срок годности!".ToUpper());
-                                MainStaticClass.write_cdn_log("CDN У товара с кодом маркировки " + mark_str_cdn + "  истек срок годности.", numdoc.ToString(), codes[0].ToString(), "1");
+                                await MainStaticClass.write_cdn_log("CDN У товара с кодом маркировки " + mark_str_cdn + "  истек срок годности.", numdoc.ToString(), codes[0].ToString(), "1");
 
                             }
                         }
@@ -762,7 +762,7 @@ namespace Cash8Avalon
                             sb.Append(s);
                             sb.AppendLine(d_tovar.Keys.ElementAt(0));
                             sb.AppendLine(d_tovar[d_tovar.Keys.ElementAt(0)]);
-                            MessageBox.Show(sb.ToString());
+                            await MessageBox.Show(sb.ToString());
                         }
                     }
                 }
@@ -772,7 +772,7 @@ namespace Cash8Avalon
                     {
                         // Обработка таймаута и ошибок соединения
                         error = true;
-                        MainStaticClass.write_cdn_log("Timeout or connection error: " + ex.Message + "  " + host.host.ToString(), numdoc.ToString(), codes[0].ToString(), "3");
+                        await MainStaticClass.write_cdn_log("Timeout or connection error: " + ex.Message + "  " + host.host.ToString(), numdoc.ToString(), codes[0].ToString(), "3");
 
                         if (error_timeout == 0)
                         {
@@ -785,13 +785,13 @@ namespace Cash8Avalon
                     // Если есть HTTP-ответ — обрабатываем его
                     if (ex.Response is HttpWebResponse errorResponse)
                     {
-                        MainStaticClass.write_cdn_log("check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
+                        await MainStaticClass.write_cdn_log("check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
 
                         using (var errorStream = errorResponse.GetResponseStream())
                         using (var reader = new StreamReader(errorStream))
                         {
                             string errorResponseText = reader.ReadToEnd();
-                            MainStaticClass.write_cdn_log($"HTTP Error {(int)errorResponse.StatusCode}: {errorResponseText}", numdoc.ToString(), codes[0].ToString(), "2");
+                            await MainStaticClass.write_cdn_log($"HTTP Error {(int)errorResponse.StatusCode}: {errorResponseText}", numdoc.ToString(), codes[0].ToString(), "2");
 
                             answer_check_mark = JsonConvert.DeserializeObject<AnswerCheckMark>(errorResponseText);
                             if (answer_check_mark != null)
@@ -802,7 +802,7 @@ namespace Cash8Avalon
                                 }
                                 else
                                 {
-                                    MessageBox.Show("При проверке кода маркировки на сервере CDN произошла ошибка \r\n Код  " + answer_check_mark.code + " \r\n Описание " + answer_check_mark.description);
+                                    await MessageBox.Show("При проверке кода маркировки на сервере CDN произошла ошибка \r\n Код  " + answer_check_mark.code + " \r\n Описание " + answer_check_mark.description);
                                 }
                             }
                         }
@@ -811,7 +811,7 @@ namespace Cash8Avalon
                         error = true;
                         if (error_5000 == 0)
                         {
-                            MessageBox.Show("WebException check_marker_code " + host.host + " " + ex.Message, "check_marker_code");
+                            await MessageBox.Show("WebException check_marker_code " + host.host + " " + ex.Message, "check_marker_code");
                             //host.dateTime = DateTime.Now.AddMinutes(15);
                         }
                         else if (error_5000 > 1)
@@ -826,17 +826,17 @@ namespace Cash8Avalon
                     else
                     {
                         // Другие WebException без Response
-                        MessageBox.Show("WebException without response: " + ex.Message);
+                        await MessageBox.Show("WebException without response: " + ex.Message);
                         //MainStaticClass.write_cdn_log("WebException without response: " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
                         error = true;
                     }
-                    MainStaticClass.write_cdn_log("WebException check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
+                    await MainStaticClass.write_cdn_log("WebException check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
                     //MainStaticClass.UpdateHostDateTimeCdnHost(host.host, DateTime.Now.AddMinutes(15));
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Exception check_marker_code " + host.host + " " + ex.Message, "check_marker_code");
-                    MainStaticClass.write_cdn_log("check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
+                    await MessageBox.Show("Exception check_marker_code " + host.host + " " + ex.Message, "check_marker_code");
+                    await MainStaticClass.write_cdn_log("check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
                     //MainStaticClass.UpdateHostDateTimeCdnHost(host.host, DateTime.Now.AddMinutes(15));
                     error = true;
                 }

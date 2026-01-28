@@ -7,7 +7,46 @@
              MinHeight="350">
     
     <Grid>
-        <!-- Кнопка закрытия в правом верхнем углу -->
+        <!-- Основной контент по центру -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="10" Spacing="10"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center">
+                        
+                <!-- Кнопка полной загрузки -->
+                <Button x:Name="btn_new_load"
+                        Content="Загрузить данные (ПОЛНАЯ ЗАГРУЗКА)"
+                        MinHeight="45"
+                        Padding="10,8"
+                        Click="btn_new_load_Click"/>
+                
+                <!-- Прогресс-бар -->
+                <ProgressBar x:Name="progressBar1"
+                             Height="20"
+                             Minimum="0" Maximum="100"
+                             IsVisible="False"
+                             IsIndeterminate="False"/>
+                
+                <!-- Кнопка обновления клиентов -->
+                <Button x:Name="download_bonus_clients"
+                        Content="Обновить клиентов"
+                        MinHeight="35"
+                        Padding="10,6"
+                        IsVisible="False"
+                        Click="download_bonus_clients_Click"/>
+                
+                <!-- Быстрая загрузка (скрыта по умолчанию) -->
+                <Button x:Name="btn_new_load_fast"
+                        Content="Загрузить данные быстро (ПОЛНАЯ ЗАГРУЗКА)"
+                        MinHeight="45"
+                        Padding="10,8"
+                        IsVisible="False"
+                        Click="btn_new_load_fast_Click"/>
+                        
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Кнопка закрытия поверх всего -->
         <Button x:Name="btnClose" 
                 Content="✕" 
                 Width="30" Height="30"
@@ -25,40 +64,6 @@
                 </Style>
             </Button.Styles>
         </Button>
-        
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="10" Spacing="10">
-                        
-                <!-- Кнопка полной загрузки -->
-                <Button x:Name="btn_new_load"
-                        Content="Загрузить данные (ПОЛНАЯ ЗАГРУЗКА)"
-                        MinHeight="45"
-                        Padding="10,8"
-                        Click="btn_new_load_Click"/>
-                
-                <!-- Прогресс-бар -->
-                <ProgressBar x:Name="progressBar1"
-                             Height="20"
-                             Minimum="0" Maximum="100"
-                             IsIndeterminate="False"/>
-                
-                <!-- Кнопка обновления клиентов -->
-                <Button x:Name="download_bonus_clients"
-                        Content="Обновить клиентов"
-                        MinHeight="35"
-                        Padding="10,6"
-                        Click="download_bonus_clients_Click"/>
-                
-                <!-- Быстрая загрузка (скрыта по умолчанию) -->
-                <Button x:Name="btn_new_load_fast"
-                        Content="Загрузить данные быстро (ПОЛНАЯ ЗАГРУЗКА)"
-                        MinHeight="45"
-                        Padding="10,8"
-                        IsVisible="False"
-                        Click="btn_new_load_fast_Click"/>
-                        
-            </StackPanel>
-        </ScrollViewer>
     </Grid>
     
 </UserControl>

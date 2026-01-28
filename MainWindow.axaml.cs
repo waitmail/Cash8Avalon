@@ -4,8 +4,10 @@ using Avalonia.Markup.Xaml;
 using Cash8Avalon.ViewModels;
 using Npgsql;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -92,78 +94,88 @@ namespace Cash8Avalon
                     MainStaticClass.SystemTaxation = await check_system_taxation();
 
                     // 4. Проверка таблицы constants
-                    //if (!await CheckConstantsTable())
-                    //{
-                    //    await ShowErrorMessage("В базе данных нет таблицы constants!");
-                    //    this.Close();
-                    //    return;
-                    //}
-
-                    // 5. Установка заголовка окна
-                    //SetWindowTitle();
-
-                    // 6. Запуск фоновых задач
-                    //StartBackgroundTasks();
-
-                    // 7. Проверка системы налогообложения
-                    //await CheckTaxation();
-
-                    // 8. Очистка старых чеков и логов
-                    //CleanOldData();
-
-                    // 9. Проверки для реальных касс (не тестовой №9)
-                    if (MainStaticClass.CashDeskNumber != 9)
+                    if (await MainStaticClass.exist_table_name("constants"))
                     {
-                        if (MainStaticClass.Use_Fiscall_Print)
+                        _ = InventoryManager.FillDictionaryProductDataAsync(this);
+                        _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);
+
+                        //await ShowErrorMessage("В базе данных нет таблицы constants!");
+                        //this.Close();
+                        //return;
+
+
+                        // 5. Установка заголовка окна
+                        //SetWindowTitle();
+
+                        // 6. Запуск фоновых задач
+                        //StartBackgroundTasks();
+
+                        // 7. Проверка системы налогообложения
+                        //await CheckTaxation();
+
+                        // 8. Очистка старых чеков и логов
+                        //CleanOldData();
+
+                        // 9. Проверки для реальных касс (не тестовой №9)
+                        if (MainStaticClass.CashDeskNumber != 9)
                         {
-                            printing = new PrintingUsingLibraries();
-                            await printing.getShiftStatus();
+                            if (MainStaticClass.Use_Fiscall_Print)
+                            {
+                                printing = new PrintingUsingLibraries();
+                                await printing.getShiftStatus();
+                            }
+
+                            // Проверка даты/времени с ФН
+                            MainStaticClass.validate_date_time_with_fn(10);
+
+                            // Проверка системы налогообложения
+                            if (MainStaticClass.SystemTaxation == 0)
+                            {
+                                await MessageBox.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!", "Проверка системы налогообложения", MessageBoxButton.OK, MessageBoxType.Error);
+                            }
+
+                            // Проверка версии ФН
+                            bool restart = false, error = false;
+                            MainStaticClass.check_version_fn(ref restart, ref error);
+                            if (!error && restart)
+                            {
+                                await MessageBox.Show("У вас неверно была установлена версия ФН, необходим перезапуск программы", "Проверка версии ФН", MessageBoxButton.OK, MessageBoxType.Error);
+                                this.Close();
+                                return;
+                            }
                         }
 
-                        // Проверка даты/времени с ФН
-                        MainStaticClass.validate_date_time_with_fn(10);
+                        // 10. Проверка версии ФН для маркировки
+                        //CheckFnMarkingVersion();
 
-                        // Проверка системы налогообложения
-                        if (MainStaticClass.SystemTaxation == 0)
+                        // 11. Загрузка бонусных клиентов и CDN
+                        if (MainStaticClass.CashDeskNumber != 9)
                         {
-                            await MessageBox.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!","Проверка системы налогообложения",MessageBoxButton.OK,MessageBoxType.Error);
+                            _ = loadBonusClients();
+                            if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
+                            {
+                                await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error);
+                            }
+                            else
+                            {
+                                _ = LoadCdnWithStartAsync();
+                            }
                         }
 
-                        // Проверка версии ФН
-                        bool restart = false, error = false;
-                        MainStaticClass.check_version_fn(ref restart, ref error);
-                        if (!error && restart)
-                        {
-                            await MessageBox.Show("У вас неверно была установлена версия ФН, необходим перезапуск программы","Проверка версии ФН",MessageBoxButton.OK,MessageBoxType.Error);
-                            this.Close();
-                            return;
-                        }
+                        // 12. Проверка файлов и папок
+                        _ = CheckFilesAndFolders();
+
+                        // 13. Отправка статуса открытия магазина
+                        //await SendShopStatus(true);
+
+                        Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
+                    }
+                    else
+                    {
+                        await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд");
                     }
 
-                    // 10. Проверка версии ФН для маркировки
-                    //CheckFnMarkingVersion();
-
-                    // 11. Загрузка бонусных клиентов и CDN
-                    if (MainStaticClass.CashDeskNumber != 9)
-                    {
-                        _ = loadBonusClients();
-                        if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
-                        {
-                            await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!","Проверка cdn токена",MessageBoxButton.OK,MessageBoxType.Error);
-                        }
-                        else
-                        {
-                            //await LoadCdnData();
-                        }
-                    }
-
-                    // 12. Проверка файлов и папок
-                    CheckFilesAndFolders();
-
-                    // 13. Отправка статуса открытия магазина
-                    //await SendShopStatus(true);
-
-                    Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
+                       
 
                     // ТОЛЬКО ПОСЛЕ ВСЕХ ПРОВЕРОК СОЗДАЕМ ViewModel!
                     this.DataContext = new MainViewModel();
@@ -179,6 +191,36 @@ namespace Cash8Avalon
             {
                 // Закрываем главное окно при отмене
                 this.Close();
+            }
+        }       
+
+        private void get_cdn_with_start()
+        {
+            CDN.CDN_List list = MainStaticClass.CDN_List;
+        }
+
+        private async Task LoadCdnWithStartAsync()
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationToken token = cts.Token;
+
+            try
+            {
+                // Запуск функции с параметром в новом потоке
+                Task task = Task.Run(() => get_cdn_with_start(), token);
+
+                // Ожидание результата функции в течение 60 секунд
+                bool isCompletedSuccessfully = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(60), token)) == task;
+
+                if (!isCompletedSuccessfully)
+                {
+                    cts.Cancel();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Обработка исключений
+                await MessageBox.Show($"При загрузке CDN произошла ошибка: {ex.Message}");
             }
         }
 
@@ -200,7 +242,7 @@ namespace Cash8Avalon
                     else
                     {
                         // Очистка папки
-                        ClearFolder(folderPathPictures);
+                        _ = ClearFolder(folderPathPictures);
                         Console.WriteLine($"Папка очищена: {folderPathPictures}");
                     }
                 });

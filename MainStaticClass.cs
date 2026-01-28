@@ -1659,7 +1659,7 @@ namespace Cash8Avalon
             }
         }
 
-        public static bool exist_table_name(string table_name)
+        public async static Task<bool> exist_table_name(string table_name)
         {
             bool exists = true;
             NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
@@ -1675,7 +1675,7 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show("Ошибка при чтении наличия таблицы в текущей бд " + ex.Message);
+                await MessageBox.Show("Ошибка при чтении наличия таблицы в текущей бд " + ex.Message);
                 if (conn_open == 1)
                 {
                     exists = false;
@@ -1683,7 +1683,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при чтении наличия таблицы в текущей бд " + ex.Message);
+                await MessageBox.Show("Ошибка при чтении наличия таблицы в текущей бд " + ex.Message);
                 if (conn_open == 1)
                 {
                     exists = false;
@@ -4486,7 +4486,7 @@ namespace Cash8Avalon
         /// <param name="mark"></param>
         /// <param name="guid"></param>
         /// <param name="status">1 - Ответ от cdn 2 - Отладочная информация 3 - Ошибка при работе с CDN</param> 
-        public static void write_cdn_log(string description, string numdoc, string mark, string status)
+        public async static Task write_cdn_log(string description, string numdoc, string mark, string status)
         {
             NpgsqlConnection conn = null;
             NpgsqlCommand command = null;
@@ -4514,7 +4514,7 @@ namespace Cash8Avalon
                 parameter = new NpgsqlParameter("mark", mark);
                 command.Parameters.Add(parameter);
 
-                parameter = new NpgsqlParameter("status", status);
+                parameter = new NpgsqlParameter("status", Convert.ToInt16(status));
                 command.Parameters.Add(parameter);
 
                 command.ExecuteNonQuery();
@@ -4523,7 +4523,7 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message);
             }
             finally
             {
@@ -5332,6 +5332,38 @@ namespace Cash8Avalon
             }
 
             return dt;
+        }
+
+        public async static Task<bool> cdn_check(ProductData productData, string mark_str, Cash_check check)
+        {
+            bool result = true;
+            string mark_str_cdn = "";
+
+            if (productData.IsCDNCheck())
+            {
+                if (MainStaticClass.CashDeskNumber != 9)// && MainStaticClass.EnableCdnMarkers == 1
+                {
+                    if (MainStaticClass.CDN_Token == "")
+                    {
+                        await MessageBox.Show("В этой кассе не заполнен CDN токен, \r\n ПРОДАЖА ДАННОГО ТОВАРА НЕВОЗМОЖНА ! ", "Проверка CDN");
+                        result = false;
+                    }
+                    else
+                    {
+                        CDN cdn = new CDN();
+                        List<string> codes = new List<string>();
+                        mark_str_cdn = mark_str.Replace("\u001d", @"\u001d");
+                        codes.Add(mark_str_cdn);
+                        mark_str_cdn = mark_str_cdn.Replace("'", "\'");
+                        Dictionary<string, string> d_tovar = new Dictionary<string, string>();
+                        //d_tovar[lvi.SubItems[1].Text] = lvi.SubItems[0].Text;
+                        d_tovar[productData.Name] = productData.Code.ToString();                        
+                        result = await cdn.cdn_check_marker_code(codes, mark_str, check.numdoc, check.request, mark_str_cdn, d_tovar, check, productData);
+                    }
+                }
+            }
+
+            return result;
         }
 
 

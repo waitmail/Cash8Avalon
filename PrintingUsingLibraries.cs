@@ -439,7 +439,7 @@ namespace Cash8Avalon
         //    }
         //}
 
-        private async void print_fiscal_advertisement(IFptr fptr)
+        private async Task print_fiscal_advertisement(IFptr fptr)
         {
             NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
             string s = ""; //int length = 0;
@@ -593,7 +593,7 @@ namespace Cash8Avalon
             // Открытие чека (с передачей телефона получателя)
             if (check.check_type.SelectedIndex == 0)
             {
-                get_actions_num_doc(check);//Печать акционных картинок
+                await get_actions_num_doc(check);//Печать акционных картинок
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
             }
             else if (check.check_type.SelectedIndex == 1)
@@ -911,7 +911,7 @@ namespace Cash8Avalon
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
             fptr.printText();
 
-            print_fiscal_advertisement(fptr);
+            await print_fiscal_advertisement(fptr);
 
             //MessageBox.Show(fptr.errorCode().ToString());
             fptr.setParam(1085, "NumCheckShop");
@@ -1013,7 +1013,7 @@ namespace Cash8Avalon
             //print_promo();
         }
 
-        public async void print_sell_2_3_or_return_sell(Cash_check check, int variant)
+        public async Task print_sell_2_3_or_return_sell(Cash_check check, int variant)
         {
 
             bool error = false;
@@ -1026,7 +1026,7 @@ namespace Cash8Avalon
 
             if (!check.print_promo_picture)
             {
-                get_actions_num_doc(check);//Печать акционных картинок
+                await get_actions_num_doc(check);//Печать акционных картинок
                 check.print_promo_picture = true;
             }
 
@@ -1557,7 +1557,7 @@ namespace Cash8Avalon
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_LEFT);
             fptr.printText();
-            print_fiscal_advertisement(fptr);
+            await print_fiscal_advertisement(fptr);
 
             fptr.setParam(1085, "NumCheckShop");
             fptr.setParam(1086, s);
@@ -1646,29 +1646,7 @@ namespace Cash8Avalon
                 fptr.cancelReceipt();
             }
         }
-
-       
-
-        ///// <summary>
-        ///// Преобразует шестнадцатеричную строку в массив байтов.
-        ///// </summary>
-        ///// <param name="hexString">Шестнадцатеричная строка.</param>
-        ///// <returns>Массив байтов.</returns>
-        //static byte[] HexStringToByteArray(string hexString)
-        //{
-        //    int length = hexString.Length;
-        //    byte[] byteArray = new byte[length / 2];
-
-        //    for (int i = 0; i < length; i += 2)
-        //    {
-        //        // Преобразуем каждую пару символов в байт
-        //        byteArray[i / 2] = Convert.ToByte(hexString.Substring(i, 2), 16);
-        //    }
-
-        //    return byteArray;
-        //}
-
-
+        
         /// <summary>
         /// Добавляет новую запись в таблицу picture_number_in_f_r.
         /// </summary>
@@ -1808,7 +1786,7 @@ namespace Cash8Avalon
             fptr.endNonfiscalDocument();
         }
 
-        private void get_actions_num_doc(Cash_check check)
+        private async Task get_actions_num_doc(Cash_check check)
         {
             List<string> numDocsAction = new List<string>();
 
@@ -1832,7 +1810,7 @@ namespace Cash8Avalon
             if (numDocsAction.Count > 0)
             {
                 //MessageBox.Show("Акция с картинкой есть");
-                print_pictures(numDocsAction);
+                await print_pictures(numDocsAction);
             }
             else
             {
@@ -1840,7 +1818,7 @@ namespace Cash8Avalon
             }
         }
 
-        public async void print_pictures(List<string> numDocsAction)
+        public async Task print_pictures(List<string> numDocsAction)
         {
             using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
             {
