@@ -2438,7 +2438,14 @@ namespace Cash8Avalon
 
         private async void find_product()
         {
-            string search_param = InputSearchProduct.Text.Trim();
+            string search_param = InputSearchProduct.Text?.Trim();
+
+            // Проверка на null и пустую строку
+            if (string.IsNullOrEmpty(search_param))
+            {
+                return;
+            }
+            //search_param = InputSearchProduct.Text.Trim();
             InputSearchProduct.Text = string.Empty;
             int Length = search_param.Length;
             string gtin = string.Empty;

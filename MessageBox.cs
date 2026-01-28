@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -55,152 +55,6 @@ public static class MessageBox
     }
 
     // ОСНОВНОЙ МЕТОД
-    //private static async Task<MessageBoxResult> ShowDialog(string message, string title,
-    //                                                       MessageBoxButton buttons,
-    //                                                       MessageBoxType type)
-    //{
-    //    if (Application.Current?.ApplicationLifetime is
-    //        IClassicDesktopStyleApplicationLifetime desktop)
-    //    {
-    //        var tcs = new TaskCompletionSource<MessageBoxResult>();
-
-    //        // СОЗДАЕМ ОКНО
-    //        //var dialog = new Window
-    //        //{
-    //        //    Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-    //        //    Width = 400,
-    //        //    Height = 200,
-    //        //    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-    //        //    CanResize = false,
-    //        //    SizeToContent = SizeToContent.Manual
-    //        //};
-
-    //        // В Avalonia нет WindowChrome, но можно использовать стили
-    //        var dialog = new Window
-    //        {
-    //            Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-    //            Width = 400,
-    //            Height = 200,
-    //            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-
-    //            // Эти свойства делают кнопки неактивными (серыми)
-    //            CanResize = false,
-    //            CanMinimize = false,
-    //            CanMaximize = false,
-
-    //            ShowInTaskbar = false,
-    //            SystemDecorations = SystemDecorations.Full, // Заголовок и кнопки видны
-    //            Topmost = true
-    //        };
-
-
-    //        // ОСНОВНОЙ КОНТЕЙНЕР
-    //        var mainStack = new StackPanel
-    //        {
-    //            Margin = new Thickness(20),
-    //            VerticalAlignment = VerticalAlignment.Center,
-    //            HorizontalAlignment = HorizontalAlignment.Center
-    //        };
-
-    //        // ИКОНКА И ТЕКСТ
-    //        var contentStack = new StackPanel
-    //        {
-    //            Orientation = Orientation.Horizontal,
-    //            Spacing = 15,
-    //            Margin = new Thickness(0, 0, 0, 20),
-    //            HorizontalAlignment = HorizontalAlignment.Center
-    //        };
-
-    //        // ИКОНКА (эмодзи)
-    //        var iconText = new TextBlock
-    //        {
-    //            Text = GetIconEmoji(type),
-    //            FontSize = 32,
-    //            VerticalAlignment = VerticalAlignment.Center
-    //        };
-
-    //        // ТЕКСТ СООБЩЕНИЯ
-    //        var messageText = new TextBlock
-    //        {
-    //            Text = message,
-    //            TextWrapping = TextWrapping.Wrap,
-    //            FontSize = 14,
-    //            VerticalAlignment = VerticalAlignment.Center,
-    //            MaxWidth = 300
-    //        };
-
-    //        contentStack.Children.Add(iconText);
-    //        contentStack.Children.Add(messageText);
-
-    //        // КНОПКИ
-    //        var buttonStack = new StackPanel
-    //        {
-    //            Orientation = Orientation.Horizontal,
-    //            HorizontalAlignment = HorizontalAlignment.Center,
-    //            Spacing = 10
-    //        };
-
-    //        // СОЗДАЕМ КНОПКИ В ЗАВИСИМОСТИ ОТ ТИПА
-    //        switch (buttons)
-    //        {
-    //            case MessageBoxButton.OK:
-    //                var okButton = CreateButton("OK", MessageBoxResult.OK, true, dialog, tcs);
-    //                buttonStack.Children.Add(okButton);
-    //                break;
-
-    //            case MessageBoxButton.OKCancel:
-    //                var okBtn = CreateButton("OK", MessageBoxResult.OK, true, dialog, tcs);
-    //                var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, false, dialog, tcs);
-    //                buttonStack.Children.Add(okBtn);
-    //                buttonStack.Children.Add(cancelBtn);
-    //                break;
-
-    //            case MessageBoxButton.YesNo:
-    //                var yesBtn = CreateButton("Да", MessageBoxResult.Yes, true, dialog, tcs);
-    //                var noBtn = CreateButton("Нет", MessageBoxResult.No, false, dialog, tcs);
-    //                buttonStack.Children.Add(yesBtn);
-    //                buttonStack.Children.Add(noBtn);
-    //                break;
-
-    //            case MessageBoxButton.YesNoCancel:
-    //                var yesButton = CreateButton("Да", MessageBoxResult.Yes, true, dialog, tcs);
-    //                var noButton = CreateButton("Нет", MessageBoxResult.No, false, dialog, tcs);
-    //                var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, false, dialog, tcs);
-    //                buttonStack.Children.Add(yesButton);
-    //                buttonStack.Children.Add(noButton);
-    //                buttonStack.Children.Add(cancelButton);
-    //                break;
-    //        }
-
-    //        // ДОБАВЛЯЕМ ВСЕ В ОКНО
-    //        mainStack.Children.Add(contentStack);
-    //        mainStack.Children.Add(buttonStack);
-    //        dialog.Content = mainStack;
-
-    //        // ОБРАБОТЧИК ЗАКРЫТИЯ
-    //        dialog.Closed += (s, e) =>
-    //        {
-    //            if (!tcs.Task.IsCompleted)
-    //                tcs.TrySetResult(MessageBoxResult.None);
-    //        };
-
-    //        // ПОКАЗЫВАЕМ ОКНО
-    //        if (desktop.MainWindow != null)
-    //        {
-    //            await dialog.ShowDialog(desktop.MainWindow);
-    //        }
-    //        else
-    //        {
-    //            dialog.Show();
-    //        }
-
-    //        return await tcs.Task;
-    //    }
-
-    //    return MessageBoxResult.None;
-    //}
-
-    // ОСНОВНОЙ МЕТОД (версия со ScrollViewer)
     private static async Task<MessageBoxResult> ShowDialog(string message, string title,
                                                            MessageBoxButton buttons,
                                                            MessageBoxType type)
@@ -210,12 +64,12 @@ public static class MessageBox
         {
             var tcs = new TaskCompletionSource<MessageBoxResult>();
 
-            // СОЗДАЕМ ОКНО
-            var dialog = new Window
+            // СОЗДАЕМ ОСНОВНОЕ ОКНО
+            var mainWindow = new Window
             {
-                Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-                MinWidth = 300,
-                MinHeight = 150,
+                Title = "",
+                MinWidth = 420,
+                MinHeight = 220,
                 MaxWidth = 800,
                 MaxHeight = 600,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -223,121 +77,240 @@ public static class MessageBox
                 CanMinimize = false,
                 CanMaximize = false,
                 ShowInTaskbar = false,
-                SystemDecorations = SystemDecorations.Full,
+                SystemDecorations = SystemDecorations.None,
                 Topmost = true,
-                SizeToContent = SizeToContent.WidthAndHeight
+                SizeToContent = SizeToContent.WidthAndHeight,
+                Background = Brushes.Transparent
             };
 
-            // ОСНОВНОЙ КОНТЕЙНЕР
-            var mainStack = new StackPanel
+            // ГЛАВНЫЙ КОНТЕЙНЕР
+            var mainContainer = new Grid();
+
+            // ========== ОСНОВНАЯ ПАНЕЛЬ С ВЫРАЗИТЕЛЬНОЙ РАМКОЙ ==========
+            var mainBorder = new Border
             {
-                Margin = new Thickness(20),
+                Background = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0, 122, 204)), // Яркая синяя рамка
+                BorderThickness = new Thickness(3),
+                CornerRadius = new CornerRadius(5),
+                ZIndex = 2
+            };
+
+            // ========== СИНЯЯ ПАНЕЛЬ ВВЕРХУ (внутри основного Border) ==========
+            var blueHeader = new Border
+            {
+                Height = 30,
+                Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)), // #FF007ACC
+                CornerRadius = new CornerRadius(5, 5, 0, 0), // Совпадает со скруглением основного окна
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Top,
+                ZIndex = 3,
+                Child = new Grid
+                {
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    Children =
+                    {
+                        // ЗАГОЛОВОК
+                        new TextBlock
+                        {
+                            Text = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+                            Foreground = Brushes.White,
+                            FontSize = 14,
+                            FontWeight = FontWeight.Bold,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                            Margin = new Thickness(15, 0, 0, 0)
+                        },
+                        // КНОПКА ЗАКРЫТИЯ
+                        new Button
+                        {
+                            Content = "✕",
+                            Width = 26,
+                            Height = 26,
+                            HorizontalAlignment = HorizontalAlignment.Right,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Margin = new Thickness(0, 0, 8, 0),
+                            FontSize = 14,
+                            FontWeight = FontWeight.Bold,
+                            Background = Brushes.Transparent,
+                            BorderThickness = new Thickness(0),
+                            Foreground = Brushes.White,
+                            Cursor = new Cursor(StandardCursorType.Hand)
+                        }
+                    }
+                }
+            };
+
+            // ========== ОСНОВНОЙ КОНТЕНТ (с отступом для синей панели) ==========
+            var contentGrid = new Grid
+            {
+                Margin = new Thickness(25, 45, 25, 25)
+            };
+
+            // СТЕК ДЛЯ КОНТЕНТА
+            var contentStack = new StackPanel
+            {
+                Spacing = 25,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            // ИКОНКА И ТЕКСТ
-            var contentStack = new StackPanel
+            // СООБЩЕНИЕ И ИКОНКА
+            var messageStack = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Spacing = 15,
-                Margin = new Thickness(0, 0, 0, 20),
+                Spacing = 20,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            // ИКОНКА (эмодзи)
+            // ИКОНКА (простая эмодзи без фона)
             var iconText = new TextBlock
             {
                 Text = GetIconEmoji(type),
                 FontSize = 32,
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, 5, 0, 0)
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = GetIconColor(type)
             };
 
-            // ТЕКСТ СООБЩЕНИЯ в ScrollViewer
+            // ТЕКСТ СООБЩЕНИЯ
             var messageText = new TextBlock
             {
                 Text = message,
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 14,
                 VerticalAlignment = VerticalAlignment.Center,
-                MaxWidth = 600,
-                MinWidth = 200
+                MaxWidth = 500,
+                MinWidth = 220,
+                Foreground = Brushes.Black
             };
 
-            // ScrollViewer для очень длинных сообщений
-            var scrollViewer = new ScrollViewer
-            {
-                MaxHeight = 400,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = messageText
-            };
-
-            contentStack.Children.Add(iconText);
-            contentStack.Children.Add(scrollViewer);
+            messageStack.Children.Add(iconText);
+            messageStack.Children.Add(messageText);
 
             // КНОПКИ
             var buttonStack = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Spacing = 10,
-                Margin = new Thickness(0, 10, 0, 0)
+                Spacing = 15
             };
 
             // СОЗДАЕМ КНОПКИ В ЗАВИСИМОСТИ ОТ ТИПА
             switch (buttons)
             {
                 case MessageBoxButton.OK:
-                    var okButton = CreateButton("OK", MessageBoxResult.OK, true, dialog, tcs);
+                    var okButton = CreateNeutralButton("OK", MessageBoxResult.OK, true, mainWindow, tcs);
                     buttonStack.Children.Add(okButton);
                     break;
 
                 case MessageBoxButton.OKCancel:
-                    var okBtn = CreateButton("OK", MessageBoxResult.OK, true, dialog, tcs);
-                    var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, false, dialog, tcs);
+                    var okBtn = CreateNeutralButton("OK", MessageBoxResult.OK, true, mainWindow, tcs);
+                    var cancelBtn = CreateNeutralButton("Отмена", MessageBoxResult.Cancel, false, mainWindow, tcs);
                     buttonStack.Children.Add(okBtn);
                     buttonStack.Children.Add(cancelBtn);
                     break;
 
                 case MessageBoxButton.YesNo:
-                    var yesBtn = CreateButton("Да", MessageBoxResult.Yes, true, dialog, tcs);
-                    var noBtn = CreateButton("Нет", MessageBoxResult.No, false, dialog, tcs);
+                    var yesBtn = CreateNeutralButton("Да", MessageBoxResult.Yes, true, mainWindow, tcs);
+                    var noBtn = CreateNeutralButton("Нет", MessageBoxResult.No, false, mainWindow, tcs);
                     buttonStack.Children.Add(yesBtn);
                     buttonStack.Children.Add(noBtn);
                     break;
 
                 case MessageBoxButton.YesNoCancel:
-                    var yesButton = CreateButton("Да", MessageBoxResult.Yes, true, dialog, tcs);
-                    var noButton = CreateButton("Нет", MessageBoxResult.No, false, dialog, tcs);
-                    var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, false, dialog, tcs);
+                    var yesButton = CreateNeutralButton("Да", MessageBoxResult.Yes, true, mainWindow, tcs);
+                    var noButton = CreateNeutralButton("Нет", MessageBoxResult.No, false, mainWindow, tcs);
+                    var cancelButton = CreateNeutralButton("Отмена", MessageBoxResult.Cancel, false, mainWindow, tcs);
                     buttonStack.Children.Add(yesButton);
                     buttonStack.Children.Add(noButton);
                     buttonStack.Children.Add(cancelButton);
                     break;
             }
 
-            // ДОБАВЛЯЕМ ВСЕ В ОКНО
-            mainStack.Children.Add(contentStack);
-            mainStack.Children.Add(buttonStack);
-            dialog.Content = mainStack;
+            // СБОРКА ИНТЕРФЕЙСА
+            contentStack.Children.Add(messageStack);
+            contentStack.Children.Add(buttonStack);
+            contentGrid.Children.Add(contentStack);
 
-            // ОБРАБОТЧИК ЗАКРЫТИЯ
-            dialog.Closed += (s, e) =>
+            // ========== ВНУТРЕННЯЯ ПАНЕЛЬ ДЛЯ ОБЪЕМА ==========
+            var innerBorder = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Margin = new Thickness(2),
+                Child = new Grid
+                {
+                    Children =
+                    {
+                        contentGrid,
+                        blueHeader // Добавляем синюю панель поверх контента
+                    }
+                }
+            };
+
+            // Устанавливаем innerBorder как дочерний элемент mainBorder
+            mainBorder.Child = innerBorder;
+
+            // СБОРКА ВСЕХ СЛОЕВ
+            mainContainer.Children.Add(mainBorder);
+
+            mainWindow.Content = mainContainer;
+
+            // ОБРАБОТЧИКИ СОБЫТИЙ
+            mainWindow.Closed += (s, e) =>
             {
                 if (!tcs.Task.IsCompleted)
                     tcs.TrySetResult(MessageBoxResult.None);
             };
 
+            // ОБРАБОТЧИК ДЛЯ КНОПКИ ЗАКРЫТИЯ В СИНЕЙ ПАНЕЛИ
+            if (blueHeader.Child is Grid headerGrid)
+            {
+                foreach (var child in headerGrid.Children)
+                {
+                    if (child is Button closeButton && closeButton.Content as string == "✕")
+                    {
+                        closeButton.Click += (s, e) =>
+                        {
+                            tcs.TrySetResult(MessageBoxResult.Cancel);
+                            mainWindow.Close();
+                        };
+
+                        // Простой эффект при наведении
+                        closeButton.PointerEntered += (s, e) =>
+                        {
+                            closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+                        };
+
+                        closeButton.PointerExited += (s, e) =>
+                        {
+                            closeButton.Background = Brushes.Transparent;
+                        };
+                    }
+                }
+            }
+
+            // ОБРАБОТКА КЛАВИШ
+            mainWindow.KeyDown += (s, e) =>
+            {
+                if (e.Key == Avalonia.Input.Key.Escape)
+                {
+                    e.Handled = true;
+                    tcs.TrySetResult(MessageBoxResult.Cancel);
+                    mainWindow.Close();
+                }
+            };
+
             // ПОКАЗЫВАЕМ ОКНО
             if (desktop.MainWindow != null)
             {
-                await dialog.ShowDialog(desktop.MainWindow);
+                await mainWindow.ShowDialog(desktop.MainWindow);
             }
             else
             {
-                dialog.Show();
+                mainWindow.Show();
             }
 
             return await tcs.Task;
@@ -346,52 +319,63 @@ public static class MessageBox
         return MessageBoxResult.None;
     }
 
-    // СОЗДАНИЕ КНОПКИ
-    //private static Button CreateButton(string content, MessageBoxResult buttonResult,
-    //                                   bool isDefault, Window dialog,
-    //                                   TaskCompletionSource<MessageBoxResult> tcs)
-    //{
-    //    var button = new Button
-    //    {
-    //        Content = content,
-    //        Width = 80,
-    //        Height = 30,
-    //        HorizontalAlignment = HorizontalAlignment.Center
-    //    };
-
-    //    button.Click += (s, e) =>
-    //    {
-    //        tcs.TrySetResult(buttonResult);
-    //        dialog.Close();
-    //    };
-
-    //    if (isDefault)
-    //    {
-    //        // ОБРАБОТКА ENTER
-    //        dialog.KeyDown += (s, e) =>
-    //        {
-    //            if (e.Key == Avalonia.Input.Key.Enter)
-    //            {
-    //                e.Handled = true;
-    //                tcs.TrySetResult(buttonResult);
-    //                dialog.Close();
-    //            }
-    //        };
-    //    }
-
-    //    return button;
-    //}
-
-    private static Button CreateButton(string content, MessageBoxResult buttonResult,
-                                   bool isDefault, Window dialog,
-                                   TaskCompletionSource<MessageBoxResult> tcs)
+    // СОЗДАНИЕ НЕЙТРАЛЬНОЙ КНОПКИ (как в вашем приложении)
+    private static Button CreateNeutralButton(string content, MessageBoxResult buttonResult,
+                                            bool isDefault, Window dialog,
+                                            TaskCompletionSource<MessageBoxResult> tcs)
     {
+        // Цвета как в вашем приложении
+        var normalBackground = new SolidColorBrush(Color.FromRgb(240, 240, 240)); // Светло-серый
+        var hoverBackground = new SolidColorBrush(Color.FromRgb(225, 225, 225));  // Немного темнее
+        var pressedBackground = new SolidColorBrush(Color.FromRgb(210, 210, 210)); // Еще темнее
+        var borderColor = new SolidColorBrush(Color.FromRgb(180, 180, 180));      // Серый
+
         var button = new Button
         {
-            Content = content,
-            Width = 80,
-            Height = 30,
-            HorizontalAlignment = HorizontalAlignment.Center
+            Content = new TextBlock
+            {
+                Text = content,
+                FontSize = 13,
+                FontWeight = FontWeight.Medium,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = Brushes.Black
+            },
+            MinWidth = 90,
+            Height = 35,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Background = normalBackground,
+            BorderBrush = borderColor,
+            BorderThickness = new Thickness(1),
+            Cursor = new Cursor(StandardCursorType.Hand),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(20, 0, 20, 0)
+        };
+
+        // ЭФФЕКТ ПРИ НАВЕДЕНИИ
+        button.PointerEntered += (s, e) =>
+        {
+            button.Background = hoverBackground;
+            button.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
+        };
+
+        button.PointerExited += (s, e) =>
+        {
+            button.Background = normalBackground;
+            button.BorderBrush = borderColor;
+        };
+
+        // ЭФФЕКТ ПРИ НАЖАТИИ
+        button.PointerPressed += (s, e) =>
+        {
+            button.Background = pressedBackground;
+            button.BorderBrush = new SolidColorBrush(Color.FromRgb(140, 140, 140));
+        };
+
+        button.PointerReleased += (s, e) =>
+        {
+            button.Background = hoverBackground;
+            button.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
         };
 
         button.Click += (s, e) =>
@@ -400,12 +384,11 @@ public static class MessageBox
             dialog.Close();
         };
 
-        // УСТАНАВЛИВАЕМ ФОКУС НА КНОПКУ ПО УМОЛЧАНИЮ ПРИ ОТКРЫТИИ ОКНА
+        // УСТАНАВЛИВАЕМ ФОКУС НА КНОПКУ ПО УМОЛЧАНИЮ
         if (isDefault)
         {
             dialog.Opened += (s, e) =>
             {
-                // Используем Dispatcher чтобы установить фокус после полной загрузки
                 Dispatcher.UIThread.Post(() =>
                 {
                     button.Focus();
@@ -413,14 +396,14 @@ public static class MessageBox
             };
         }
 
-        // ОБРАБОТКА ENTER для кнопки по умолчанию
+        // ОБРАБОТКА ENTER
         if (isDefault)
         {
             dialog.KeyDown += (s, e) =>
             {
                 if (e.Key == Avalonia.Input.Key.Enter)
                 {
-                    e.Handled = true; // ВАЖНО для Linux!
+                    e.Handled = true;
                     tcs.TrySetResult(buttonResult);
                     dialog.Close();
                 }
@@ -428,6 +411,24 @@ public static class MessageBox
         }
 
         return button;
+    }
+
+    // ПОЛУЧЕНИЕ ЦВЕТА ИКОНКИ
+    private static IBrush GetIconColor(MessageBoxType type)
+    {
+        switch (type)
+        {
+            case MessageBoxType.Info:
+                return new SolidColorBrush(Color.FromRgb(0, 122, 204)); // Синий
+            case MessageBoxType.Warning:
+                return new SolidColorBrush(Color.FromRgb(255, 140, 0)); // Оранжевый
+            case MessageBoxType.Error:
+                return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // Красный
+            case MessageBoxType.Question:
+                return new SolidColorBrush(Color.FromRgb(40, 167, 69)); // Зеленый
+            default:
+                return new SolidColorBrush(Color.FromRgb(0, 122, 204)); // Синий
+        }
     }
 
     // ПОЛУЧЕНИЕ ЗАГОЛОВКА ПО УМОЛЧАНИЮ
