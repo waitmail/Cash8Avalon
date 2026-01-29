@@ -1,0 +1,86 @@
+﻿<!-- InputSertificates.axaml -->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="Cash8Avalon.InputSertificates"
+        Title="Ввод сертификатов"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        SystemDecorations="None"
+        WindowState="Maximized">
+    
+    <Grid x:Name="MainGrid" Background="White">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Верхняя панель с полем ввода -->
+        <Border Grid.Row="0" 
+                Background="#FF007ACC" 
+                Height="70">
+            <Grid Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0"
+                          Text="Ввод сертификатов"
+                          FontSize="24"
+                          FontWeight="Bold"
+                          Foreground="White"
+                          VerticalAlignment="Center"/>
+                
+                <StackPanel Grid.Column="1" 
+                           Orientation="Horizontal" 
+                           Spacing="10"
+                           VerticalAlignment="Center">
+                    <TextBlock Text="Код сертификата:"
+                              FontSize="16"
+                              Foreground="White"
+                              VerticalAlignment="Center"/>
+                    
+                    <TextBox x:Name="input_sertificate"
+                            Width="230"
+                            Height="30"
+                            MaxLength="13"
+                            FontSize="14"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Контейнер с синей рамкой как в Cash_check -->
+        <Border Grid.Row="1"
+                x:Name="gridContainer"
+                BorderBrush="#8A2BE2" 
+                BorderThickness="2"
+                Background="White"
+                Margin="20,10,20,10"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <!-- Grid будет создан программно -->
+        </Border>
+        
+        <!-- Кнопка подтверждения -->
+        <Button x:Name="button_commit"
+               Grid.Row="2"
+               Content="Подтвердить ввод (F12)"
+               FontSize="18"
+               Foreground="Red"
+               Background="LightGray"
+               BorderBrush="DarkGray"
+               BorderThickness="1"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Stretch"
+               Margin="20"
+               Height="60"
+               Cursor="Hand"/>
+    </Grid>
+</Window>
