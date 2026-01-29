@@ -56,7 +56,7 @@
             </Grid>
         </Border>
         
-        <!-- Контейнер с синей рамкой как в Cash_check -->
+        <!-- Контейнер с синей рамкой  -->
         <Border Grid.Row="1"
                 x:Name="gridContainer"
                 BorderBrush="#8A2BE2" 

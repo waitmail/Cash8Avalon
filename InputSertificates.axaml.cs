@@ -12,12 +12,16 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cash8Avalon
 {
     public partial class InputSertificates : Window
     {
+
+       
+
         // Элементы управления
         private TextBox _inputSertificate;
         private Button _buttonCommit;
@@ -25,6 +29,12 @@ namespace Cash8Avalon
         private ScrollViewer _scrollViewer;
         private Grid _gridTable;
         private int _currentGridRow = 1;
+
+        // Флаг для корректного закрытия окна
+        private bool _closedNormally = false;
+
+        // Для передачи данных в окно оплаты
+        public Pay PayForm { get; set; }
 
         // Константы для стилей
         private static readonly IBrush HEADER_BACKGROUND = Brushes.LightBlue;
@@ -52,6 +62,20 @@ namespace Cash8Avalon
             public decimal Amount { get; set; }           // Номинал (retail_price)
             public string Barcode { get; set; }           // Штрихкод
             public string Status { get; set; }            // Статус
+
+            // Для клонирования (аналог Clone() в ListViewItem)
+            public CertificateItem Clone()
+            {
+                return new CertificateItem
+                {
+                    Number = this.Number,
+                    Code = this.Code,
+                    Name = this.Name,
+                    Amount = this.Amount,
+                    Barcode = this.Barcode,
+                    Status = this.Status
+                };
+            }
         }
 
         public InputSertificates()
@@ -148,18 +172,48 @@ namespace Cash8Avalon
                 // Добавляем ScrollViewer в контейнер
                 _gridContainer.Child = _scrollViewer;
 
-                // ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ РАЗМЕРЫ
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _gridTable.MinHeight = 200;
-                    _gridTable.MinWidth = 600;
-                }, DispatcherPriority.Background);
-
                 Console.WriteLine("✓ Grid для сертификатов создан программно");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании Grid: {ex.Message}");
+            }
+        }
+
+        public void LoadExistingCertificates(List<CertificateItem> existingCertificates)
+        {
+            if (existingCertificates == null || existingCertificates.Count == 0)
+                return;
+
+            // Очищаем текущие данные
+            _certificates.Clear();
+            _sertificatesData?.Clear();
+
+            // Добавляем существующие сертификаты
+            foreach (var cert in existingCertificates)
+            {
+                var certificate = cert.Clone();
+                certificate.Number = _certificates.Count + 1;
+                _certificates.Add(certificate);
+
+                // Добавляем в DataTable
+                DataRow newRow = _sertificatesData.NewRow();
+                newRow["Number"] = certificate.Number;
+                newRow["Code"] = certificate.Code;
+                newRow["Name"] = certificate.Name;
+                newRow["Amount"] = certificate.Amount;
+                newRow["Barcode"] = certificate.Barcode;
+                newRow["Status"] = certificate.Status;
+                _sertificatesData.Rows.Add(newRow);
+
+                // Добавляем строку в Grid
+                AddRowToGrid(certificate);
+            }
+
+            // Выделяем последнюю строку
+            if (_certificates.Count > 0)
+            {
+                SelectRow(_certificates.Count - 1);
             }
         }
 
@@ -486,7 +540,7 @@ namespace Cash8Avalon
                 case Key.F12:
                     if (_buttonCommit.IsEnabled)
                     {
-                        CommitInput();
+                        ButtonCommit_Click(null, null);
                         e.Handled = true;
                     }
                     break;
@@ -496,10 +550,10 @@ namespace Cash8Avalon
                     e.Handled = true;
                     break;
 
-                case Key.Escape:
-                    this.Close();
-                    e.Handled = true;
-                    break;
+                //case Key.Escape:
+                //    this.Close();
+                //    e.Handled = true;
+                //    break;
 
                 case Key.Delete:
                     if (_selectedRowIndex >= 0)
@@ -533,7 +587,241 @@ namespace Cash8Avalon
             }
         }
 
-        // Остальные методы остаются без изменений (SelectRow, ClearSelection, ScrollToRow, MoveSelectionUp/Down и т.д.)
+        private async void ButtonCommit_Click(object sender, RoutedEventArgs e)
+        {
+            await CommitSertificates();
+        }
+
+        /// <summary>
+        /// Проверить все сертификаты на то, что они активированы
+        /// Аналог button_commit_Click из WinForms
+        /// </summary>
+        private async Task CommitSertificates()
+        {
+            if (_certificates.Count > 0)
+            {
+                bool resultCheck = true;
+
+                // Проверяем все сертификаты на активность
+                foreach (var certificate in _certificates)
+                {
+                    if (!await CheckSertificateActive(certificate.Barcode))
+                    {
+                        resultCheck = false;
+                        break;
+                    }
+                }
+
+                if (!resultCheck)
+                {
+                    return;
+                }
+            }
+
+            _closedNormally = true;
+
+            // Вычисляем общую сумму сертификатов (даже если 0)
+            decimal totalAmount = _certificates.Sum(c => c.Amount);
+
+            // Устанавливаем результат через Tag для передачи в вызывающую форму
+            this.Tag = new
+            {
+                Success = true,
+                Sertificates = _certificates.Select(c => c.Clone()).ToList(), // Клонируем
+                TotalAmount = totalAmount, // Добавляем общую сумму
+                DataTable = _sertificatesData
+            };
+
+            this.Close();
+        }
+
+        /// <summary>
+        /// Проверка активности сертификата с таймаутом
+        /// Аналог check_sertificate_active из WinForms
+        /// </summary>
+        /// <param name="sertificateCode">Штрихкод сертификата</param>
+        /// <returns>True если сертификат активен</returns>
+        private async Task<bool> CheckSertificateActive(string sertificateCode)
+        {
+            bool result = true;
+            var cts = new CancellationTokenSource();
+
+            try
+            {
+                // Запускаем проверку с таймаутом
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
+                var checkTask = CheckSertificateActiveAsync(sertificateCode, cts.Token);
+
+                // Ожидаем завершения первой задачи
+                var completedTask = await Task.WhenAny(checkTask, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    // Таймаут
+                    MainStaticClass.write_event_in_log($"Таймаут при проверке сертификата {sertificateCode}",
+                        "Документ чек", "0");
+
+                    await MessageBox.Show("Внешний таймаут при проверке активности сертификата",
+                        "Проверка сертификата",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error);
+
+                    cts.Cancel();
+                    result = false;
+                }
+                else
+                {
+                    // Проверка завершена успешно
+                    result = await checkTask;
+
+                    if (result)
+                    {
+                        MainStaticClass.write_event_in_log($"Успешная проверка сертификата {sertificateCode}",
+                            "Документ чек", "0");
+                    }
+                    else
+                    {
+                        MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен",
+                            "Документ чек", "0");
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Задача была отменена
+                result = false;
+                MainStaticClass.write_event_in_log($"Проверка сертификата {sertificateCode} отменена",
+                    "Документ чек", "0");
+            }
+            catch (Exception ex)
+            {
+                // Обработка других исключений
+                result = false;
+                MainStaticClass.write_event_in_log($"Ошибка при проверке сертификата {sertificateCode}: {ex.Message}",
+                    "Документ чек", "0");
+
+                await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}",
+                    "Ошибка проверки",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error);
+            }
+            finally
+            {
+                cts.Dispose();
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Асинхронная проверка активности сертификата
+        /// Аналог check_sertificate_active1 из WinForms
+        /// </summary>
+        private async Task<bool> CheckSertificateActiveAsync(string sertificateCode, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Проверка на отмену
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Получаем параметры для запроса
+                string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(nickShop))
+                {
+                    await MessageBox.Show("Не удалось получить название магазина",
+                        "Ошибка",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error);
+                    return false;
+                }
+
+                string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(codeShop))
+                {
+                    await MessageBox.Show("Не удалось получить код магазина",
+                        "Ошибка",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error);
+                    return false;
+                }
+
+                string countDay = CryptorEngine.get_count_day();
+                string key = nickShop.Trim() + countDay.Trim() + codeShop.Trim();
+
+                string encryptData = CryptorEngine.Encrypt(sertificateCode, true, key);
+
+                // Используем веб-сервис для проверки
+                DS ds = MainStaticClass.get_ds();
+                ds.Timeout = 60000;
+
+                string status;
+                try
+                {
+                    // Асинхронный вызов веб-сервиса
+                    status = await Task.Run(() =>
+                        ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString()),
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    await MessageBox.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
+                        "Проверка сертификата",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error);
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                        "Проверка активации сертификата");
+                    return false;
+                }
+
+                if (status == "-1")
+                {
+                    await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
+                        "Проверка сертификата",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error);
+                    MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами",
+                        "CheckSertificateActiveAsync", 0, MainStaticClass.CashDeskNumber,
+                        "Проверка активации сертификата");
+                    return false;
+                }
+                else
+                {
+                    string decryptData = CryptorEngine.Decrypt(status, true, key);
+
+                    // 1 - уже активирован, 0 - не активирован
+                    if (decryptData == "1")
+                    {
+                        await MessageBox.Show($"Сертификат {sertificateCode} уже активирован",
+                            "Проверка сертификата",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error);
+                        return false;
+                    }
+                    else if (decryptData == "0")
+                    {
+                        return true; // Сертификат не активирован, можно использовать
+                    }
+                    else
+                    {
+                        await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
+                            "Проверка сертификата",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error);
+                        return false;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw; // Пробрасываем дальше
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                    "Проверка активации сертификата");
+                throw;
+            }
+        }
 
         private void SelectRow(int rowIndex)
         {
@@ -760,55 +1048,17 @@ namespace Cash8Avalon
             }
         }
 
-        private async void CommitInput()
+        // Переопределяем закрытие окна для корректной работы с флагом
+        protected override void OnClosed(EventArgs e)
         {
-            if (_certificates.Count == 0)
+            base.OnClosed(e);
+
+            // Если окно закрыто не через кнопку подтверждения,
+            // устанавливаем Tag в null или false
+            if (!_closedNormally)
             {
-                await MessageBox.Show("Нет добавленных сертификатов", "Информация",
-                    MessageBoxButton.OK, MessageBoxType.Info);
-                return;
+                this.Tag = null;
             }
-
-            // Вычисляем общую сумму
-            decimal totalAmount = _certificates.Sum(c => c.Amount);
-
-            // Устанавливаем результат через Tag
-            this.Tag = _sertificatesData;
-
-            // Закрываем окно
-            this.Close();
-        }
-
-        // Методы для получения данных (совместимость со старым кодом)
-        public DataTable GetSertificatesData()
-        {
-            return _sertificatesData;
-        }
-
-        public List<string> GetSertificateCodes()
-        {
-            return _certificates.Select(c => c.Code).ToList();
-        }
-
-        public List<string> GetSertificateBarcodes()
-        {
-            return _certificates.Select(c => c.Barcode).ToList();
-        }
-
-        public decimal GetTotalAmount()
-        {
-            return _certificates.Sum(c => c.Amount);
-        }
-
-        // Метод для получения списка объектов сертификатов
-        public List<CertificateItem> GetCertificates()
-        {
-            return new List<CertificateItem>(_certificates);
-        }
-
-        private void ButtonCommit_Click(object sender, RoutedEventArgs e)
-        {
-            CommitInput();
         }
 
         private void GridTable_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -846,6 +1096,34 @@ namespace Cash8Avalon
                 control = control.Parent as Control;
             }
             return null;
+        }
+
+        // Методы для получения данных (совместимость со старым кодом)
+        public DataTable GetSertificatesData()
+        {
+            return _sertificatesData;
+        }
+
+        public List<string> GetSertificateCodes()
+        {
+            return _certificates.Select(c => c.Code).ToList();
+        }
+
+        public List<string> GetSertificateBarcodes()
+        {
+            return _certificates.Select(c => c.Barcode).ToList();
+        }
+
+        public decimal GetTotalAmount()
+        {
+            return _certificates.Sum(c => c.Amount);
+        }
+
+
+        // Метод для получения списка объектов сертификатов
+        public List<CertificateItem> GetCertificates()
+        {
+            return new List<CertificateItem>(_certificates);
         }
     }
 }

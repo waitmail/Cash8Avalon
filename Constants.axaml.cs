@@ -18,6 +18,7 @@ namespace Cash8Avalon
     public partial class Constants : UserControl
     {
 
+
         public event EventHandler RequestClose;
         private int m_cash_desk_number = 0;
 

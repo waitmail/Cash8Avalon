@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,10 @@ namespace Cash8Avalon
 {
     public partial class Pay : Window
     {
+
+        private DataTable _certificatesData = null;
+        private List<InputSertificates.CertificateItem> _certificatesList = new List<InputSertificates.CertificateItem>();
+
         // События для внешней подписки
         public event EventHandler ReturnToDocumentRequested;
         public event EventHandler PaymentConfirmed;
@@ -106,6 +111,7 @@ namespace Cash8Avalon
             };
 
             ToolTip.SetTip(checkBox_do_not_send_payment_to_the_terminal, toolTipContent);
+            calculate();
         }
 
         private void CashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
@@ -243,6 +249,7 @@ namespace Cash8Avalon
 
         private void Button1_Click(object? sender, RoutedEventArgs e)
         {
+            ClearCertificates();
             this.Tag = false;
             this.Close();
         }
@@ -527,7 +534,112 @@ namespace Cash8Avalon
                     FillNonCashFromPaySum();
                     ClearCash();
                     break;
+                case Key.F8:
+                    e.Handled = true;
+                    await ShowCertificatesDialog();
+                    break;
             }
+        }
+
+        private async Task ShowCertificatesDialog()
+        {
+            try
+            {
+                var inputSertificates = new InputSertificates();
+
+                // ПЕРЕДАЕМ СУЩЕСТВУЮЩИЕ СЕРТИФИКАТЫ
+                if (_certificatesList.Count > 0)
+                {
+                    inputSertificates.LoadExistingCertificates(_certificatesList);
+                }
+
+                // Открываем как модальное окно
+                await inputSertificates.ShowDialog<List<InputSertificates.CertificateItem>>(this);
+
+                // Получаем обновленный список сертификатов
+                var updatedCertificates = inputSertificates.Tag as List<InputSertificates.CertificateItem>;
+                if (updatedCertificates != null)
+                {
+                    // Обрабатываем обновленные данные
+                    await ProcessCertificatesData(updatedCertificates);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show($"Ошибка открытия формы сертификатов: {ex.Message}",
+                    "Ошибка",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error);
+            }
+        }
+
+        private async Task ProcessCertificatesData(object certificateData)
+        {
+            if (certificateData == null) return;
+
+            try
+            {
+                if (certificateData is List<InputSertificates.CertificateItem> certificates)
+                {
+                    if (certificates.Count > 0)
+                    {
+                        // СОХРАНЯЕМ СЕРТИФИКАТЫ
+                        _certificatesList = certificates;
+
+                        // Считаем сумму сами
+                        decimal totalAmount = certificates.Sum(c => c.Amount);
+
+                        // Обновляем сумму в интерфейсе
+                        this.CertificatesSum = totalAmount.ToString("F2");
+                        CalculateChange();
+
+                        // Логирование
+                        MainStaticClass.write_event_in_log(
+                            $"Добавлено {certificates.Count} сертификатов на сумму {totalAmount:F2}",
+                            "Сертификаты",
+                            cc?.numdoc.ToString() ?? "0"
+                        );
+                    }
+                    else
+                    {
+                        // Пустой список - очищаем
+                        ClearCertificates();
+                    }
+                }
+                else
+                {
+                    // Неправильный формат данных
+                    ClearCertificates();
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show($"Ошибка обработки сертификатов: {ex.Message}",
+                    "Ошибка",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error);
+                ClearCertificates();
+            }
+        }
+
+        private void ClearCertificates()
+        {
+            _certificatesList.Clear();
+            _certificatesData?.Clear();
+            this.CertificatesSum = "0,00";
+            CalculateChange();
+        }
+
+        // Метод для получения суммы сертификатов
+        public decimal GetCertificatesTotal()
+        {
+            return _certificatesList.Sum(c => c.Amount);
+        }
+
+        // Метод для получения количества сертификатов
+        public int GetCertificatesCount()
+        {
+            return _certificatesList.Count;
         }
 
         private void FillNonCashFromPaySum()
@@ -561,7 +673,7 @@ namespace Cash8Avalon
         {
             this.CashSum = "0,00";
         }
-        
+
 
 
 
@@ -570,7 +682,7 @@ namespace Cash8Avalon
         //    this.Tag = false;
         //    this.Close();            
         //}
-             
+
 
         private async Task<bool> copFilledCorrectly()
         {
@@ -728,6 +840,8 @@ namespace Cash8Avalon
             //{
             //    cc.listView_sertificates.Items.Add((ListViewItem)lvi.Clone());
             //}
+
+            cc.SetCertificatesFromPay(_certificatesList);
 
             MainStaticClass.write_event_in_log("Окно оплаты перед записью и закрытием документа ", "Документ чек", cc.numdoc.ToString());
 

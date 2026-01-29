@@ -1140,7 +1140,7 @@ namespace Cash8Avalon
 
                 /*Копируем табличную часть один ListView в другой
                  *  чтобы если оплата отменится и с чеком будут дальше работать
-                 *  отменить все расчитанные акции одним махом
+                 *  отменить все рассчитанные акции одним махом
                  */
                 MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
                 //listview_original.Items.Clear();
@@ -5828,6 +5828,34 @@ namespace Cash8Avalon
                     conn.Close();
                 }
             }
+        }
+
+        public void SetCertificatesFromPay(List<InputSertificates.CertificateItem> certificatesFromPay)
+        {
+            if (certificatesFromPay == null || certificatesFromPay.Count == 0)
+            {
+                _certificatesData.Clear();
+                return;
+            }
+
+            _certificatesData.Clear();
+
+            foreach (var cert in certificatesFromPay)
+            {
+                // Конвертируем из InputSertificates.CertificateItem в Cash_check.CertificateItem
+                var certificateItem = new CertificateItem
+                {
+                    Code = cert.Code,
+                    Certificate = cert.Name, // Название сертификата
+                    Nominal = cert.Amount,
+                    Barcode = cert.Barcode
+                };
+
+                _certificatesData.Add(certificateItem);
+            }
+
+            // Обновляем Grid сертификатов если нужно
+            //RefreshCertificatesGrid();
         }
 
         private async Task<int> get_its_deleted_document()

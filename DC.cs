@@ -13,6 +13,7 @@ namespace Cash8Avalon
         private int _timeout = 100000; // 100 секунд по умолчанию
         private WebClient _webClient;
 
+
         public DS()
         {
             _webClient = new WebClient();
