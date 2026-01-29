@@ -35,6 +35,7 @@ namespace Cash8Avalon
             InitializeComponent(); // Теперь это будет работать
             StartTimer();
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            this.ShowInTaskbar = false;
         }
 
         public WaitNonCashPay(int timeoutSeconds) : this()

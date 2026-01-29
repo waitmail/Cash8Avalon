@@ -554,7 +554,7 @@ namespace Cash8Avalon
             {
                 using (DS ds = MainStaticClass.get_ds())
                 {
-                    ds.Timeout = 60000;
+                    ds.Timeout = 60000;                    
                     //if (MainStaticClass.GetWorkSchema == 2)
                     //{
                     //    ds.Url = "http://10.21.200.21/DiscountSystem/Ds.asmx"; //"http://localhost:50520/DS.asmx";
@@ -613,24 +613,68 @@ namespace Cash8Avalon
             WHERE tovar.code = t2.code;";
         }
 
-        private void btn_new_load_Click(object sender, RoutedEventArgs e)
+        private async void btn_new_load_Click(object sender, RoutedEventArgs e)
         {
+            //InventoryManager.ClearDictionaryProductData();
+            //LoadActionDataInMemory.AllActionData1 = null;
+            //LoadActionDataInMemory.AllActionData2 = null;
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+            GC.WaitForPendingFinalizers();
+            if (!await new_load())
+            {
+                return;
+            }
             InventoryManager.ClearDictionaryProductData();
             LoadActionDataInMemory.AllActionData1 = null;
             LoadActionDataInMemory.AllActionData2 = null;
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-            GC.WaitForPendingFinalizers();
-            new_load();
-            InventoryManager.FillDictionaryProductDataAsync(); //товары и цены
-            Task.Run(() => InventoryManager.DictionaryPriceGiftAction);//цены для подарков в акциях
+            _ = InventoryManager.FillDictionaryProductDataAsync(); //товары и цены
+            _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);//цены для подарков в акциях
         }
-        private async void new_load()
+        //private async void btn_new_load_Click(object sender, RoutedEventArgs e)
+        //{
+        //    try
+        //    {
+        //        btnNewoad = this.FindControl<Button>("btn_new_load");
+        //        // Блокируем кнопку, чтобы не запустить дважды
+        //        btn_new_load.IsEnabled = false;
+
+
+        //        InventoryManager.ClearDictionaryProductData();
+        //        LoadActionDataInMemory.AllActionData1 = null;
+        //        LoadActionDataInMemory.AllActionData2 = null;
+
+        //        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+        //        GC.WaitForPendingFinalizers();
+
+        //        // ЖДЕМ завершения new_load
+        //        await Task.Run(() => new_load());
+
+        //        // ЖДЕМ завершения заполнения данных
+        //        await InventoryManager.FillDictionaryProductDataAsync(); //товары и цены
+
+        //        // Запускаем в фоне, но не ждем
+        //        _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);//цены для подарков в акциях
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await MessageBox.Show($"Ошибка при загрузке: {ex.Message}");
+        //    }
+        //    finally
+        //    {
+        //        // Разблокируем кнопку
+        //        btn_new_load.IsEnabled = true;
+        //    }
+        //}
+
+
+        private async Task<bool> new_load()
         {
+            bool result = true;
             //btn_new_load.Enabled = false;
             if (!MainStaticClass.service_is_worker())
             {
                 await MessageBox.Show("Веб сервис недоступен");
-                return;
+                return false;
             }
 
             check_temp_tables();
@@ -640,14 +684,14 @@ namespace Cash8Avalon
             if (nick_shop.Trim().Length == 0)
             {
                 await MessageBox.Show(" Не удалось получить название магазина ");
-                return;
+                return false;
             }
 
             string code_shop = MainStaticClass.Code_Shop.Trim();
             if (code_shop.Trim().Length == 0)
             {
                 await MessageBox.Show(" Не удалось получить код магазина ");
-                return;
+                return false;
             }
             string count_day = CryptorEngine.get_count_day();
             string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
@@ -669,12 +713,12 @@ namespace Cash8Avalon
                 if (!loadPacketData.PacketIsFull)
                 {
                     await MessageBox.Show(loadPacketData.Exception + "\r\n Неудачная попытка получения данных");
-                    return;
+                    return false;
                 }
                 if (loadPacketData.Exchange)
                 {
                     await MessageBox.Show("Пакет данных получен во время обновления данных на сервере, загрузка прервана");
-                    return;
+                    return false;
                 }
 
                 queries.Add("Delete from action_table");
@@ -903,7 +947,7 @@ namespace Cash8Avalon
                 {
                     tran.Rollback();
                 }
-
+                result = false;
             }
             catch (Exception ex)
             {
@@ -913,6 +957,7 @@ namespace Cash8Avalon
                 {
                     tran.Rollback();
                 }
+                result= false;
 
             }
             finally
@@ -927,7 +972,7 @@ namespace Cash8Avalon
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
             GC.WaitForPendingFinalizers();
 
-            //btn_new_load.Enabled = true;
+            return result;
         }
 
         private void btnClose_Click(object sender, RoutedEventArgs e)

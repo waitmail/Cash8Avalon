@@ -218,6 +218,7 @@ namespace Cash8Avalon
                 //this.Closed += Cash_check_Closed;
 
                 Console.WriteLine("✓ Конструктор завершен успешно");
+                this.ShowInTaskbar = false;
             }
             catch (Exception ex)
             {

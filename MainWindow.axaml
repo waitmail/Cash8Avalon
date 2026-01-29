@@ -84,7 +84,7 @@
             CornerRadius="8"
             Margin="20"
             IsVisible="{Binding CurrentContent, Converter={x:Static ObjectConverters.IsNull}}">
-        <TextBlock Text="Рабочая область"
+        <TextBlock Text=""
                    VerticalAlignment="Center"
                    HorizontalAlignment="Center"
                    FontSize="18"

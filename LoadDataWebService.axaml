@@ -10,8 +10,8 @@
         <!-- Основной контент по центру -->
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="10" Spacing="10"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center">
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Left">
                         
                 <!-- Кнопка полной загрузки -->
                 <Button x:Name="btn_new_load"

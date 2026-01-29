@@ -58,9 +58,10 @@ namespace Cash8Avalon
         TextBox cashSumTextBox = null;
         
         public Pay()
-        {
+        {            
             InitializeComponent();
-            this.Loaded += Pay_Loaded;
+            this.ShowInTaskbar = false;            
+            this.Loaded += Pay_Loaded;            
         }
 
         private void Pay_Loaded(object? sender, RoutedEventArgs e)
@@ -178,6 +179,12 @@ namespace Cash8Avalon
         {
             var textBox = sender as TextBox;
             if (textBox == null) return;
+
+            if (e.Key == Key.Y || e.Key == Key.R ||
+            e.Key == Key.F5 || e.Key == Key.F12 || e.Key == Key.F8)
+            {
+                return; // Пусть обрабатывает Pay_KeyDown
+            }
 
             // Определяем тип клавиши
             bool isNumeric = (e.Key >= Key.D0 && e.Key <= Key.D9) ||
@@ -659,6 +666,7 @@ namespace Cash8Avalon
                 this.NonCashSum = rubles.ToString();
                 this.NonCashSumKop = kopecks.ToString("00");
             }
+            calculate();
         }
 
         // Обнулить безналичную оплату
@@ -666,12 +674,14 @@ namespace Cash8Avalon
         {
             this.NonCashSum = "0";
             this.NonCashSumKop = "00";
+            calculate();
         }
 
         // Обнулить наличные
         private void ClearCash()
         {
             this.CashSum = "0,00";
+            calculate();
         }
 
 
