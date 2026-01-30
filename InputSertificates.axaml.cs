@@ -102,6 +102,20 @@ namespace Cash8Avalon
                     _inputSertificate?.Focus();
                 }, DispatcherPriority.Input);
             };
+
+            this.ShowInTaskbar = false;
+
+            this.Opened += InputSertificates_Opened;
+        }
+
+        private void InputSertificates_Opened(object sender, EventArgs e)
+        {
+            // Устанавливаем фокус на поле ввода с небольшой задержкой
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _inputSertificate?.Focus();
+                _inputSertificate?.SelectAll();
+            }, DispatcherPriority.Background);
         }
 
         private void InitializeComponent()
@@ -305,6 +319,13 @@ namespace Cash8Avalon
             {
                 await MessageBox.Show("Введите код сертификата", "Ошибка",
                     MessageBoxButton.OK, MessageBoxType.Error);
+
+                // Восстанавливаем фокус сразу после MessageBox
+                //Dispatcher.UIThread.InvokeAsync(() =>
+                //{
+                //    _inputSertificate?.Focus();
+                //    _inputSertificate?.SelectAll();
+                //}, DispatcherPriority.Background);
                 return;
             }
 
@@ -318,25 +339,25 @@ namespace Cash8Avalon
                 if (code.Length > 6)
                 {
                     query = @"SELECT tovar.code AS tovar_code, 
-                                     tovar.name AS tovar_name, 
-                                     tovar.retail_price AS retail_price 
-                              FROM barcode 
-                              LEFT JOIN tovar ON barcode.tovar_code = tovar.code 
-                              WHERE barcode.barcode = @code 
-                              AND tovar.its_deleted = 0  
-                              AND tovar.retail_price <> 0 
-                              AND tovar.its_certificate = 1";
+                             tovar.name AS tovar_name, 
+                             tovar.retail_price AS retail_price 
+                      FROM barcode 
+                      LEFT JOIN tovar ON barcode.tovar_code = tovar.code 
+                      WHERE barcode.barcode = @code 
+                      AND tovar.its_deleted = 0  
+                      AND tovar.retail_price <> 0 
+                      AND tovar.its_certificate = 1";
                 }
                 else
                 {
                     query = @"SELECT tovar.code AS tovar_code, 
-                                     tovar.name AS tovar_name, 
-                                     tovar.retail_price AS retail_price 
-                              FROM tovar 
-                              WHERE tovar.its_deleted = 0 
-                              AND tovar.retail_price <> 0 
-                              AND tovar.code = @code 
-                              AND tovar.its_certificate = 1";
+                             tovar.name AS tovar_name, 
+                             tovar.retail_price AS retail_price 
+                      FROM tovar 
+                      WHERE tovar.its_deleted = 0 
+                      AND tovar.retail_price <> 0 
+                      AND tovar.code = @code 
+                      AND tovar.its_certificate = 1";
                 }
 
                 // Очищаем поле ввода сразу, как в старом коде
@@ -435,12 +456,84 @@ namespace Cash8Avalon
                     conn.Close();
                 }
 
-                // Возвращаем фокус на поле ввода
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _inputSertificate?.Focus();
-                }, DispatcherPriority.Background);
+                // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Используем более высокий приоритет
+                //Dispatcher.UIThread.InvokeAsync(() =>
+                //{
+                //    _inputSertificate?.Focus();
+                //    _inputSertificate?.SelectAll();
+
+                //    // Также можно попробовать принудительно обработать очередь сообщений
+                //    Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+                //}, DispatcherPriority.Input); // Изменено с Background на Input
+                //await ForceFocusToInputBox();
             }
+        }
+
+        private async Task ForceFocusToInputBox()
+        {
+            // Даем время для закрытия MessageBox
+            await Task.Delay(50);
+
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                try
+                {
+                    Console.WriteLine("Начинаем принудительную установку фокуса...");
+
+                    // Ваш рабочий обходной путь: фокус на грид, потом на поле ввода
+                    if (_scrollViewer != null)
+                    {
+                        _scrollViewer.Focus();
+                        Console.WriteLine("Фокус установлен на ScrollViewer");
+
+                        // Небольшая пауза
+                        await Task.Delay(20);
+                        Dispatcher.UIThread.RunJobs();
+                    }
+
+                    if (_inputSertificate != null)
+                    {
+                        // Пробуем несколько раз установить фокус
+                        for (int i = 0; i < 5; i++)
+                        {
+                            _inputSertificate.Focus();
+                            _inputSertificate.SelectAll();
+
+                            // Проверяем визуально - меняем цвет рамки для отладки
+                            _inputSertificate.BorderBrush = Brushes.Red;
+                            await Task.Delay(10);
+                            _inputSertificate.BorderBrush = Brushes.Gray;
+
+                            if (_inputSertificate.IsFocused)
+                            {
+                                Console.WriteLine($"Фокус установлен на поле ввода (попытка {i + 1})");
+                                break;
+                            }
+
+                            // Если не получилось, ждем и пробуем снова
+                            await Task.Delay(20);
+                            Dispatcher.UIThread.RunJobs();
+                        }
+
+                        // Принудительно показываем каретку
+                        _inputSertificate.CaretIndex = _inputSertificate.Text.Length;
+                        _inputSertificate.CaretBrush = Brushes.Black;
+
+                        // Обновляем отображение
+                        _inputSertificate.InvalidateVisual();
+                    }
+
+                    // Активируем окно
+                    this.Activate();
+                    this.Focus();
+
+                    Console.WriteLine("✓ Фокус установлен принудительно");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                }
+            }, DispatcherPriority.Render);
         }
 
         private void AddRowToGrid(CertificateItem certificate)
@@ -600,37 +693,22 @@ namespace Cash8Avalon
         {
             if (_certificates.Count > 0)
             {
-                bool resultCheck = true;
-
-                // Проверяем все сертификаты на активность
+                // Проверяем все сертификаты
                 foreach (var certificate in _certificates)
                 {
                     if (!await CheckSertificateActive(certificate.Barcode))
                     {
-                        resultCheck = false;
-                        break;
+                        // Если хоть один не прошел проверку - закрываем без результата
+                        this.Close();
+                        return;
                     }
-                }
-
-                if (!resultCheck)
-                {
-                    return;
                 }
             }
 
             _closedNormally = true;
 
-            // Вычисляем общую сумму сертификатов (даже если 0)
-            decimal totalAmount = _certificates.Sum(c => c.Amount);
-
-            // Устанавливаем результат через Tag для передачи в вызывающую форму
-            this.Tag = new
-            {
-                Success = true,
-                Sertificates = _certificates.Select(c => c.Clone()).ToList(), // Клонируем
-                TotalAmount = totalAmount, // Добавляем общую сумму
-                DataTable = _sertificatesData
-            };
+            // Возвращаем ТОЛЬКО список сертификатов
+            this.Tag = _certificates.Select(c => c.Clone()).ToList();
 
             this.Close();
         }
@@ -752,7 +830,7 @@ namespace Cash8Avalon
 
                 // Используем веб-сервис для проверки
                 DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 60000;
+                ds.Timeout = 10000;
 
                 string status;
                 try
@@ -788,26 +866,25 @@ namespace Cash8Avalon
                 {
                     string decryptData = CryptorEngine.Decrypt(status, true, key);
 
-                    // 1 - уже активирован, 0 - не активирован
-                    if (decryptData == "1")
+                    switch (decryptData)
                     {
-                        await MessageBox.Show($"Сертификат {sertificateCode} уже активирован",
-                            "Проверка сертификата",
-                            MessageBoxButton.OK,
-                            MessageBoxType.Error);
-                        return false;
-                    }
-                    else if (decryptData == "0")
-                    {
-                        return true; // Сертификат не активирован, можно использовать
-                    }
-                    else
-                    {
-                        await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
-                            "Проверка сертификата",
-                            MessageBoxButton.OK,
-                            MessageBoxType.Error);
-                        return false;
+                        case "1":
+                            // Сертификат не активирован, можно использовать
+                            return true;
+
+                        case "0":
+                            await MessageBox.Show($"Сертификат {sertificateCode} уже активирован",
+                                "Проверка сертификата",
+                                MessageBoxButton.OK,
+                                MessageBoxType.Error);
+                            return false;
+
+                        default:
+                            await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
+                                "Проверка сертификата",
+                                MessageBoxButton.OK,
+                                MessageBoxType.Error);
+                            return false;
                     }
                 }
             }

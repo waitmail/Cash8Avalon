@@ -53,7 +53,7 @@ namespace Cash8Avalon
         string str_return_sale_sbp = @"<?xml version=""1.0"" encoding=""UTF-8""?><request><field id = ""00"">sum</field><field id=""04"">643</field><field id=""13"">sale_code_authorization_terminal</field><field id=""14"">guid</field><field id = ""25"" >29</field><field id=""27"">id_terminal</field><field id=""53"">118</field></request>";
         string str_payment_status_return_sale_sbp = @"<?xml version=""1.0"" encoding=""UTF-8""?><request><field id = ""00"">sum</field><field id=""04"">643</field><field id=""13"">sale_code_authorization_terminal</field><field id=""14"">guid</field><field id = ""25"" >29</field><field id=""27"">id_terminal</field><field id=""53"">119</field></request>";
         public Cash_check cc = null;
-        private ToolTip toolTip = new ToolTip();
+        //private ToolTip toolTip = new ToolTip();
 
         TextBox cashSumTextBox = null;
         
@@ -133,9 +133,7 @@ namespace Cash8Avalon
         private void InitializeEventHandlers()
         {
             // Обработчики для горячих клавиш
-            this.KeyDown += Pay_KeyDown;
-
-           
+            this.KeyDown += Pay_KeyDown;          
             
 
             // Связывание событий
@@ -171,9 +169,79 @@ namespace Cash8Avalon
             if (nonCashSumTextBox != null)
             {                
                 nonCashSumTextBox.KeyDown += NonCashSumTextBox_KeyDown;
+                nonCashSumTextBox.LostFocus += OnNonCashSumLostFocus;                
                 nonCashSumTextBox.Text = "0";
             }          
         }
+
+        #region NonCashSum (Рубли) Handlers
+
+        private void OnNonCashSumLostFocus(object sender, RoutedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            // Проверяем пустую строку или только пробелы
+            if (string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                textBox.Text = "0";
+            }
+            else
+            {
+                // Проверяем, что это число
+                if (!int.TryParse(textBox.Text, out _))
+                {
+                    textBox.Text = "0";
+                }
+            }
+
+            calculate();
+        }
+
+        private void NonCashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
+        {
+            CalculateChange();
+        }
+
+        #endregion
+
+        #region NonCashSumKop (Копейки) Handlers
+
+        private void OnNonCashSumKopLostFocus(object sender, RoutedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            // Проверяем пустую строку или только пробелы
+            if (string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                textBox.Text = "00";
+            }
+            //else
+            //{
+            //    // Проверяем, что это число
+            //    if (!int.TryParse(textBox.Text))
+            //    {
+            //        textBox.Text = "00";
+            //    }
+            //    //else
+            //    //{
+            //    //    // Форматируем как двузначное число (00, 01, 02... 99)
+            //    //    if (kopecks < 0) kopecks = 0;
+            //    //    if (kopecks > 99) kopecks = 99;
+            //    //    textBox.Text = kopecks.ToString("00");
+            //    //}
+            //}
+
+            Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
+        }
+
+        private void NonCashSumKopTextBox_KeyUp(object? sender, KeyEventArgs e)
+        {
+            CalculateChange();
+        }
+
+        #endregion
 
         private void NonCashSumTextBox_KeyDown(object? sender, KeyEventArgs e)
         {
@@ -301,6 +369,7 @@ namespace Cash8Avalon
                 }
                 _firstInput = true;
             }
+            CalculateChange();
         }
 
         private void OnCashSumTextInput(object sender, TextInputEventArgs e)
@@ -385,6 +454,7 @@ namespace Cash8Avalon
             {
                 cashSumTextBox.CaretIndex = cashSumTextBox.Text.Length;
             }
+            CalculateChange();
         }
 
         private void OnCashSumKeyDown(object sender, KeyEventArgs e)
@@ -406,7 +476,7 @@ namespace Cash8Avalon
                     });
                 });
             }
-            calculate();
+            CalculateChange();
         }
 
         private void CashSumTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -554,22 +624,32 @@ namespace Cash8Avalon
             {
                 var inputSertificates = new InputSertificates();
 
-                // ПЕРЕДАЕМ СУЩЕСТВУЮЩИЕ СЕРТИФИКАТЫ
+                // Передаем существующие сертификаты для редактирования
                 if (_certificatesList.Count > 0)
                 {
                     inputSertificates.LoadExistingCertificates(_certificatesList);
                 }
 
-                // Открываем как модальное окно
+                // Открываем как модальное окно, ожидая список сертификатов
                 await inputSertificates.ShowDialog<List<InputSertificates.CertificateItem>>(this);
 
-                // Получаем обновленный список сертификатов
+                // Получаем результат
                 var updatedCertificates = inputSertificates.Tag as List<InputSertificates.CertificateItem>;
+
                 if (updatedCertificates != null)
                 {
                     // Обрабатываем обновленные данные
                     await ProcessCertificatesData(updatedCertificates);
                 }
+                //else
+                //{
+                //    // Форма закрылась без результата (пользователь отменил или проверка не прошла)
+                //    // Можно показать сообщение или просто игнорировать
+                //    await MessageBox.Show("Изменения не сохранены",
+                //        "Информация",
+                //        MessageBoxButton.OK,
+                //        MessageBoxType.Error);
+                //}
             }
             catch (Exception ex)
             {
@@ -606,6 +686,8 @@ namespace Cash8Avalon
                             "Сертификаты",
                             cc?.numdoc.ToString() ?? "0"
                         );
+                        calculate();
+                        //CalculateChange();
                     }
                     else
                     {
@@ -764,6 +846,7 @@ namespace Cash8Avalon
                 {
                     this.button_pay.IsEnabled = true;
                 }
+                Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
             }
             catch (Exception ex)
             {
@@ -1566,43 +1649,87 @@ namespace Cash8Avalon
 
                 SbpPaymentChanged?.Invoke(this, checkBox.IsChecked ?? false);
             }
-        }       
-        
+        }
+
         private void CalculateChange()
         {
             var paySumTextBox = this.FindControl<TextBox>("pay_sum");
             var cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
             var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
             var nonCashSumKopTextBox = this.FindControl<TextBox>("non_cash_sum_kop");
+            var sertificatesSumTextBox = this.FindControl<TextBox>("sertificates_sum");
+            var bonusManyTextBox = this.FindControl<TextBox>("pay_bonus_many");
             var remainderTextBox = this.FindControl<TextBox>("remainder");
 
             if (paySumTextBox != null && cashSumTextBox != null && remainderTextBox != null)
             {
-                if (decimal.TryParse(paySumTextBox.Text, out decimal paySum) &&
-                    decimal.TryParse(cashSumTextBox.Text, out decimal cashSum))
+                try
                 {
-                    decimal nonCashSum = 0;
-                    if (nonCashSumTextBox != null && decimal.TryParse(nonCashSumTextBox.Text, out decimal nonCash))
+                    // Функция для безопасного парсинга
+                    decimal ParseDecimal(string text)
                     {
-                        nonCashSum = nonCash;
+                        if (string.IsNullOrWhiteSpace(text)) return 0m;
+                        text = text.Replace(",", ".");
+                        return decimal.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture);
+                    }
 
-                        // Добавляем копейки если есть
-                        if (nonCashSumKopTextBox != null && int.TryParse(nonCashSumKopTextBox.Text, out int kop))
+                    int ParseInt(string text)
+                    {
+                        if (string.IsNullOrWhiteSpace(text)) return 0;
+                        return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture);
+                    }
+
+                    // Парсим все суммы
+                    decimal paySum = ParseDecimal(paySumTextBox.Text);
+                    decimal cashSum = ParseDecimal(cashSumTextBox.Text);
+
+                    decimal nonCashSum = 0;
+                    if (nonCashSumTextBox != null)
+                    {
+                        nonCashSum = ParseDecimal(nonCashSumTextBox.Text);
+
+                        // Добавляем копейки
+                        if (nonCashSumKopTextBox != null)
                         {
+                            int kop = ParseInt(nonCashSumKopTextBox.Text);
                             nonCashSum += kop / 100m;
                         }
                     }
 
-                    decimal totalPaid = cashSum + nonCashSum;
-
-                    if (totalPaid >= paySum)
+                    decimal certificatesSum = 0;
+                    if (sertificatesSumTextBox != null)
                     {
-                        decimal remainder = totalPaid - paySum;
-                        remainderTextBox.Text = remainder.ToString("F2");
+                        certificatesSum = ParseDecimal(sertificatesSumTextBox.Text);
                     }
-                    else
+
+                    decimal bonusSum = 0;
+                    if (bonusManyTextBox != null)
                     {
-                        remainderTextBox.Text = "0,00";
+                        bonusSum = ParseDecimal(bonusManyTextBox.Text);
+                    }
+
+                    // ИТОГО оплачено
+                    decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
+
+                    // Рассчитываем сдачу
+                    decimal remainder = Math.Max(0, totalPaid - paySum);
+                    remainderTextBox.Text = remainder.ToString("F2");
+
+                    // Обновляем кнопку оплаты
+                    var buttonPay = this.FindControl<Button>("button_pay");
+                    if (buttonPay != null)
+                    {
+                        buttonPay.IsEnabled = totalPaid >= paySum;
+                    }
+                }
+                catch (Exception)
+                {
+                    // При ошибке парсинга устанавливаем сдачу 0
+                    remainderTextBox.Text = "0,00";
+                    var buttonPay = this.FindControl<Button>("button_pay");
+                    if (buttonPay != null)
+                    {
+                        buttonPay.IsEnabled = false;
                     }
                 }
             }

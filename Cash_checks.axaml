@@ -38,14 +38,60 @@
                     
                     <Button Name="btn_update_status_send" 
                            Content="Обновить" 
-                           Width="80"
+                           Width="90"
+                           Height="30"
                            Margin="0,0,10,0"
-                           HorizontalAlignment="Left"/>
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Background="#FF2196F3"
+                           BorderBrush="#1976D2"
+                           BorderThickness="2"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           HorizontalContentAlignment="Center"
+                           VerticalContentAlignment="Center"
+                           CornerRadius="3"
+                           Cursor="Hand">
+                        <Button.Styles>
+                            <Style Selector="Button:pointerover">
+                                <Setter Property="Background" Value="#FF42A5F5"/>
+                                <Setter Property="BorderBrush" Value="#1E88E5"/>
+                            </Style>
+                            <Style Selector="Button:pressed">
+                                <Setter Property="Background" Value="#1976D2"/>
+                                <Setter Property="BorderBrush" Value="#1565C0"/>
+                            </Style>
+                        </Button.Styles>
+                    </Button>
                     
                     <Button Name="btn_check_actions" 
                            Content="ПРОВЕРКА АКЦИЙ" 
-                           Width="150"
-                           HorizontalAlignment="Left"/>                   
+                           Width="170"
+                           Height="30"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Background="#FF2196F3"
+                           BorderBrush="#1976D2"
+                           BorderThickness="2"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           HorizontalContentAlignment="Center"
+                           VerticalContentAlignment="Center"
+                           CornerRadius="3"
+                           Cursor="Hand">
+                        <Button.Styles>
+                            <Style Selector="Button:pointerover">
+                                <Setter Property="Background" Value="#FF42A5F5"/>
+                                <Setter Property="BorderBrush" Value="#1E88E5"/>
+                            </Style>
+                            <Style Selector="Button:pressed">
+                                <Setter Property="Background" Value="#1976D2"/>
+                                <Setter Property="BorderBrush" Value="#1565C0"/>
+                            </Style>
+                        </Button.Styles>
+                    </Button>                   
                     
                     <Image Name="pictureBox_get_update_program"
                           Width="65"
@@ -63,11 +109,34 @@
                                   VerticalAlignment="Center"/>
                         <DatePicker Name="dateTimePicker1" 
                                    Width="150"
+                                   Height="30"
                                    VerticalAlignment="Center"/>
                         <Button Name="fill" 
                                Content="Заполнить" 
-                               Width="90"
-                               VerticalAlignment="Center"/>
+                               Width="100"
+                               Height="30"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               Background="#FF2196F3"
+                               BorderBrush="#1976D2"
+                               BorderThickness="2"
+                               VerticalAlignment="Center"
+                               HorizontalContentAlignment="Center"
+                               VerticalContentAlignment="Center"
+                               CornerRadius="3"
+                               Cursor="Hand">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover">
+                                    <Setter Property="Background" Value="#FF42A5F5"/>
+                                    <Setter Property="BorderBrush" Value="#1E88E5"/>
+                                </Style>
+                                <Style Selector="Button:pressed">
+                                    <Setter Property="Background" Value="#1976D2"/>
+                                    <Setter Property="BorderBrush" Value="#1565C0"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
                     </StackPanel>
                     
                     <!-- Центр: Кассир и номер кассы -->
@@ -78,6 +147,7 @@
                         <TextBox Name="txtB_cashier" 
                                 IsEnabled="False"
                                 Width="150"
+                                Height="30"
                                 VerticalAlignment="Center"
                                 Margin="0,0,10,0"
                                 Background="White"
@@ -93,7 +163,9 @@
                             <TextBlock Name="num_cash" 
                                       Text="" 
                                       Foreground="Maroon"
-                                      FontWeight="Bold"/>
+                                      FontWeight="Bold"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"/>
                         </Border>
                         
                         <!-- Чекбокс оставляем в правой части -->
@@ -119,7 +191,18 @@
                     VerticalAlignment="Top"
                     HorizontalAlignment="Right"
                     Margin="0,0,0,0"
-                    Click="CloseButton_Click"/>
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Click="CloseButton_Click">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Foreground" Value="Red"/>
+                    </Style>
+                    <Style Selector="Button:pressed">
+                        <Setter Property="Foreground" Value="DarkRed"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
         </Grid>
         
         <!-- ОБЛАСТЬ ДЛЯ ТАБЛИЦЫ -->
@@ -139,9 +222,30 @@
                    Name="BottomPanel">
             <Button Name="button1" 
                    Content="Закрыть" 
-                   Width="100"
-                   Height="30"
-                   Click="Button1_Click"/>
+                   Width="120"
+                   Height="40"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   Foreground="White"
+                   Background="#FF2196F3"
+                   BorderBrush="#1976D2"
+                   BorderThickness="2"
+                   HorizontalContentAlignment="Center"
+                   VerticalContentAlignment="Center"
+                   CornerRadius="5"
+                   Cursor="Hand"
+                   Click="Button1_Click">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Background" Value="#FF42A5F5"/>
+                        <Setter Property="BorderBrush" Value="#1E88E5"/>
+                    </Style>
+                    <Style Selector="Button:pressed">
+                        <Setter Property="Background" Value="#1976D2"/>
+                        <Setter Property="BorderBrush" Value="#1565C0"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
         </StackPanel>
     </Grid>
 </UserControl>

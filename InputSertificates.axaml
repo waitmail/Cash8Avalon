@@ -68,19 +68,35 @@
             <!-- Grid будет создан программно -->
         </Border>
         
-        <!-- Кнопка подтверждения -->
+        
+       <!-- Кнопка подтверждения -->
         <Button x:Name="button_commit"
                Grid.Row="2"
-               Content="Подтвердить ввод (F12)"
-               FontSize="18"
-               Foreground="Red"
-               Background="LightGray"
-               BorderBrush="DarkGray"
-               BorderThickness="1"
+               Content="ПОДТВЕРДИТЬ ВВОД (F12)"
+               FontSize="28"
+               FontWeight="Bold"
+               Foreground="White"
+               Background="#FF2196F3"
+               BorderBrush="#1976D2"
+               BorderThickness="2"
                HorizontalAlignment="Stretch"
                VerticalAlignment="Stretch"
-               Margin="20"
-               Height="60"
-               Cursor="Hand"/>
+               HorizontalContentAlignment="Center"
+               VerticalContentAlignment="Center"
+               Margin="15,10"
+               Height="55"
+               Cursor="Hand"
+               CornerRadius="5">
+            <Button.Styles>
+                <Style Selector="Button:pointerover">
+                    <Setter Property="Background" Value="#FF42A5F5"/>
+                    <Setter Property="BorderBrush" Value="#1E88E5"/>
+                </Style>
+                <Style Selector="Button:pressed">
+                    <Setter Property="Background" Value="#1976D2"/>
+                    <Setter Property="BorderBrush" Value="#1565C0"/>
+                </Style>
+            </Button.Styles>
+        </Button>
     </Grid>
 </Window>

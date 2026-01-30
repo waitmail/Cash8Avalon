@@ -623,7 +623,7 @@ namespace Cash8Avalon
                 string query = "UPDATE constants SET " +
                     "cash_desk_number =" + cashDeskNumber.Text + "," +  // ? хяопюбкемн
                     "nick_shop ='" + nickShop.Text + "'," +             // ? хяопюбкемн
-                    "path_for_web_service ='" + pathWebService + "'," +
+                    //"path_for_web_service ='" + pathWebService + "'," +
                     "unloading_period =" + periodText + "," +           // ? хяопюбкемн
                     "last_date_download_bonus_clients ='" + lastDateDownload + "'," +
                     "system_taxation = '" + systemTaxation + "'," +     // ? хяопюбкемн
@@ -650,7 +650,7 @@ namespace Cash8Avalon
                     // INSERT ГЮОПНЯ РНФЕ МСФМН ХЯОПЮБХРЭ
                     query = "INSERT INTO constants(cash_desk_number," +
                         "nick_shop," +
-                        "path_for_web_service," +
+                        //"path_for_web_service," +
                         "unloading_period," +
                         "last_date_download_bonus_clients," +
                         "system_taxation," +
@@ -670,7 +670,7 @@ namespace Cash8Avalon
                         "include_piot) VALUES(" +
                         cashDeskNumber.Text + ",'" +                    // ? хяопюбкемн
                         nickShop.Text + "'," +                          // ? хяопюбкемн
-                        "'" + pathWebService + "'," +
+                        //"'" + pathWebService + "'," +
                         periodText + ",'" +                             // ? хяопюбкемн
                         lastDateDownload + "','" +
                         systemTaxation + "'," +                         // ? хяопюбкемн

@@ -3547,16 +3547,16 @@ namespace Cash8Avalon
         {
             DateTime result = new DateTime(1, 1, 1);
 
-            if (!MainStaticClass.service_is_worker())
-            {
-                return result;
-            }
+            //if (!MainStaticClass.service_is_worker())
+            //{
+            //    return result;
+            //}
 
             try
             {
-                //Cash8.DS.DS ds = MainStaticClass.get_ds();
-                //ds.Timeout = 15000;
-                //result = ds.GetDateTimeServer();
+                DS ds = MainStaticClass.get_ds();
+                ds.Timeout = 15000;
+                result = ds.GetDateTimeServer();
             }
             catch (Exception)
             {
@@ -3657,7 +3657,7 @@ namespace Cash8Avalon
             return result;
         }
 
-        public static int get_unloading_interval()
+        public async static Task<int> GetUnloadingInterval()
         {
             int result = 0;
 
@@ -3673,7 +3673,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message);
             }
 
 
@@ -3684,88 +3684,21 @@ namespace Cash8Avalon
         {
             bool result = true;
 
-            //Cash8.DS.DS ds = MainStaticClass.get_ds();
-            //ds.Timeout = 15000;
-            //try
-            //{
-            //    result = ds.ServiceIsWorker();
-            //}
-            //catch
-            //{
-            //    result = false;
-            //}
+            DS ds = MainStaticClass.get_ds();
+            ds.Timeout = 3000;
+            try
+            {
+                result = ds.ServiceIsWorker();
+            }
+            catch
+            {
+                result = false;
+            }
 
 
             return result;
         }
-
-
-        /* public static void send_data_trassir(string data)
-         {
-             IPAddress ipAddr = IPAddress.Parse(MainStaticClass.Ip_Addr_Trassir.Replace(",","."));
-
-             try
-             {
-                 // Создаем UdpClient
-                 UdpClient udpClient = new UdpClient();
-
-                 // Соединяемся с удаленным хостом
-                 udpClient.Connect(ipAddr, Convert.ToInt32(MainStaticClass.Ip_Port_Trassir));
-
-                 // Отправка простого сообщения
-                 Encoding encoding = Encoding.GetEncoding(1251);
-
-                 byte[] bytes = encoding.GetBytes(data);
-                 udpClient.Send(bytes, bytes.Length);
-
-                 // Закрываем соединение
-                 udpClient.Close();
-             }
-             catch (Exception ex)
-             {
-                 MessageBox.Show(ex.Message);
-             }
-
-         }*/
-
-        //public static void send_data_trassir(string data)
-        //{          
-
-        //    try
-        //    {              
-
-        //        var client = new TcpClient();
-        //        var result = client.BeginConnect(MainStaticClass.Ip_Addr_Trassir, MainStaticClass.Ip_Port_Trassir, null, null);
-
-        //        result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(10));
-        //        if (!client.Connected)
-        //        {
-        //            return;//throw new Exception("Failed to connect.");
-        //        }
-
-        //        // we have connected
-        //        client.EndConnect(result);
-        //        Encoding encoding = Encoding.GetEncoding(1251);                
-        //        Byte[] byte_data = encoding.GetBytes(data);
-        //        // Get a client stream for reading and writing.
-        //        NetworkStream stream = client.GetStream();
-        //        // Send the message to the connected TcpServer.  
-        //        stream.WriteTimeout = 500;
-        //        stream.Write(byte_data, 0, byte_data.Length);
-        //        client.Close();
-        //        stream.Dispose();
-        //    }
-        //    catch (SocketException)
-        //    {
-        //       // MessageBox.Show("trassir " + ex.Message);
-        //    }
-        //    catch (Exception)
-        //    {
-        //       // MessageBox.Show("tressir " + ex.Message);
-        //    }
-        //}
-
-
+        
         public static string PathForWebService
         {
             get

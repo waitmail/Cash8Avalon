@@ -418,7 +418,7 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message);
                 conn?.Close();
                 return;
             }
@@ -440,12 +440,12 @@ namespace Cash8Avalon
             // Проверка схемы авторизации
             if (MainStaticClass.check_new_shema_autenticate() != 1)
             {
-                MessageBox.Show("Из-за произошедших ошибок авторизация невозможна");
+                await MessageBox.Show("Из-за произошедших ошибок авторизация невозможна");
                 ShowErrorMessage("Ошибка системы авторизации");
                 return;
             }
 
-            result = find_user_role_new(inputBarcode.Text);
+            result = await find_user_role_new(inputBarcode.Text);
 
             // Обработка результатов
             switch (result)
@@ -528,7 +528,7 @@ namespace Cash8Avalon
             }
         }
 
-        private int find_user_role_new(string password)
+        private async Task<int> find_user_role_new(string password)
         {
             int rezult = 0;
 
@@ -556,12 +556,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);//.GetAwaiter().GetResult();
+                await MessageBox.Show(ex.Message);//.GetAwaiter().GetResult();
             }
 
             if (MainStaticClass.Cash_Operator.Trim().ToUpper() == "К9")
             {
-                if ((MainStaticClass.CashDeskNumber != 9) || (MainStaticClass.get_unloading_interval() != 0))
+                if ((MainStaticClass.CashDeskNumber != 9) || (await MainStaticClass.GetUnloadingInterval() != 0))
                 {
                     rezult = 0;
                     MainStaticClass.Cash_Operator = "";

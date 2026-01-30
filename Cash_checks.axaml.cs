@@ -45,6 +45,11 @@ namespace Cash8Avalon
         private int _selectedRowIndex = -1;
         private Border _selectedRowBorder;
 
+        // ДЛЯ ТАЙМЕРА И СТАТУСА
+        private System.Timers.Timer _statusTimer;
+        private DateTime _timerExecute = DateTime.Now;
+        private TextBox _txtStatusBox; // Ссылка на TextBox со статусом
+
         // Константы для цветов
         private static readonly IBrush SELECTED_ROW_BACKGROUND = Brushes.LightSkyBlue;
         private static readonly IBrush SELECTED_ROW_BORDER = Brushes.DodgerBlue;
@@ -75,6 +80,9 @@ namespace Cash8Avalon
 
                 // 5. Подписываемся на глобальные события клавиатуры
                 this.AddHandler(KeyDownEvent, OnGlobalKeyDown, RoutingStrategies.Tunnel);
+
+                // 6. ИНИЦИАЛИЗИРУЕМ ТАЙМЕР ДЛЯ СТАТУСА
+                InitializeStatusTimer();
 
                 Console.WriteLine("✓ Конструктор завершен успешно");
             }
@@ -643,6 +651,172 @@ namespace Cash8Avalon
         #region Обработчики событий мыши и клавиатуры
 
         /// <summary>
+        /// Получение статуса отправки документов (аналог старого метода)
+        /// </summary>
+        private void GetStatusSendDocument()
+        {
+            try
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        string result = "";
+
+                        // Вызываем статический метод для получения количества неотправленных документов
+                        int documentsNotOut = MainStaticClass.get_documents_not_out();
+                        string documents_not_out = documentsNotOut.ToString();
+
+                        if (documents_not_out == "-1")
+                        {
+                            result = " Произошли ошибки при получении кол-ва неотправленных документов, ";
+                        }
+                        else
+                        {
+                            result = " Не отправлено документов " + documents_not_out + ",";
+                        }
+
+                        // Получаем количество документов вне диапазона дат
+                        int documents_out_of_the_range_of_dates = MainStaticClass.get_documents_out_of_the_range_of_dates();
+
+                        if (documents_out_of_the_range_of_dates == -1)
+                        {
+                            result += " Не удалось получить дату с сервера ";
+                        }
+                        else if (documents_out_of_the_range_of_dates == -2)
+                        {
+                            result += " Не удалось получить количество документов вне диапазона ";
+                        }
+                        else if (documents_out_of_the_range_of_dates > 0)
+                        {
+                            result += " За диапазоном находится " + documents_out_of_the_range_of_dates.ToString();
+                        }
+
+                        result += "  " + DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
+
+                        // Обновляем TextBox со статусом
+                        if (_txtStatusBox != null)
+                        {
+                            _txtStatusBox.Text = result;
+                        }
+                        else
+                        {
+                            // Если ссылка еще не установлена, пытаемся найти элемент
+                            _txtStatusBox = this.FindControl<TextBox>("txtB_not_unloaded_docs");
+                            if (_txtStatusBox != null)
+                            {
+                                _txtStatusBox.Text = result;
+                            }
+                        }
+
+                        // Проверяем наличие новой версии программы
+                        CheckNewVersion();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"✗ Ошибка в GetStatusSendDocument: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при вызове GetStatusSendDocument: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Проверка наличия новой версии программы
+        /// </summary>
+        private void CheckNewVersion()
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                try
+                {
+                    // Получаем ссылку на изображение
+                    var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
+                    if (pictureBox != null)
+                    {
+                        // Вызываем статический метод проверки версии
+                        bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
+                        pictureBox.IsVisible = hasNewVersion;
+
+                        if (hasNewVersion)
+                        {
+                            Console.WriteLine("✓ Обнаружена новая версия программы");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
+                }
+            });
+        }
+
+        /// <summary>
+        /// Инициализация таймера для обновления статуса отправки
+        /// </summary>
+        private async Task InitializeStatusTimer()
+        {
+            try
+            {
+                // Получаем интервал выгрузки (в минутах)
+                int unloadInterval = await MainStaticClass.GetUnloadingInterval();  // Измените на синхронный метод
+
+                if (unloadInterval > 0)
+                {
+                    // Создаем таймер с интервалом в миллисекундах
+                    _statusTimer = new System.Timers.Timer(unloadInterval * 60 * 1000); // минуты -> миллисекунды
+                    _statusTimer.Elapsed += StatusTimer_Elapsed;
+                    _statusTimer.AutoReset = true;
+                    _statusTimer.Enabled = true;
+
+                    Console.WriteLine($"✓ Таймер статуса инициализирован с интервалом {unloadInterval} мин.");
+
+                    // Первоначальное обновление статуса
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        Task.Run(() => GetStatusSendDocument());
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("⚠ Интервал выгрузки не настроен, таймер не запущен");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при инициализации таймера: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Обработчик события таймера (аналог timer_Elapsed из старой версии)
+        /// </summary>
+        private void StatusTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            try
+            {
+                // Проверяем, прошла ли минута с последнего выполнения
+                if (DateTime.Now > _timerExecute.AddSeconds(59))
+                {
+                    // Обновляем статус отправки документов
+                    GetStatusSendDocument();
+
+                    // Обновляем время последнего выполнения
+                    _timerExecute = DateTime.Now;
+
+                    Console.WriteLine($"✓ Статус отправки обновлен в {DateTime.Now:HH:mm:ss}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка в обработчике таймера: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Обработка клика по строке
         /// </summary>
         private void OnRowPointerPressed(object sender, PointerPressedEventArgs e)
@@ -1080,10 +1254,25 @@ namespace Cash8Avalon
                     Console.WriteLine($"Дата установлена: {DateTime.Today:dd.MM.yyyy}");
                 }
 
+                // ИНИЦИАЛИЗАЦИЯ TextBox СО СТАТУСОМ
+                _txtStatusBox = this.FindControl<TextBox>("txtB_not_unloaded_docs");
+                if (_txtStatusBox != null)
+                {
+                    _txtStatusBox.Text = "Инициализация статуса отправки...";
+                    Console.WriteLine("✓ TextBox со статусом найден");
+                }
+                else
+                {
+                    Console.WriteLine("⚠ TextBox 'txtB_not_unloaded_docs' не найден!");
+                }
+
                 Console.WriteLine("✓ Инициализация завершена");
 
                 // ЗАГРУЖАЕМ ДАННЫЕ ИЗ БД ПРИ ЗАГРУЗКЕ!
                 LoadDocuments();
+
+                // ПЕРВОНАЧАЛЬНОЕ ОБНОВЛЕНИЕ СТАТУСА
+                Task.Run(() => GetStatusSendDocument());
             }
             catch (Exception ex)
             {
@@ -1466,7 +1655,21 @@ namespace Cash8Avalon
         private void Btn_update_status_send_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("Кнопка 'Обновить' нажата");
-            LoadDocuments();
+
+            try
+            {
+                // Обновляем время последней записи чека (как в старой версии)
+                MainStaticClass.Last_Write_Check = DateTime.Now;
+
+                // Запускаем обновление статуса
+                Task.Run(() => GetStatusSendDocument());
+
+                Console.WriteLine("✓ Обновление статуса запущено");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при обновлении статуса: {ex.Message}");
+            }
         }
 
         private void Btn_check_actions_Click(object sender, RoutedEventArgs e)

@@ -1873,25 +1873,24 @@ namespace Cash8Avalon
                 foreach (var certificate in _certificatesData)
                 {
                     command = new NpgsqlCommand("INSERT INTO checks_table(" +
-                        "document_number, tovar_code, characteristic, quantity, price, " +
+                        "document_number, tovar_code, quantity, price, " +
                         "price_at_a_discount, sum, sum_at_a_discount, numstr, action_num_doc, " +
                         "action_num_doc1, action_num_doc2, item_marker, guid) VALUES(" +
-                        "@document_number, @tovar_code, @characteristic, @quantity, @price, " +
+                        "@document_number, @tovar_code, @quantity, @price, " +
                         "@price_at_a_discount, @sum, @sum_at_a_discount, @numstr, @action_num_doc, " +
                         "@action_num_doc1, @action_num_doc2, @item_marker, @guid)", conn);
 
                     command.Parameters.AddWithValue("document_number", numdoc);
-                    command.Parameters.AddWithValue("tovar_code", certificate.Code);
-                    command.Parameters.AddWithValue("characteristic", "");
-                    command.Parameters.AddWithValue("quantity", "1");
-                    command.Parameters.AddWithValue("price", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
-                    command.Parameters.AddWithValue("price_at_a_discount", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
-                    command.Parameters.AddWithValue("sum", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
-                    command.Parameters.AddWithValue("sum_at_a_discount", "-" + certificate.Nominal.ToString("F2").Replace(",", "."));
-                    command.Parameters.AddWithValue("numstr", numstr.ToString());
-                    command.Parameters.AddWithValue("action_num_doc", "0");
-                    command.Parameters.AddWithValue("action_num_doc1", "0");
-                    command.Parameters.AddWithValue("action_num_doc2", "0");
+                    command.Parameters.AddWithValue("tovar_code", Convert.ToInt64(certificate.Code));                    
+                    command.Parameters.AddWithValue("quantity", 1);
+                    command.Parameters.AddWithValue("price", certificate.Nominal * -1);
+                    command.Parameters.AddWithValue("price_at_a_discount", certificate.Nominal *-1);
+                    command.Parameters.AddWithValue("sum", certificate.Nominal * -1);
+                    command.Parameters.AddWithValue("sum_at_a_discount", certificate.Nominal * -1);
+                    command.Parameters.AddWithValue("numstr", numstr);
+                    command.Parameters.AddWithValue("action_num_doc", 0);
+                    command.Parameters.AddWithValue("action_num_doc1", 0);
+                    command.Parameters.AddWithValue("action_num_doc2", 0);
                     command.Parameters.AddWithValue("item_marker", certificate.Barcode);
                     command.Parameters.AddWithValue("guid", guid);
 
@@ -1901,7 +1900,7 @@ namespace Cash8Avalon
 
                     // Обновляем статус сертификата в локальной базе
                     command = new NpgsqlCommand("UPDATE sertificates SET is_active = 0 WHERE code_tovar = @tovar_code", conn);
-                    command.Parameters.AddWithValue("tovar_code", certificate.Code);
+                    command.Parameters.AddWithValue("tovar_code", Convert.ToInt64(certificate.Code));
                     command.Transaction = tran;
                     command.ExecuteNonQuery();
                 }
@@ -2743,7 +2742,7 @@ namespace Cash8Avalon
             //Проверка по сертификату
             if (productData.isCertificate())
             {
-                if (!check_sertificate_for_sales(barcode))
+                if (!await check_sertificate_for_sales(barcode))
                 {
                     return;
                 }
@@ -3088,7 +3087,7 @@ namespace Cash8Avalon
         /// </summary>
         /// <param name="tovar_code"></param>
         /// <returns></returns>
-        private bool check_sertificate_for_sales(string barcode)
+        private async Task<bool> check_sertificate_for_sales(string barcode)
         {
 
             bool result = true;
@@ -3104,16 +3103,18 @@ namespace Cash8Avalon
                                " AND date_time_start between @date_start AND @date_finish;";
 
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                parameter = new NpgsqlParameter("@date_start", DateTime.Now.Date.ToString("yyyy-MM-dd"));
+                //parameter = new NpgsqlParameter("@date_start", DateTime.Now.Date.ToString("yyyy-MM-dd"));
+                parameter = new NpgsqlParameter("@date_start", DateTime.Now.Date);
                 command.Parameters.Add(parameter);
-                parameter = new NpgsqlParameter("@date_finish", DateTime.Now.Date.AddDays(1).ToString("yyyy-MM-dd"));
+                //parameter = new NpgsqlParameter("@date_finish", DateTime.Now.Date.AddDays(1).ToString("yyyy-MM-dd"));
+                parameter = new NpgsqlParameter("@date_finish", DateTime.Now.Date.AddDays(1));
                 command.Parameters.Add(parameter);
                 parameter = new NpgsqlParameter("@barcode", barcode);
                 command.Parameters.Add(parameter);
                 NpgsqlDataReader reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    MessageBox.Show(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBox.Show(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error);
                     MainStaticClass.write_event_in_log(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", "Документ", numdoc.ToString());
                     result = false;
                 }
@@ -3122,12 +3123,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ",MessageBoxButton.OK,MessageBoxType.Error);
                 result = false;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error);
                 result = false;
             }
             finally
@@ -5306,7 +5307,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при обновлении общей суммы: {ex.Message}");
             }
         }
-        
+
         // Метод для открытия записанного документа (аналог старого метода)
         private void ToOpenTheWrittenDownDocument()
         {
@@ -5341,7 +5342,8 @@ namespace Cash8Avalon
 
                 // Очищаем существующие данные перед загрузкой новых
                 _productsData.Clear();
-                _productsCurrentRow = 1; // Сбрасываем счетчик строк
+                _certificatesData.Clear(); // Также очищаем сертификаты
+                _productsCurrentRow = 1; // Сбрасываем счетчик строк для товаров
 
                 Console.WriteLine("Чтение данных из БД...");
 
@@ -5372,30 +5374,51 @@ namespace Cash8Avalon
                         Console.WriteLine("✓ Заголовок документа заполнен");
                     }
 
-                    // Добавляем данные в Grid товаров
-                    var productItem = new ProductItem
-                    {
-                        Code = Convert.ToInt32(reader["tovar_code"]),
-                        Tovar = reader["tovar_name"].ToString().Trim(),
-                        Quantity = Convert.ToInt32(reader["quantity"]),
-                        Price = Convert.ToDecimal(reader["price"]),
-                        PriceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]),
-                        Sum = Convert.ToDecimal(reader["sum"]),
-                        SumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]),
-                        Action = Convert.ToInt32(reader["action_num_doc"]),
-                        Gift = Convert.ToInt32(reader["action_num_doc1"]),
-                        Action2 = Convert.ToInt32(reader["action_num_doc2"]),
-                        Mark = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
-                    };
+                    // Получаем цену со скидкой
+                    decimal priceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]);
 
-                    _productsData.Add(productItem);
-                    Console.WriteLine($"Добавлена запись в товары: {productItem.Tovar} (Код: {productItem.Code})");
+                    // Проверяем, является ли строка сертификатом (цена со скидкой < 0)
+                    if (priceAtDiscount < 0)
+                    {
+                        // Добавляем в сертификаты
+                        var certificateItem = new CertificateItem
+                        {
+                            Code = reader["tovar_code"].ToString(),
+                            Certificate = reader["tovar_name"].ToString().Trim(),
+                            Nominal = Math.Abs(priceAtDiscount), // Берем абсолютное значение (неминус)
+                            Barcode = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
+                        };
+
+                        _certificatesData.Add(certificateItem);
+                        Console.WriteLine($"Добавлен сертификат: {certificateItem.Certificate} (Код: {certificateItem.Code}, Номинал: {certificateItem.Nominal})");
+                    }
+                    else
+                    {
+                        // Добавляем данные в Grid товаров
+                        var productItem = new ProductItem
+                        {
+                            Code = Convert.ToInt32(reader["tovar_code"]),
+                            Tovar = reader["tovar_name"].ToString().Trim(),
+                            Quantity = Convert.ToInt32(reader["quantity"]),
+                            Price = Convert.ToDecimal(reader["price"]),
+                            PriceAtDiscount = priceAtDiscount, // Используем уже полученное значение
+                            Sum = Convert.ToDecimal(reader["sum"]),
+                            SumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]),
+                            Action = Convert.ToInt32(reader["action_num_doc"]),
+                            Gift = Convert.ToInt32(reader["action_num_doc1"]),
+                            Action2 = Convert.ToInt32(reader["action_num_doc2"]),
+                            Mark = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
+                        };
+
+                        _productsData.Add(productItem);
+                        Console.WriteLine($"Добавлена запись в товары: {productItem.Tovar} (Код: {productItem.Code}, Цена: {productItem.Price})");
+                    }
                 }
 
                 reader.Close();
-                Console.WriteLine($"✓ Прочитано {_productsData.Count} записей из БД");
+                Console.WriteLine($"✓ Прочитано из БД: {_productsData.Count} товаров, {_certificatesData.Count} сертификатов");
 
-                // УБИРАЕМ ПЕРЕСОЗДАНИЕ GRID - просто обновляем данные
+                // Обновляем Grid товаров (УБИРАЕМ ПЕРЕСОЗДАНИЕ - просто обновляем данные)
                 if (_productsTableGrid != null && _productsScrollViewer != null && _tabProducts != null)
                 {
                     Console.WriteLine("Обновление данных Grid товаров...");
@@ -5450,6 +5473,44 @@ namespace Cash8Avalon
                     // Если Grid еще не создан (маловероятно), создаем его
                     CreateProductsGrid();
                 }
+
+                // Обновляем Grid сертификатов
+                if (_certificatesTableGrid != null && _certificatesScrollViewer != null && _tabCertificates != null)
+                {
+                    Console.WriteLine("Обновление данных Grid сертификатов...");
+
+                    // 1. Удаляем все строки данных (кроме заголовков)
+                    while (_certificatesTableGrid.RowDefinitions.Count > 1)
+                    {
+                        _certificatesTableGrid.RowDefinitions.RemoveAt(_certificatesTableGrid.RowDefinitions.Count - 1);
+                    }
+
+                    // 2. Удаляем все элементы кроме заголовков
+                    var elementsToRemove = new List<Control>();
+                    foreach (Control child in _certificatesTableGrid.Children)
+                    {
+                        if (Grid.GetRow(child) > 0)
+                        {
+                            elementsToRemove.Add(child);
+                        }
+                    }
+
+                    foreach (var element in elementsToRemove)
+                    {
+                        _certificatesTableGrid.Children.Remove(element);
+                    }
+
+                    // 3. Сбрасываем счетчик строк
+                    _certificatesCurrentRow = 1;
+
+                    // 4. Добавляем новые данные
+                    AddCertificatesGridRows(_certificatesTableGrid, ref _certificatesCurrentRow, _certificatesData);
+
+                    Console.WriteLine($"✓ Данные Grid сертификатов обновлены: {_certificatesData.Count} записей");
+                }
+
+                // Обновляем общую сумму
+                UpdateTotalSum();
             }
             catch (NpgsqlException ex)
             {
@@ -5481,7 +5542,7 @@ namespace Cash8Avalon
 
         #endregion
 
-        
+
 
 
         private Int64 get_new_number_document()
