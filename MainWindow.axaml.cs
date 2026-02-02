@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Cash8Avalon.ViewModels;
@@ -19,6 +20,8 @@ namespace Cash8Avalon
     public partial class MainWindow : Window
     {
         private DispatcherTimer _unloadingTimer; // Заменяем System.Timers.Timer на DispatcherTimer
+
+       
 
         public MainWindow()
         {
@@ -43,10 +46,13 @@ namespace Cash8Avalon
 
         protected override async void OnOpened(EventArgs e)
         {
+
             base.OnOpened(e);
+            UpdateMenuVisibility(0);
+
 
             // Ждем пока окно появится на экране
-            await Task.Delay(50);
+            await Task.Delay(50);            
 
             // Создаем окно авторизации
             var loginWindow = new Interface_switching();
@@ -72,6 +78,8 @@ namespace Cash8Avalon
             {
                 try
                 {
+                    UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
+
                     Console.WriteLine("=== ВЫПОЛНЕНИЕ ПРОВЕРОК ПРИ СТАРТЕ ===");
 
                     // ВОТ СЮДА ДОБАВЛЯЕМ ВСЕ ПРОВЕРКИ!
@@ -211,19 +219,10 @@ namespace Cash8Avalon
                     else
                     {
                         await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд");
-                    }
-
-
-                    
+                    }                   
 
                     // ТОЛЬКО ПОСЛЕ ВСЕХ ПРОВЕРОК СОЗДАЕМ ViewModel!
                     this.DataContext = new MainViewModel();
-
-
-
-                   
-
-
 
                 }
                 catch (Exception ex)
@@ -239,6 +238,66 @@ namespace Cash8Avalon
                 this.Close();
             }
         }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            // Обработка F12 для показа окна авторизации
+            if (e.Key == Key.F12)
+            {
+                e.Handled = true;
+                _ = ShowAuthorizationWindow();
+            }
+        }         
+
+        private async Task ShowAuthorizationWindow()
+        {
+            try
+            {
+                var loginWindow = new Interface_switching();
+
+                bool loginSuccess = false;
+
+                loginWindow.AuthorizationSuccess += (s, password) =>
+                {
+                    loginSuccess = true;
+                    loginWindow.Close();
+                };
+
+                loginWindow.AuthorizationCancel += (s, args) =>
+                {
+                    loginSuccess = false;
+                    loginWindow.Close();
+                };
+                //loginWindow.input_barcode.Focus();
+                // Показываем как модальное окно
+                await loginWindow.ShowDialog(this);
+
+                if (loginSuccess)
+                {
+                    UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при показе окна авторизации: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка авторизации",
+                    MessageBoxButton.OK, MessageBoxType.Error);
+            }
+        }
+
+        // Просто обращайтесь к MainMenu
+        private void UpdateMenuVisibility(int userRights)
+        {
+            var menu = MainMenu ?? this.FindControl<Menu>("MainMenu");
+            if (menu != null)
+            {
+                menu.IsVisible = userRights > 0; // Скрываем если права = 0                 
+            }
+        }
+
+        //InitializeMenuVisibility
 
         /// <summary>
         /// Обновление периода выгрузки в БД

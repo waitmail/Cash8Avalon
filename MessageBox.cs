@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 // ENUM ТИПОВ СООБЩЕНИЙ
@@ -40,29 +41,53 @@ public enum MessageBoxResult
 // КЛАСС MESSAGEBOX
 public static class MessageBox
 {
-    // ПРОСТАЯ ВЕРСИЯ (ТОЛЬКО СООБЩЕНИЕ)
-    public static async Task Show(string message, string title = "")
+    // ========== ПУБЛИЧНЫЕ МЕТОДЫ ==========
+
+    // Простая версия (owner - опциональный параметр)
+    public static async Task Show(string message, string title = "", Window owner = null)
     {
-        await ShowDialog(message, title, MessageBoxButton.OK, MessageBoxType.Info);
+        await ShowInternal(message, title, MessageBoxButton.OK, MessageBoxType.Info, owner);
     }
 
-    // ПОЛНАЯ ВЕРСИЯ
+    // Полная версия (owner - опциональный параметр)
     public static async Task<MessageBoxResult> Show(string message, string title,
                                                      MessageBoxButton buttons,
-                                                     MessageBoxType type = MessageBoxType.Info)
+                                                     MessageBoxType type = MessageBoxType.Info,
+                                                     Window owner = null)
     {
-        return await ShowDialog(message, title, buttons, type);
+        return await ShowInternal(message, title, buttons, type, owner);
     }
 
-    // ОСНОВНОЙ МЕТОД
-    private static async Task<MessageBoxResult> ShowDialog(string message, string title,
-                                                           MessageBoxButton buttons,
-                                                           MessageBoxType type)
+    // ========== ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД ==========
+    private static async Task<MessageBoxResult> ShowInternal(string message, string title,
+                                                             MessageBoxButton buttons,
+                                                             MessageBoxType type,
+                                                             Window explicitOwner)
     {
         if (Application.Current?.ApplicationLifetime is
             IClassicDesktopStyleApplicationLifetime desktop)
         {
             var tcs = new TaskCompletionSource<MessageBoxResult>();
+
+            // УМНАЯ ЛОГИКА ОПРЕДЕЛЕНИЯ РОДИТЕЛЬСКОГО ОКНА
+            Window ownerWindow = null;
+
+            // Приоритет 1: Явно указанное окно
+            if (explicitOwner != null && explicitOwner.IsVisible)
+            {
+                ownerWindow = explicitOwner;
+            }
+            // Приоритет 2: Активное окно приложения (старая логика)
+            else if (desktop.Windows.Count > 0)
+            {
+                ownerWindow = desktop.Windows.FirstOrDefault(w => w.IsActive) ??
+                              desktop.Windows.FirstOrDefault(w => w.IsVisible);
+            }
+            // Приоритет 3: Главное окно
+            else if (desktop.MainWindow != null && desktop.MainWindow.IsVisible)
+            {
+                ownerWindow = desktop.MainWindow;
+            }
 
             // СОЗДАЕМ ОСНОВНОЕ ОКНО
             var mainWindow = new Window
@@ -72,13 +97,15 @@ public static class MessageBox
                 MinHeight = 220,
                 MaxWidth = 800,
                 MaxHeight = 600,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                WindowStartupLocation = ownerWindow != null
+                    ? WindowStartupLocation.CenterOwner
+                    : WindowStartupLocation.CenterScreen,
                 CanResize = true,
                 CanMinimize = false,
                 CanMaximize = false,
                 ShowInTaskbar = false,
                 SystemDecorations = SystemDecorations.None,
-                Topmost = true,
+                Topmost = ownerWindow == null, // Только поверх других окон, если нет родителя
                 SizeToContent = SizeToContent.WidthAndHeight,
                 Background = Brushes.Transparent
             };
@@ -96,12 +123,12 @@ public static class MessageBox
                 ZIndex = 2
             };
 
-            // ========== СИНЯЯ ПАНЕЛЬ ВВЕРХУ (внутри основного Border) ==========
+            // ========== СИНЯЯ ПАНЕЛЬ ВВЕРХУ ==========
             var blueHeader = new Border
             {
                 Height = 30,
                 Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)), // #FF007ACC
-                CornerRadius = new CornerRadius(5, 5, 0, 0), // Совпадает со скруглением основного окна
+                CornerRadius = new CornerRadius(5, 5, 0, 0),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Top,
                 ZIndex = 3,
@@ -141,13 +168,12 @@ public static class MessageBox
                 }
             };
 
-            // ========== ОСНОВНОЙ КОНТЕНТ (с отступом для синей панели) ==========
+            // ========== ОСНОВНОЙ КОНТЕНТ ==========
             var contentGrid = new Grid
             {
                 Margin = new Thickness(25, 45, 25, 25)
             };
 
-            // СТЕК ДЛЯ КОНТЕНТА
             var contentStack = new StackPanel
             {
                 Spacing = 25,
@@ -163,7 +189,6 @@ public static class MessageBox
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            // ИКОНКА (простая эмодзи без фона)
             var iconText = new TextBlock
             {
                 Text = GetIconEmoji(type),
@@ -172,7 +197,6 @@ public static class MessageBox
                 Foreground = GetIconColor(type)
             };
 
-            // ТЕКСТ СООБЩЕНИЯ
             var messageText = new TextBlock
             {
                 Text = message,
@@ -232,7 +256,7 @@ public static class MessageBox
             contentStack.Children.Add(buttonStack);
             contentGrid.Children.Add(contentStack);
 
-            // ========== ВНУТРЕННЯЯ ПАНЕЛЬ ДЛЯ ОБЪЕМА ==========
+            // ========== ВНУТРЕННЯЯ ПАНЕЛЬ ==========
             var innerBorder = new Border
             {
                 Background = Brushes.White,
@@ -245,17 +269,13 @@ public static class MessageBox
                     Children =
                     {
                         contentGrid,
-                        blueHeader // Добавляем синюю панель поверх контента
+                        blueHeader
                     }
                 }
             };
 
-            // Устанавливаем innerBorder как дочерний элемент mainBorder
             mainBorder.Child = innerBorder;
-
-            // СБОРКА ВСЕХ СЛОЕВ
             mainContainer.Children.Add(mainBorder);
-
             mainWindow.Content = mainContainer;
 
             // ОБРАБОТЧИКИ СОБЫТИЙ
@@ -265,7 +285,7 @@ public static class MessageBox
                     tcs.TrySetResult(MessageBoxResult.None);
             };
 
-            // ОБРАБОТЧИК ДЛЯ КНОПКИ ЗАКРЫТИЯ В СИНЕЙ ПАНЕЛИ
+            // ОБРАБОТЧИК ДЛЯ КНОПКИ ЗАКРЫТИЯ
             if (blueHeader.Child is Grid headerGrid)
             {
                 foreach (var child in headerGrid.Children)
@@ -278,7 +298,6 @@ public static class MessageBox
                             mainWindow.Close();
                         };
 
-                        // Простой эффект при наведении
                         closeButton.PointerEntered += (s, e) =>
                         {
                             closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
@@ -303,13 +322,15 @@ public static class MessageBox
                 }
             };
 
-            // ПОКАЗЫВАЕМ ОКНО
-            if (desktop.MainWindow != null)
+            // ========== ПОКАЗ ОКНА ==========
+            if (ownerWindow != null)
             {
-                await mainWindow.ShowDialog(desktop.MainWindow);
+                // Модальное окно с родителем
+                await mainWindow.ShowDialog(ownerWindow);
             }
             else
             {
+                // Без родителя (старая логика)
                 mainWindow.Show();
             }
 
@@ -319,16 +340,16 @@ public static class MessageBox
         return MessageBoxResult.None;
     }
 
-    // СОЗДАНИЕ НЕЙТРАЛЬНОЙ КНОПКИ (как в вашем приложении)
+    // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
+
     private static Button CreateNeutralButton(string content, MessageBoxResult buttonResult,
                                             bool isDefault, Window dialog,
                                             TaskCompletionSource<MessageBoxResult> tcs)
     {
-        // Цвета как в вашем приложении
-        var normalBackground = new SolidColorBrush(Color.FromRgb(240, 240, 240)); // Светло-серый
-        var hoverBackground = new SolidColorBrush(Color.FromRgb(225, 225, 225));  // Немного темнее
-        var pressedBackground = new SolidColorBrush(Color.FromRgb(210, 210, 210)); // Еще темнее
-        var borderColor = new SolidColorBrush(Color.FromRgb(180, 180, 180));      // Серый
+        var normalBackground = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+        var hoverBackground = new SolidColorBrush(Color.FromRgb(225, 225, 225));
+        var pressedBackground = new SolidColorBrush(Color.FromRgb(210, 210, 210));
+        var borderColor = new SolidColorBrush(Color.FromRgb(180, 180, 180));
 
         var button = new Button
         {
@@ -365,7 +386,6 @@ public static class MessageBox
             button.BorderBrush = borderColor;
         };
 
-        // ЭФФЕКТ ПРИ НАЖАТИИ
         button.PointerPressed += (s, e) =>
         {
             button.Background = pressedBackground;
@@ -413,25 +433,23 @@ public static class MessageBox
         return button;
     }
 
-    // ПОЛУЧЕНИЕ ЦВЕТА ИКОНКИ
     private static IBrush GetIconColor(MessageBoxType type)
     {
         switch (type)
         {
             case MessageBoxType.Info:
-                return new SolidColorBrush(Color.FromRgb(0, 122, 204)); // Синий
+                return new SolidColorBrush(Color.FromRgb(0, 122, 204));
             case MessageBoxType.Warning:
-                return new SolidColorBrush(Color.FromRgb(255, 140, 0)); // Оранжевый
+                return new SolidColorBrush(Color.FromRgb(255, 140, 0));
             case MessageBoxType.Error:
-                return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // Красный
+                return new SolidColorBrush(Color.FromRgb(220, 53, 69));
             case MessageBoxType.Question:
-                return new SolidColorBrush(Color.FromRgb(40, 167, 69)); // Зеленый
+                return new SolidColorBrush(Color.FromRgb(40, 167, 69));
             default:
-                return new SolidColorBrush(Color.FromRgb(0, 122, 204)); // Синий
+                return new SolidColorBrush(Color.FromRgb(0, 122, 204));
         }
     }
 
-    // ПОЛУЧЕНИЕ ЗАГОЛОВКА ПО УМОЛЧАНИЮ
     private static string GetDefaultTitle(MessageBoxType type)
     {
         switch (type)
@@ -444,7 +462,6 @@ public static class MessageBox
         }
     }
 
-    // ПОЛУЧЕНИЕ ИКОНКИ (ЭМОДЗИ)
     private static string GetIconEmoji(MessageBoxType type)
     {
         switch (type)

@@ -636,7 +636,7 @@ namespace Cash8Avalon
                 numdoc = get_new_number_document();
                 if (numdoc == 0)
                 {
-                    await MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номера документа",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номера документа", MessageBoxButton.OK,MessageBoxType.Error);
                     MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
                     this.Close();
                 }

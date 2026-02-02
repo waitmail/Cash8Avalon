@@ -1122,12 +1122,12 @@ namespace Cash8Avalon
             {
                 if (MainStaticClass.Nick_Shop.Trim().Length == 0)
                 {
-                    await MessageBox.Show("Не заполнен код магазина","Проверка заполнения",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Не заполнен код магазина", "Проверка заполнения", MessageBoxButton.OK, MessageBoxType.Error);
                     return false;
                 }
                 if (MainStaticClass.CashDeskNumber == 0)
                 {
-                    await MessageBox.Show("Номер кассы не может быть ноль","Проверка заполнения",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Номер кассы не может быть ноль", "Проверка заполнения", MessageBoxButton.OK, MessageBoxType.Error);
                     return false;
                 }
                 if (MainStaticClass.Cash_Operator.Trim().Length == 0)
@@ -1675,7 +1675,68 @@ namespace Cash8Avalon
         private void Btn_check_actions_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("Кнопка 'ПРОВЕРКА АКЦИЙ' нажата");
-            // Здесь можно добавить вашу логику
+
+            try
+            {
+                // Создаем и показываем форму проверки акций
+                var verifyActionsForm = new VerifyActions();
+
+                // Находим родительское окно для правильного позиционирования
+                Window parentWindow = null;
+
+                // Вариант 1: Через TopLevel
+                var topLevel = TopLevel.GetTopLevel(this);
+                if (topLevel is Window currentWindow)
+                {
+                    parentWindow = currentWindow;
+                }
+
+                // Вариант 2: Через Application
+                if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
+                }
+
+                // Настройка окна - ИСПРАВЛЕНО
+                verifyActionsForm.Title = "Проверка акций";
+                verifyActionsForm.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+                // Управление поведением окна:
+                verifyActionsForm.CanResize = true;     // Разрешаем изменение размера (иначе кнопка развернуть неактивна)
+                verifyActionsForm.CanMaximize = true;   // ВАЖНО: Разрешаем развертывание на весь экран!
+                verifyActionsForm.CanMinimize = true;   // Разрешаем сворачивание
+
+                // Можно установить минимальный размер окна
+                verifyActionsForm.MinWidth = 400;
+                verifyActionsForm.MinHeight = 300;
+
+                // Размер окна по умолчанию
+                verifyActionsForm.Width = 800;
+                verifyActionsForm.Height = 600;
+
+                // Подписываемся на события закрытия окна
+                verifyActionsForm.Closed += (s, args) =>
+                {
+                    Console.WriteLine("Окно проверки акций закрыто");
+                };
+
+                // Показываем окно
+                if (parentWindow != null)
+                {
+                    verifyActionsForm.Show();
+                }
+                else
+                {
+                    verifyActionsForm.Show();
+                }
+
+                Console.WriteLine("✓ Форма проверки акций открыта");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при открытии формы проверки акций: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
         }
 
         private void PictureBox_get_update_program_DoubleTapped(object sender, RoutedEventArgs e)

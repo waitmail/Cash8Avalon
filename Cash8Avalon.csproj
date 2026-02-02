@@ -42,4 +42,11 @@
       <HintPath>bin\Debug\net8.0\Atol.Drivers10.Fptr.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+
+  <ItemGroup>
+    <Compile Update="VerifyActions .axaml.cs">
+      <DependentUpon>VerifyActions .axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

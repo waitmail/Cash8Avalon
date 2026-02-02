@@ -11,15 +11,18 @@
         Width="1200" Height="700"
         WindowStartupLocation="CenterScreen"
         x:DataType="vm:MainViewModel">
-	<!-- ДОБАВЬТЕ ЭТУ СТРОКУ! -->
 
 	<Design.DataContext>
 		<vm:MainViewModel />
 	</Design.DataContext>
 
 	<DockPanel Background="#f0f2f5">
-		<!-- Верхнее меню -->
-		<Menu DockPanel.Dock="Top" Background="White" BorderBrush="#e0e0e0" BorderThickness="0 0 0 1">
+		<!-- Верхнее меню - ПРОСТО ДОБАВЛЯЕМ x:Name="MainMenu" -->
+		<Menu x:Name="MainMenu"			  
+              DockPanel.Dock="Top" 
+              Background="White" 
+              BorderBrush="#e0e0e0" 
+              BorderThickness="0 0 0 1">
 			<MenuItem Header="Справочники">
 				<MenuItem Header="Константы"
                           Command="{Binding OpenConstantsCommand}"/>
@@ -34,30 +37,9 @@
 			<MenuItem Header="Журналы">
 				<MenuItem Header="Кассовые чеки"
                           Command="{Binding OpenReceiptsCommand}"/>
-				<!-- Остальные пока закомментируем для простоты -->
-				<!--
-                <MenuItem Header="Акции" 
-                          Command="{Binding OpenPromotionsCommand}"/>
-                -->
 			</MenuItem>
 
-			<MenuItem Header="Служебные">
-				<!-- Пока оставим только 1-2 пункта для теста -->
-				<!--
-                <MenuItem Header="Параметры базы данных" 
-                          Command="{Binding OpenDbSettingsCommand}"/>
-                <MenuItem Header="Проверка акций" 
-                          Command="{Binding OpenPromotionCheckCommand}"/>
-                <MenuItem Header="Корректировочные чеки" 
-                          Command="{Binding OpenCorrectionReceiptsCommand}"/>
-                <MenuItem Header="Загрузка данных через интернет" 
-                          Command="{Binding OpenInternetDataLoadCommand}"/>
-                <MenuItem Header="Обновление программы" 
-                          Command="{Binding OpenProgramUpdateCommand}"/>
-                <Separator/>
-                <MenuItem Header="О программе" 
-                          Command="{Binding OpenAboutCommand}"/>
-                -->				
+			<MenuItem Header="Служебные">			
                 <MenuItem Header="Загрузка данных через интернет" 
                           Command="{Binding OpenInternetDataLoadCommand}"/>
 			</MenuItem>
@@ -75,21 +57,21 @@
 		</Border>
 
 		<Grid>
-    <!-- Здесь будет отображаться UserControl (Константы) -->
-    <ContentControl Content="{Binding CurrentContent}"
-                    Margin="0"/>
-    
-    <!-- Заглушка когда ничего не открыто -->
-    <Border Background="White"
-            CornerRadius="8"
-            Margin="20"
-            IsVisible="{Binding CurrentContent, Converter={x:Static ObjectConverters.IsNull}}">
-        <TextBlock Text=""
-                   VerticalAlignment="Center"
-                   HorizontalAlignment="Center"
-                   FontSize="18"
-                   Foreground="#666"/>
-    </Border>
-</Grid>
+			<!-- Здесь будет отображаться UserControl (Константы) -->
+			<ContentControl Content="{Binding CurrentContent}"
+							Margin="0"/>
+			
+			<!-- Заглушка когда ничего не открыто -->
+			<Border Background="White"
+					CornerRadius="8"
+					Margin="20"
+					IsVisible="{Binding CurrentContent, Converter={x:Static ObjectConverters.IsNull}}">
+				<TextBlock Text=""
+						   VerticalAlignment="Center"
+						   HorizontalAlignment="Center"
+						   FontSize="18"
+						   Foreground="#666"/>
+			</Border>
+		</Grid>
 	</DockPanel>
 </Window>

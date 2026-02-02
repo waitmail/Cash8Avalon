@@ -1,0 +1,248 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Cash8Avalon.VerifyActions"
+        Title="Проверка акций"
+        Width="850"
+        Height="850"
+        WindowStartupLocation="CenterScreen">
+    
+    <DockPanel Background="#F0F0F0">
+        <!-- Верхняя панель с полями ввода -->
+        <Border DockPanel.Dock="Top" 
+                Background="White" 
+                BorderBrush="#CCCCCC" 
+                BorderThickness="0,0,0,1"
+                Margin="0,0,0,5"
+                Padding="10">
+            <StackPanel Orientation="Horizontal" 
+                        Height="50"
+                        Spacing="10"
+                        VerticalAlignment="Center">
+                
+                <!-- Метка ШК -->
+                <Border Background="#F5F5F5" 
+                        BorderBrush="#DDDDDD" 
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="5,0">
+                    <TextBox x:Name="textBox2"
+                            Text="ШК"
+                            FontSize="14"
+                            IsReadOnly="True"
+                            Width="45"
+                            Height="35"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#666666"/>
+                </Border>
+                
+                <!-- Поле ввода штрихкода -->
+                <Border Background="White" 
+                        BorderBrush="#007ACC" 
+                        BorderThickness="1"
+                        CornerRadius="3">
+                    <TextBox x:Name="txtB_input_code_or_barcode"
+                            FontSize="14"
+                            MaxLength="13"
+                            Width="160"
+                            Height="35"
+                            VerticalAlignment="Center"
+                            BorderThickness="0"
+                            Padding="10,0"
+                            Foreground="#333333"
+                            Watermark="Введите штрихкод"/>
+                </Border>
+                
+                <!-- Метка Покупатель -->
+                <Border Background="#F5F5F5" 
+                        BorderBrush="#DDDDDD" 
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="5,0">
+                    <TextBox x:Name="textBox3"
+                            Text="Покупатель"
+                            FontSize="14"
+                            IsReadOnly="True"
+                            Width="130"
+                            Height="35"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#666666"/>
+                </Border>
+                
+                <!-- Поле клиента -->
+                <Border Background="White" 
+                        BorderBrush="#DDDDDD" 
+                        BorderThickness="1"
+                        CornerRadius="3">
+                    <TextBox x:Name="txtB_client"
+                            FontSize="14"
+                            IsReadOnly="True"
+                            Width="210"
+                            Height="35"
+                            VerticalAlignment="Center"
+                            BorderThickness="0"
+                            Padding="10,0"
+                            Foreground="#333333"/>
+                </Border>
+                
+                <!-- Поле кода клиента -->
+                <Border Background="White" 
+                        BorderBrush="#DDDDDD" 
+                        BorderThickness="1"
+                        CornerRadius="3">
+                    <TextBox x:Name="txtB_client_code"
+                            FontSize="14"
+                            MaxLength="13"
+                            Width="170"
+                            Height="35"
+                            VerticalAlignment="Center"
+                            BorderThickness="0"
+                            Padding="10,0"
+                            Foreground="#333333"
+                            Watermark="Код клиента"/>
+                </Border>
+                
+                <!-- Поле суммы -->
+                <Border Background="#FFF8DC" 
+                        BorderBrush="#FFA500" 
+                        BorderThickness="2"
+                        CornerRadius="3">
+                    <TextBox x:Name="txtxB_summ"
+                            FontSize="16"
+                            FontWeight="Bold"
+                            Foreground="#FF0000"
+                            MaxLength="10"
+                            IsReadOnly="True"
+                            Width="140"
+                            Height="40"
+                            VerticalAlignment="Center"
+                            BorderThickness="0"
+                            Padding="10,0"
+                            TextAlignment="Right"
+                            Text="0.00"/>
+                </Border>
+                
+            </StackPanel>
+        </Border>
+        
+        <!-- Основная область с гридами -->
+        <Grid Margin="10" Background="White">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/> <!-- Для подсказок -->
+            </Grid.RowDefinitions>
+            
+            <!-- Первый грид: Товары -->
+            <Border Grid.Row="0"
+                    BorderBrush="#007ACC" 
+                    BorderThickness="2"
+                    CornerRadius="3"
+                    Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Заголовок первого грида -->
+                    <Border Grid.Row="0"
+                            Background="#007ACC"
+                            CornerRadius="3,3,0,0">
+                        <TextBlock Text="Товары в чеке" 
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0"/>
+                    </Border>
+                    
+                    <!-- Контейнер для таблицы товаров -->
+                    <Border Grid.Row="1" 
+                            x:Name="TovarTableContainer"
+                            Background="White"
+                            BorderThickness="0">
+                    </Border>
+                </Grid>
+            </Border>
+            
+            <!-- Разделитель 1 -->
+            <Border Grid.Row="1" Background="Transparent"/>
+            
+            <!-- Второй грид: Выполненные товары -->
+            <Border Grid.Row="2"
+                    BorderBrush="#4CAF50" 
+                    BorderThickness="2"
+                    CornerRadius="3"
+                    Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Заголовок второго грида -->
+                    <Border Grid.Row="0"
+                            Background="#4CAF50"
+                            CornerRadius="3,3,0,0">
+                        <TextBlock Text="Выполненные товары" 
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0"/>
+                    </Border>
+                    
+                    <!-- Контейнер для таблицы выполненных товаров -->
+                    <Border Grid.Row="1" 
+                            x:Name="TovarExecuteTableContainer"
+                            Background="White"
+                            BorderThickness="0">
+                    </Border>
+                </Grid>
+            </Border>
+            
+            <!-- Разделитель 2 -->
+            <Border Grid.Row="3" Background="Transparent"/>
+            
+            <!-- Третий грид: Участие в акциях -->
+            <Border Grid.Row="4"
+                    BorderBrush="#9C27B0" 
+                    BorderThickness="2"
+                    CornerRadius="3"
+                    Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Заголовок третьего грида -->
+                    <Border Grid.Row="0"
+                            Background="#9C27B0"
+                            CornerRadius="3,3,0,0">
+                        <TextBlock Text="Участие в механических акциях" 
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0"/>
+                    </Border>
+                    
+                    <!-- Контейнер для таблицы участия в акциях -->
+                    <Border Grid.Row="1" 
+                            x:Name="ParticipationTableContainer"
+                            Background="White"
+                            BorderThickness="0">
+                    </Border>
+                </Grid>
+            </Border>            
+        </Grid>        
+    </DockPanel>
+</Window>

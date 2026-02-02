@@ -615,9 +615,13 @@ namespace Cash8Avalon
                             int multiplicity = (int)(calculation_of_the_sum_of_the_document_dt() / divisor);
                             await MessageBox.Show("Кратность " + multiplicity.ToString() + " " + reader["comment"].ToString());
                             int num = Convert.ToInt32(reader["num_doc"]);
-                            if (!cc.action_num_doc.Contains(num))
+                            if (cc != null)
                             {
-                                cc.action_num_doc.Add(num);
+                                if (!cc.action_num_doc.Contains(num))
+                                {
+
+                                    cc.action_num_doc.Add(num);
+                                }
                             }
                         }
                     }
