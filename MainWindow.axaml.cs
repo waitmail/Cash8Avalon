@@ -42,10 +42,41 @@ namespace Cash8Avalon
             _unloadingTimer.Tick += UnloadingTimer_Tick;
         }
 
+        private void CreateDefaultSettingsFile(string filePath)
+        {
+            // Способ 1 (проще всего)
+            string defaultSettings = @"[ip адрес сервера]
+                127.0.0.1
+                [имя базы данных]
+                Cash_Place
+                [сервисный пароль]
+                1
+                [порт сервера]
+                5432
+                [пароль postgres]
+                a123456789
+                [пользователь postgres]
+                postgres";
+
+            MainStaticClass.EncryptData(filePath, defaultSettings);
+        }
 
 
         protected override async void OnOpened(EventArgs e)
         {
+            // 2. Проверка файла конфигурации
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
+            if (!File.Exists(configPath))
+            {
+                CreateDefaultSettingsFile(configPath);
+                await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}\r\nБудет создан новый с настройками по умолчанию.", "Проверка файлов настроек ", MessageBoxButton.OK, MessageBoxType.Error);
+                //this.Close();
+                //return;
+            }           
+            
+            Console.WriteLine($"Загружаем конфигурацию из: {configPath}");            
+            MainStaticClass.loadConfig(configPath);
+            Console.WriteLine($"? Конфиг загружен: {configPath}");            
 
             base.OnOpened(e);
             UpdateMenuVisibility(0);
@@ -88,16 +119,22 @@ namespace Cash8Avalon
                     MainStaticClass.Last_Write_Check = DateTime.Now.AddSeconds(1);
                     MainStaticClass.MainWindow = this;
 
-                    // 2. Проверка файла конфигурации
-                    string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
-                    if (!File.Exists(configPath))
-                    {
-                        await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}","Проверка файлов настроек ",MessageBoxButton.OK,MessageBoxType.Error);
-                        this.Close();
-                        return;
-                    }
-                    MainStaticClass.loadConfig(configPath);
-                    Console.WriteLine($"? Конфиг загружен: {configPath}");
+                    //// 2. Проверка файла конфигурации
+                    //string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
+                    //if (!File.Exists(configPath))
+                    //{
+                    //    await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}", "Проверка файлов настроек ", MessageBoxButton.OK, MessageBoxType.Error);
+                    //    this.Close();
+                    //    return;
+                    //}
+                    //else
+                    //{
+                    //    Console.WriteLine($"Загружаем конфигурацию из: {configPath}");
+                    //    MainStaticClass.loadConfig(configPath);
+                    //    Console.WriteLine($"? Конфиг загружен: {configPath}");
+                    //}
+                        
+                    
 
                     string version_program = await MainStaticClass.GetAtolDriverVersion();
                     this.Title = "Касса   " + MainStaticClass.CashDeskNumber;

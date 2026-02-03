@@ -102,78 +102,93 @@ namespace Cash8Avalon
             // или оставить пустым, если все уже в XAML
         }
 
-        // Обработчики событий
-        private void TextBox2_KeyDown(object sender, KeyEventArgs e)
+        private bool IsValidServicePassword(string enteredPassword)
         {
-            if (e.Key == Key.Enter)
+            // Убираем пробелы и приводим к верхнему регистру для сравнения
+            string cleanPassword = enteredPassword.Trim();
+            string upperPassword = cleanPassword.ToUpper();
+
+            // Если файла настроек еще нет (первый запуск)
+            if (!fileSettinConnect)
             {
-                if (fileSettinConnect == false)
+                // Допустимые пароли при первом запуске:
+                // 1. "1" (простой пароль по умолчанию)
+                // 2. "SERVICEMODE" (специальный режим сервиса)
+                return upperPassword == "1" || upperPassword == "SERVICEMODE";
+            }
+
+            // Если файл настроек уже существует
+            if (_servicePassword != null)
+            {
+                // Допустимые пароли:
+                // 1. Совпадение с сохраненным паролем (точное сравнение)
+                // 2. Специальный режим SERVICEMODE (в любом регистре)
+                return cleanPassword == _servicePassword.Text.Trim() ||
+                       upperPassword == "SERVICEMODE";
+            }
+
+            // Если почему-то нет контрола servicePassword, 
+            // но файл настроек есть - разрешаем только SERVICEMODE
+            return upperPassword == "SERVICEMODE";
+        }
+
+        private async Task ProcessPasswordCheck()
+        {
+            try
+            {
+                if (_textBox2 == null)
                 {
-                    //if (textBox2.Text.Trim().ToUpper() == "SERVICEMODE")//прошли авторизацию
-                    if (textBox2.Text.Trim().ToUpper() == "1")//прошли авторизацию
-                    {
-                        //сделать видимыми реквизиты 
-                        ChangeVisibleBeforeWrite();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Пароль неправильный");
-                    }
+                    await MessageBox.Show("Ошибка: поле ввода пароля не найдено");
+                    return;
+                }
+
+                string enteredPassword = _textBox2.Text;
+                if (enteredPassword == null)
+                {
+                    return;
+                }
+
+                if (IsValidServicePassword(enteredPassword))
+                {
+                    // Пароль верный - показываем настройки
+                    ChangeVisibleBeforeWrite();
+
+                    // Можно добавить логирование успешного входа
+                    Console.WriteLine($"Успешная авторизация: {DateTime.Now}");
                 }
                 else
                 {
-                    if (servicePassword.Text.Trim() == textBox2.Text.Trim())
-                    {
-                        ChangeVisibleBeforeWrite();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Неправильный пароль");
-                    }
+                    // Пароль неверный
+                    await MessageBox.Show("Неправильный пароль");
 
+                    // Можно добавить счетчик неудачных попыток
+                    // или блокировку после нескольких попыток
                 }
-                textBox2.Text = "";
+
+                // Очищаем поле ввода пароля
+                _textBox2.Text = "";
+                _textBox2.Focus(); // Возвращаем фокус на поле ввода
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show($"Ошибка проверки пароля: {ex.Message}");
             }
         }
 
-        private void Button1_Click(object sender, RoutedEventArgs e)
+        // Обработчик нажатия Enter в поле ввода пароля
+        private async void TextBox2_KeyDown(object sender, KeyEventArgs e)
         {
-            // Находим контролы
-            var textBox2Control = this.FindControl<TextBox>("textBox2");
-            var servicePasswordControl = this.FindControl<TextBox>("servicePassword");
-
-            if (textBox2Control == null)
+            if (e.Key == Key.Enter)
             {
-                MessageBox.Show("Ошибка: не найден контрол textBox2");
-                return;
+                await ProcessPasswordCheck();
+                e.Handled = true; // Предотвращаем дальнейшую обработку
             }
+        }
 
-            if (fileSettinConnect == false)
-            {
-                if (textBox2Control.Text.Trim().ToUpper() == "1") // прошли авторизацию
-                {
-                    // сделать видимыми реквизиты 
-                    ChangeVisibleBeforeWrite();
-                }
-                else
-                {
-                    MessageBox.Show("Пароль неправильный");
-                }
-            }
-            else
-            {
-                if (servicePasswordControl != null &&
-                    servicePasswordControl.Text.Trim() == textBox2Control.Text.Trim())
-                {
-                    ChangeVisibleBeforeWrite();
-                }
-                else
-                {
-                    MessageBox.Show("Неправильный пароль");
-                }
-            }
-
-            textBox2Control.Text = "";
+        // Обработчик нажатия кнопки "Ввести"
+        private async void Button1_Click(object sender, RoutedEventArgs e)
+        {
+            await ProcessPasswordCheck();
         }
 
         private async Task<bool> GetValidateDialogControl()
@@ -333,25 +348,17 @@ namespace Cash8Avalon
 
             // Получение пути к исполняемому файлу
             string startupPath = AppContext.BaseDirectory;
+            string settingsPath = Path.Combine(startupPath, "Setting.gaa");
 
-            // Или для получения директории приложения:
-            string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-            // Ваш код будет выглядеть так:
-            StringReader stReader = MainStaticClass.DecryptData(Path.Combine(startupPath, "Setting.gaa"));
-
-            //using (StreamWriter sw = new StreamWriter(Application.StartupPath + "/SettingCopy.gaa"))
-            //{
-            //    sw.WriteLine(f);
-            //}
+            // Используем ваш метод шифрования вместо StreamWriter
+            MainStaticClass.EncryptData(settingsPath, f);
 
             ChangeVisibleAfterWrite();
 
-            //Cash8.MainStaticClass.loadConfig(Application.StartupPath + "/Setting.gaa");
-            if (fileSettinConnect == true)//файл с параметрами есть заполнить реквизиты
+            // Загружаем зашифрованные настройки для отображения
+            if (fileSettinConnect)
             {
-               // Ваш код будет выглядеть так:
-                stReader = MainStaticClass.DecryptData(Path.Combine(startupPath, "Setting.gaa"));
+                StringReader stReader = MainStaticClass.DecryptData(settingsPath);
                 fillDialog(stReader);
             }
         }
@@ -363,6 +370,7 @@ namespace Cash8Avalon
 
             while ((line = sr.ReadLine()) != null)
             {
+                line = line.Trim();
                 if (line == "[ip адрес сервера]")
                 {
                     etap = 1;
@@ -834,7 +842,7 @@ namespace Cash8Avalon
 
         private void ChangeVisibleAfterWrite()
         {
-            if (_button4 != null) _button4.IsVisible = false;
+            //if (_button4 != null) _button4.IsVisible = false;
             if (_button2 != null) _button2.IsVisible = false;
             if (_label1 != null) _label1.IsVisible = false;
             if (_ipaddrServer != null) _ipaddrServer.IsVisible = false;

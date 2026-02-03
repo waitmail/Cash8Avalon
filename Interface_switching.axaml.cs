@@ -386,10 +386,10 @@ namespace Cash8Avalon
             failAutorize.Text = "";
             int result = -1;
 
-            if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
-            {
-                inputBarcode.Text = barcode;
-            }
+            //if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
+            //{
+            //    inputBarcode.Text = barcode;
+            //}
 
             // Проверка наличия таблицы если не найдена то это первый запуск
             NpgsqlConnection conn = null;

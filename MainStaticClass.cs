@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -5086,27 +5087,70 @@ namespace Cash8Avalon
                 passwordPostgres = value;
             }
         }
-        public static void EncryptData(String outName, String data)
+        public static void EncryptData(string outName, string data)
         {
-            FileStream fout = new FileStream(outName, FileMode.OpenOrCreate, FileAccess.Write);
-            fout.SetLength(0);
-            //string roundtrip = "";
-            //Encoding ascii = Encoding.Default;
-            Encoding ascii = Encoding.UTF8;
-            byte[] bin = ascii.GetBytes(data);//This is intermediate storage for the encryption.
-            int totlen = bin.Length;    //This is the total length of the input file.
-            SymmetricAlgorithm rijn = SymmetricAlgorithm.Create(); //Creates the default implementation, which is RijndaelManaged.         
-            CryptoStream encStream = new CryptoStream(fout, rijn.CreateEncryptor(EncryptedSymmetricKey, EncryptedSymmetricIV), CryptoStreamMode.Write);
-            encStream.Write(bin, 0, totlen);
-            encStream.Close();
-            fout.Close();
+            using (FileStream fout = new FileStream(outName, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                fout.SetLength(0);
+
+                // Используем нашу кодировку
+                byte[] bin = System.Text.Encoding.UTF8.GetBytes(data);
+                int totlen = bin.Length;
+
+                using (RijndaelManaged rijndael = new RijndaelManaged())
+                {
+                    rijndael.Key = EncryptedSymmetricKey;
+                    rijndael.IV = EncryptedSymmetricIV;
+
+                    using (CryptoStream encStream = new CryptoStream(
+                        fout,
+                        rijndael.CreateEncryptor(),
+                        CryptoStreamMode.Write))
+                    {
+                        encStream.Write(bin, 0, totlen);
+                        encStream.FlushFinalBlock();
+                    }
+                }
+            }
         }
+
+        public static StringReader DecryptData(string inName)
+        {
+            using (FileStream fin = new FileStream(inName, FileMode.Open, FileAccess.Read))
+            {
+                using (RijndaelManaged rijndael = new RijndaelManaged())
+                {
+                    rijndael.Key = EncryptedSymmetricKey;
+                    rijndael.IV = EncryptedSymmetricIV;
+
+                    using (CryptoStream encStream = new CryptoStream(
+                        fin,
+                        rijndael.CreateDecryptor(),
+                        CryptoStreamMode.Read))
+                    {
+                        // Читаем все байты
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            encStream.CopyTo(ms);
+                            byte[] decryptedBytes = ms.ToArray();
+
+                            // Преобразуем байты в строку с правильной кодировкой
+                            string roundtrip = System.Text.Encoding.UTF8.GetString(decryptedBytes);
+                            return new StringReader(roundtrip);
+                        }
+                    }
+                }
+            }
+        }
+
+
         public static void loadConfig(string fileConfig)
         {
             StringReader sr = MainStaticClass.DecryptData(fileConfig);
             string line = ""; int etap = 0;
             while ((line = sr.ReadLine()) != null)
             {
+                line = line.Trim();
                 if (line == "[ip адрес сервера]")
                 {
                     etap = 1;
@@ -5165,37 +5209,37 @@ namespace Cash8Avalon
                 }
             }
         }
-        public static StringReader DecryptData(string inName)
-        {
-            string roundtrip = "";
+        //public static StringReader DecryptData(string inName)
+        //{
+        //    string roundtrip = "";
 
-            using (FileStream fin = new FileStream(inName, FileMode.Open, FileAccess.Read))
-            {
-                // Для Rijndael в .NET Core/6+
-                using (RijndaelManaged rijndael = new RijndaelManaged())
-                {
-                    rijndael.Key = EncryptedSymmetricKey;
-                    rijndael.IV = EncryptedSymmetricIV;
+        //    using (FileStream fin = new FileStream(inName, FileMode.Open, FileAccess.Read))
+        //    {
+        //        // Для Rijndael в .NET Core/6+
+        //        using (RijndaelManaged rijndael = new RijndaelManaged())
+        //        {
+        //            rijndael.Key = EncryptedSymmetricKey;
+        //            rijndael.IV = EncryptedSymmetricIV;
 
-                    using (CryptoStream encStream = new CryptoStream(
-                        fin,
-                        rijndael.CreateDecryptor(),
-                        CryptoStreamMode.Read))
-                    {
-                        Encoding ascii = Encoding.UTF8;
-                        byte[] bin = new byte[100];
-                        int len;
+        //            using (CryptoStream encStream = new CryptoStream(
+        //                fin,
+        //                rijndael.CreateDecryptor(),
+        //                CryptoStreamMode.Read))
+        //            {
+        //                Encoding ascii = Encoding.UTF8;
+        //                byte[] bin = new byte[100];
+        //                int len;
 
-                        while ((len = encStream.Read(bin, 0, 100)) > 0)
-                        {
-                            roundtrip += ascii.GetString(bin, 0, len);
-                        }
-                    }
-                }
-            }
+        //                while ((len = encStream.Read(bin, 0, 100)) > 0)
+        //                {
+        //                    roundtrip += ascii.GetString(bin, 0, len);
+        //                }
+        //            }
+        //        }
+        //    }
 
-            return new StringReader(roundtrip);
-        }
+        //    return new StringReader(roundtrip);
+        //}
 
         public static bool exists_update_prorgam()
         {
