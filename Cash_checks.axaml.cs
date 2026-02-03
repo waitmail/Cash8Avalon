@@ -186,17 +186,17 @@ namespace Cash8Avalon
                 // Стало:
                 var columnDefinitions = new[]
                 {
-            new ColumnDefinition(0.8, GridUnitType.Star),   // Статус
-            new ColumnDefinition(0.8, GridUnitType.Star),   // Дата
-            new ColumnDefinition(2.2, GridUnitType.Star),   // Клиент
-            new ColumnDefinition(0.8, GridUnitType.Star),   // Сумма
-            new ColumnDefinition(0.8, GridUnitType.Star),   // Сдача
-            new ColumnDefinition(2.2, GridUnitType.Star),   // Комментарий
-            new ColumnDefinition(0.7, GridUnitType.Star),   // Тип
-            new ColumnDefinition(0.8, GridUnitType.Star),   // Номер
-            new ColumnDefinition(0.6, GridUnitType.Star),   // Напечатан
-            new ColumnDefinition(0.5, GridUnitType.Star)    // ПечатьП
-        };
+                    new ColumnDefinition(0.8, GridUnitType.Star),   // Статус
+                    new ColumnDefinition(0.8, GridUnitType.Star),   // Дата
+                    new ColumnDefinition(2.2, GridUnitType.Star),   // Клиент
+                    new ColumnDefinition(0.8, GridUnitType.Star),   // Сумма
+                    new ColumnDefinition(0.8, GridUnitType.Star),   // Сдача
+                    new ColumnDefinition(2.2, GridUnitType.Star),   // Комментарий
+                    new ColumnDefinition(0.7, GridUnitType.Star),   // Тип
+                    new ColumnDefinition(0.8, GridUnitType.Star),   // Номер
+                    new ColumnDefinition(0.6, GridUnitType.Star),   // Напечатан
+                    new ColumnDefinition(0.5, GridUnitType.Star)    // ПечатьП
+                };
 
                 foreach (var colDef in columnDefinitions)
                 {
