@@ -167,19 +167,42 @@ namespace Cash8Avalon
                 // Создаем Grid для таблицы
                 _tableGrid = new Grid
                 {
-                    Background = Brushes.White
+                    Background = Brushes.White,
+                    HorizontalAlignment = HorizontalAlignment.Stretch, // Добавьте это
+                    VerticalAlignment = VerticalAlignment.Stretch
                 };
 
                 // Подписываемся на события Grid
                 _tableGrid.PointerPressed += OnTableGridPointerPressed;
 
-                // Определяем колонки Grid
-                var columnWidths = new[] { 80, 150, 200, 100, 100, 150, 100, 100, 100, 100 };
+                // ==== ЗАМЕНА СТРОК НАЧИНАЕТСЯ ЗДЕСЬ ====
+                // Было:
+                // var columnWidths = new[] { 80, 150, 200, 100, 100, 150, 100, 100, 100, 100 };
+                // foreach (var width in columnWidths)
+                // {
+                //     _tableGrid.ColumnDefinitions.Add(new ColumnDefinition(width, GridUnitType.Pixel));
+                // }
 
-                foreach (var width in columnWidths)
+                // Стало:
+                var columnDefinitions = new[]
                 {
-                    _tableGrid.ColumnDefinitions.Add(new ColumnDefinition(width, GridUnitType.Pixel));
+            new ColumnDefinition(0.8, GridUnitType.Star),   // Статус
+            new ColumnDefinition(0.8, GridUnitType.Star),   // Дата
+            new ColumnDefinition(2.2, GridUnitType.Star),   // Клиент
+            new ColumnDefinition(0.8, GridUnitType.Star),   // Сумма
+            new ColumnDefinition(0.8, GridUnitType.Star),   // Сдача
+            new ColumnDefinition(2.2, GridUnitType.Star),   // Комментарий
+            new ColumnDefinition(0.7, GridUnitType.Star),   // Тип
+            new ColumnDefinition(0.8, GridUnitType.Star),   // Номер
+            new ColumnDefinition(0.6, GridUnitType.Star),   // Напечатан
+            new ColumnDefinition(0.5, GridUnitType.Star)    // ПечатьП
+        };
+
+                foreach (var colDef in columnDefinitions)
+                {
+                    _tableGrid.ColumnDefinitions.Add(colDef);
                 }
+                // ==== ЗАМЕНА ЗАКАНЧИВАЕТСЯ ЗДЕСЬ ====
 
                 // Создаем строку заголовков (строка 0)
                 _tableGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
@@ -191,7 +214,7 @@ namespace Cash8Avalon
                 // Добавляем ScrollViewer в Border
                 tableBorder.Child = _scrollViewer;
 
-                Console.WriteLine("✓ Таблица создана из кода");
+                Console.WriteLine("✓ Таблица создана из кода с пропорциональными колонками");
             }
             catch (Exception ex)
             {
