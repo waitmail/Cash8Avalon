@@ -1,0 +1,181 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Cash8Avalon.SettingConnect"
+        Title="Параметры соединения с базой данных"
+        Width="800" Height="600"
+        WindowStartupLocation="CenterScreen"
+        SizeToContent="Manual">
+    
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Margin" Value="5,2"/>
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+    </Window.Styles>
+    
+    <ScrollViewer>
+        <StackPanel Margin="10" Spacing="10">
+            <!-- Секция сервисного пароля -->
+            <StackPanel Spacing="5">
+                <TextBlock Text="сервисный пароль :"/>
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBox x:Name="textBox2" 
+                             Width="200"
+                             PasswordChar="|"
+                             KeyDown="TextBox2_KeyDown"/>
+                    <Button x:Name="button1" 
+                            Content="Ввести"
+                            Click="Button1_Click"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Группа смены сервисного пароля -->
+            <Border BorderBrush="Gray" 
+                    BorderThickness="1" 
+                    CornerRadius="5" 
+                    Padding="10"
+                    x:Name="groupBox1"
+                    IsVisible="False">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="смена сервисного пароля" 
+                               FontWeight="Bold"/>
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock x:Name="label5" 
+                                   Text="нов. сервисный пароль :"
+                                   IsVisible="False"/>
+                        <TextBox x:Name="servicePassword" 
+                                 Width="200"
+                                 IsVisible="False"/>
+                        
+                        <TextBlock x:Name="label6" 
+                                   Text="подтверждение пароля"
+                                   IsVisible="False"/>
+                        <TextBox x:Name="repeatPassword" 
+                                 Width="200"
+                                 IsVisible="False"/>
+                    </StackPanel>
+                    
+                    <CheckBox x:Name="checkBox1" 
+                              Content="Показывать пароли"
+                              IsVisible="False"
+                              Checked="CheckBox1_CheckedChanged"
+                              Unchecked="CheckBox1_CheckedChanged"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Группа параметров базы данных -->
+            <Border BorderBrush="Gray" 
+                    BorderThickness="1" 
+                    CornerRadius="5" 
+                    Padding="10"
+                    x:Name="groupBox2"
+                    IsVisible="False">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Параметры соединения с базой данных" 
+                               FontWeight="Bold"/>
+                    
+                    <Grid ColumnDefinitions="Auto,*,Auto" 
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          RowSpacing="5" ColumnSpacing="10">
+                        
+                        <!-- Строка 0: IP адрес -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" 
+                                   x:Name="label1"
+                                   Text="IP адрес сервера :"
+                                   IsVisible="False"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" 
+                                 x:Name="ipaddrServer"
+                                 MaxLength="15"
+                                 IsVisible="False"/>
+                        
+                        <!-- Строка 1: Пользователь -->
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                   x:Name="userPostrgres"
+                                   Text="пользователь postgres"
+                                   IsVisible="False"/>
+                        <TextBox Grid.Row="1" Grid.Column="1"
+                                 x:Name="postgresUser"
+                                 MaxLength="15"
+                                 IsVisible="False"/>
+                        
+                        <!-- Строка 2: Порт -->
+                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                   x:Name="portPostgres"
+                                   Text="порт сервера"
+                                   IsVisible="False"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 x:Name="portServer"
+                                 IsVisible="False"/>
+                        
+                        <!-- Строка 3: Имя БД -->
+                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                   x:Name="label2"
+                                   Text="имя базы данных :"
+                                   IsVisible="False"/>
+                        <TextBox Grid.Row="3" Grid.Column="1"
+                                 x:Name="nameDataBase"
+                                 MaxLength="15"
+                                 IsVisible="False"/>
+                        
+                        <!-- Строка 4: Пароль -->
+                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                   x:Name="label4"
+                                   Text="пароль к серверу"/>
+                        <TextBox Grid.Row="4" Grid.Column="1"
+                                 x:Name="passwordPostgres"
+                                 PasswordChar="*"/>
+                        
+                        <!-- Строка 5: Подтверждение пароля -->
+                        <TextBlock Grid.Row="5" Grid.Column="0"
+                                   x:Name="label7"
+                                   Text="подтверждение пароля"/>
+                        <TextBox Grid.Row="5" Grid.Column="1"
+                                 x:Name="repeatPasswordPostgres"
+                                 PasswordChar="*"/>
+                        
+                        <!-- Строка 6: Чекбокс показа пароля -->
+                        <CheckBox Grid.Row="6" Grid.Column="1"
+                                  x:Name="checkBox2"
+                                  Content="Показывать пароль к серверу"
+                                  IsVisible="False"
+                                  Checked="CheckBox2_CheckedChanged"
+                                  Unchecked="CheckBox2_CheckedChanged"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Кнопки действий -->
+            <StackPanel Spacing="5" Margin="0,10,0,0">
+                <Button x:Name="button2" 
+                        Content="Записать новые параметры"
+                        HorizontalAlignment="Left"
+                        IsVisible="False"
+                        Click="Button2_Click"/>
+                
+                <Button x:Name="button4" 
+                        Content="Создать таблицы базы данных"
+                        HorizontalAlignment="Left"
+                        Click="Button4_Click"/>
+                
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button Grid.Column="0"
+                            x:Name="add_field"
+                        Content="Добавить поля"
+                        Click="AddField_Click"/>         
+                </Grid>
+                
+                <Button x:Name="button3" 
+                        Content="Закрыть"
+                        HorizontalAlignment="Right"
+                        Click="Button3_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

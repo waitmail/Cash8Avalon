@@ -50,7 +50,6 @@ namespace Cash8Avalon
             base.OnOpened(e);
             UpdateMenuVisibility(0);
 
-
             // Ждем пока окно появится на экране
             await Task.Delay(50);            
 

@@ -39,7 +39,9 @@
                           Command="{Binding OpenReceiptsCommand}"/>
 			</MenuItem>
 
-			<MenuItem Header="Служебные">			
+			<MenuItem Header="Служебные">
+				<MenuItem Header="Параметры базы данных"
+                          Command="{Binding OpenSettingConnectCommand}"/>
                 <MenuItem Header="Загрузка данных через интернет" 
                           Command="{Binding OpenInternetDataLoadCommand}"/>
 			</MenuItem>

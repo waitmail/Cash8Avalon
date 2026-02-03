@@ -25,8 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.11" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.11" />
-	  <!--<PackageReference Include="Avalonia.Controls" Version="11.3.10" />-->
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.11" />	  
     <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.11" />
@@ -39,14 +38,7 @@
 
   <ItemGroup>
     <Reference Include="Atol.Drivers10.Fptr">
-      <HintPath>bin\Debug\net8.0\Atol.Drivers10.Fptr.dll</HintPath>
+      <HintPath>Atol.Drivers10.Fptr.dll</HintPath>
     </Reference>
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <Compile Update="VerifyActions .axaml.cs">
-      <DependentUpon>VerifyActions .axaml</DependentUpon>
-    </Compile>
-  </ItemGroup>
+  </ItemGroup>  
 </Project>
