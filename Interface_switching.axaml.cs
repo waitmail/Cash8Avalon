@@ -478,18 +478,20 @@ namespace Cash8Avalon
 
         private void HandleAdminSuccess(string password)
         {
-            if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
-            {
-                result_execute_enter = true;
-            }
+            //if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
+            //{
+            //    result_execute_enter = true;
+            //}
             MainStaticClass.First_Login_Admin = true;
 
             if ((caller_type == 3) && (cc != null))
             {
                 cc.enable_delete = true;
             }
-
-            MainStaticClass.Code_right_of_user = 1;
+            if (!not_change_Cash_Operator)
+            {
+                MainStaticClass.Code_right_of_user = 1;
+            }
             CloseWithSuccess(password);
         }
 

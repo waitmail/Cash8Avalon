@@ -20,8 +20,9 @@ namespace Cash8Avalon
     public partial class MainWindow : Window
     {
         private DispatcherTimer _unloadingTimer; // Заменяем System.Timers.Timer на DispatcherTimer
+        private MainViewModel _viewModel;
 
-       
+
 
         public MainWindow()
         {
@@ -31,6 +32,8 @@ namespace Cash8Avalon
             //#if DEBUG
             //            this.AttachDevTools();
             //#endif
+            _viewModel = new MainViewModel();
+            DataContext = _viewModel;
         }
 
         private void InitializeUnloadingTimer()
@@ -258,7 +261,7 @@ namespace Cash8Avalon
                     }                   
 
                     // ТОЛЬКО ПОСЛЕ ВСЕХ ПРОВЕРОК СОЗДАЕМ ViewModel!
-                    this.DataContext = new MainViewModel();
+                    //this.DataContext = new MainViewModel();
 
                 }
                 catch (Exception ex)
@@ -313,6 +316,10 @@ namespace Cash8Avalon
                 if (loginSuccess)
                 {
                     UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
+                    if (MainStaticClass.Code_right_of_user == 2)
+                    {
+                        _viewModel.OpenCashChecks();
+                    }
                 }
             }
             catch (Exception ex)
@@ -329,7 +336,7 @@ namespace Cash8Avalon
             var menu = MainMenu ?? this.FindControl<Menu>("MainMenu");
             if (menu != null)
             {
-                menu.IsVisible = userRights > 0; // Скрываем если права = 0                 
+                menu.IsVisible = userRights != 2; // Скрываем если права = 0              
             }
         }
 

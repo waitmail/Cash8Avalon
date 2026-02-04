@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using static Cash8Avalon.Cash_check;
+using static Cash8Avalon.CDN;
 using static Cash8Avalon.LoadDataWebService;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using AtolConstants = Atol.Drivers10.Fptr.Constants;
@@ -155,6 +156,9 @@ namespace Cash8Avalon
         private static readonly IBrush QUANTITY_MINIMUM_COLOR = Brushes.Red; // Красный для мин. количества
         private static readonly IBrush QUANTITY_ERROR_COLOR = Brushes.OrangeRed;
 
+        // В классе Cash_check добавьте константу
+        private const int PRODUCT_FONT_SIZE = 16; // Единый размер шрифта для всех товаров
+
         // Классы данных для товаров
         public class ProductItem
         {
@@ -169,6 +173,9 @@ namespace Cash8Avalon
             public int Gift { get; set; }
             public int Action2 { get; set; }
             public string Mark { get; set; } = "0";
+            public bool IsSertificate { get; set; } = false;//Это сертификат
+            public bool IsFractional { get; set; } = false;//Весовой
+            public bool IsMarked { get; set; } = false;//Маркированный
         }
 
         // Классы данных для сертификатов
@@ -232,9 +239,10 @@ namespace Cash8Avalon
         protected override async void OnLoaded(RoutedEventArgs e)
         {
             base.OnLoaded(e);
-
-            this.num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
-            this.num_cash.Tag = MainStaticClass.CashDeskNumber;
+            // Теперь ищем конкретно num_cash
+            var _num_cash = this.FindControl<TextBox>("num_cash");
+            _num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
+            _num_cash.Tag = MainStaticClass.CashDeskNumber;
 
             //Создание таблицы для перераспределения акций
             DataColumn dc = new DataColumn("Code", System.Type.GetType("System.Int32"));
@@ -1793,14 +1801,14 @@ namespace Cash8Avalon
                 command.Parameters.AddWithValue("discount", calculation_of_the_discount_of_the_document());
                 command.Parameters.AddWithValue("autor", User.Tag.ToString());
 
-                //if (its_deleted == "0")
-                //{
-                //    command.Parameters.AddWithValue("its_deleted", (last_rewrite ? 0 : 2).ToString());
-                //}
-                //else
-                //{
+                if (its_deleted == "0")
+                {
+                    command.Parameters.AddWithValue("its_deleted", (last_rewrite ? 0 : 2));
+                }
+                else
+                {
                     command.Parameters.AddWithValue("its_deleted", Convert.ToDecimal(its_deleted));
-                //}
+                }
 
                 command.Parameters.AddWithValue("action_num_doc", action_num_doc.ToArray());
                 command.Parameters.AddWithValue("check_type", CheckType.SelectedIndex);
@@ -2007,7 +2015,7 @@ namespace Cash8Avalon
                     customerScreen.show_price = show_price;
                     customerScreen.ListCheckPositions = new List<CheckPosition>();
                     if (mode == 1)
-                    {                       
+                    {
                         foreach (var product in _productsData)
                         {
                             CheckPosition checkPosition = new CheckPosition();
@@ -2026,21 +2034,23 @@ namespace Cash8Avalon
                     customerScreen.show_price = 1;
                     customerScreen.ListCheckPositions = new List<CheckPosition>();
                     DataTable dataTable = await to_define_the_action_dt(false);
-                    //if (dataTable.Rows.Count > 0)
-                    //{
-                    this.txtB_total_sum.Text = "0";// calculation_of_the_sum_of_the_document().ToString() + " / " + Math.Round(Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)), 2).ToString("F2");//calculation_of_the_sum_of_the_document().ToString() +" / "+Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)).ToString("F2");
-                    //}
-                    //foreach (DataRow row in dataTable.Rows)
-                    //{
-                    //    //CheckPosition checkPosition = new CheckPosition();
-                    //    //checkPosition.NamePosition = row["tovar_name"].ToString();
-                    //    //checkPosition.Quantity = row["quantity"].ToString();
-                    //    //checkPosition.Price = row["price_at_discount"].ToString();
-                    //    //customerScreen.ListCheckPositions.Add(checkPosition);
-                    //}
+
+                    foreach (var product in _productsData)
+                    {
+                        CheckPosition checkPosition = new CheckPosition();
+                        checkPosition.NamePosition = product.Tovar;                // Наименование товара
+                        checkPosition.Quantity = product.Quantity.ToString();      // Количество
+                        checkPosition.Price = product.PriceAtDiscount.ToString();  // Цена со скидкой
+                        customerScreen.ListCheckPositions.Add(checkPosition);
+                    }
+
+                    this.txtB_total_sum.Text = calculation_of_the_sum_of_the_document().ToString() + " / " + Math.Round(Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)), 2).ToString("F2");//calculation_of_the_sum_of_the_document().ToString() +" / "+Convert.ToDouble(dataTable.Compute("Sum(sum_at_discount)", (string)null)).ToString("F2");                        
+
+
                     string message = JsonConvert.SerializeObject(customerScreen, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
                     SendUDPMessage(message);
                 }
+                
             }
             catch (Exception ex)
             {
@@ -2320,6 +2330,7 @@ namespace Cash8Avalon
             {
                 await MessageBox.Show("Введено неверное количество символов");
             }
+            SendDataToCustomerScreen(1,0,1);
             MainStaticClass.write_event_in_log(" Выход из процедуры поиска клиента " + barcode, " Документ ", numdoc.ToString());
         }
 
@@ -2734,7 +2745,7 @@ namespace Cash8Avalon
             {
                 if (WeightFromScales != 0)
                 {
-                    await MessageBox.Show("Товар с кодом/штрихкодком " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error);
                     return;
                 }
             }  
@@ -2838,7 +2849,10 @@ namespace Cash8Avalon
                 Action = 0,
                 Gift = 0,
                 Action2 = 0,
-                Mark = !string.IsNullOrEmpty(marking_code) ? marking_code : "0"
+                Mark = !string.IsNullOrEmpty(marking_code) ? marking_code : "0",
+                IsSertificate = productData.isCertificate(),
+                IsFractional  = productData.IsFractional(),
+                IsMarked = productData.IsMarked()
             };
 
             // Пересчитываем суммы
@@ -3613,7 +3627,7 @@ namespace Cash8Avalon
                 HorizontalAlignment = alignment,
                 TextWrapping = TextWrapping.NoWrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                FontSize = 12,
+                FontSize = PRODUCT_FONT_SIZE,
                 FontWeight = FontWeight.Normal, // Явно указываем обычный вес
                 Foreground = Brushes.Black,     // Явно указываем цвет
                 Background = Brushes.Transparent,
@@ -3638,7 +3652,7 @@ namespace Cash8Avalon
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = alignment,
                 TextWrapping = TextWrapping.Wrap,
-                FontSize = 12,
+                FontSize = PRODUCT_FONT_SIZE,
                 FontWeight = FontWeight.Normal, // Явно указываем обычный вес
                 Foreground = Brushes.Black,     // Явно указываем цвет
                 Background = Brushes.Transparent,
@@ -4250,20 +4264,62 @@ namespace Cash8Avalon
 
                     if (product.Quantity > 1)
                     {
-                        product.Quantity--;
+                        if (MainStaticClass.Code_right_of_user != 1)
+                        {
+                            // Для обычных пользователей показываем диалог подтверждения
+                            enable_delete = false;
+                            var interfaceSwitching = new Interface_switching();
+                            interfaceSwitching.caller_type = 3;
+                            interfaceSwitching.cc = this;
+                            interfaceSwitching.not_change_Cash_Operator = true;
 
-                        RecalculateProductSums(product);
-                        UpdateProductRowInGrid(dataIndex);
-                        UpdateTotalSum();
+                            var result = await interfaceSwitching.ShowDialog<bool?>(this);
 
-                        // Замените эту строку (если есть):
-                        // ShowSimpleQuantityEffect(dataIndex, false);
+                            if (!enable_delete)
+                            {
+                                await MessageBox.Show("Вам запрещено уменьшать количество",
+                                                     "Права доступа",
+                                                     MessageBoxButton.OK,
+                                                     MessageBoxType.Warning);
+                                return;
+                            }
+                        }
 
-                        // На эту:
-                        ShowQuantityEffect(dataIndex, false); // false = уменьшение (желтый)
-                        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                                      "0", "0", false, "0", "0", "0", "0");
-                        Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
+                        // 4. Показываем диалог указания причины удаления
+                        var reasonsDialog = new ReasonsDeletionCheck();
+                        reasonsDialog.Title = "Уменьшение количества";
+
+                        var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                        if (dialogResult == true && !string.IsNullOrEmpty(reasonsDialog.Reason))
+                        {
+                            // 5. Записываем в лог
+                            await InsertIncidentRecordAsync(
+                                product.Code.ToString(),
+                                product.Quantity.ToString("F2"),
+                                "1",
+                                reasonsDialog.Reason
+                            );
+
+                            product.Quantity--;
+
+                            RecalculateProductSums(product);
+                            UpdateProductRowInGrid(dataIndex);
+                            UpdateTotalSum();
+
+                            // Замените эту строку (если есть):
+                            // ShowSimpleQuantityEffect(dataIndex, false);
+
+                            // На эту:
+                            ShowQuantityEffect(dataIndex, false); // false = уменьшение (желтый)
+                            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                          "0", "0", false, "0", "0", "0", "0");
+                            Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                        }
                     }
                     else
                     {
@@ -4347,44 +4403,167 @@ namespace Cash8Avalon
             }
         }
 
-        // Простой метод удаления с подтверждением
+        //// Простой метод удаления с подтверждением
+        //private async void DeleteProductWithConfirmation(ProductItem product)
+        //{
+        //    // Можно реализовать простой диалог или сразу удалять
+        //    // Для простоты сразу удаляем
+        //    // Удаляем товар из данных
+        //    _productsData.RemoveAt(_selectedProductRowIndex);
+
+        //    // Обновляем Grid
+        //    RefreshProductsGrid();
+
+        //    // Обновляем общую сумму
+        //    UpdateTotalSum();
+
+        //    Console.WriteLine($"✓ Товар '{product.Tovar}' удален");
+
+        //    // Выделяем следующую строку или снимаем выделение
+        //    if (_productsData.Count > 0)
+        //    {
+        //        if (_selectedProductRowIndex >= _productsData.Count)
+        //            _selectedProductRowIndex = _productsData.Count - 1;
+        //        SelectProductRow(_selectedProductRowIndex);
+        //    }
+        //    else
+        //    {
+        //        ClearProductSelection();
+        //    }
+        //    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+        //                       "0", "0", false, "0", "0", "0", "0");
+
+        //    // Выделяем следующую строку или снимаем выделение
+        //    if (_productsData.Count > 0)
+        //    {
+        //        _productsScrollViewer?.Focus();
+        //    }
+        //    else
+        //    {
+        //        ClearProductSelection();
+        //    }
+        //}
+
         private async void DeleteProductWithConfirmation(ProductItem product)
         {
-            // Можно реализовать простой диалог или сразу удалять
-            // Для простоты сразу удаляем
-            // Удаляем товар из данных
-            _productsData.RemoveAt(_selectedProductRowIndex);
-
-            // Обновляем Grid
-            RefreshProductsGrid();
-
-            // Обновляем общую сумму
-            UpdateTotalSum();
-
-            Console.WriteLine($"✓ Товар '{product.Tovar}' удален");
-
-            // Выделяем следующую строку или снимаем выделение
-            if (_productsData.Count > 0)
+            try
             {
-                if (_selectedProductRowIndex >= _productsData.Count)
-                    _selectedProductRowIndex = _productsData.Count - 1;
-                SelectProductRow(_selectedProductRowIndex);
+                // 1. Проверяем права пользователя (аналог WinForms кода)
+                if (!IsNewCheck)
+                {
+                    await MessageBox.Show("Нельзя удалять строки в уже созданном чеке",
+                                         "Удаление",
+                                         MessageBoxButton.OK,
+                                         MessageBoxType.Warning);
+                    return;
+                }
+
+                if (CheckType.SelectedIndex != 0) // Только для чека продажи
+                {
+                    //await MessageBox.Show("Удаление строк возможно только в чеке продажи",
+                    //                     "Удаление",
+                    //                     MessageBoxButton.OK,
+                    //                     MessageBoxType.Warning);
+                    return;
+                }
+
+                // 2. Проверяем количество строк (как в WinForms)
+                if (_productsData.Count == 1)
+                {
+                    await MessageBox.Show("Единственную строку удалить нельзя, можно только удалить документ целиком",
+                                         "Удаление",
+                                         MessageBoxButton.OK,
+                                         MessageBoxType.Warning);
+                    return;
+                }
+
+                // 3. Проверяем права пользователя (код 1 - администратор)
+                if (MainStaticClass.Code_right_of_user != 1)
+                {
+                    // Для обычных пользователей показываем диалог подтверждения
+                    enable_delete = false;
+                    var interfaceSwitching = new Interface_switching();
+                    interfaceSwitching.caller_type = 3;
+                    interfaceSwitching.cc = this;
+                    interfaceSwitching.not_change_Cash_Operator = true;
+
+                    var result = await interfaceSwitching.ShowDialog<bool?>(this);
+
+                    if (!enable_delete)
+                    {
+                        await MessageBox.Show("Вам запрещено удалять строки",
+                                             "Права доступа",
+                                             MessageBoxButton.OK,
+                                             MessageBoxType.Warning);
+                        return;
+                    }
+                }
+
+                // 4. Показываем диалог указания причины удаления
+                var reasonsDialog = new ReasonsDeletionCheck();
+                reasonsDialog.Title = "Удаление строки";
+
+                var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                if (dialogResult == true && !string.IsNullOrEmpty(reasonsDialog.Reason))
+                {
+                    // 5. Записываем в лог
+                    await InsertIncidentRecordAsync(
+                        product.Code.ToString(),                        
+                        product.Quantity.ToString("F2"),
+                        "0",
+                        reasonsDialog.Reason
+                    );
+
+                    // 6. Удаляем товар из данных
+                    bool reloadKM = false;
+                    if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 13)
+                    {
+                        reloadKM = true;
+                    }
+                    
+                    _productsData.RemoveAt(_selectedProductRowIndex);
+
+                    // 7. Обновляем Grid
+                    RefreshProductsGrid();
+
+                    // 8. Обновляем общую сумму
+                    UpdateTotalSum();
+
+                    // 9. Записываем изменения в БД
+                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                           "0", "0", false, "0", "0", "0", "0");
+
+                    // 10. Устанавливаем флаг reopened (как в WinForms)
+                    reopened = true;
+
+                    Console.WriteLine($"✓ Товар '{product.Tovar}' удален с причиной: {reasonsDialog.Reason}");
+
+                    // 11. Выделяем следующую строку или снимаем выделение
+                    if (_productsData.Count > 0)
+                    {
+                        if (_selectedProductRowIndex >= _productsData.Count)
+                            _selectedProductRowIndex = _productsData.Count - 1;
+                        SelectProductRow(_selectedProductRowIndex);
+                    }
+                    else
+                    {
+                        ClearProductSelection();
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("✓ Удаление отменено пользователем");
+                    return;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ClearProductSelection();
-            }
-            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                               "0", "0", false, "0", "0", "0", "0");
-
-            // Выделяем следующую строку или снимаем выделение
-            if (_productsData.Count > 0)
-            {
-                _productsScrollViewer?.Focus();
-            }
-            else
-            {
-                ClearProductSelection();
+                Console.WriteLine($"✗ Ошибка при удалении товара: {ex.Message}");
+                await MessageBox.Show($"Ошибка при удалении товара: {ex.Message}",
+                                     "Ошибка",
+                                     MessageBoxButton.OK,
+                                     MessageBoxType.Error);
             }
         }
 
@@ -4533,7 +4712,7 @@ namespace Cash8Avalon
                 // Сбрасываем стиль перед обновлением текста
                 textBlock.FontWeight = FontWeight.Normal;
                 textBlock.Foreground = Brushes.Black;
-                textBlock.FontSize = 12;
+                textBlock.FontSize = PRODUCT_FONT_SIZE;
                 textBlock.Text = text;
             }
         }
@@ -5918,6 +6097,55 @@ namespace Cash8Avalon
 
             // Обновляем Grid сертификатов если нужно
             //RefreshCertificatesGrid();
+        }
+
+        public async Task InsertIncidentRecordAsync(string tovar, string quantity, string type_of_operation, string reason)
+        {
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+            try
+            {
+                conn.Open();
+                string query = "INSERT INTO deleted_items(" +
+                    "num_doc," +
+                    "num_cash," +
+                    "date_time_start," +
+                    "date_time_action," +
+                    "tovar," +
+                    "quantity," +
+                    "type_of_operation," +
+                    "guid," +
+                    "autor," +
+                    "reason)	VALUES(" +
+                    numdoc.ToString() + "," +
+                    num_cash.Tag.ToString() + ",'" +
+                    date_time_start.Text.Replace("Чек", "").Trim() + "','" +
+                    DateTime.Now.ToString("yyy-MM-dd HH:mm:ss") + "'," +
+                    tovar.ToString() + "," +
+                    quantity.ToString().Replace(",", ".") + "," +
+                    type_of_operation + ",'" +
+                    guid + "','" +
+                    MainStaticClass.CashOperatorInn + "','" +
+                    reason + "');";
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                command.ExecuteNonQuery();
+                command.Dispose();
+                conn.Close();
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show(" insert_incident_record" + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show(" insert_incident_record " + ex.Message);
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
         }
 
         private async Task<int> get_its_deleted_document()

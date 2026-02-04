@@ -362,9 +362,43 @@
                                     VerticalAlignment="Center" TextAlignment="Right"/>
                             
                             <!-- Кнопка оплаты (прижата вправо) -->
-                            <Button Grid.Column="4" Name="pay" Content="Оплатить/Вернуть (F8)"
-                                   FontWeight="Bold" FontSize="13" Height="45" MinWidth="160"
-                                   HorizontalAlignment="Right"/>
+                            <Button Grid.Column="4" Name="pay" 
+                                   Content="ОПЛАТИТЬ/ВЕРНУТЬ (F8)"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   Background="#FF2196F3"
+                                   BorderBrush="#1976D2"
+                                   BorderThickness="2"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   HorizontalContentAlignment="Center"
+                                   VerticalContentAlignment="Center"
+                                   Margin="0,0,10,0"
+                                   Height="45"
+                                   MinWidth="160"
+                                   Cursor="Hand"
+                                   CornerRadius="5"
+                                   Classes="primary">
+                                <Button.Styles>
+                                    <!-- Основной стиль -->
+                                    <Style Selector="Button.primary">
+                                        <Setter Property="Background" Value="#FF2196F3"/>
+                                        <Setter Property="BorderBrush" Value="#1976D2"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Style>
+        
+                                    <!-- При наведении -->
+                                    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="#4CAF50"/>
+                                    </Style>
+        
+                                    <!-- При нажатии -->
+                                    <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="#388E3C"/>
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
                         </Grid>
                     </Border>
                     

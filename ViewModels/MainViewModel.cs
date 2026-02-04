@@ -42,6 +42,10 @@ namespace Cash8Avalon.ViewModels
         public ICommand OpenFiscalPrinterCommand => new RelayCommand(() => OpenFiscalPrinter());
         public ICommand ExitCommand => new RelayCommand(() => ExitApplication());
         public ICommand OpenReceiptsCommand => new RelayCommand(() => OpenReceipts());
+        public void OpenCashChecks()
+        {
+            OpenReceipts();
+        }
         public ICommand CloseContentCommand => new RelayCommand(() => CloseCurrentContent());
         public ICommand OpenSettingConnectCommand => new RelayCommand(() => OpenSettingConnect());
         public ICommand OpenInternetDataLoadCommand => new RelayCommand(() => OpenInternetDataLoad());

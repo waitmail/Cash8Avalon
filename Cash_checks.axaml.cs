@@ -264,19 +264,65 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Добавление строки данных в таблицу
+        /// Добавление строки данных в таблицу (с учетом спец-стилей)
         /// </summary>
         private void AddRowToTable(CheckItem item, int dataRowIndex)
         {
             try
             {
                 // Добавляем новую строку в Grid
+                int gridRowIndex = _currentRow;
                 _tableGrid.RowDefinitions.Add(new RowDefinition(30, GridUnitType.Pixel));
 
-                // Определяем цвет фона строки (чередование)
-                var rowBackground = (dataRowIndex % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
+                // БАЗОВЫЙ ЦВЕТ по умолчанию (белые и AliceBlue строки поочередно)
+                IBrush rowBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
+                FontWeight fontWeight = FontWeight.Normal;
+                FontStyle fontStyle = FontStyle.Normal;
+                double fontSize = 12;
+                IBrush foreground = Brushes.Black;
+                TextDecorationCollection textDecorations = null;
 
-                // Создаем Border для всей строки (для выделения)
+                // === ЛОГИКА ВЫДЕЛЕНИЯ СПЕЦИАЛЬНЫХ СЛУЧАЕВ (как в WinForms) ===
+
+                // 1. Удаленный чек (ItsDeleted == 1)
+                if (item.ItsDeleted == 1)
+                {
+                    // Прозрачный фон и зачеркнутый текст
+                    rowBackground = Brushes.Transparent;
+                    fontSize = 18;
+                    fontStyle = FontStyle.Italic;
+                    foreground = Brushes.Gray;
+                    textDecorations = TextDecorations.Strikethrough;
+                }
+                // 2. Нераспечатанный чек (только для активных чеков)
+                else if (item.ItsDeleted == 0 && MainStaticClass.Use_Fiscall_Print)
+                {
+                    // Проверяем по логике из WinForms
+                    bool needHighlight = false;
+
+                    // Проверяем оба флага печати (или один, если другой не установлен)
+                    if (item.ItsPrint && item.ItsPrintP)
+                    {
+                        // Оба флага установлены - все распечатано
+                        needHighlight = false;
+                    }
+                    else
+                    {
+                        // Хотя бы один флаг не установлен - нужно выделение
+                        needHighlight = true;
+                    }
+
+                    if (needHighlight)
+                    {
+                        // Розовый фон (аналог Color.Pink) и подчеркнутый жирный текст
+                        rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый цвет
+                        fontSize = 18;
+                        fontWeight = FontWeight.Bold;
+                        textDecorations = TextDecorations.Underline;
+                    }
+                }
+
+                // Создаем Border для всей строки
                 var rowBorder = new Border
                 {
                     BorderBrush = Brushes.LightGray,
@@ -289,47 +335,103 @@ namespace Cash8Avalon
                 rowBorder.PointerPressed += OnRowPointerPressed;
 
                 Grid.SetColumnSpan(rowBorder, 10);
-                Grid.SetRow(rowBorder, _currentRow);
+                Grid.SetRow(rowBorder, gridRowIndex);
                 _tableGrid.Children.Add(rowBorder);
 
-                // Колонка 1: Удален
-                AddCellToRow(0, _currentRow, item.ItsDeleted.ToString());
+                // === ДОБАВЛЯЕМ ЯЧЕЙКИ С УЧЕТОМ СТИЛЕЙ ===
+
+                // Колонка 1: Статус (Удален/Активен)
+                AddStyledCell(0, gridRowIndex,
+                    item.ItsDeleted == 1 ? "Удален" : "Активен",
+                    HorizontalAlignment.Center,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
                 // Колонка 2: Дата
-                AddCellToRow(1, _currentRow, item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"));
+                AddStyledCell(1, gridRowIndex,
+                    item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"),
+                    HorizontalAlignment.Left,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
                 // Колонка 3: Клиент
-                AddCellToRow(2, _currentRow, item.ClientName);
+                AddStyledCell(2, gridRowIndex,
+                    item.ClientName,
+                    HorizontalAlignment.Left,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
                 // Колонка 4: Сумма
-                AddCellToRow(3, _currentRow, item.Cash.ToString("N2"), HorizontalAlignment.Right);
+                AddStyledCell(3, gridRowIndex,
+                    item.Cash.ToString("N2"),
+                    HorizontalAlignment.Right,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
                 // Колонка 5: Сдача
-                AddCellToRow(4, _currentRow, item.Remainder.ToString("N2"), HorizontalAlignment.Right);
+                AddStyledCell(4, gridRowIndex,
+                    item.Remainder.ToString("N2"),
+                    HorizontalAlignment.Right,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 6: Комментарий
-                AddCellToRow(5, _currentRow, item.Comment);
+                // Колонка 6: Тип чека
+                AddStyledCell(5, gridRowIndex,
+                    item.CheckType,
+                    HorizontalAlignment.Center,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 7: Тип
-                AddCellToRow(6, _currentRow, item.CheckType);
+                // Колонка 7: Комментарий
+                AddStyledCell(6, gridRowIndex,
+                    item.Comment,
+                    HorizontalAlignment.Left,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 8: Номер
-                AddCellToRow(7, _currentRow, item.DocumentNumber);
+                // Колонка 8: Номер документа
+                AddStyledCell(7, gridRowIndex,
+                    item.DocumentNumber,
+                    HorizontalAlignment.Right,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 9: Напечатан
-                AddCheckBoxCell(8, _currentRow, item.ItsPrint);
+                // Колонка 9: Напечатан (CheckBox)
+                AddCheckBoxCell(8, gridRowIndex, item.ItsPrint);
 
-                // Колонка 10: ПечатьП
-                AddCheckBoxCell(9, _currentRow, item.ItsPrintP);
+                // Колонка 10: ПечатьП (CheckBox)
+                AddCheckBoxCell(9, gridRowIndex, item.ItsPrintP);
 
                 _currentRow++;
 
-                Console.WriteLine($"✓ Добавлена строка {_currentRow - 1}");
+                Console.WriteLine($"✓ Добавлена строка {dataRowIndex}: {item.DocumentNumber}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении строки: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Добавление ячейки со стилями
+        /// </summary>
+        private void AddStyledCell(int column, int row, string text,
+                                  HorizontalAlignment alignment,
+                                  double fontSize, FontWeight fontWeight, FontStyle fontStyle,
+                                  IBrush foreground, TextDecorationCollection textDecorations)
+        {
+            var textBlock = new TextBlock
+            {
+                Text = text,
+                Margin = new Thickness(5, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = alignment,
+                FontSize = fontSize,
+                FontWeight = fontWeight,
+                FontStyle = fontStyle,
+                Foreground = foreground
+            };
+
+            if (textDecorations != null)
+            {
+                textBlock.TextDecorations = textDecorations;
+            }
+
+            Grid.SetColumn(textBlock, column);
+            Grid.SetRow(textBlock, row);
+            _tableGrid.Children.Add(textBlock);
         }
 
         /// <summary>
@@ -459,7 +561,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Снятие выделения
+        /// Снятие выделения (исправленная версия)
         /// </summary>
         private void ClearSelection()
         {
@@ -467,11 +569,49 @@ namespace Cash8Avalon
             {
                 if (_selectedRowBorder != null)
                 {
-                    // Восстанавливаем оригинальный стиль строки
-                    int dataRowIndex = (int)_selectedRowBorder.Tag;
-                    var originalBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
+                    // Восстанавливаем оригинальный фон строки
+                    // Сначала пробуем восстановить стиль строки
 
-                    _selectedRowBorder.Background = originalBackground;
+                    // Получаем индекс данных
+                    int dataRowIndex = (int)_selectedRowBorder.Tag;
+
+                    // Находим CheckItem для этой строки
+                    if (dataRowIndex >= 0 && dataRowIndex < _checkItems.Count)
+                    {
+                        var checkItem = _checkItems[dataRowIndex];
+
+                        // Проверяем, каким был оригинальный стиль
+                        IBrush originalBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
+
+                        // Если это удаленный чек
+                        if (checkItem.ItsDeleted == 1)
+                        {
+                            originalBackground = Brushes.Transparent;
+                        }
+                        // Если это нераспечатанный чек
+                        else if (checkItem.ItsDeleted == 0 && MainStaticClass.Use_Fiscall_Print)
+                        {
+                            bool needHighlight = false;
+                            if (!checkItem.ItsPrint || !checkItem.ItsPrintP)
+                            {
+                                needHighlight = true;
+                            }
+
+                            if (needHighlight)
+                            {
+                                originalBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый
+                            }
+                        }
+
+                        _selectedRowBorder.Background = originalBackground;
+                    }
+                    else
+                    {
+                        // Если не нашли, используем стандартную логику
+                        var originalBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
+                        _selectedRowBorder.Background = originalBackground;
+                    }
+
                     _selectedRowBorder.BorderBrush = Brushes.LightGray;
                     _selectedRowBorder.BorderThickness = new Thickness(0, 0, 0, 1);
 

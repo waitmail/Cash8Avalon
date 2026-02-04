@@ -1,54 +1,91 @@
-<Window xmlns="https://github.com/avaloniaui"
+п»ї<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="421"
+        mc:Ignorable="d"
         x:Class="Cash8Avalon.ReasonsDeletionCheck"
-        Title="Причины удаления чека"
-        Width="944"
-        Height="421"
+        Title="РџСЂРёС‡РёРЅС‹ СѓРґР°Р»РµРЅРёСЏ С‡РµРєР°"
+        Width="550"
+        Height="350"
         SizeToContent="Manual"
         WindowStartupLocation="CenterScreen"
         CanResize="False">
     
-    <DockPanel Margin="6">
-        <!-- ComboBox с причинами -->
-        <ComboBox Name="comboBox_reasons"
-                  DockPanel.Dock="Top"
-                  Margin="0,54,0,20"
-                  Height="52"
-                  FontSize="14.25"
-                  SelectedIndex="0"
-                  SelectionChanged="comboBox_reasons_SelectedIndexChanged">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Р—Р°РіРѕР»РѕРІРѕРє -->
+        <TextBlock Grid.Row="0"
+                   Text="Р’С‹Р±РµСЂРёС‚Рµ РїСЂРёС‡РёРЅСѓ СѓРґР°Р»РµРЅРёСЏ СЃС‚СЂРѕРєРё:"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,20"/>
+        
+        <!-- ComboBox СЃ РїСЂРёС‡РёРЅР°РјРё -->
+        <ComboBox Grid.Row="1"
+                  Name="comboBox_reasons"
+                  HorizontalAlignment="Center"
+                  Margin="0,0,0,30"
+                  Width="500"
+                  Height="45"
+                  FontSize="14.25">
             <ComboBox.Items>
-                <ListBoxItem>Проверка акции.</ListBoxItem>
-                <ListBoxItem>Несрабатывание акции, переоценки, уценки.</ListBoxItem>
-                <ListBoxItem>Ошибка магазина.</ListBoxItem>
-                <ListBoxItem>Техническая ошибка.</ListBoxItem>
-                <ListBoxItem>Клиента не устроила цена.</ListBoxItem>
-                <ListBoxItem>Клиенту не хватило денег.</ListBoxItem>
-                <ListBoxItem>IT-отдел</ListBoxItem>
-                <ListBoxItem>Иные причины.</ListBoxItem>
+                <ComboBoxItem>РџСЂРѕРІРµСЂРєР° Р°РєС†РёРё.</ComboBoxItem>
+                <ComboBoxItem>РќРµСЃСЂР°Р±Р°С‚С‹РІР°РЅРёРµ Р°РєС†РёРё, РїРµСЂРµРѕС†РµРЅРєРё, СѓС†РµРЅРєРё.</ComboBoxItem>
+                <ComboBoxItem>РћС€РёР±РєР° РјР°РіР°Р·РёРЅР°.</ComboBoxItem>
+                <ComboBoxItem>РўРµС…РЅРёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°.</ComboBoxItem>
+                <ComboBoxItem>РљР»РёРµРЅС‚Р° РЅРµ СѓСЃС‚СЂРѕРёР»Р° С†РµРЅР°.</ComboBoxItem>
+                <ComboBoxItem>РљР»РёРµРЅС‚Сѓ РЅРµ С…РІР°С‚РёР»Рѕ РґРµРЅРµРі.</ComboBoxItem>
+                <ComboBoxItem>IT-РѕС‚РґРµР»</ComboBoxItem>
+                <ComboBoxItem>РРЅС‹Рµ РїСЂРёС‡РёРЅС‹.</ComboBoxItem>
             </ComboBox.Items>
         </ComboBox>
         
-        <!-- Кнопки внизу -->
-        <StackPanel DockPanel.Dock="Bottom"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Center"
-                    Margin="0,20,0,0">
-            <Button Name="btn_ok"
-                    Content="Выбрать"
-                    Width="258"
-                    Height="94"
-                    Margin="0,0,374,0"
+        <!-- РљРЅРѕРїРєРё - Р·Р°РЅРёРјР°СЋС‚ РІСЃСЋ С€РёСЂРёРЅСѓ РєРѕРјР±РѕР±РѕРєСЃР° (500px) -->
+        <Grid Grid.Row="2"
+              Width="500"
+              HorizontalAlignment="Center">
+            
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- РљРЅРѕРїРєР° "Р’С‹Р±СЂР°С‚СЊ" - РїСЂРёР¶Р°С‚Р° Рє Р»РµРІРѕРјСѓ РєСЂР°СЋ РєРѕРјР±РѕР±РѕРєСЃР° -->
+            <Button Grid.Column="0"
+                    Name="btn_ok"
+                    Content="Р’С‹Р±СЂР°С‚СЊ"
+                    FontSize="14"
+                    FontWeight="Bold"
+                    Foreground="White"
+                    Background="#2196F3"
+                    BorderBrush="#1976D2"
+                    Width="180"
+                    Height="40"
+                    CornerRadius="3"
                     Click="Btn_ok_Click"/>
             
-            <Button Name="btn_cancel"
-                    Content="Отмена"
-                    Width="264"
-                    Height="94"
+            <!-- РљРЅРѕРїРєР° "РћС‚РјРµРЅР°" - РїСЂРёР¶Р°С‚Р° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ РєРѕРјР±РѕР±РѕРєСЃР° -->
+            <Button Grid.Column="2"
+                    Name="btn_cancel"
+                    Content="РћС‚РјРµРЅР°"
+                    FontSize="14"
+                    FontWeight="Bold"
+                    Foreground="White"
+                    Background="#F44336"
+                    BorderBrush="#D32F2F"
+                    Width="180"
+                    Height="40"
+                    CornerRadius="3"
                     Click="Btn_cancel_Click"/>
-        </StackPanel>
-    </DockPanel>
+            
+        </Grid>
+        
+    </Grid>
 </Window>
