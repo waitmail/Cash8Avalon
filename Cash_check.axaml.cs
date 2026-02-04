@@ -429,92 +429,44 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Устанавливает режим "только для чтения" для всей формы
-        /// </summary>
         private void SetFormReadOnly(bool readOnly)
         {
             try
             {
                 Console.WriteLine($"Установка режима только для чтения: {readOnly}");
 
-                // 1. Делаем недоступными основные элементы управления
-                if (txtB_search_product != null)
-                    txtB_search_product.IsEnabled = !readOnly;
+                // Блокируем элементы
+                txtB_search_product.IsEnabled = !readOnly;
+                client_barcode.IsEnabled = !readOnly;
+                pay.IsEnabled = !readOnly && MainStaticClass.Code_right_of_user == 1;
+                check_type.IsEnabled = !readOnly;
+                comment.IsEnabled = !readOnly;
+                txtB_inn.IsEnabled = !readOnly;
+                txtB_name.IsEnabled = !readOnly;
+                btn_get_name.IsEnabled = !readOnly;
 
-                if (client_barcode != null)
-                    client_barcode.IsEnabled = !readOnly;
-
-                if (pay != null)
-                    pay.IsEnabled = !readOnly && MainStaticClass.Code_right_of_user == 1;
-
-                if (check_type != null)
-                    check_type.IsEnabled = !readOnly;
-
-                if (comment != null)
-                    comment.IsEnabled = !readOnly;
-
-                if (txtB_inn != null)
-                    txtB_inn.IsEnabled = !readOnly;
-
-                if (txtB_name != null)
-                    txtB_name.IsEnabled = !readOnly;
-
-                if (btn_get_name != null)
-                    btn_get_name.IsEnabled = !readOnly;
-
-                // 2. Делаем Grid товаров недоступным
-                if (_productsScrollViewer != null)
-                {
-                    _productsScrollViewer.IsEnabled = !readOnly;
-                    _productsScrollViewer.Focusable = !readOnly;
-                }
-
-                if (_productsTableGrid != null)
-                {
-                    _productsTableGrid.IsEnabled = !readOnly;
-                    _productsTableGrid.Focusable = !readOnly;
-                }
-
-                // 3. Добавляем визуальный индикатор только для чтения
+                // Добавляем/удаляем водяной знак
                 if (readOnly)
                 {
-                    // Меняем цвет фона у элементов
-                    if (_productsScrollViewer != null)
-                        _productsScrollViewer.Background = Brushes.LightGray;
+                    this.Title = $"Просмотр чека №{numdoc}";
 
-                    if (_productsTableGrid != null)
-                        _productsTableGrid.Background = Brushes.LightGray;
-
-                    // Добавляем водяной знак "ТОЛЬКО ДЛЯ ЧТЕНИЯ"
-                    AddReadOnlyWatermark();
+                    // Даем время на отрисовку интерфейса
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        AddSimpleWatermark("ТОЛЬКО ПРОСМОТР");
+                    }, DispatcherPriority.Background);
                 }
                 else
                 {
-                    // Возвращаем нормальные цвета
-                    if (_productsScrollViewer != null)
-                        _productsScrollViewer.Background = Brushes.White;
+                    this.Title = $"Чек №{numdoc}";
 
-                    if (_productsTableGrid != null)
-                        _productsTableGrid.Background = Brushes.White;
-
-                    // Убираем водяной знак
-                    RemoveReadOnlyWatermark();
+                    // Удаляем водяной знак
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        RemoveWatermark();
+                        RemoveWatermarkOverlay();
+                    }, DispatcherPriority.Background);
                 }
-
-                // 4. Делаем все элементы управления недоступными для клавиатуры
-                if (readOnly)
-                {
-                    // Отписываемся от событий клавиатуры для Grid товаров
-                    this.RemoveHandler(KeyDownEvent, OnGlobalKeyDownForProducts);
-                }
-                else
-                {
-                    // Подписываемся на события клавиатуры для Grid товаров
-                    this.AddHandler(KeyDownEvent, OnGlobalKeyDownForProducts, RoutingStrategies.Tunnel);
-                }
-
-                Console.WriteLine($"✓ Режим только для чтения установлен: {readOnly}");
             }
             catch (Exception ex)
             {
@@ -522,33 +474,74 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Добавляет водяной знак "ТОЛЬКО ДЛЯ ЧТЕНИЯ" на Grid
-        /// </summary>
-        private void AddReadOnlyWatermark()
+        private Border _watermarkOverlay;
+
+        private void RemoveWatermarkOverlay()
         {
             try
             {
-                if (_productsTableGrid == null) return;
+                if (_watermarkOverlay != null && _watermarkOverlay.Parent is Grid parentGrid)
+                {
+                    parentGrid.Children.Remove(_watermarkOverlay);
+                    _watermarkOverlay = null;
+                    Console.WriteLine("✓ Водяной знак удален");
+                }
+            }
+            catch { }
+        }
 
+        private void AddSimpleWatermark(string text)
+        {
+            try
+            {
                 // Создаем TextBlock с водяным знаком
                 var watermark = new TextBlock
                 {
-                    Text = "ТОЛЬКО ДЛЯ ЧТЕНИЯ",
-                    FontSize = 48,
+                    Text = text,
+                    FontSize = 36,
                     FontWeight = FontWeight.Bold,
-                    Foreground = Brushes.LightGray,
-                    Opacity = 0.3,
+                    Foreground = new SolidColorBrush(Color.FromArgb(30, 128, 128, 128)),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                     RenderTransform = new RotateTransform(-30),
-                    IsHitTestVisible = false
+                    IsHitTestVisible = false,
+                    Name = "SimpleWatermark"
                 };
 
-                // Добавляем как последний элемент Grid
-                Grid.SetColumnSpan(watermark, 11);
-                Grid.SetRowSpan(watermark, _productsTableGrid.RowDefinitions.Count);
-                _productsTableGrid.Children.Add(watermark);
+                // Создаем Grid-контейнер
+                var watermarkGrid = new Grid
+                {
+                    IsHitTestVisible = false,
+                    Background = Brushes.Transparent,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Stretch
+                };
+
+                watermarkGrid.Children.Add(watermark);
+
+                // Добавляем прямо в Content окна через StackPanel
+                if (this.Content is StackPanel stackPanel)
+                {
+                    stackPanel.Children.Add(watermarkGrid);
+                }
+                else if (this.Content is Grid grid)
+                {
+                    grid.Children.Add(watermarkGrid);
+                    Grid.SetRowSpan(watermarkGrid, grid.RowDefinitions.Count);
+                    Grid.SetColumnSpan(watermarkGrid, grid.ColumnDefinitions.Count);
+                }
+                else
+                {
+                    // Создаем новый контейнер
+                    var container = new Grid();
+                    var currentContent = this.Content as Control;
+                    this.Content = null;
+                    container.Children.Add(currentContent);
+                    container.Children.Add(watermarkGrid);
+                    this.Content = container;
+                }
+
+                Console.WriteLine($"✓ Простой водяной знак добавлен: {text}");
             }
             catch (Exception ex)
             {
@@ -556,22 +549,25 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Удаляет водяной знак "ТОЛЬКО ДЛЯ ЧТЕНИЯ" с Grid
-        /// </summary>
-        private void RemoveReadOnlyWatermark()
+        private Canvas _watermarkCanvas;
+        
+        ///// <summary>
+        ///// Удаляет водяной знак
+        ///// </summary>
+        private void RemoveWatermark()
         {
             try
             {
-                if (_productsTableGrid == null) return;
-
-                // Ищем и удаляем водяной знак
-                var watermark = _productsTableGrid.Children
-                    .FirstOrDefault(c => c is TextBlock textBlock && textBlock.Text == "ТОЛЬКО ДЛЯ ЧТЕНИЯ");
-
-                if (watermark != null)
+                if (_watermarkCanvas != null)
                 {
-                    _productsTableGrid.Children.Remove(watermark);
+                    // Удаляем Canvas из родительского контейнера
+                    if (_watermarkCanvas.Parent is Grid parentGrid)
+                    {
+                        parentGrid.Children.Remove(_watermarkCanvas);
+                    }
+
+                    _watermarkCanvas = null;
+                    Console.WriteLine("✓ Водяной знак удален");
                 }
             }
             catch (Exception ex)
@@ -3948,8 +3944,12 @@ namespace Cash8Avalon
 
             if (!isProductsTableFocused) return;
 
+            // Проверяем режим документа
+            bool isReadOnlyMode = !IsNewCheck; // Документ не новый = режим чтения
+
             switch (e.Key)
             {
+                // ВСЕ КЛАВИШИ НАВИГАЦИИ - РАБОТАЮТ В ЛЮБОМ РЕЖИМЕ
                 case Key.Up:
                     MoveProductSelectionUp();
                     e.Handled = true;
@@ -3961,56 +3961,73 @@ namespace Cash8Avalon
                     break;
 
                 case Key.Home:
-                    if (_productsData.Count > 0) SelectProductRow(0);
-                    e.Handled = true;
+                    if (_productsData.Count > 0)
+                    {
+                        MoveProductSelectionHome();
+                        e.Handled = true;
+                    }
                     break;
 
                 case Key.End:
-                    if (_productsData.Count > 0) SelectProductRow(_productsData.Count - 1);
-                    e.Handled = true;
+                    if (_productsData.Count > 0)
+                    {
+                        MoveProductSelectionEnd();
+                        e.Handled = true;
+                    }
                     break;
 
-                // ОБРАБОТКА КЛАВИШ + И - ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА
+                // КЛАВИШИ РЕДАКТИРОВАНИЯ - РАБОТАЮТ ТОЛЬКО В РЕЖИМЕ РЕДАКТИРОВАНИЯ
                 case Key.Add:
                 case Key.OemPlus:
-                    if (_selectedProductRowIndex >= 0)
-                        IncreaseProductQuantity(_selectedProductRowIndex);
-                    e.Handled = true;
-                    break;
-
                 case Key.Subtract:
                 case Key.OemMinus:
-                    if (_selectedProductRowIndex >= 0)
-                        DecreaseProductQuantity(_selectedProductRowIndex);
-                    e.Handled = true;
-                    break;
-
-                // Дополнительно: клавиша Delete для удаления товара
                 case Key.Delete:
-                    if (_selectedProductRowIndex >= 0)
-                        DeleteSelectedProduct();
-                    e.Handled = true;
-                    break;
-
-                // Клавиша Enter для быстрого редактирования количества
                 case Key.Enter:
-                    if (_selectedProductRowIndex >= 0)
-                        ShowQuantityEditDialog(_selectedProductRowIndex);
-                    e.Handled = true;
+                    if (isReadOnlyMode)
+                    {
+                        // В режиме чтения показываем сообщение
+                        Console.WriteLine("⚠ Режим просмотра: редактирование запрещено");
+                        e.Handled = true;
+
+                        // Можно добавить звуковой сигнал или визуальную подсказку
+                        if (_selectedProductRowBorder != null)
+                        {
+                            FlashBorderTemporarily(_selectedProductRowBorder, Colors.OrangeRed);
+                        }
+                    }
+                    // Если не режим чтения, то обработка продолжится ниже
+                    // (у вас уже есть обработчики для этих клавиш)
                     break;
             }
         }
 
-        // Перемещение выделения вверх в товарах
-        //private void MoveProductSelectionUp()
-        //{
-        //    if (_productsData.Count == 0) return;
+        // Простая вспомогательная функция для мигания рамки
+        private void FlashBorderTemporarily(Border border, Color flashColor)
+        {
+            try
+            {
+                var originalColor = border.BorderBrush;
 
-        //    int newIndex = _selectedProductRowIndex - 1;
-        //    if (newIndex < 0) newIndex = 0; // Остаемся на первой строке
+                border.BorderBrush = new SolidColorBrush(flashColor);
+                border.BorderThickness = new Thickness(2);
 
-        //    SelectProductRow(newIndex);
-        //}
+                // Возвращаем исходный вид через 300 мс
+                DispatcherTimer timer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(300)
+                };
+
+                timer.Tick += (s, e) =>
+                {
+                    border.BorderBrush = originalColor;
+                    border.BorderThickness = new Thickness(0, 0, 0, 1);
+                    timer.Stop();
+                };
+
+                timer.Start();
+            }
+            catch { /* Игнорируем ошибки при мигании */ }
+        }      
 
         private void MoveProductSelectionUp()
         {
@@ -4021,17 +4038,7 @@ namespace Cash8Avalon
 
             SelectProductRow(newIndex);
         }
-
-        // Перемещение выделения вниз в товарах
-        //private void MoveProductSelectionDown()
-        //{
-        //    if (_productsData.Count == 0) return;
-
-        //    int newIndex = _selectedProductRowIndex + 1;
-        //    if (newIndex >= _productsData.Count) newIndex = _productsData.Count - 1; // Остаемся на последней строке
-
-        //    SelectProductRow(newIndex);
-        //}
+       
         private void MoveProductSelectionDown()
         {
             if (_productsData.Count == 0) return;
