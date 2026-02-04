@@ -157,7 +157,7 @@ namespace Cash8Avalon
         private static readonly IBrush QUANTITY_ERROR_COLOR = Brushes.OrangeRed;
 
         // В классе Cash_check добавьте константу
-        private const int PRODUCT_FONT_SIZE = 16; // Единый размер шрифта для всех товаров
+        private const int PRODUCT_FONT_SIZE = 18; // Единый размер шрифта для всех товаров
 
         // Классы данных для товаров
         public class ProductItem
@@ -498,7 +498,7 @@ namespace Cash8Avalon
                 var watermark = new TextBlock
                 {
                     Text = text,
-                    FontSize = 36,
+                    FontSize = 56,
                     FontWeight = FontWeight.Bold,
                     Foreground = new SolidColorBrush(Color.FromArgb(30, 128, 128, 128)),
                     HorizontalAlignment = HorizontalAlignment.Center,
@@ -575,7 +575,6 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при удалении водяного знака: {ex.Message}");
             }
         }
-
 
 
         private async void Cash_check_Loaded(object? sender, EventArgs e)
