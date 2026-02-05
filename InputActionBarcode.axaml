@@ -9,9 +9,9 @@
         Width="500"
         Height="75"
         MinWidth="500"
-        MinHeight="60"
+        MinHeight="100"
         MaxWidth="500"
-        MaxHeight="99"
+        MaxHeight="200"
         WindowStartupLocation="CenterScreen"
         SizeToContent="WidthAndHeight"
         CanResize="False"
@@ -32,7 +32,7 @@
             CornerRadius="2"
             Margin="0">
         
-        <Grid Margin="16,8,16,8">
+        <Grid Margin="16,5,16,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -42,7 +42,7 @@
             <TextBlock x:Name="authorizationTextBlock"
                        Grid.Row="0"
                        HorizontalAlignment="Center"
-                       FontSize="14"
+                       FontSize="18"
                        FontWeight="Bold"
                        Foreground="DarkGreen"
                        Text="Введите штрихкод, включающий акцию"
@@ -54,9 +54,9 @@
             <TextBox x:Name="inputBarcodeTextBox"
                      Grid.Row="1"
                      Width="472"
-                     Height="20"
+                     Height="40"
                      MaxLength="200"
-                     FontSize="12"
+                     FontSize="18"
                      VerticalAlignment="Center"
                      HorizontalAlignment="Center"
                      Text="" />

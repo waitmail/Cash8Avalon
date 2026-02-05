@@ -216,6 +216,10 @@ namespace Cash8Avalon
                 // 3. Создаем Grid программно
                 CreateAllGridsProgrammatically();
 
+                // 4. Настраиваем контекстное меню для изменения ширины колонок
+                //    (это установит ContextMenu для _productsTableGrid)
+                SetupGridContextMenu();
+
                 // 4. Подписываемся на глобальные события клавиатуры
                 this.AddHandler(KeyDownEvent, OnGlobalKeyDownForProducts, RoutingStrategies.Tunnel);
 
@@ -234,6 +238,678 @@ namespace Cash8Avalon
             }
             
             Console.WriteLine("=== Конструктор Cash_check завершен ===");
+            UpdateWindowTitle();
+        }
+
+        #region Вспомогательные методы для работы с шириной колонок
+
+        // Метод для получения заголовка колонки
+        private string GetColumnHeader(int columnIndex)
+        {
+            var headers = new[]
+            {
+        "Код",
+        "Наименование",
+        "Кол-во",
+        "Цена",
+        "Цена ск.",
+        "Сумма",
+        "Сумма ск.",
+        "Акция",
+        "Подарок",
+        "Акция2",
+        "Марк"
+    };
+
+            if (columnIndex >= 0 && columnIndex < headers.Length)
+                return headers[columnIndex];
+
+            return $"Колонка {columnIndex + 1}";
+        }
+
+        // Метод для получения текста ячейки для конкретной колонки
+        private string GetCellTextForColumn(ProductItem product, int columnIndex)
+        {
+            if (product == null)
+                return string.Empty;
+
+            switch (columnIndex)
+            {
+                case 0: return product.Code.ToString();
+                case 1: return product.Tovar;
+                case 2: return product.Quantity.ToString();
+                case 3: return product.Price.ToString("N2");
+                case 4: return product.PriceAtDiscount.ToString("N2");
+                case 5: return product.Sum.ToString("N2");
+                case 6: return product.SumAtDiscount.ToString("N2");
+                case 7: return product.Action.ToString();
+                case 8: return product.Gift.ToString();
+                case 9: return product.Action2.ToString();
+                case 10: return product.Mark;
+                default: return string.Empty;
+            }
+        }
+
+        // Исправленный метод для расчета ширины текста
+        private double GetTextWidth(string text, double fontSize, FontWeight fontWeight)
+        {
+            if (string.IsNullOrEmpty(text))
+                return 0;
+
+            try
+            {
+                // Упрощенный расчет ширины текста
+                // В реальном приложении лучше использовать FormattedText для точного расчета
+
+                // Базовый коэффициент для расчета ширины символа
+                double charWidth = fontSize * 0.55; // Примерный коэффициент для нормального шрифта
+
+                // Увеличиваем коэффициент для жирного шрифта
+                if (fontWeight == FontWeight.Bold ||
+                    fontWeight == FontWeight.SemiBold ||
+                    fontWeight == FontWeight.ExtraBold)
+                {
+                    charWidth *= 1.15; // +15% для жирного шрифта
+                }
+
+                // Упрощенный расчет общей ширины
+                double totalWidth = 0;
+
+                foreach (char c in text)
+                {
+                    // Учитываем разные типы символов
+                    if (IsWideCharacter(c))
+                        totalWidth += charWidth * 1.2; // Широкие символы (кириллица, иероглифы)
+                    else if (IsNarrowCharacter(c))
+                        totalWidth += charWidth * 0.8; // Узкие символы (цифры, латиница)
+                    else if (IsVeryNarrowCharacter(c))
+                        totalWidth += charWidth * 0.5; // Очень узкие символы (точки, пробелы)
+                    else
+                        totalWidth += charWidth; // Обычные символы
+                }
+
+                // Минимальная ширина
+                return Math.Max(totalWidth, 5);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Ошибка расчета ширины текста: {ex.Message}");
+                return text.Length * 7; // Фолбэк: 7px на символ
+            }
+        }
+
+        // Вспомогательные методы для определения типа символов
+        private bool IsWideCharacter(char c)
+        {
+            // Кириллица, греческие символы, иероглифы
+            return (c >= 0x0400 && c <= 0x04FF) || // Кириллица
+                   (c >= 0x0370 && c <= 0x03FF) || // Греческий
+                   (c >= 0x4E00 && c <= 0x9FFF);   // Иероглифы CJK
+        }
+
+        private bool IsNarrowCharacter(char c)
+        {
+            // Цифры, латинские буквы
+            return (c >= 0x0030 && c <= 0x0039) || // Цифры
+                   (c >= 0x0041 && c <= 0x005A) || // Латиница верхний регистр
+                   (c >= 0x0061 && c <= 0x007A);   // Латиница нижний регистр
+        }
+
+        private bool IsVeryNarrowCharacter(char c)
+        {
+            // Пунктуация, пробелы
+            return c == ' ' || c == '.' || c == ',' || c == ':' ||
+                   c == ';' || c == '!' || c == '?' || c == '\'' ||
+                   c == '"' || c == '(' || c == ')' || c == '[' ||
+                   c == ']' || c == '{' || c == '}';
+        }
+
+        // Метод для автонастройки ширины конкретной колонки
+        private void AutoSizeColumn(int columnIndex)
+        {
+            try
+            {
+                if (_productsTableGrid == null || columnIndex < 0 || columnIndex >= _productsTableGrid.ColumnDefinitions.Count)
+                    return;
+
+                double maxWidth = 0;
+
+                // 1. Проверяем заголовок колонки
+                var headerText = GetColumnHeader(columnIndex);
+                var headerWidth = GetTextWidth(headerText, 12, FontWeight.Bold);
+                maxWidth = Math.Max(maxWidth, headerWidth + 20); // +20px на padding
+
+                // 2. Проверяем все строки с данными
+                foreach (var product in _productsData)
+                {
+                    string cellText = GetCellTextForColumn(product, columnIndex);
+                    if (!string.IsNullOrEmpty(cellText))
+                    {
+                        double cellWidth = GetTextWidth(cellText, 18, FontWeight.Normal);
+                        maxWidth = Math.Max(maxWidth, cellWidth + 15); // +15px на padding
+                    }
+                }
+
+                // 3. Устанавливаем минимальные и максимальные ограничения
+                double finalWidth = Math.Max(30, Math.Min(maxWidth + 10, 500)); // Min 30px, Max 500px
+
+                _productsTableGrid.ColumnDefinitions[columnIndex].Width = new GridLength(finalWidth, GridUnitType.Pixel);
+
+                Console.WriteLine($"✓ Автонастройка колонки {columnIndex}: {finalWidth:F0}px");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка автонастройки колонки {columnIndex}: {ex.Message}");
+            }
+        }
+
+        // Метод для установки ширины колонки
+        private void SetColumnWidth(int columnIndex, double width)
+        {
+            try
+            {
+                if (_productsTableGrid == null || columnIndex < 0 || columnIndex >= _productsTableGrid.ColumnDefinitions.Count)
+                    return;
+
+                // Ограничиваем минимальную и максимальную ширину
+                width = Math.Max(30, Math.Min(width, 1000));
+
+                _productsTableGrid.ColumnDefinitions[columnIndex].Width = new GridLength(width, GridUnitType.Pixel);
+
+                Console.WriteLine($"✓ Ширина колонки {columnIndex} установлена: {width}px");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка установки ширины колонки: {ex.Message}");
+            }
+        }
+
+        // Метод для сброса всех колонок к значениям по умолчанию
+        private void ResetAllColumnWidths()
+        {
+            try
+            {
+                if (_productsTableGrid == null)
+                    return;
+
+                // Значения по умолчанию для каждой колонки
+                double[] defaultWidths = { 80, 300, 80, 100, 100, 100, 100, 80, 80, 80, 60 };
+
+                for (int i = 0; i < Math.Min(_productsTableGrid.ColumnDefinitions.Count, defaultWidths.Length); i++)
+                {
+                    SetColumnWidth(i, defaultWidths[i]);
+                }
+
+                Console.WriteLine("✓ Ширина всех колонок сброшена к значениям по умолчанию");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка сброса ширины колонок: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        // Метод для создания контекстного меню таблицы
+        private void SetupGridContextMenu()
+        {
+            try
+            {
+                if (_productsTableGrid == null)
+                    return;
+
+                // Создаем контекстное меню для Grid
+                var contextMenu = new ContextMenu
+                {
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.LightGray,
+                    BorderThickness = new Thickness(1)
+                };
+
+                // 1. Пункт "Настроить ширину колонок"
+                var setupWidthsItem = new MenuItem
+                {
+                    Header = "Настроить ширину колонок",
+                    FontWeight = FontWeight.SemiBold,
+                    Icon = new Border
+                    {
+                        Width = 16,
+                        Height = 16,
+                        Background = Brushes.SteelBlue,
+                        Margin = new Thickness(0, 0, 5, 0)
+                    }
+                };
+
+                setupWidthsItem.Click += async (s, e) =>
+                {
+                    await ShowColumnWidthSettingsDialog();
+                };
+
+                // 2. Пункт "Автонастройка всех колонок"
+                var autoSizeItem = new MenuItem
+                {
+                    Header = "Автонастройка всех колонок",
+                    Icon = new Border
+                    {
+                        Width = 16,
+                        Height = 16,
+                        Background = Brushes.LightGreen,
+                        Margin = new Thickness(0, 0, 5, 0)
+                    }
+                };
+
+                autoSizeItem.Click += (s, e) =>
+                {
+                    for (int i = 0; i < _productsTableGrid.ColumnDefinitions.Count; i++)
+                    {
+                        AutoSizeColumn(i);
+                    }
+                };
+
+                // 3. Пункт "Сбросить ширину"
+                var resetItem = new MenuItem
+                {
+                    Header = "Сбросить ширину к значениям по умолчанию",
+                    Icon = new Border
+                    {
+                        Width = 16,
+                        Height = 16,
+                        Background = Brushes.LightCoral,
+                        Margin = new Thickness(0, 0, 5, 0)
+                    }
+                };
+
+                resetItem.Click += (s, e) =>
+                {
+                    ResetAllColumnWidths();
+                };
+
+                // 4. Разделитель
+                contextMenu.Items.Add(setupWidthsItem);
+                contextMenu.Items.Add(autoSizeItem);
+                contextMenu.Items.Add(resetItem);
+                contextMenu.Items.Add(new Separator());
+
+                // 5. Пункты для каждой колонки
+                for (int i = 0; i < _productsTableGrid.ColumnDefinitions.Count; i++)
+                {
+                    var columnItem = new MenuItem
+                    {
+                        Header = $"{i + 1}. {GetColumnHeader(i)}"
+                    };
+
+                    // Подменю для конкретной колонки
+                    var currentWidth = _productsTableGrid.ColumnDefinitions[i].Width.Value;
+                    var currentIndex = i;
+
+                    var widthLabel = new MenuItem
+                    {
+                        Header = $"Текущая ширина: {currentWidth:F0}px",
+                        IsEnabled = false,
+                        Foreground = Brushes.Gray
+                    };
+
+                    var autoSizeColumnItem = new MenuItem
+                    {
+                        Header = "Автонастройка ширины"
+                    };
+
+                    autoSizeColumnItem.Click += (s, e) =>
+                    {
+                        AutoSizeColumn(currentIndex);
+                    };
+
+                    var setWidthItem = new MenuItem
+                    {
+                        Header = "Задать ширину..."
+                    };
+
+                    setWidthItem.Click += async (s, e) =>
+                    {
+                        await ShowSingleColumnWidthDialog(currentIndex);
+                    };
+
+                    columnItem.Items.Add(widthLabel);
+                    columnItem.Items.Add(new Separator());
+                    columnItem.Items.Add(autoSizeColumnItem);
+                    columnItem.Items.Add(setWidthItem);
+
+                    contextMenu.Items.Add(columnItem);
+                }
+
+                // Присваиваем контекстное меню Grid
+                _productsTableGrid.ContextMenu = contextMenu;
+
+                Console.WriteLine("✓ Контекстное меню для Grid настроено");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка настройки контекстного меню: {ex.Message}");
+            }
+        }
+
+        // Диалог для настройки ширины конкретной колонки
+        private async Task ShowSingleColumnWidthDialog(int columnIndex)
+        {
+            try
+            {
+                var currentWidth = _productsTableGrid.ColumnDefinitions[columnIndex].Width.Value;
+                var header = GetColumnHeader(columnIndex);
+
+                var dialog = new Window
+                {
+                    Title = $"Ширина колонки: {header}",
+                    Width = 350,
+                    Height = 200,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    CanResize = false,
+                    SizeToContent = SizeToContent.Manual
+                };
+
+                var grid = new Grid();
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+                // Заголовок
+                var titleText = new TextBlock
+                {
+                    Text = $"Колонка {columnIndex + 1}: {header}",
+                    FontWeight = FontWeight.Bold,
+                    FontSize = 14,
+                    Margin = new Thickness(10, 10, 10, 5),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                Grid.SetRow(titleText, 0);
+                grid.Children.Add(titleText);
+
+                // Текущая ширина
+                var currentText = new TextBlock
+                {
+                    Text = $"Текущая ширина: {currentWidth:F0}px",
+                    FontSize = 12,
+                    Margin = new Thickness(10, 0, 10, 10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                Grid.SetRow(currentText, 1);
+                grid.Children.Add(currentText);
+
+                // Slider
+                var slider = new Slider
+                {
+                    Minimum = 30,
+                    Maximum = 500,
+                    Value = currentWidth,
+                    Margin = new Thickness(20, 10),
+                    TickFrequency = 10,
+                    IsSnapToTickEnabled = true,
+                    TickPlacement = TickPlacement.BottomRight
+                };
+
+                var sliderValue = new TextBlock
+                {
+                    Text = $"{slider.Value:F0}px",
+                    FontSize = 12,
+                    Margin = new Thickness(10, 0),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+
+                slider.ValueChanged += (s, e) =>
+                {
+                    sliderValue.Text = $"{e.NewValue:F0}px";
+                };
+
+                Grid.SetRow(slider, 2);
+                grid.Children.Add(slider);
+
+                Grid.SetRow(sliderValue, 2);
+                Grid.SetRowSpan(sliderValue, 1);
+                grid.Children.Add(sliderValue);
+
+                // Кнопки
+                var buttonPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 15, 0, 10),
+                    Spacing = 20
+                };
+
+                var okButton = new Button
+                {
+                    Content = "OK",
+                    Width = 80,
+                    Padding = new Thickness(10, 5),
+                    IsDefault = true
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = "Отмена",
+                    Width = 80,
+                    Padding = new Thickness(10, 5),
+                    IsCancel = true
+                };
+
+                okButton.Click += (s, e) =>
+                {
+                    SetColumnWidth(columnIndex, slider.Value);
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    dialog.Close();
+                };
+
+                buttonPanel.Children.Add(okButton);
+                buttonPanel.Children.Add(cancelButton);
+                Grid.SetRow(buttonPanel, 3);
+                grid.Children.Add(buttonPanel);
+
+                dialog.Content = grid;
+
+                var parentWindow = this.FindAncestorOfType<Window>();
+                await dialog.ShowDialog(parentWindow);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка показа диалога ширины колонки: {ex.Message}");
+            }
+        }
+
+        // Диалог для настройки всех колонок
+        private async Task ShowColumnWidthSettingsDialog()
+        {
+            try
+            {
+                var dialog = new Window
+                {
+                    Title = "Настройка ширины колонок",
+                    Width = 450,
+                    Height = 400,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    CanResize = false
+                };
+
+                var mainGrid = new Grid();
+                mainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                mainGrid.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star)));
+                mainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+                // Заголовок
+                var title = new TextBlock
+                {
+                    Text = "Настройка ширины колонок таблицы",
+                    FontWeight = FontWeight.Bold,
+                    FontSize = 14,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                Grid.SetRow(title, 0);
+                mainGrid.Children.Add(title);
+
+                // Список колонок с слайдерами
+                var scrollViewer = new ScrollViewer
+                {
+                    Margin = new Thickness(10),
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+                };
+
+                var columnsStack = new StackPanel { Spacing = 15 };
+
+                for (int i = 0; i < _productsTableGrid.ColumnDefinitions.Count; i++)
+                {
+                    var columnPanel = CreateColumnWidthControlPanel(i);
+                    columnsStack.Children.Add(columnPanel);
+                }
+
+                scrollViewer.Content = columnsStack;
+                Grid.SetRow(scrollViewer, 1);
+                mainGrid.Children.Add(scrollViewer);
+
+                // Кнопки
+                var buttonPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(10),
+                    Spacing = 20
+                };
+
+                var applyButton = new Button
+                {
+                    Content = "Применить все",
+                    Width = 120,
+                    Padding = new Thickness(10, 5),
+                    Background = Brushes.LightGreen
+                };
+
+                var resetButton = new Button
+                {
+                    Content = "Сбросить все",
+                    Width = 120,
+                    Padding = new Thickness(10, 5),
+                    Background = Brushes.LightCoral
+                };
+
+                var cancelButton = new Button
+                {
+                    Content = "Отмена",
+                    Width = 120,
+                    Padding = new Thickness(10, 5),
+                    IsCancel = true
+                };
+
+                applyButton.Click += (s, e) =>
+                {
+                    // Применяем все изменения
+                    foreach (var child in columnsStack.Children)
+                    {
+                        if (child is Grid columnGrid && columnGrid.Tag is int colIndex)
+                        {
+                            var slider = columnGrid.Children
+                                .OfType<Slider>()
+                                .FirstOrDefault();
+
+                            if (slider != null)
+                            {
+                                SetColumnWidth(colIndex, slider.Value);
+                            }
+                        }
+                    }
+                    dialog.Close();
+                };
+
+                resetButton.Click += (s, e) =>
+                {
+                    ResetAllColumnWidths();
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    dialog.Close();
+                };
+
+                buttonPanel.Children.Add(applyButton);
+                buttonPanel.Children.Add(resetButton);
+                buttonPanel.Children.Add(cancelButton);
+                Grid.SetRow(buttonPanel, 2);
+                mainGrid.Children.Add(buttonPanel);
+
+                dialog.Content = mainGrid;
+
+                var parentWindow = this.FindAncestorOfType<Window>();
+                await dialog.ShowDialog(parentWindow);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка показа диалога настроек колонок: {ex.Message}");
+            }
+        }
+
+        // Создает панель управления для одной колонки
+        private Grid CreateColumnWidthControlPanel(int columnIndex)
+        {
+            var grid = new Grid();
+            grid.Tag = columnIndex; // Сохраняем индекс колонки
+            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(2, GridUnitType.Star)));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(3, GridUnitType.Star)));
+
+            var currentWidth = _productsTableGrid.ColumnDefinitions[columnIndex].Width.Value;
+            var header = GetColumnHeader(columnIndex);
+
+            // Название колонки
+            var label = new TextBlock
+            {
+                Text = $"{columnIndex + 1}. {header}",
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0),
+                TextWrapping = TextWrapping.Wrap
+            };
+            Grid.SetColumn(label, 0);
+            grid.Children.Add(label);
+
+            // Slider с текущим значением
+            var slider = new Slider
+            {
+                Minimum = 30,
+                Maximum = 500,
+                Value = currentWidth,
+                TickFrequency = 10,
+                IsSnapToTickEnabled = true
+            };
+
+            var valueText = new TextBlock
+            {
+                Text = $"{currentWidth:F0}px",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(10, 0, 0, 0),
+                MinWidth = 60
+            };
+
+            slider.ValueChanged += (s, e) =>
+            {
+                valueText.Text = $"{e.NewValue:F0}px";
+            };
+
+            var sliderContainer = new Grid();
+            sliderContainer.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+            sliderContainer.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+
+            Grid.SetColumn(slider, 0);
+            sliderContainer.Children.Add(slider);
+
+            Grid.SetColumn(valueText, 1);
+            sliderContainer.Children.Add(valueText);
+
+            Grid.SetColumn(sliderContainer, 1);
+            grid.Children.Add(sliderContainer);
+
+            return grid;
         }
 
         protected override async void OnLoaded(RoutedEventArgs e)
@@ -332,7 +1008,7 @@ namespace Cash8Avalon
                     this.check_type.IsEnabled = false;
                     //this.inputbarcode.Enabled = false;
                     this.txtB_search_product.IsEnabled = false;
-                    this.client_barcode.IsEnabled = false;
+                    //this.client_barcode.IsEnabled = false;
                     //this.sale_cancellation.Enabled = false;
                     //this.inventory.Enabled = false;
                     this.comment.IsEnabled = false;                    
@@ -427,7 +1103,86 @@ namespace Cash8Avalon
                     }
                 }
             }
+            UpdateWindowTitle();
+            UpdatePaymentInfoRowVisibility();
         }
+
+        private void UpdatePaymentInfoRowVisibility()
+        {
+            try
+            {
+                var paymentInfoRow = this.FindControl<Border>("PaymentInfoRow");
+                if (paymentInfoRow != null)
+                {
+                    paymentInfoRow.IsVisible = !IsNewCheck;
+
+                    if (IsNewCheck)
+                    {
+                        Console.WriteLine("✓ Строка с платежной информацией скрыта (новый чек)");
+                    }
+                    else
+                    {
+                        Console.WriteLine("✓ Строка с платежной информацией показана (открытый чек)");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при обновлении видимости строки платежей: {ex.Message}");
+            }
+        }
+
+
+
+        /// <summary>
+        /// Обновляет заголовок окна в стандартном формате
+        /// Формат: "Чек №[номер] от [дата начала]"
+        /// </summary>
+        private void UpdateWindowTitle()
+        {
+            try
+            {
+                string title = "Чек";
+
+                if (numdoc > 0)
+                {
+                    title += $" №{numdoc}";
+                }
+
+                if (!string.IsNullOrEmpty(date_time_start?.Text))
+                {
+                    string datePart = date_time_start.Text;
+
+                    if (datePart.StartsWith("Чек"))
+                    {
+                        datePart = datePart.Substring(3).Trim();
+                    }
+
+                    if (!string.IsNullOrEmpty(datePart))
+                    {
+                        title += $" от {datePart}";
+                    }
+                }
+
+                // Обновляем Title окна
+                this.Title = title;
+
+                // Обновляем кастомный заголовок
+                var titleTextBlock = this.FindControl<TextBlock>("titleTextBlock");
+                if (titleTextBlock != null)
+                {
+                    titleTextBlock.Text = title;
+                }
+
+                Console.WriteLine($"✓ Заголовок окна обновлен: {title}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при обновлении заголовка: {ex.Message}");
+                this.Title = "Чек";
+            }
+        }
+
 
         private void SetFormReadOnly(bool readOnly)
         {
@@ -437,7 +1192,7 @@ namespace Cash8Avalon
 
                 // Блокируем элементы
                 txtB_search_product.IsEnabled = !readOnly;
-                client_barcode.IsEnabled = !readOnly;
+                //client_barcode.IsEnabled = !readOnly;
                 pay.IsEnabled = !readOnly && MainStaticClass.Code_right_of_user == 1;
                 check_type.IsEnabled = !readOnly;
                 comment.IsEnabled = !readOnly;
@@ -671,7 +1426,7 @@ namespace Cash8Avalon
                     this.check_type.IsEnabled = false;
                     //this.inputbarcode.Enabled = false;
                     this.txtB_search_product.IsEnabled = false;
-                    this.client_barcode.IsEnabled = false;
+                    //this.client_barcode.IsEnabled = false;
                     //this.sale_cancellation.Enabled = false;
                     //this.inventory.Enabled = false;
                     //this.comment.Enabled = false;
@@ -691,7 +1446,7 @@ namespace Cash8Avalon
                     this.check_type.IsEnabled = true;
                     //this.inputbarcode.Enabled = true;
                     this.txtB_search_product.IsEnabled = true;
-                    this.client_barcode.IsEnabled = false;
+                    //this.client_barcode.IsEnabled = false;
                     ToOpenTheWrittenDownDocument();
                     get_old_document_Discount();
                     check_type.IsEnabled = false;
@@ -811,6 +1566,11 @@ namespace Cash8Avalon
                 // Можно добавить и другие глобальные горячие клавиши
                 switch (e.Key)
                 {
+                    case Key.F6:
+                        // Вместо перехода в поле - открываем диалог
+                        ShowSimpleClientDialog();
+                        e.Handled = true;
+                        break;
                     case Key.F7:
                         // Обновить данные
                         e.Handled = true;
@@ -833,7 +1593,65 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
             }
         }
-              
+
+        private async void ShowSimpleClientDialog()
+        {
+            try
+            {
+                if (this.client.Tag != null)
+                {
+                    return;
+                }
+
+                // Создаем диалог
+                var dialog = new InputActionBarcode();
+                dialog.call_type = 7; // Новый тип для ввода клиента
+                dialog.caller = this; // Передаем текущую форму как caller
+
+                // Настраиваем сообщение
+                if (client.Tag != null && !string.IsNullOrEmpty(client.Text))
+                {
+                    dialog.SetAuthorizationMessage($"Текущий клиент: {client.Text}\nВведите новый код или нажмите Esc");
+                }
+                else
+                {
+                    dialog.SetAuthorizationMessage("Введите код карты (10 символов)\nили номер телефона (начинается с 9, 13 символов)");
+                }
+
+                // Получаем родительское окно (как в примере с маркировкой)
+                var owner = TopLevel.GetTopLevel(this) as Window;
+                if (owner == null)
+                {
+                    await MessageBox.Show("Не удалось определить родительское окно");
+                    return;
+                }
+
+                // Показываем диалог используя его собственный метод ShowDialog
+                var result = await dialog.ShowDialog<bool?>(owner);
+
+                // Обрабатываем результат
+                if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
+                {
+                    if (this.client.Tag != null)//вдруг уже присвоено и здесь ошибка повторное присвоение 
+                    {
+                        return;
+                    }
+                    ProcessClientDiscount(dialog.EnteredBarcode);
+                }
+
+                // Возвращаем фокус на поиск товара
+                InputSearchProduct.Focus();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка в диалоге клиента: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        // Добавьте поле для отслеживания состояния
+        //private bool IsClientDialogOpen = false;
+
 
         private void CheckControls()
         {
@@ -2241,7 +3059,7 @@ namespace Cash8Avalon
                     Discount = Convert.ToDouble(reader.GetDecimal(0)) / 100;
                     //}
 
-                    client_barcode.IsEnabled = false;//дисконтная карта определена, сделаем недоступным окно ввода кода  
+                    //client_barcode.IsEnabled = false;//дисконтная карта определена, сделаем недоступным окно ввода кода  
                     //txtB_client_phone.IsEnabled = false;//дисконтная карта определена, сделаем недоступным окно ввода телефона  
                     //btn_inpute_phone_client.IsEnabled = false;
                     //this.btn_inpute_phone_client.IsEnabled = false;
@@ -2386,9 +3204,11 @@ namespace Cash8Avalon
                     client.Text = reader["name"].ToString();
                     Discount = Convert.ToDouble(0.05);
                     //txtB_client_phone.IsEnabled = false;
-                    client_barcode.IsEnabled = false;
+                    //client_barcode.IsEnabled = false;
 
                 }
+                reader.Close();
+
                 if (!client_exist)
                 {
                     MainStaticClass.write_event_in_log(" Проверка наличия телефона это новый телефон  ", " Документ ", numdoc.ToString());
@@ -2406,7 +3226,7 @@ namespace Cash8Avalon
                         client.Text = phone_number;
                         Discount = Convert.ToDouble(0.05);
                         //txtB_client_phone.IsEnabled = false;
-                        client_barcode.IsEnabled = false;
+                        //client_barcode.IsEnabled = false;
                     }
                 }
                 //Пересчет ТЧ в любом случае
@@ -4092,7 +4912,8 @@ namespace Cash8Avalon
         }
         private async void btn_get_name_Click(object sender, EventArgs e)
         {
-            if (txtB_inn.Text.Trim().Length == 0)
+
+            if (string.IsNullOrWhiteSpace(txtB_inn?.Text))
             {
                 await MessageBox.Show("Для получения наименования покупателя необходимо заполнить его ИНН");
                 return;
@@ -5934,7 +6755,7 @@ namespace Cash8Avalon
                     //{
                     //inputbarcode.Enabled = false;
                     txtB_search_product.IsEnabled = false;
-                    client_barcode.IsEnabled = false;
+                    //client_barcode.IsEnabled = false;
                     //txtB_client_phone.Enabled = false;
                     //}
                 }
@@ -6191,7 +7012,7 @@ namespace Cash8Avalon
                 NpgsqlCommand command = new NpgsqlCommand();
                 command.Connection = conn;
                 Discount = 0;
-                command.CommandText = "SELECT discount_types.discount_percent,clients.code,clients.name  FROM clients left join discount_types ON clients.discount_types_code= discount_types.code WHERE clients.code='" + client_barcode.Tag.ToString() + "'";
+                command.CommandText = "SELECT discount_types.discount_percent,clients.code,clients.name  FROM clients left join discount_types ON clients.discount_types_code= discount_types.code WHERE clients.code='" + client.Tag.ToString() + "'";
                 NpgsqlDataReader reader = command.ExecuteReader();
 
                 while (reader.Read())

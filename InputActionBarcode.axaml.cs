@@ -156,6 +156,11 @@ namespace Cash8Avalon
                 _authorizationTextBlock.Text = " Просканируйте код маркировки. Отказ - Esc ";
                 //this.input_barcode.MaxLength = 100;
             }
+            else if (call_type == 7) // Ввод клиента
+            {
+                _authorizationTextBlock.Text = "Введите код карты (10 символов) или номер телефона (13 символов)";
+                _inputBarcodeTextBox.MaxLength = 13;
+            }            
         }
 
         // Обработка нажатия клавиш в TextBox
@@ -361,12 +366,40 @@ namespace Cash8Avalon
                     return;
                 }
                 
-                //caller.qr_code = this.input_barcode.Text;
-                //this.DialogResult = DialogResult.OK;
                 this.Close(true);
                 e.Handled = true;
             }
-            
+            else if (call_type == 7)
+            {
+                if (e.Key == Key.Enter)
+                {
+                    string code = _inputBarcodeTextBox.Text?.Trim() ?? "";
+
+                    if (string.IsNullOrEmpty(code))
+                    {
+                        await MessageBox.Show("Введите код клиента");
+                        return;
+                    }
+
+                    if (code.Length != 10 && code.Length != 13)
+                    {
+                        await MessageBox.Show("Код должен содержать 10 или 13 символов");
+                        _inputBarcodeTextBox.SelectAll();
+                        return;
+                    }
+
+                    // Проверяем, если телефон должен начинаться с 9
+                    if (code.Length == 13 && !code.StartsWith("9"))
+                    {
+                        await MessageBox.Show("Номер телефона должен начинаться с 9");
+                        _inputBarcodeTextBox.SelectAll();
+                        return;
+                    }                  
+                    e.Handled = true;
+                    this.Close(true);
+                }
+            }
+
             //if (e.Key == Key.Escape)
             //{
             //    if (call_type == 1)
