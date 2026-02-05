@@ -104,7 +104,7 @@ namespace Cash8Avalon
         public DateTime sale_date;
         public int print_to_button = 0;
         public string guid = "";
-        private string guid1 = "";
+        //private string guid1 = "";
         public string guid_sales = "";
         public string tax_order = "";
         public bool external_fix = false;
@@ -444,6 +444,7 @@ namespace Cash8Avalon
                 txtB_inn.IsEnabled = !readOnly;
                 txtB_name.IsEnabled = !readOnly;
                 btn_get_name.IsEnabled = !readOnly;
+                txtB_email_telephone.IsEnabled = !readOnly;
 
                 // Добавляем/удаляем водяной знак
                 if (readOnly)
@@ -658,7 +659,7 @@ namespace Cash8Avalon
                 //txtB_email_telephone.Enabled = false;
                 txtB_inn.IsEnabled = false;
                 btn_get_name.IsEnabled = false;
-                //txtB_client_phone.Enabled = false;
+                txtB_email_telephone.IsEnabled = false;                
                 txtB_name.IsEnabled = false;
                 comment.IsEnabled = false;
 
@@ -740,7 +741,7 @@ namespace Cash8Avalon
                     fptr.queryData();
                     if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
                     {
-                        MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
+                        await MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
                     }
                 }
             }
@@ -873,10 +874,10 @@ namespace Cash8Avalon
 
                 Pay.Click += Pay_Click;
 
-
-
                 _tabProducts = this.FindControl<TabItem>("tabProducts");
                 _tabCertificates = this.FindControl<TabItem>("tabCertificates");
+
+                btn_get_name.Click += btn_get_name_Click;
 
                 Console.WriteLine("✓ Все основные контролы проверены");
             }
@@ -3933,7 +3934,73 @@ namespace Cash8Avalon
 
         #region Обработка клавиатуры и управление количеством товаров
 
-        // Глобальная обработка клавиатуры для товаров
+        //// Глобальная обработка клавиатуры для товаров
+        //private void OnGlobalKeyDownForProducts(object sender, KeyEventArgs e)
+        //{
+        //    // Проверяем, есть ли фокус в таблице товаров
+        //    bool isProductsTableFocused = _productsScrollViewer?.IsFocused == true ||
+        //                                 _productsTableGrid?.IsFocused == true ||
+        //                                 IsChildFocused(_productsScrollViewer);
+
+        //    if (!isProductsTableFocused) return;
+
+        //    // Проверяем режим документа
+        //    bool isReadOnlyMode = !IsNewCheck; // Документ не новый = режим чтения
+
+        //    switch (e.Key)
+        //    {
+        //        // ВСЕ КЛАВИШИ НАВИГАЦИИ - РАБОТАЮТ В ЛЮБОМ РЕЖИМЕ
+        //        case Key.Up:
+        //            MoveProductSelectionUp();
+        //            e.Handled = true;
+        //            break;
+
+        //        case Key.Down:
+        //            MoveProductSelectionDown();
+        //            e.Handled = true;
+        //            break;
+
+        //        case Key.Home:
+        //            if (_productsData.Count > 0)
+        //            {
+        //                MoveProductSelectionHome();
+        //                e.Handled = true;
+        //            }
+        //            break;
+
+        //        case Key.End:
+        //            if (_productsData.Count > 0)
+        //            {
+        //                MoveProductSelectionEnd();
+        //                e.Handled = true;
+        //            }
+        //            break;
+
+        //        // КЛАВИШИ РЕДАКТИРОВАНИЯ - РАБОТАЮТ ТОЛЬКО В РЕЖИМЕ РЕДАКТИРОВАНИЯ
+        //        case Key.Add:
+        //        case Key.OemPlus:
+        //        case Key.Subtract:
+        //        case Key.OemMinus:
+        //        case Key.Delete:
+        //        case Key.Enter:
+        //            if (isReadOnlyMode)
+        //            {
+        //                // В режиме чтения показываем сообщение
+        //                Console.WriteLine("⚠ Режим просмотра: редактирование запрещено");
+        //                e.Handled = true;
+
+        //                // Можно добавить звуковой сигнал или визуальную подсказку
+        //                if (_selectedProductRowBorder != null)
+        //                {
+        //                    FlashBorderTemporarily(_selectedProductRowBorder, Colors.OrangeRed);
+        //                }
+        //            }
+        //            // Если не режим чтения, то обработка продолжится ниже
+        //            // (у вас уже есть обработчики для этих клавиш)
+        //            break;
+        //    }
+        //}
+        // В методе OnGlobalKeyDownForProducts добавьте:
         private void OnGlobalKeyDownForProducts(object sender, KeyEventArgs e)
         {
             // Проверяем, есть ли фокус в таблице товаров
@@ -3948,7 +4015,7 @@ namespace Cash8Avalon
 
             switch (e.Key)
             {
-                // ВСЕ КЛАВИШИ НАВИГАЦИИ - РАБОТАЮТ В ЛЮБОМ РЕЖИМЕ
+                // КЛАВИШИ НАВИГАЦИИ
                 case Key.Up:
                     MoveProductSelectionUp();
                     e.Handled = true;
@@ -3957,6 +4024,42 @@ namespace Cash8Avalon
                 case Key.Down:
                     MoveProductSelectionDown();
                     e.Handled = true;
+                    break;
+
+                // ДОБАВЬТЕ ЭТИ КЛАВИШИ:
+                case Key.Add:
+                case Key.OemPlus:
+                    if(IsNewCheck)
+                    if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
+                    {
+                        IncreaseProductQuantity(_selectedProductRowIndex);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.Subtract:
+                case Key.OemMinus:
+                    if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
+                    {
+                        DecreaseProductQuantity(_selectedProductRowIndex);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.Delete:
+                    if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
+                    {
+                        DeleteSelectedProduct();
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.Enter:
+                    if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
+                    {
+                        ShowQuantityEditDialog(_selectedProductRowIndex);
+                        e.Handled = true;
+                    }
                     break;
 
                 case Key.Home:
@@ -3974,29 +4077,68 @@ namespace Cash8Avalon
                         e.Handled = true;
                     }
                     break;
+            }
+        }
 
-                // КЛАВИШИ РЕДАКТИРОВАНИЯ - РАБОТАЮТ ТОЛЬКО В РЕЖИМЕ РЕДАКТИРОВАНИЯ
-                case Key.Add:
-                case Key.OemPlus:
-                case Key.Subtract:
-                case Key.OemMinus:
-                case Key.Delete:
-                case Key.Enter:
-                    if (isReadOnlyMode)
-                    {
-                        // В режиме чтения показываем сообщение
-                        Console.WriteLine("⚠ Режим просмотра: редактирование запрещено");
-                        e.Handled = true;
+        public class Suggestion
+        {
+            public string value { get; set; }
+            public string unrestricted_value { get; set; }
+        }
 
-                        // Можно добавить звуковой сигнал или визуальную подсказку
-                        if (_selectedProductRowBorder != null)
-                        {
-                            FlashBorderTemporarily(_selectedProductRowBorder, Colors.OrangeRed);
-                        }
-                    }
-                    // Если не режим чтения, то обработка продолжится ниже
-                    // (у вас уже есть обработчики для этих клавиш)
-                    break;
+        public class Answer
+        {
+            public List<Suggestion> suggestions { get; set; }
+        }
+        private async void btn_get_name_Click(object sender, EventArgs e)
+        {
+            if (txtB_inn.Text.Trim().Length == 0)
+            {
+                await MessageBox.Show("Для получения наименования покупателя необходимо заполнить его ИНН");
+                return;
+            }
+            try
+            {
+                System.Net.WebRequest req = System.Net.WebRequest.Create("https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party");
+                req.Method = "POST";
+                req.ContentType = "application/json";
+                req.Headers.Add("Authorization", "Token 9d101a5cde3d28f5bade72ea5613f8f536a4d219");
+                req.Timeout = 20000;
+                //{ "query": "7707083893" }
+                string inn = "{\"query\": \"" + txtB_inn.Text + "\" }";
+                byte[] sentData = Encoding.UTF8.GetBytes(inn);
+                req.ContentLength = sentData.Length;
+                System.IO.Stream sendStream = req.GetRequestStream();
+                sendStream.Write(sentData, 0, sentData.Length);
+                sendStream.Close();
+                System.Net.WebResponse res = req.GetResponse();
+                System.IO.Stream ReceiveStream = res.GetResponseStream();
+                System.IO.StreamReader sr = new System.IO.StreamReader(ReceiveStream, Encoding.UTF8);
+                //Кодировка указывается в зависимости от кодировки ответа сервера
+                //sr.ReadToEnd();
+                Char[] read = new Char[512];
+                int count = sr.Read(read, 0, 512);
+                string Out = string.Empty;
+                while (count > 0)
+                {
+                    string str = new string(read, 0, count);
+                    Out += str;
+                    count = sr.Read(read, 0, 512);
+                }
+                //MessageBox.Show(Out);
+                Answer suggestion = JsonConvert.DeserializeObject<Answer>(Out);
+                if (suggestion.suggestions.Count > 0)
+                {
+                    txtB_name.Text = suggestion.suggestions[0].value;
+                }
+                else
+                {
+                    await MessageBox.Show("По данному ИНН ничего не найдено");
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBox.Show("При поиске по ИНН произошли ошибки " + ex.Message);
             }
         }
 
@@ -5538,7 +5680,7 @@ namespace Cash8Avalon
                     {
                         // Заполнение заголовка документа
                         this.guid = reader["checks_header_guid"].ToString();
-                        this.guid1 = reader["checks_header_guid"].ToString();
+                        //this.guid1 = reader["checks_header_guid"].ToString();
                         this.Client.Tag = reader["client"].ToString();
                         this.Client.Text = reader["clients_name"].ToString();
                         this.User.Text = reader["users_name"].ToString();

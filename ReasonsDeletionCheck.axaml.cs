@@ -2,7 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Newtonsoft.Json;
 using System;
+using System.Text;
 
 namespace Cash8Avalon
 {
@@ -31,7 +33,7 @@ namespace Cash8Avalon
             //_comboBoxReasons.Items.Add("Иные причины.");
 
             // Если нужно установить начальное значение
-            //_comboBoxReasons.SelectedIndex = 0;
+            _comboBoxReasons.SelectedIndex = 0;
             _comboBoxReasons.SelectionChanged += _comboBoxReasons_SelectionChanged;
 
         }
@@ -46,6 +48,8 @@ namespace Cash8Avalon
                 }                
             }
         }
+
+       
 
         private void InitializeComponent()
         {
