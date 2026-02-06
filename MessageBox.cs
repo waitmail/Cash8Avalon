@@ -38,6 +38,8 @@ public enum MessageBoxResult
     No
 }
 
+
+
 // КЛАСС MESSAGEBOX
 public static class MessageBox
 {

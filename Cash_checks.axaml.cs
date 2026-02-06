@@ -168,22 +168,14 @@ namespace Cash8Avalon
                 _tableGrid = new Grid
                 {
                     Background = Brushes.White,
-                    HorizontalAlignment = HorizontalAlignment.Stretch, // Добавьте это
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
                     VerticalAlignment = VerticalAlignment.Stretch
                 };
 
                 // Подписываемся на события Grid
                 _tableGrid.PointerPressed += OnTableGridPointerPressed;
 
-                // ==== ЗАМЕНА СТРОК НАЧИНАЕТСЯ ЗДЕСЬ ====
-                // Было:
-                // var columnWidths = new[] { 80, 150, 200, 100, 100, 150, 100, 100, 100, 100 };
-                // foreach (var width in columnWidths)
-                // {
-                //     _tableGrid.ColumnDefinitions.Add(new ColumnDefinition(width, GridUnitType.Pixel));
-                // }
-
-                // Стало:
+                // Добавляем колонки с пропорциональными ширинами
                 var columnDefinitions = new[]
                 {
                     new ColumnDefinition(0.8, GridUnitType.Star),   // Статус
@@ -202,7 +194,6 @@ namespace Cash8Avalon
                 {
                     _tableGrid.ColumnDefinitions.Add(colDef);
                 }
-                // ==== ЗАМЕНА ЗАКАНЧИВАЕТСЯ ЗДЕСЬ ====
 
                 // Создаем строку заголовков (строка 0)
                 _tableGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
@@ -237,16 +228,16 @@ namespace Cash8Avalon
                     {
                         BorderBrush = Brushes.Gray,
                         BorderThickness = new Thickness(0, 0, 1, 2),
-                        Background = Brushes.LightBlue, // ИЗМЕНЕНО: LightBlue вместо LightGray
+                        Background = Brushes.LightBlue,
                         Child = new TextBlock
                         {
                             Text = headers[i],
                             FontWeight = FontWeight.Bold,
-                            FontSize = 12, // Добавьте, как в Cash_check
+                            FontSize = 12,
                             Margin = new Thickness(5, 0),
                             VerticalAlignment = VerticalAlignment.Center,
-                            HorizontalAlignment = HorizontalAlignment.Center, // Добавьте выравнивание по центру
-                            Foreground = Brushes.DarkBlue // Добавьте темно-синий цвет текста
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Foreground = Brushes.DarkBlue
                         }
                     };
 
@@ -255,7 +246,7 @@ namespace Cash8Avalon
                     _tableGrid.Children.Add(headerBorder);
                 }
 
-                Console.WriteLine("✓ Заголовки созданы (светло-голубые, как в Cash_check)");
+                Console.WriteLine("✓ Заголовки созданы");
             }
             catch (Exception ex)
             {
@@ -282,7 +273,7 @@ namespace Cash8Avalon
                 IBrush foreground = Brushes.Black;
                 TextDecorationCollection textDecorations = null;
 
-                // === ЛОГИКА ВЫДЕЛЕНИЯ СПЕЦИАЛЬНЫХ СЛУЧАЕВ (как в WinForms) ===
+                // === ЛОГИКА ВЫДЕЛЕНИЯ СПЕЦИАЛЬНЫХ СЛУЧАЕВ ===
 
                 // 1. Удаленный чек (ItsDeleted == 1)
                 if (item.ItsDeleted == 1)
@@ -370,16 +361,16 @@ namespace Cash8Avalon
                     HorizontalAlignment.Right,
                     fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 6: Тип чека
+                // Колонка 6: Комментарий
                 AddStyledCell(5, gridRowIndex,
-                    item.CheckType,
-                    HorizontalAlignment.Center,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
-
-                // Колонка 7: Комментарий
-                AddStyledCell(6, gridRowIndex,
                     item.Comment,
                     HorizontalAlignment.Left,
+                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+
+                // Колонка 7: Тип чека
+                AddStyledCell(6, gridRowIndex,
+                    item.CheckType,
+                    HorizontalAlignment.Center,
                     fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
                 // Колонка 8: Номер документа
@@ -428,24 +419,6 @@ namespace Cash8Avalon
             {
                 textBlock.TextDecorations = textDecorations;
             }
-
-            Grid.SetColumn(textBlock, column);
-            Grid.SetRow(textBlock, row);
-            _tableGrid.Children.Add(textBlock);
-        }
-
-        /// <summary>
-        /// Добавление текстовой ячейки
-        /// </summary>
-        private void AddCellToRow(int column, int row, string text, HorizontalAlignment alignment = HorizontalAlignment.Left)
-        {
-            var textBlock = new TextBlock
-            {
-                Text = text,
-                Margin = new Thickness(5, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = alignment
-            };
 
             Grid.SetColumn(textBlock, column);
             Grid.SetRow(textBlock, row);
@@ -516,7 +489,7 @@ namespace Cash8Avalon
         /// <summary>
         /// Выделение строки по индексу
         /// </summary>
-        private void SelectRow(int rowIndex)
+        private void SelectRow(int rowIndex, bool scrollToRow = true)  // Добавляем параметр scrollToRow
         {
             try
             {
@@ -549,8 +522,11 @@ namespace Cash8Avalon
                     }
                 }
 
-                // Прокручиваем к выделенной строке
-                ScrollToRow(gridRowIndex);
+                // Прокручиваем к выделенной строке ТОЛЬКО если нужно
+                if (scrollToRow)
+                {
+                    ScrollToRow(gridRowIndex);
+                }
 
                 Console.WriteLine($"✓ Выделена строка {rowIndex}");
             }
@@ -560,8 +536,9 @@ namespace Cash8Avalon
             }
         }
 
+
         /// <summary>
-        /// Снятие выделения (исправленная версия)
+        /// Снятие выделения
         /// </summary>
         private void ClearSelection()
         {
@@ -570,8 +547,6 @@ namespace Cash8Avalon
                 if (_selectedRowBorder != null)
                 {
                     // Восстанавливаем оригинальный фон строки
-                    // Сначала пробуем восстановить стиль строки
-
                     // Получаем индекс данных
                     int dataRowIndex = (int)_selectedRowBorder.Tag;
 
@@ -627,7 +602,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Прокрутка к указанной строке
+        /// Прокрутка к указанной строке с проверкой видимости
         /// </summary>
         private void ScrollToRow(int gridRowIndex)
         {
@@ -635,6 +610,7 @@ namespace Cash8Avalon
             {
                 if (_scrollViewer == null || _tableGrid == null) return;
 
+                // ПРОВЕРЯЕМ, ВИДИМА ЛИ УЖЕ СТРОКА В ОКНЕ ПРОСМОТРА
                 // Вычисляем позицию строки
                 double rowPosition = 0;
                 for (int i = 0; i < gridRowIndex; i++)
@@ -645,8 +621,52 @@ namespace Cash8Avalon
                     }
                 }
 
-                // Прокручиваем
-                _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, rowPosition - 50); // -50 для небольшого отступа сверху
+                double rowBottom = rowPosition + _tableGrid.RowDefinitions[gridRowIndex].Height.Value;
+
+                // Проверяем, полностью ли видна строка в текущей области просмотра
+                bool isFullyVisible = rowPosition >= _scrollViewer.Offset.Y &&
+                                       rowBottom <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
+
+                // Проверяем, частично видна ли строка сверху или снизу
+                bool isPartiallyVisibleTop = rowPosition >= _scrollViewer.Offset.Y &&
+                                             rowPosition <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
+
+                bool isPartiallyVisibleBottom = rowBottom >= _scrollViewer.Offset.Y &&
+                                                rowBottom <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
+
+                // Если строка уже полностью видна, НЕ прокручиваем
+                if (isFullyVisible)
+                {
+                    Console.WriteLine($"✓ Строка {gridRowIndex} уже видна, прокрутка не требуется");
+                    return;
+                }
+
+                // Если строка частично видна, можно немного подкорректировать позицию
+                // но не прыгать резко. Давайте сделаем так:
+
+                if (isPartiallyVisibleTop)
+                {
+                    // Строка видна сверху, но не полностью
+                    // Прокручиваем так, чтобы она была сверху видимой области
+                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, rowPosition - 20); // Небольшой отступ сверху
+                    Console.WriteLine($"✓ Строка {gridRowIndex} частично видна сверху, корректируем позицию");
+                }
+                else if (isPartiallyVisibleBottom)
+                {
+                    // Строка видна снизу, но не полностью
+                    // Прокручиваем так, чтобы она была снизу видимой области
+                    double targetPosition = rowBottom - _scrollViewer.Viewport.Height + 20;
+                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetPosition);
+                    Console.WriteLine($"✓ Строка {gridRowIndex} частично видна снизу, корректируем позицию");
+                }
+                else
+                {
+                    // Строка не видна совсем - центрируем ее
+                    double centerPosition = rowPosition - (_scrollViewer.Viewport.Height / 2) +
+                                           (_tableGrid.RowDefinitions[gridRowIndex].Height.Value / 2);
+                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, centerPosition);
+                    Console.WriteLine($"✓ Строка {gridRowIndex} не видна, центрируем");
+                }
             }
             catch (Exception ex)
             {
@@ -655,34 +675,97 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Перемещение выделения вверх
+        /// Перемещение выделения вверх (без циклического перехода)
         /// </summary>
         private void MoveSelectionUp()
         {
             if (_checkItems.Count == 0) return;
 
             int newIndex = _selectedRowIndex - 1;
-            if (newIndex < 0) newIndex = _checkItems.Count - 1; // Циклическое перемещение
+
+            // Если достигли начала списка - останавливаемся на первой строке
+            if (newIndex < 0)
+            {
+                // Можно остаться на первой строке или снять выделение
+                // В данном случае оставляем на первой строке
+                if (_selectedRowIndex != 0)
+                {
+                    SelectRow(0);
+                }
+                return;
+            }
 
             SelectRow(newIndex);
         }
 
         /// <summary>
-        /// Перемещение выделения вниз
+        /// Перемещение выделения вниз (без циклического перехода)
         /// </summary>
         private void MoveSelectionDown()
         {
             if (_checkItems.Count == 0) return;
 
             int newIndex = _selectedRowIndex + 1;
-            if (newIndex >= _checkItems.Count) newIndex = 0; // Циклическое перемещение
+
+            // Если достигли конца списка - останавливаемся на последней строке
+            if (newIndex >= _checkItems.Count)
+            {
+                // Можно остаться на последней строке или снять выделение
+                // В данном случае оставляем на последней строке
+                if (_selectedRowIndex != _checkItems.Count - 1)
+                {
+                    SelectRow(_checkItems.Count - 1);
+                }
+                return;
+            }
 
             SelectRow(newIndex);
         }
 
         /// <summary>
-        /// Обработка выбранного элемента
+        /// Перемещение на страницу вверх
         /// </summary>
+        private void MovePageUp()
+        {
+            if (_checkItems.Count == 0 || _selectedRowIndex <= 0) return;
+
+            // Количество видимых строк
+            int visibleRows = GetVisibleRowCount();
+            int newIndex = Math.Max(0, _selectedRowIndex - visibleRows);
+            SelectRow(newIndex);
+        }
+
+        /// <summary>
+        /// Перемещение на страницу вниз
+        /// </summary>
+        private void MovePageDown()
+        {
+            if (_checkItems.Count == 0) return;
+
+            // Количество видимых строк
+            int visibleRows = GetVisibleRowCount();
+            int newIndex = Math.Min(_checkItems.Count - 1, _selectedRowIndex + visibleRows);
+            SelectRow(newIndex);
+        }
+
+        /// <summary>
+        /// Получение количества видимых строк
+        /// </summary>
+        private int GetVisibleRowCount()
+        {
+            if (_scrollViewer == null || _scrollViewer.Viewport.Height <= 0)
+                return 10; // значение по умолчанию
+
+            // Высота строки (30 пикселей)
+            double rowHeight = 30;
+
+            // Количество строк, помещающихся в видимой области
+            int visibleRows = (int)(_scrollViewer.Viewport.Height / rowHeight);
+
+            // Минимум 1 строка, минус 1 чтобы оставить часть строки для контекста
+            return Math.Max(1, visibleRows - 1);
+        }
+
         /// <summary>
         /// Обработка выбранного элемента
         /// </summary>
@@ -693,7 +776,7 @@ namespace Cash8Avalon
                 var selectedItem = _checkItems[_selectedRowIndex];
                 Console.WriteLine($"Выбран чек: {selectedItem.DocumentNumber}, Клиент: {selectedItem.ClientName}, Сумма: {selectedItem.Cash}");
 
-                // Здесь открываем форму с деталями чека
+                // Открываем форму с деталями чека
                 await OpenCheckDetails(selectedItem.DateTimeWrite.ToString("dd-MM-yyyy HH:mm:ss"));
             }
         }
@@ -732,7 +815,7 @@ namespace Cash8Avalon
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // Настройка размеров окна чека - ВАРИАНТ 3
+                // Настройка размеров окна чека
                 if (parentWindow != null)
                 {
                     // Получаем размеры главного окна
@@ -744,17 +827,15 @@ namespace Cash8Avalon
                     bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
 
                     // Примерная высота заголовка Windows
-                    const double titleBarHeight = 35; // Среднее значение 30-40px
+                    const double titleBarHeight = 35;
 
                     if (parentHasDecorations && !checkHasDecorations)
                     {
-                        // Главное окно имеет системный заголовок, чек - нет
-                        // Чек будет ниже на высоту заголовка, поэтому нужно компенсировать
+                        // Компенсируем разницу в высоте
                         checkWindow.Width = mainWidth;
                         checkWindow.Height = mainHeight + titleBarHeight;
 
                         Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
-                        Console.WriteLine($"Размеры: главное окно={mainHeight}px, чек окно={checkWindow.Height}px");
                     }
                     else
                     {
@@ -765,8 +846,6 @@ namespace Cash8Avalon
 
                     // Позиционируем по центру главного окна
                     checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-                    Console.WriteLine($"Размеры окна чека: {checkWindow.Width}x{checkWindow.Height}");
                 }
                 else
                 {
@@ -786,8 +865,6 @@ namespace Cash8Avalon
                 if (parentWindow != null)
                 {
                     checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-                    // Показываем как диалог
                     await checkWindow.ShowDialog(parentWindow);
                 }
                 else
@@ -801,7 +878,6 @@ namespace Cash8Avalon
                 if (dialogResult == true)
                 {
                     Console.WriteLine("Чек успешно обработан");
-                    // Можно обновить список чеков если нужно
                 }
             }
             catch (Exception ex)
@@ -814,7 +890,7 @@ namespace Cash8Avalon
         #region Обработчики событий мыши и клавиатуры
 
         /// <summary>
-        /// Получение статуса отправки документов (аналог старого метода)
+        /// Получение статуса отправки документов
         /// </summary>
         private void GetStatusSendDocument()
         {
@@ -925,12 +1001,12 @@ namespace Cash8Avalon
             try
             {
                 // Получаем интервал выгрузки (в минутах)
-                int unloadInterval = await MainStaticClass.GetUnloadingInterval();  // Измените на синхронный метод
+                int unloadInterval = await MainStaticClass.GetUnloadingInterval();
 
                 if (unloadInterval > 0)
                 {
                     // Создаем таймер с интервалом в миллисекундах
-                    _statusTimer = new System.Timers.Timer(unloadInterval * 60 * 1000); // минуты -> миллисекунды
+                    _statusTimer = new System.Timers.Timer(unloadInterval * 60 * 1000);
                     _statusTimer.Elapsed += StatusTimer_Elapsed;
                     _statusTimer.AutoReset = true;
                     _statusTimer.Enabled = true;
@@ -955,7 +1031,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Обработчик события таймера (аналог timer_Elapsed из старой версии)
+        /// Обработчик события таймера
         /// </summary>
         private void StatusTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
@@ -988,7 +1064,8 @@ namespace Cash8Avalon
             {
                 if (sender is Border border && border.Tag is int dataRowIndex)
                 {
-                    SelectRow(dataRowIndex);
+                    // При клике мышкой прокручивать НЕ нужно
+                    SelectRow(dataRowIndex, scrollToRow: false);  // false - не прокручивать
                     e.Handled = true;
 
                     // Устанавливаем фокус на ScrollViewer для обработки клавиатуры
@@ -1027,69 +1104,12 @@ namespace Cash8Avalon
             _scrollViewer?.Focus();
         }
 
-        //private async void ProcessInsertKey()
-        //{
-        //    if (DateTime.Now <= MainStaticClass.GetMinDateWork)
-        //    {
-        //        await MessageBox.Show(" У ВАС УСТАНОВЛЕНА НЕПРАВИЛЬНАЯ ДАТА НА КОМПЬЮТЕРЕ !!! ДАЛЬНЕЙШАЯ РАБОТА С ЧЕКАМИ НЕВОЗМОЖНА !!!", "Проверка даты на компьютере", MessageBoxButton.OK, MessageBoxType.Error);
-        //        return;
-        //    }
-        //    if (MainStaticClass.CashDeskNumber != 9)
-        //    {
-        //        bool restart = false; bool errors = false;
-        //        MainStaticClass.check_version_fn(ref restart, ref errors);
-        //        if (errors)
-        //        {
-        //            return;
-        //        }
-        //        if (restart)
-        //        {
-        //            await MessageBox.Show("У вас неверно была установлена версия ФН,НЕОБХОДИМ ПЕРЕЗАПУСК КАССОВОЙ ПРОГРАММЫ !!!", "Проверка настройки ФН", MessageBoxButton.OK, MessageBoxType.Error);
-        //            //this.Close();
-        //            return;
-        //        }
-        //    }
-        //    if (MainStaticClass.SystemTaxation == 0)
-        //    {
-        //        await MessageBox.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!");
-        //        return;
-        //    }
-
-
-        //    //Проверка на заполненность обяз реквизитов
-        //    if (await AllIsFilled())
-        //    {
-        //        if (newDocument)
-        //        {
-        //            return;
-        //        }
-
-        //        if (txtB_cashier.Text.Trim().Length == 0)
-        //        {
-        //            await MessageBox.Show("Не заполнен кассир");
-        //            return;
-        //        }
-
-        //        MainStaticClass.validate_date_time_with_fn(15);
-
-        //        newDocument = true;
-        //        Cash_check doc = new Cash_check();
-        //        doc.cashier = txtB_cashier.Text;
-        //        doc.ShowDialog();
-        //        doc.Dispose();
-        //        newDocument = false;
-        //        LoadDocuments();             
-        //    }
-        //}
-
         private async void ProcessInsertKey()
         {
             Console.WriteLine("Insert нажат - создание нового чека");
 
             try
             {
-                // Все проверки остаются без изменений...
-
                 // Проверка даты на компьютере
                 if (DateTime.Now <= MainStaticClass.GetMinDateWork)
                 {
@@ -1178,7 +1198,7 @@ namespace Cash8Avalon
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // Настройка размеров окна чека - ВАРИАНТ 3
+                // Настройка размеров окна чека
                 if (parentWindow != null)
                 {
                     // Получаем размеры главного окна
@@ -1190,17 +1210,15 @@ namespace Cash8Avalon
                     bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
 
                     // Примерная высота заголовка Windows
-                    const double titleBarHeight = 35; // Среднее значение 30-40px
+                    const double titleBarHeight = 35;
 
                     if (parentHasDecorations && !checkHasDecorations)
                     {
-                        // Главное окно имеет системный заголовок, чек - нет
-                        // Чек будет ниже на высоту заголовка, поэтому нужно компенсировать
+                        // Компенсируем разницу в высоте
                         checkWindow.Width = mainWidth;
                         checkWindow.Height = mainHeight + titleBarHeight;
 
                         Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
-                        Console.WriteLine($"Размеры: главное окно={mainHeight}px, чек окно={checkWindow.Height}px");
                     }
                     else
                     {
@@ -1211,8 +1229,6 @@ namespace Cash8Avalon
 
                     // Позиционируем по центру главного окна
                     checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-                    Console.WriteLine($"Размеры окна чека: {checkWindow.Width}x{checkWindow.Height}");
                 }
                 else
                 {
@@ -1278,9 +1294,6 @@ namespace Cash8Avalon
         private async Task<bool> AllIsFilled()
         {
             bool result = true;
-            //NpgsqlConnection conn = null;
-            //try
-            //{
             try
             {
                 if (MainStaticClass.Nick_Shop.Trim().Length == 0)
@@ -1341,6 +1354,16 @@ namespace Cash8Avalon
                     e.Handled = true;
                     break;
 
+                case Key.PageUp:
+                    MovePageUp();
+                    e.Handled = true;
+                    break;
+
+                case Key.PageDown:
+                    MovePageDown();
+                    e.Handled = true;
+                    break;
+
                 case Key.Enter:
                     ProcessSelectedItem();
                     e.Handled = true;
@@ -1352,12 +1375,20 @@ namespace Cash8Avalon
                     break;
 
                 case Key.Home:
-                    if (_checkItems.Count > 0) SelectRow(0);
+                    if (_checkItems.Count > 0)
+                    {
+                        // При Home прокручиваем к первой строке
+                        SelectRow(0);
+                    }
                     e.Handled = true;
                     break;
 
                 case Key.End:
-                    if (_checkItems.Count > 0) SelectRow(_checkItems.Count - 1);
+                    if (_checkItems.Count > 0)
+                    {
+                        // При End прокручиваем к последней строке
+                        SelectRow(_checkItems.Count - 1);
+                    }
                     e.Handled = true;
                     break;
 
@@ -1443,7 +1474,7 @@ namespace Cash8Avalon
             }
             Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                await Task.Delay(100); // Небольшая задержка
+                await Task.Delay(100);
                 this.Focus();
 
                 // Или попробуйте фокус на ScrollViewer
@@ -1655,7 +1686,7 @@ namespace Cash8Avalon
                                             }
                                             else if (docNumObj is decimal decimalValue)
                                             {
-                                                checkItem.DocumentNumber = decimalValue.ToString("F0"); // Без дробной части
+                                                checkItem.DocumentNumber = decimalValue.ToString("F0");
                                             }
                                             else
                                             {
@@ -1821,7 +1852,7 @@ namespace Cash8Avalon
 
             try
             {
-                // Обновляем время последней записи чека (как в старой версии)
+                // Обновляем время последней записи чека
                 MainStaticClass.Last_Write_Check = DateTime.Now;
 
                 // Запускаем обновление статуса
@@ -1860,14 +1891,14 @@ namespace Cash8Avalon
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
                 }
 
-                // Настройка окна - ИСПРАВЛЕНО
+                // Настройка окна
                 verifyActionsForm.Title = "Проверка акций";
                 verifyActionsForm.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
                 // Управление поведением окна:
-                verifyActionsForm.CanResize = true;     // Разрешаем изменение размера (иначе кнопка развернуть неактивна)
-                verifyActionsForm.CanMaximize = true;   // ВАЖНО: Разрешаем развертывание на весь экран!
-                verifyActionsForm.CanMinimize = true;   // Разрешаем сворачивание
+                verifyActionsForm.CanResize = true;
+                verifyActionsForm.CanMaximize = true;
+                verifyActionsForm.CanMinimize = true;
 
                 // Можно установить минимальный размер окна
                 verifyActionsForm.MinWidth = 400;

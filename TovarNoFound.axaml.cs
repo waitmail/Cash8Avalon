@@ -8,12 +8,12 @@ using System.Timers;
 
 namespace Cash8Avalon
 {
-    public partial class Tovar_Not_Found : Window
+    public partial class TovarNotFound : Window
     {
         private Timer _timer;
         private Grid _mainGrid;
 
-        public Tovar_Not_Found()
+        public TovarNotFound()
         {
             InitializeComponent();
             SetupControls();

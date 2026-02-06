@@ -4,11 +4,13 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Npgsql;
 using System;
 using System.Data;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Cash8Avalon
 {
@@ -24,16 +26,18 @@ namespace Cash8Avalon
         Yes = 6,
         No = 7
     }
-    public partial class InputActionBarcode : Window
+
+
+    public partial class InputActionBarcode : BaseWindow
     {
-
-       
-
         // Объявляем поля для элементов управления
         private TextBox? _inputBarcodeTextBox;
         private TextBlock? _authorizationTextBlock;
 
         public string EnteredBarcode => _inputBarcodeTextBox?.Text?.Trim() ?? string.Empty;
+        //public string EnteredBarcode = "";
+
+        //public bool? DialogResult { get; private set; } // ← ДОБАВЬТЕ ЭТО
 
         /*Тип вызова этой формы
          * 1.Вызов для ввода акционного штрихкода (штрихкод акции)
@@ -43,7 +47,7 @@ namespace Cash8Avalon
          * 5.вызов для ввод 4 последних цифр телефона 
          * 6.вызов для ввода QR - кода маркера товара
          */
-        public Cash_check caller = null;
+        //public Cash_check caller = null;
         public ProcessingOfActions caller2 = null;
         //public CheckActions caller3 = null;
         public DataTable dtCopy = null;
@@ -54,6 +58,7 @@ namespace Cash8Avalon
         public int num_doc = 0; //номер акционного документа по которму выдается подарок
         public int mode = 0;//Это для акционных подарков когда перебирается осносноая dt тогда нужна другая dt,эта переменная показывает в какую dt вствлять строки
         //System.Windows.Forms.Timer input_barcode_timer = null;
+        //DialogResult dialogResult = DialogResult.None;
 
         public InputActionBarcode()
         {
@@ -61,6 +66,7 @@ namespace Cash8Avalon
 
             // Инициализируем элементы после загрузки XAML
             InitializeControls();
+            
 
             // Устанавливаем позицию окна
             Position = new PixelPoint(332, 99);
@@ -97,7 +103,8 @@ namespace Cash8Avalon
                         
             if (e.Key == Key.Escape) 
             {
-                Close(false);
+                this.DialogResult = false;
+                this.Close();
                 e.Handled = true;
             }
         }
@@ -161,22 +168,7 @@ namespace Cash8Avalon
                 _authorizationTextBlock.Text = "Введите код карты (10 символов) или номер телефона (13 символов)";
                 _inputBarcodeTextBox.MaxLength = 13;
             }            
-        }
-
-        // Обработка нажатия клавиш в TextBox
-        //private void InputBarcodeTextBox_KeyDown(object? sender, KeyEventArgs e)
-        //{
-        //    if (e.Key == Key.Enter)
-        //    {
-        //        ProcessBarcode();
-        //        e.Handled = true;
-        //    }
-        //    else if (e.Key == Key.Escape)
-        //    {
-        //        Close();
-        //        e.Handled = true;
-        //    }
-        //}
+        }             
 
 
         private async void InputBarcodeTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -365,38 +357,44 @@ namespace Cash8Avalon
                     _inputBarcodeTextBox.Text = "";
                     return;
                 }
-                
-                this.Close(true);
+
+                this.DialogResult = true;
+                this.Close();
                 e.Handled = true;
             }
             else if (call_type == 7)
             {
                 if (e.Key == Key.Enter)
                 {
-                    string code = _inputBarcodeTextBox.Text?.Trim() ?? "";
+                    //Console.WriteLine("Нажатие Enter в форме ввода кода/телефона клиента");
+                    //string code = _inputBarcodeTextBox.Text?.Trim() ?? "";
 
-                    if (string.IsNullOrEmpty(code))
-                    {
-                        await MessageBox.Show("Введите код клиента");
-                        return;
-                    }
+                    //if (string.IsNullOrEmpty(code))
+                    //{
+                    //    await MessageBox.Show("Введите код клиента");
+                    //    return;
+                    //}
 
-                    if (code.Length != 10 && code.Length != 13)
-                    {
-                        await MessageBox.Show("Код должен содержать 10 или 13 символов");
-                        _inputBarcodeTextBox.SelectAll();
-                        return;
-                    }
+                    //if (code.Length != 10 && code.Length != 13)
+                    //{
+                    //    await MessageBox.Show("Код должен содержать 10 или 13 символов");
+                    //    _inputBarcodeTextBox.SelectAll();
+                    //    return;
+                    //}
 
-                    // Проверяем, если телефон должен начинаться с 9
-                    if (code.Length == 13 && !code.StartsWith("9"))
-                    {
-                        await MessageBox.Show("Номер телефона должен начинаться с 9");
-                        _inputBarcodeTextBox.SelectAll();
-                        return;
-                    }                  
+                    //// Проверяем, если телефон должен начинаться с 9
+                    //if (code.Length == 13 && !code.StartsWith("9"))
+                    //{
+                    //    await MessageBox.Show("Номер телефона должен начинаться с 9");
+                    //    _inputBarcodeTextBox.SelectAll();
+                    //    return;
+                    //}
+                    //EnteredBarcode = _inputBarcodeTextBox.Text;
+                    this.DialogResult = true;
+                    this.Close();
                     e.Handled = true;
-                    this.Close(true);
+
+                    //Console.WriteLine("Форма успешно закрывается, был введен код "+ code+" общая переменная модуля "+ EnteredBarcode);
                 }
             }
 

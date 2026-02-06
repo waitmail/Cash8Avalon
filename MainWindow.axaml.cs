@@ -83,7 +83,7 @@ namespace Cash8Avalon
 
             base.OnOpened(e);
             UpdateMenuVisibility(0);
-
+            GetUsers();
             // Ждем пока окно появится на экране
             await Task.Delay(50);            
 
@@ -254,6 +254,7 @@ namespace Cash8Avalon
                         }
 
                         Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
+                       
                     }
                     else
                     {
@@ -275,6 +276,122 @@ namespace Cash8Avalon
             {
                 // Закрываем главное окно при отмене
                 this.Close();
+            }
+        }
+
+        public class Users
+        {
+            public List<User> list_users { get; set; }
+        }
+
+        public class User
+        {
+            public string shop { get; set; }
+            public string user_id { get; set; }
+            public string name { get; set; }
+            public string rights { get; set; }
+            public string password_m { get; set; }
+            public string password_b { get; set; }
+            public string fiscals_forbidden { get; set; }
+        }
+
+        private void GetUsers()
+        {
+            DS ds = MainStaticClass.get_ds();
+            ds.Timeout = 3000;
+            string nick_shop = MainStaticClass.Nick_Shop.Trim();
+            if (nick_shop.Trim().Length == 0)
+            {
+                MessageBox.Show(" Не удалось получить название магазина ");
+                return;
+            }
+
+            string code_shop = MainStaticClass.Code_Shop.Trim();
+            if (code_shop.Trim().Length == 0)
+            {
+                MessageBox.Show(" Не удалось получить код магазина ");
+                return;
+            }
+
+            string count_day = CryptorEngine.get_count_day();
+            string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
+            string encrypt_string = CryptorEngine.Encrypt(nick_shop + "|" + code_shop, true, key);
+
+            string answer = "";
+            try
+            {
+                answer = ds.GetUsers(MainStaticClass.Nick_Shop, encrypt_string, "4");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Произошли ошибки при при получении пользователей от веб сервиса " + ex.Message + ".", "Синхронизация пользователей");
+            }
+            if (answer == "")
+            {
+                return;
+            }
+
+            string decrypt_string = CryptorEngine.Decrypt(answer, true, key);
+            Users users = JsonConvert.DeserializeObject<Users>(decrypt_string);
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+            NpgsqlTransaction trans = null;
+
+            try
+            {
+                conn.Open();
+                trans = conn.BeginTransaction();
+                string query = "UPDATE users SET rights=13";
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                command.Transaction = trans;
+                command.ExecuteNonQuery();
+                foreach (User user in users.list_users)
+                {
+                    query = "DELETE FROM public.users	WHERE inn='" + user.user_id + "';";
+
+                    query += "INSERT INTO users(" +
+                        " code," +
+                        " name," +
+                        " rights," +
+                        " shop," +
+                        " password_m," +
+                        " password_b," +
+                        " inn, " +
+                        "fiscals_forbidden" +
+                        ")VALUES ('" +
+                        user.user_id + "','" +
+                        user.name + "'," +
+                        user.rights + ",'" +
+                        user.shop + "','" +
+                        user.password_m + "','" +
+                        user.password_b + "','" +
+                        user.user_id + "','" +
+                        user.fiscals_forbidden + "')";
+
+                    command = new NpgsqlCommand(query, conn);
+                    command.Transaction = trans;
+                    command.ExecuteNonQuery();
+                }
+
+                trans.Commit();
+                conn.Close();
+
+            }
+            catch (NpgsqlException ex)
+            {
+                MessageBox.Show("Произошли ошибки sql при обновлении пользователей " + ex.Message);
+                trans.Rollback();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Произошли общие ошибки при обновлении пользователей " + ex.Message);
+                trans.Rollback();
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
             }
         }
 

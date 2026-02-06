@@ -45,5 +45,12 @@
 
   <ItemGroup>
     <Folder Include="SberDll\" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Compile Update="TovarNoFound.axaml.cs">
+      <DependentUpon>TovarNoFound.axaml</DependentUpon>
+    </Compile>
   </ItemGroup>  
 </Project>
