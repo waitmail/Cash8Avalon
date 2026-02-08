@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Npgsql;
@@ -295,53 +296,116 @@ namespace Cash8Avalon
         {
             try
             {
-                // Добавляем строку для сообщения
-                _tableGrid.RowDefinitions.Add(new RowDefinition(50, GridUnitType.Pixel)); // Еще больше высота
+                _tableGrid.RowDefinitions.Add(new RowDefinition(90, GridUnitType.Pixel));
 
-                // Создаем StackPanel для центрирования
-                var loadingPanel = new StackPanel
+                var mainContainer = new StackPanel
                 {
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 10 // Отступ между элементами
+                    Orientation = Orientation.Vertical,
+                    Spacing = 8
                 };
 
-                // Анимированный индикатор загрузки (ProgressBar)
+                // Заголовок
+                var titleText = new TextBlock
+                {
+                    Text = "ЗАГРУЗКА БАЗЫ ДАННЫХ",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    FontSize = 20,
+                    FontWeight = FontWeight.Bold,
+                    Foreground = new SolidColorBrush(Color.Parse("#0D47A1")),
+                    TextAlignment = TextAlignment.Center
+                };
+
+                // ProgressBar с настройками
                 var progressBar = new ProgressBar
                 {
-                    Width = 30,
-                    Height = 30,
-                    IsIndeterminate = true, // Анимированная загрузка
-                    VerticalAlignment = VerticalAlignment.Center
+                    Width = 400,
+                    Height = 8,
+                    IsIndeterminate = true,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Foreground = new SolidColorBrush(Color.Parse("#2196F3")),
+                    Background = new SolidColorBrush(Color.Parse("#E3F2FD")),
+                    BorderBrush = new SolidColorBrush(Color.Parse("#90CAF9")),
+                    BorderThickness = new Thickness(1)
                 };
 
-                // Текст загрузки
-                var loadingText = new TextBlock
+                // Анимированные точки
+                var dotsContainer = new StackPanel
                 {
-                    Text = "Загрузка данных...",
-                    VerticalAlignment = VerticalAlignment.Center,
-                    FontSize = 18, // Большой шрифт
-                    FontWeight = FontWeight.Bold,
-                    Foreground = new SolidColorBrush(Color.Parse("#2C3E50")), // Темно-синий цвет
-                    Margin = new Thickness(0, 0, 0, 2)
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 4,
+                    Margin = new Thickness(0, 5, 0, 0)
                 };
 
-                // Добавляем элементы в панель
-                loadingPanel.Children.Add(progressBar);
-                loadingPanel.Children.Add(loadingText);
+                // Создаем 3 анимированные точки
+                for (int i = 0; i < 3; i++)
+                {
+                    var dot = new Border
+                    {
+                        Width = 12,
+                        Height = 12,
+                        Background = new SolidColorBrush(Color.Parse("#42A5F5")),
+                        CornerRadius = new CornerRadius(6),
+                        Opacity = 0.4,
+                        Margin = new Thickness(2)
+                    };
 
-                Grid.SetColumnSpan(loadingPanel, 10);
-                Grid.SetRow(loadingPanel, _currentRow);
-                _tableGrid.Children.Add(loadingPanel);
+                    // Простая анимация (можно заменить на настоящую анимацию)
+                    DispatcherTimer timer = null;
+                    timer = new DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(300 + (i * 200))
+                    };
+                    timer.Tick += (s, e) =>
+                    {
+                        dot.Opacity = dot.Opacity == 0.4 ? 1.0 : 0.4;
+                    };
+                    timer.Start();
+
+                    dotsContainer.Children.Add(dot);
+                }
+
+                // Информационный текст
+                var infoText = new TextBlock
+                {
+                    Text = "Получение данных из PostgreSQL...",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    FontSize = 12,
+                    Foreground = new SolidColorBrush(Color.Parse("#757575")),
+                    FontStyle = FontStyle.Italic
+                };
+
+                mainContainer.Children.Add(titleText);
+                mainContainer.Children.Add(progressBar);
+                mainContainer.Children.Add(dotsContainer);
+                mainContainer.Children.Add(infoText);
+
+                Grid.SetColumnSpan(mainContainer, 10);
+                Grid.SetRow(mainContainer, _currentRow);
+                _tableGrid.Children.Add(mainContainer);
 
                 _currentRow++;
-                Console.WriteLine("✓ Добавлена строка загрузки с индикатором");
+                Console.WriteLine("✓ Добавлена строка загрузки с анимированными точками");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении строки загрузки: {ex.Message}");
             }
+        }
+
+        // Создание анимированного спиннера
+        private Avalonia.Media.Imaging.Bitmap CreateLoadingSpinner()
+        {
+            // Простая реализация - можно заменить на настоящую картинку
+            var renderTarget = new RenderTargetBitmap(new PixelSize(100, 100));
+            using (var ctx = renderTarget.CreateDrawingContext())
+            {
+                var pen = new Pen(new SolidColorBrush(Color.Parse("#2196F3")), 4);
+                ctx.DrawEllipse(null, pen, new Point(50, 50), 40, 40);
+            }
+            return renderTarget;
         }
 
         /// <summary>
