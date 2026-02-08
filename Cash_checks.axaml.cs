@@ -72,17 +72,17 @@ namespace Cash8Avalon
                 CreateTableFromCode();
 
                 // 3. Подписываемся на события
-                Loaded += OnLoaded;
                 InitializeEvents();
-
-                // 4. Инициализируем кнопку закрытия
                 InitializeCloseButton();
 
-                // 5. Подписываемся на глобальные события клавиатуры
+                // 4. Подписываемся на глобальные события клавиатуры
                 this.AddHandler(KeyDownEvent, OnGlobalKeyDown, RoutingStrategies.Tunnel);
 
-                // 6. ИНИЦИАЛИЗИРУЕМ ТАЙМЕР ДЛЯ СТАТУСА
+                // 5. ИНИЦИАЛИЗИРУЕМ ТАЙМЕР ДЛЯ СТАТУСА
                 InitializeStatusTimer();
+
+                // 6. ✅ ИНИЦИАЛИЗАЦИЯ ЗНАЧЕНИЙ И ЗАГРУЗКА ДАННЫХ СРАЗУ
+                InitializeAndLoadAsync();
 
                 Console.WriteLine("✓ Конструктор завершен успешно");
             }
@@ -93,6 +93,32 @@ namespace Cash8Avalon
             }
 
             Console.WriteLine("=== Конструктор Cash_checks завершен ===");
+        }
+
+        /// <summary>
+        /// ✅ Асинхронная инициализация и загрузка данных
+        /// </summary>
+        private async void InitializeAndLoadAsync()
+        {
+            try
+            {
+                // Инициализируем контролы сразу в UI потоке
+                InitializeControls();
+
+                Console.WriteLine("✓ Контролы инициализированы");
+
+                // ЗАГРУЖАЕМ ДАННЫЕ АСИНХРОННО, НЕ БЛОКИРУЯ ПОКАЗ ФОРМЫ
+                await LoadDocumentsAsync();
+
+                Console.WriteLine("✓ Данные загружены асинхронно");
+
+                // Первоначальное обновление статуса в фоне
+                _ = Task.Run(() => GetStatusSendDocument());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка в InitializeAndLoadAsync: {ex.Message}");
+            }
         }
 
         private void InitializeComponent()
@@ -132,6 +158,52 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при инициализации кнопки закрытия: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Инициализация значений контролов
+        /// </summary>
+        private void InitializeControls()
+        {
+            try
+            {
+                var numCash = this.FindControl<TextBlock>("num_cash");
+                if (numCash != null)
+                {
+                    numCash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
+                    Console.WriteLine($"Номер кассы установлен: {numCash.Text}");
+                }
+
+                var txtCashier = this.FindControl<TextBox>("txtB_cashier");
+                if (txtCashier != null)
+                {
+                    txtCashier.Text = MainStaticClass.Cash_Operator;
+                    Console.WriteLine($"Кассир установлен: {txtCashier.Text}");
+                }
+
+                var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
+                if (datePicker != null)
+                {
+                    datePicker.SelectedDate = DateTime.Today;
+                    Console.WriteLine($"Дата установлена: {DateTime.Today:dd.MM.yyyy}");
+                }
+
+                // ИНИЦИАЛИЗАЦИЯ TextBox СО СТАТУСОМ
+                _txtStatusBox = this.FindControl<TextBox>("txtB_not_unloaded_docs");
+                if (_txtStatusBox != null)
+                {
+                    _txtStatusBox.Text = "Загрузка...";
+                    Console.WriteLine("✓ TextBox со статусом найден");
+                }
+                else
+                {
+                    Console.WriteLine("⚠ TextBox 'txtB_not_unloaded_docs' не найден!");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при инициализации контролов: {ex.Message}");
             }
         }
 
@@ -199,17 +271,76 @@ namespace Cash8Avalon
                 _tableGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
                 CreateHeaderRow();
 
+                // ✅ ДОБАВЛЯЕМ СТРОКУ "ЗАГРУЗКА..." СРАЗУ
+                AddLoadingRow();
+
                 // Добавляем Grid в ScrollViewer
                 _scrollViewer.Content = _tableGrid;
 
                 // Добавляем ScrollViewer в Border
                 tableBorder.Child = _scrollViewer;
 
-                Console.WriteLine("✓ Таблица создана из кода с пропорциональными колонками");
+                Console.WriteLine("✓ Таблица создана из кода");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании таблицы: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// ✅ Добавление строки "Загрузка..."
+        /// </summary>
+        private void AddLoadingRow()
+        {
+            try
+            {
+                // Добавляем строку для сообщения
+                _tableGrid.RowDefinitions.Add(new RowDefinition(50, GridUnitType.Pixel)); // Еще больше высота
+
+                // Создаем StackPanel для центрирования
+                var loadingPanel = new StackPanel
+                {
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10 // Отступ между элементами
+                };
+
+                // Анимированный индикатор загрузки (ProgressBar)
+                var progressBar = new ProgressBar
+                {
+                    Width = 30,
+                    Height = 30,
+                    IsIndeterminate = true, // Анимированная загрузка
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                // Текст загрузки
+                var loadingText = new TextBlock
+                {
+                    Text = "Загрузка данных...",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontSize = 18, // Большой шрифт
+                    FontWeight = FontWeight.Bold,
+                    Foreground = new SolidColorBrush(Color.Parse("#2C3E50")), // Темно-синий цвет
+                    Margin = new Thickness(0, 0, 0, 2)
+                };
+
+                // Добавляем элементы в панель
+                loadingPanel.Children.Add(progressBar);
+                loadingPanel.Children.Add(loadingText);
+
+                Grid.SetColumnSpan(loadingPanel, 10);
+                Grid.SetRow(loadingPanel, _currentRow);
+                _tableGrid.Children.Add(loadingPanel);
+
+                _currentRow++;
+                Console.WriteLine("✓ Добавлена строка загрузки с индикатором");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при добавлении строки загрузки: {ex.Message}");
             }
         }
 
@@ -994,7 +1125,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Инициализация таймера для обновления статуса отправки
+        /// Инициализация таймера для обновления статуса
         /// </summary>
         private async Task InitializeStatusTimer()
         {
@@ -1420,133 +1551,14 @@ namespace Cash8Avalon
 
         #endregion
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            Console.WriteLine("=== UserControl загружен ===");
-
-            try
-            {
-                // Инициализация значений контролов
-                var numCash = this.FindControl<TextBlock>("num_cash");
-                if (numCash != null)
-                {
-                    numCash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
-                    Console.WriteLine($"Номер кассы установлен: {numCash.Text}");
-                }
-
-                var txtCashier = this.FindControl<TextBox>("txtB_cashier");
-                if (txtCashier != null)
-                {
-                    txtCashier.Text = MainStaticClass.Cash_Operator;
-                    Console.WriteLine($"Кассир установлен: {txtCashier.Text}");
-                }
-
-                var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
-                if (datePicker != null)
-                {
-                    datePicker.SelectedDate = DateTime.Today;
-                    Console.WriteLine($"Дата установлена: {DateTime.Today:dd.MM.yyyy}");
-                }
-
-                // ИНИЦИАЛИЗАЦИЯ TextBox СО СТАТУСОМ
-                _txtStatusBox = this.FindControl<TextBox>("txtB_not_unloaded_docs");
-                if (_txtStatusBox != null)
-                {
-                    _txtStatusBox.Text = "Инициализация статуса отправки...";
-                    Console.WriteLine("✓ TextBox со статусом найден");
-                }
-                else
-                {
-                    Console.WriteLine("⚠ TextBox 'txtB_not_unloaded_docs' не найден!");
-                }
-
-                Console.WriteLine("✓ Инициализация завершена");
-
-                // ЗАГРУЖАЕМ ДАННЫЕ ИЗ БД ПРИ ЗАГРУЗКЕ!
-                LoadDocuments();
-
-                // ПЕРВОНАЧАЛЬНОЕ ОБНОВЛЕНИЕ СТАТУСА
-                Task.Run(() => GetStatusSendDocument());
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Ошибка в OnLoaded: {ex.Message}");
-            }
-            Dispatcher.UIThread.InvokeAsync(async () =>
-            {
-                await Task.Delay(100);
-                this.Focus();
-
-                // Или попробуйте фокус на ScrollViewer
-                _scrollViewer?.Focus();
-
-                Console.WriteLine("✓ Фокус установлен после задержки");
-            }, DispatcherPriority.Background);
-        }
-
-        private void InitializeEvents()
-        {
-            try
-            {
-                var button1 = this.FindControl<Button>("button1");
-                if (button1 != null)
-                {
-                    button1.Click += Button1_Click;
-                }
-
-                var fillButton = this.FindControl<Button>("fill");
-                if (fillButton != null)
-                {
-                    fillButton.Click += Fill_Click;
-                }
-
-                var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
-                if (checkBox != null)
-                {
-                    checkBox.Click += CheckBox_show_3_last_checks_Click;
-                }
-
-                var updateButton = this.FindControl<Button>("btn_update_status_send");
-                if (updateButton != null)
-                {
-                    updateButton.Click += Btn_update_status_send_Click;
-                }
-
-                var checkActionsButton = this.FindControl<Button>("btn_check_actions");
-                if (checkActionsButton != null)
-                {
-                    checkActionsButton.Click += Btn_check_actions_Click;
-                }
-
-                var image = this.FindControl<Image>("pictureBox_get_update_program");
-                if (image != null)
-                {
-                    image.DoubleTapped += PictureBox_get_update_program_DoubleTapped;
-                }
-
-                // Кнопка закрытия в верхнем углу
-                var closeButton = this.FindControl<Button>("btnClose");
-                if (closeButton != null)
-                {
-                    closeButton.Click += CloseButton_Click;
-                }
-
-                Console.WriteLine("✓ События инициализированы");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Ошибка при инициализации событий: {ex.Message}");
-            }
-        }
-
         /// <summary>
-        /// Загрузка документов из БД
+        /// ✅ Асинхронная загрузка документов
         /// </summary>
-        public async void LoadDocuments()
+        private async Task LoadDocumentsAsync()
         {
             try
             {
-                Console.WriteLine("=== Загрузка документов из БД ===");
+                Console.WriteLine("=== Асинхронная загрузка документов ===");
 
                 var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
                 var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
@@ -1563,11 +1575,11 @@ namespace Cash8Avalon
 
                 Console.WriteLine($"Параметры: showLast3={showLast3}, date={selectedDate:yyyy-MM-dd}");
 
-                var checkItems = new List<CheckItem>();
-
-                // Загружаем данные из БД
-                await Task.Run(() =>
+                // ✅ ЗАГРУЖАЕМ ДАННЫЕ В ФОНОВОМ ПОТОКЕ
+                var checkItems = await Task.Run(() =>
                 {
+                    var items = new List<CheckItem>();
+
                     try
                     {
                         Console.WriteLine("Загрузка данных из БД...");
@@ -1701,28 +1713,25 @@ namespace Cash8Avalon
                                         // 9. its_print_p - boolean
                                         checkItem.ItsPrintP = reader.IsDBNull(9) ? false : Convert.ToBoolean(reader.GetValue(9));
 
-                                        checkItems.Add(checkItem);
+                                        items.Add(checkItem);
                                         Console.WriteLine($"  - Чек #{checkItem.DocumentNumber}: {checkItem.ClientName}, сумма: {checkItem.Cash}");
                                     }
                                     Console.WriteLine($"✓ Прочитано {count} строк из БД");
                                 }
                             }
                         }
-                        Console.WriteLine($"✓ Загружено {checkItems.Count} записей из БД");
+                        Console.WriteLine($"✓ Загружено {items.Count} записей из БД");
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"✗ Ошибка при загрузке из БД: {ex.Message}");
                         Console.WriteLine(ex.StackTrace);
-
-                        if (ex.InnerException != null)
-                        {
-                            Console.WriteLine($"Внутренняя ошибка: {ex.InnerException.Message}");
-                        }
                     }
+
+                    return items;
                 });
 
-                // Обновляем таблицу в UI потоке
+                // ✅ ОБНОВЛЯЕМ UI В UI ПОТОКЕ
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
@@ -1768,11 +1777,13 @@ namespace Cash8Avalon
                         Console.WriteLine(ex.StackTrace);
                     }
                 });
+
+                Console.WriteLine($"✓ Асинхронная загрузка завершена: {checkItems.Count} записей");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Общая ошибка в LoadDocuments: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine($"✗ Ошибка в LoadDocumentsAsync: {ex.Message}");
+                await MessageBox.Show($"Ошибка загрузки: {ex.Message}");
             }
         }
 
@@ -1810,6 +1821,61 @@ namespace Cash8Avalon
         }
 
         #region Обработчики событий кнопок
+
+        private void InitializeEvents()
+        {
+            try
+            {
+                var button1 = this.FindControl<Button>("button1");
+                if (button1 != null)
+                {
+                    button1.Click += Button1_Click;
+                }
+
+                var fillButton = this.FindControl<Button>("fill");
+                if (fillButton != null)
+                {
+                    fillButton.Click += Fill_Click;
+                }
+
+                var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
+                if (checkBox != null)
+                {
+                    checkBox.Click += CheckBox_show_3_last_checks_Click;
+                }
+
+                var updateButton = this.FindControl<Button>("btn_update_status_send");
+                if (updateButton != null)
+                {
+                    updateButton.Click += Btn_update_status_send_Click;
+                }
+
+                var checkActionsButton = this.FindControl<Button>("btn_check_actions");
+                if (checkActionsButton != null)
+                {
+                    checkActionsButton.Click += Btn_check_actions_Click;
+                }
+
+                var image = this.FindControl<Image>("pictureBox_get_update_program");
+                if (image != null)
+                {
+                    image.DoubleTapped += PictureBox_get_update_program_DoubleTapped;
+                }
+
+                // Кнопка закрытия в верхнем углу
+                var closeButton = this.FindControl<Button>("btnClose");
+                if (closeButton != null)
+                {
+                    closeButton.Click += CloseButton_Click;
+                }
+
+                Console.WriteLine("✓ События инициализированы");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при инициализации событий: {ex.Message}");
+            }
+        }
 
         /// <summary>
         /// Обработчик для кнопки "✕" в правом верхнем углу
@@ -1939,5 +2005,13 @@ namespace Cash8Avalon
         }
 
         #endregion
+
+        /// <summary>
+        /// Загрузка документов (синхронный метод для обратной совместимости)
+        /// </summary>
+        public async void LoadDocuments()
+        {
+            await LoadDocumentsAsync();
+        }
     }
 }

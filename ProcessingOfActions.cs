@@ -1750,7 +1750,7 @@ namespace Cash8Avalon
         {
             InputActionBarcode ib = new InputActionBarcode();
             ib.count = count;
-            ib.caller2 = this;
+            //ib.caller2 = this;
             ib.call_type = call_type;
             ib.num_doc = num_doc;
             ib.mode = mode;
@@ -1764,7 +1764,7 @@ namespace Cash8Avalon
         {
             InputActionBarcode ib = new InputActionBarcode();
             ib.count = count;
-            ib.caller2 = this;
+            //ib.caller2 = this;
             ib.call_type = call_type;
             ib.num_doc = num_doc;
             ib.mode = mode;

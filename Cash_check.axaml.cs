@@ -1596,13 +1596,13 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
             }
         }
-
+        
         //private async void ShowSimpleClientDialog()
         //{
         //    try
         //    {
         //        Console.WriteLine("Проверяем заполнен ли уже клиент");
-        //        if (this.client.Tag != null)
+        //        if (this.Client.Tag != null)
         //        {
         //            return;
         //        }
@@ -1610,41 +1610,35 @@ namespace Cash8Avalon
 
         //        // Создаем диалог
         //        var dialog = new InputActionBarcode();
-        //        dialog.call_type = 7; // Новый тип для ввода клиента
-        //        dialog.caller = this; // Передаем текущую форму как caller
+        //        dialog.call_type = 7;
 
-        //        // Настраиваем сообщение
-        //        if (client.Tag != null && !string.IsNullOrEmpty(client.Text))
-        //        {
-        //            dialog.SetAuthorizationMessage($"Текущий клиент: {client.Text}\nВведите новый код или нажмите Esc");
-        //        }
-        //        else
-        //        {
-        //            dialog.SetAuthorizationMessage("Введите код карты (10 символов)\nили номер телефона (начинается с 9, 13 символов)");
-        //        }
+        //        //dialog.SetAuthorizationMessage("Введите код карты (10 символов)\nили номер телефона (начинается с 9, 13 символов)");
 
-        //        // Получаем родительское окно (как в примере с маркировкой)
-        //        var owner = TopLevel.GetTopLevel(this) as Window;
-        //        if (owner == null)
-        //        {
-        //            await MessageBox.Show("Не удалось определить родительское окно");
-        //            return;
-        //        }
+        //        // Настройка окна для стабильной работы на Linux
+        //        dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        //        dialog.CanResize = false;
+        //        dialog.SystemDecorations = SystemDecorations.None;               
+
         //        Console.WriteLine("Показываем диалог ввода кода клиента");
-        //        // Показываем диалог используя его собственный метод ShowDialog
-        //        //var result = await dialog.ShowDialog<bool?>(owner);
-        //        await dialog.ShowDialog(owner);
-        //        var result = dialog.DialogResult;
-        //        Console.WriteLine("Обрабатываем результат ввода");
-        //        // Обрабатываем результат
+        //        dialog.Topmost = true;
+        //        // ✅ ВСЁ УПРАВЛЕНИЕ МОДАЛЬНОСТЬЮ — В ОДНОЙ СТРОЧКЕ!
+        //        //bool? result = await dialog.ShowModal(owner);                
+        //        //bool? result = await dialog.ShowModal(null);
+        //        bool? result = await dialog.ShowModalBlocking(this as Window);
+
+        //        Console.WriteLine($"Результат: {result}");
+
+        //        // ✅ ОБРАБАТЫВАЕМ РЕЗУЛЬТАТ — как и раньше
         //        if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
         //        {
-        //            if (this.client.Tag != null)//вдруг уже присвоено и здесь ошибка повторное присвоение 
-        //            {
-        //                return;
-        //            }
-        //            Console.WriteLine("Получили результат ввода и обрабатываем");
-        //            ProcessClientDiscount(dialog.EnteredBarcode);
+        //            if (this.Client.Tag != null) return; // защита от повтора
+        //            //Console.WriteLine("Получили результат ввода и обрабатываем");
+        //            //Console.WriteLine("Получили результат ввода и обрабатываем "+ dialog.EnteredBarcode);
+        //            string codeOrTelephone = dialog.EnteredBarcode;
+        //            //Console.WriteLine("Вася готов");                    
+        //            dialog = null;
+        //            GC.Collect();
+        //            ProcessClientDiscount(codeOrTelephone);
         //        }
         //        else
         //        {
@@ -1663,368 +1657,37 @@ namespace Cash8Avalon
 
         private async void ShowSimpleClientDialog()
         {
+            InputActionBarcode dialog = null;
+
             try
             {
-                Console.WriteLine("Проверяем заполнен ли уже клиент");
-                if (this.Client.Tag != null)
-                {
-                    return;
-                }
-                Console.WriteLine("Клиент не заполнен, создаем диалог выбора");
+                if (this.Client.Tag != null) return;
 
-                // Создаем диалог
-                var dialog = new InputActionBarcode();
+                dialog = new InputActionBarcode();
                 dialog.call_type = 7;
-                
-                //dialog.SetAuthorizationMessage("Введите код карты (10 символов)\nили номер телефона (начинается с 9, 13 символов)");
-                
-                // Настройка окна для стабильной работы на Linux
                 dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                 dialog.CanResize = false;
-                dialog.SystemDecorations = SystemDecorations.None;               
-
-                Console.WriteLine("Показываем диалог ввода кода клиента");
+                dialog.SystemDecorations = SystemDecorations.None;
                 dialog.Topmost = true;
-                // ✅ ВСЁ УПРАВЛЕНИЕ МОДАЛЬНОСТЬЮ — В ОДНОЙ СТРОЧКЕ!
-                //bool? result = await dialog.ShowModal(owner);                
-                //bool? result = await dialog.ShowModal(null);
-                bool? result = await dialog.ShowModalBlocking(this as Window);
 
-                Console.WriteLine($"Результат: {result}");
-
-                // ✅ ОБРАБАТЫВАЕМ РЕЗУЛЬТАТ — как и раньше
-                if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
+                bool? result = await dialog.ShowModalBlocking(this);
+                string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
+                if (result == true && !string.IsNullOrEmpty(enteredBarcode))
                 {
-                    if (this.Client.Tag != null) return; // защита от повтора
-                    //Console.WriteLine("Получили результат ввода и обрабатываем");
-                    //Console.WriteLine("Получили результат ввода и обрабатываем "+ dialog.EnteredBarcode);
-                    string codeOrTelephone = dialog.EnteredBarcode;
-                    //Console.WriteLine("Вася готов");                    
-                    dialog = null;
-                    GC.Collect();
-                    ProcessClientDiscount(codeOrTelephone);
+                    ProcessClientDiscount(enteredBarcode);
                 }
-                else
-                {
-                    Console.WriteLine("НЕ получили результат ввода и обрабатываем");
-                }
-
-                // Возвращаем фокус на поиск товара
-                InputSearchProduct.Focus();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Ошибка в диалоге клиента: {ex.Message}");
-                await MessageBox.Show($"Ошибка: {ex.Message}");
+                Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
-        }
-
-        //private InputActionBarcode _activeClientDialog;
-
-        //private async void ShowSimpleClientDialog()
-        //{
-        //    try
-        //    {
-        //        Проверяем, не открыт ли уже диалог
-        //        if (_activeClientDialog != null && _activeClientDialog.IsVisible)
-        //        {
-        //            _activeClientDialog.Activate();
-        //            return;
-        //        }
-
-        //        Console.WriteLine("Проверяем заполнен ли уже клиент");
-        //        if (this.client.Tag != null)
-        //        {
-        //            return;
-        //        }
-
-        //        Console.WriteLine("Клиент не заполнен, создаем диалог выбора");
-
-        //        Получаем родительское окно
-        //       var parentWindow = TopLevel.GetTopLevel(this) as Window;
-        //        if (parentWindow == null)
-        //        {
-        //            await MessageBox.Show("Не удалось определить родительское окно");
-        //            return;
-        //        }
-
-        //        Создаем диалог
-        //        _activeClientDialog = new InputActionBarcode();
-        //        _activeClientDialog.call_type = 7;
-        //        _activeClientDialog.caller = this;
-
-        //        Настраиваем сообщение
-        //        string message = client.Tag != null && !string.IsNullOrEmpty(client.Text)
-        //            ? $"Текущий клиент: {client.Text}\nВведите новый код или нажмите Esc"
-        //            : "Введите код карты (10 символов)\nили номер телефона (начинается с 9, 13 символов)";
-
-        //        _activeClientDialog.SetAuthorizationMessage(message);
-
-        //        Console.WriteLine("Показываем диалог ввода кода клиента");
-
-        //        Отключаем родительское окно перед показом
-        //        parentWindow.IsEnabled = false;
-
-        //        Подписываемся на события до показа
-        //        _activeClientDialog.Closing += OnClientDialogClosing;
-        //        _activeClientDialog.Closed += OnClientDialogClosed;
-
-        //        Показываем немодально
-        //        _activeClientDialog.Show();
-
-        //        Центрируем окно вручную
-        //        CenterDialogOnParent(_activeClientDialog, parentWindow);
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при открытии диалога клиента: {ex.Message}");
-
-        //        Восстанавливаем состояние родительского окна
-        //        var parentWindow = TopLevel.GetTopLevel(this) as Window;
-        //        if (parentWindow != null)
-        //        {
-        //            parentWindow.IsEnabled = true;
-        //        }
-
-        //        await MessageBox.Show($"Ошибка: {ex.Message}");
-        //    }
-        //}
-
-        //Метод для центрирования диалога на родительском окне
-        //private void CenterDialogOnParent(Window dialog, Window parent)
-        //{
-        //    try
-        //    {
-        //        var parentScreen = parent.Screens.ScreenFromPoint(parent.Position);
-        //        if (parentScreen != null)
-        //        {
-        //            var parentBounds = parent.Bounds;
-        //            var dialogWidth = dialog.Width > 0 ? dialog.Width : 400; // Дефолтная ширина
-        //            var dialogHeight = dialog.Height > 0 ? dialog.Height : 300; // Дефолтная высота
-
-        //            var x = parentBounds.X + (parentBounds.Width - dialogWidth) / 2;
-        //            var y = parentBounds.Y + (parentBounds.Height - dialogHeight) / 2;
-
-        //            dialog.Position = new PixelPoint((int)x, (int)y);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Не удалось центрировать окно: {ex.Message}");
-        //    }
-        //}
-
-        //private void OnClientDialogClosing(object sender, System.ComponentModel.CancelEventArgs e)
-        //{
-        //    Console.WriteLine("Диалог клиента закрывается");
-        //}
-
-        //private void OnClientDialogClosed(object sender, EventArgs e)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine("Диалог клиента закрыт");
-
-        //        if (sender is InputActionBarcode dialog)
-        //        {
-        //            Отписываемся от событий
-        //            dialog.Closing -= OnClientDialogClosing;
-        //            dialog.Closed -= OnClientDialogClosed;
-
-        //            Обрабатываем результат
-        //            if (!string.IsNullOrEmpty(dialog.EnteredBarcode) && this.client.Tag == null)
-        //            {
-        //                Console.WriteLine($"Обрабатываем введенный код: {dialog.EnteredBarcode}");
-        //                ProcessClientDiscount(dialog.EnteredBarcode);
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при обработке закрытия диалога: {ex.Message}");
-        //    }
-        //    finally
-        //    {
-        //        Восстанавливаем состояние родительского окна
-        //        var parentWindow = TopLevel.GetTopLevel(this) as Window;
-        //        if (parentWindow != null)
-        //        {
-        //            parentWindow.IsEnabled = true;
-        //        }
-
-        //        Очищаем ссылку
-        //        _activeClientDialog = null;
-
-        //        Возвращаем фокус на поиск товара
-        //        Dispatcher.UIThread.Post(() =>
-        //        {
-        //            try
-        //            {
-        //                InputSearchProduct.Focus();
-        //            }
-        //            catch (Exception focusEx)
-        //            {
-        //                Console.WriteLine($"Не удалось установить фокус: {focusEx.Message}");
-        //            }
-        //        });
-        //    }
-        //}
-
-
-        //private void ShowSimpleClientDialog()
-        //{
-        //    try
-        //    {
-        //        if (this.client.Tag != null) return;
-
-        //        Console.WriteLine("Создаем диалог ввода клиента (немодальный)");
-
-        //        // Создаем окно
-        //        var dialog = new Window
-        //        {
-        //            Title = "Ввод кода клиента",
-        //            Width = 450,
-        //            Height = 220,
-        //            WindowStartupLocation = WindowStartupLocation.CenterScreen, // ← CenterScreen вместо CenterOwner
-        //            CanResize = false,
-        //            ShowInTaskbar = false,
-        //            Topmost = true, // Поверх других окон
-        //            SystemDecorations = SystemDecorations.BorderOnly
-        //        };
-
-        //        var textBox = new TextBox
-        //        {
-        //            FontSize = 22,
-        //            Margin = new Thickness(20, 15, 20, 10),
-        //            MaxLength = 13,
-        //            Watermark = "0000000005 или 79521234567"
-        //        };
-
-        //        var resultCode = ""; // Для хранения результата
-
-        //        // Обработка Enter
-        //        textBox.KeyDown += async (s, e) =>
-        //        {
-        //            if (e.Key == Key.Enter)
-        //            {
-        //                string code = textBox.Text?.Trim() ?? "";
-
-        //                if (string.IsNullOrEmpty(code))
-        //                {
-        //                    await MessageBox.Show("Введите код клиента");
-        //                    return;
-        //                }
-
-        //                if (code.Length != 10 && code.Length != 13)
-        //                {
-        //                    await MessageBox.Show("Код должен содержать 10 или 13 символов");
-        //                    textBox.SelectAll();
-        //                    return;
-        //                }
-
-        //                if (code.Length == 13 && !code.StartsWith("9"))
-        //                {
-        //                    await MessageBox.Show("Номер телефона должен начинаться с 9");
-        //                    textBox.SelectAll();
-        //                    return;
-        //                }
-
-        //                resultCode = code;
-        //                dialog.Close();
-        //            }
-        //            else if (e.Key == Key.Escape)
-        //            {
-        //                dialog.Close();
-        //            }
-        //        };
-
-        //        var content = new StackPanel
-        //        {
-        //            Margin = new Thickness(0),
-        //            Children =
-        //    {
-        //        new Border
-        //        {
-        //            Background = Brushes.SteelBlue,
-        //            Padding = new Thickness(15),
-        //            Child = new TextBlock
-        //            {
-        //                Text = "Введите код клиента",
-        //                Foreground = Brushes.White,
-        //                FontSize = 16,
-        //                FontWeight = FontWeight.Bold
-        //            }
-        //        },
-        //        new TextBlock
-        //        {
-        //            Text = "Карта: 10 цифр\nТелефон: 13 цифр (начинается с 9)",
-        //            Margin = new Thickness(20, 15, 20, 5),
-        //            FontSize = 13,
-        //            TextWrapping = TextWrapping.Wrap
-        //        },
-        //        textBox,
-        //        new TextBlock
-        //        {
-        //            Text = "Нажмите Enter для подтверждения, Esc для отмены",
-        //            Margin = new Thickness(20, 5, 20, 0),
-        //            FontSize = 11,
-        //            Foreground = Brushes.Gray,
-        //            FontStyle = FontStyle.Italic
-        //        }
-        //    }
-        //        };
-
-        //        dialog.Content = content;
-
-        //        // Обработчик закрытия окна
-        //        dialog.Closed += (s, e) =>
-        //        {
-        //            if (!string.IsNullOrEmpty(resultCode))
-        //            {
-        //                // Вызываем в основном потоке
-        //                Dispatcher.UIThread.InvokeAsync(() =>
-        //                {
-        //                    try
-        //                    {
-        //                        ProcessClientDiscount(resultCode);
-        //                        InputSearchProduct.Focus();
-        //                    }
-        //                    catch (Exception ex)
-        //                    {
-        //                        Console.WriteLine($"Ошибка обработки кода: {ex.Message}");
-        //                    }
-        //                });
-        //            }
-        //            else
-        //            {
-        //                // Просто возвращаем фокус
-        //                Dispatcher.UIThread.InvokeAsync(() =>
-        //                {
-        //                    InputSearchProduct.Focus();
-        //                });
-        //            }
-        //        };
-
-        //        // Показываем немодально
-        //        dialog.Show();
-
-        //        // Фокус на TextBox
-        //        Dispatcher.UIThread.InvokeAsync(() =>
-        //        {
-        //            textBox.Focus();
-        //            textBox.SelectAll();
-        //        }, DispatcherPriority.Background);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка создания диалога: {ex.Message}");
-        //        InputSearchProduct.Focus();
-        //    }
-        //}
-
-        // Добавьте поле для отслеживания состояния
-        //private bool IsClientDialogOpen = false;
+            finally
+            {
+                //dialog?.Close();
+                InputSearchProduct.Focus();
+            }
+        }       
 
 
         private void CheckControls()

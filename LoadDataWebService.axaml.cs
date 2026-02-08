@@ -869,7 +869,7 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    await MessageBox.Show("Нет данных по акциям");
+                    await MessageBox.Show("Нет данных по акциям","Проверка наличия акций",MessageBoxButton.OK,MessageBoxType.Info);
                 }
 
                 queries.Add("Delete from action_clients");
