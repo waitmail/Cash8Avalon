@@ -1088,6 +1088,11 @@ namespace Cash8Avalon
                             this.pay.IsEnabled = false;
                             this.checkBox_to_print_repeatedly.IsEnabled = false;
                         }
+                        else
+                        {
+                            this.pay.IsEnabled = true;
+                            this.checkBox_to_print_repeatedly.IsEnabled = true;
+                        }
                     }
                     else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
                     {
@@ -1196,7 +1201,7 @@ namespace Cash8Avalon
                 // Блокируем элементы
                 txtB_search_product.IsEnabled = !readOnly;
                 //client_barcode.IsEnabled = !readOnly;
-                pay.IsEnabled = !readOnly && MainStaticClass.Code_right_of_user == 1;
+                //pay.IsEnabled = !readOnly && MainStaticClass.Code_right_of_user == 1;
                 check_type.IsEnabled = !readOnly;
                 comment.IsEnabled = !readOnly;
                 txtB_inn.IsEnabled = !readOnly;
@@ -1957,7 +1962,7 @@ namespace Cash8Avalon
             {
                 if (MainStaticClass.GetFiscalsForbidden)
                 {
-                    await MessageBox.Show("Вам запрещена печать на фискальном регистраторе", "Проверки при печати", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBox.Show("Вам запрещена печать на фискальном регистраторе", "Проверки при печати", MessageBoxButton.OK, MessageBoxType.Error,this);
                     return;
                 }
             }
@@ -7291,7 +7296,7 @@ namespace Cash8Avalon
 
         private void enable_print()
         {
-            if (MainStaticClass.SystemTaxation < 3)
+            if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
             {
                 checkBox_to_print_repeatedly.IsEnabled = true;
                 checkBox_to_print_repeatedly_p.IsEnabled = false;

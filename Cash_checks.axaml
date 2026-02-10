@@ -24,7 +24,6 @@
             <StackPanel Grid.Column="0" Spacing="10">
                 <!-- Строка 1: Документы и кнопки -->
                 <DockPanel Name="Row1Panel">
-                    <!-- Это тоже TextBox, поэтому тоже исправляем -->
                     <TextBox Name="txtB_not_unloaded_docs" 
                             IsEnabled="False"
                             Text=""
@@ -107,10 +106,34 @@
                     <StackPanel Orientation="Horizontal" Spacing="5" Name="DatePanel">
                         <TextBlock Text="На дату:" 
                                   VerticalAlignment="Center"/>
-                        <DatePicker Name="dateTimePicker1" 
-                                   Width="150"
-                                   Height="30"
-                                   VerticalAlignment="Center"/>
+                        
+                        <!-- Простой TextBox для отображения даты -->
+                        <TextBox Name="txtSelectedDate"
+                               Width="100"
+                               Height="30"
+                               VerticalAlignment="Center"
+                               Text=""
+                               IsReadOnly="True"
+                               Background="White"
+                               Foreground="Black"/>
+                        
+                        <!-- Простая кнопка для выбора даты -->
+                        <Button Name="btnSelectDate"
+                               Content="📅"
+                               Width="30"
+                               Height="30"
+                               VerticalAlignment="Center"
+                               Background="White"
+                               BorderBrush="Gray"
+                               BorderThickness="1"
+                               Click="BtnSelectDate_Click">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover">
+                                    <Setter Property="Background" Value="#F0F0F0"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                        
                         <Button Name="fill" 
                                Content="Заполнить" 
                                Width="100"
@@ -125,7 +148,8 @@
                                HorizontalContentAlignment="Center"
                                VerticalContentAlignment="Center"
                                CornerRadius="3"
-                               Cursor="Hand">
+                               Cursor="Hand"
+                               Click="Fill_Click">
                             <Button.Styles>
                                 <Style Selector="Button:pointerover">
                                     <Setter Property="Background" Value="#FF42A5F5"/>
@@ -143,7 +167,6 @@
                     <StackPanel Orientation="Horizontal" Spacing="5" Margin="20,0,0,0" Name="CashierPanel">
                         <TextBlock Text="Кассир:" 
                                   VerticalAlignment="Center"/>
-                        <!-- TextBox - поле ввода, в отключенном состоянии нужно явно задавать цвета -->
                         <TextBox Name="txtB_cashier" 
                                 IsEnabled="False"
                                 Width="150"
@@ -153,7 +176,6 @@
                                 Background="White"
                                 Foreground="Black"/>
                         
-                        <!-- TextBlock - просто отображение текста, всегда виден нормально -->
                         <Border BorderBrush="Gray" 
                                BorderThickness="1" 
                                Padding="5"
@@ -168,7 +190,6 @@
                                       HorizontalAlignment="Center"/>
                         </Border>
                         
-                        <!-- Чекбокс оставляем в правой части -->
                         <CheckBox Name="checkBox_show_3_last_checks" 
                                  Content="3"
                                  IsChecked="True"

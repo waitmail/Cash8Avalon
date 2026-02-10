@@ -59,6 +59,9 @@ namespace Cash8Avalon
 
         private bool newDocument = false;
 
+        private DateTime _currentDate = DateTime.Today;
+        private TextBox _txtSelectedDate = null;
+
         public Cash_checks()
         {
             Console.WriteLine("=== Конструктор Cash_checks начат ===");
@@ -85,6 +88,8 @@ namespace Cash8Avalon
                 // 6. ✅ ИНИЦИАЛИЗАЦИЯ ЗНАЧЕНИЙ И ЗАГРУЗКА ДАННЫХ СРАЗУ
                 InitializeAndLoadAsync();
 
+                UpdateDateDisplay();
+
                 Console.WriteLine("✓ Конструктор завершен успешно");
             }
             catch (Exception ex)
@@ -95,6 +100,112 @@ namespace Cash8Avalon
 
             Console.WriteLine("=== Конструктор Cash_checks завершен ===");
         }
+
+        private void UpdateDateDisplay()
+        {
+            _txtSelectedDate = this.FindControl<TextBox>("txtSelectedDate");
+            _txtSelectedDate.Text = _currentDate.ToString("dd.MM.yyyy");
+        }
+
+        private async void BtnSelectDate_Click(object sender, RoutedEventArgs e)
+        {
+            // Создаем простой DatePicker для выбора даты
+            var datePicker = new DatePicker();
+            datePicker.SelectedDate = new DateTimeOffset(_currentDate);
+
+            // Кнопка OK
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 80
+            };
+
+            // Кнопка Отмена
+            var cancelButton = new Button
+            {
+                Content = "Отмена",
+                Width = 80
+            };
+
+            // Панель для кнопок
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 10
+            };
+
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            // Основная панель
+            var mainPanel = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 20,
+                Children =
+                {
+                    datePicker,
+                    buttonPanel
+                }
+            };
+
+            // Окно диалога
+            var dialog = new Window
+            {
+                Title = "Выберите дату",
+                Width = 300,
+                Height = 200,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Content = mainPanel,
+                CanResize=false
+            };
+
+            // Подписываемся на события кнопок
+            okButton.Click += (s, args) =>
+            {
+                if (datePicker.SelectedDate.HasValue)
+                {
+                    // Конвертируем DateTimeOffset в DateTime
+                    _currentDate = datePicker.SelectedDate.Value.DateTime;
+                    UpdateDateDisplay();
+                }
+                dialog.Close();
+            };
+
+            cancelButton.Click += (s, args) =>
+            {
+                dialog.Close();
+            };
+
+            // Показываем диалог
+            var parentWindow = this.VisualRoot as Window;
+            if (parentWindow != null)
+            {
+                await dialog.ShowDialog(parentWindow);
+            }
+        }
+
+
+        // Получить выбранную дату
+        public DateTime GetSelectedDate()
+        {
+            return _currentDate;
+        }
+
+        // Получить дату в строковом формате
+        public string GetFormattedDate()
+        {
+            return _currentDate.ToString("dd.MM.yyyy");
+        }
+
+        // Установить дату
+        public void SetDate(DateTime date)
+        {
+            _currentDate = date;
+            UpdateDateDisplay();
+        }
+
 
         /// <summary>
         /// ✅ Асинхронная инициализация и загрузка данных
@@ -1625,17 +1736,17 @@ namespace Cash8Avalon
                 Console.WriteLine("=== Асинхронная загрузка документов ===");
 
                 var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
-                var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
+                //var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
 
-                if (checkBox == null || datePicker == null)
+                if (checkBox == null)// || datePicker == null)
                 {
-                    Console.WriteLine("✗ Контролы не найдены!");
+                    Console.WriteLine("✗ Контрол не найдены!");
                     return;
                 }
 
                 // Получаем параметры
                 bool showLast3 = checkBox.IsChecked ?? false;
-                DateTime selectedDate = datePicker.SelectedDate?.DateTime ?? DateTime.Today;
+                DateTime selectedDate = _currentDate;//datePicker.SelectedDate?.DateTime ?? DateTime.Today;
 
                 Console.WriteLine($"Параметры: showLast3={showLast3}, date={selectedDate:yyyy-MM-dd}");
 

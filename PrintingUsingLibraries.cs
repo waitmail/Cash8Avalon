@@ -667,7 +667,7 @@ namespace Cash8Avalon
             if (fptr.openReceipt() != 0)
             {
                 await MessageBox.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
-                        "Ошибка открытия чека", MessageBoxButton.OK, MessageBoxType.Error);
+                        "Ошибка открытия чека", MessageBoxButton.OK, MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 //fptr.close();
                 if (fptr.errorCode() == 82)

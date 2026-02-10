@@ -1,49 +1,69 @@
 ﻿<Window xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="350"
-             x:Class="Cash8Avalon.LoadDataWebService"
-             MinHeight="350">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="250"
+        x:Class="Cash8Avalon.LoadDataWebService"
+        Title="Загрузка данных"
+        MinWidth="400"
+        MinHeight="250"
+        Width="400"
+        Height="250">
     
-    <Grid>
-        <!-- Основной контент по центру -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="10" Spacing="10"
-                        VerticalAlignment="Top"
-                        HorizontalAlignment="Left">
-                        
-                <!-- Кнопка полной загрузки -->
-                <Button x:Name="btn_new_load"
-                        Content="Загрузить данные (ПОЛНАЯ ЗАГРУЗКА)"
-                        MinHeight="45"
-                        Padding="10,8"
-                        Click="btn_new_load_Click"/>
-                
-                <!-- Прогресс-бар -->
-                <ProgressBar x:Name="progressBar1"
-                             Height="20"
-                             Minimum="0" Maximum="100"
-                             IsVisible="False"
-                             IsIndeterminate="False"/>
-                
-                <!-- Кнопка обновления клиентов -->
-                <Button x:Name="download_bonus_clients"
-                        Content="Обновить клиентов"
-                        MinHeight="35"
-                        Padding="10,6"
-                        IsVisible="False"
-                        Click="download_bonus_clients_Click"/>
-                
-                <!-- Быстрая загрузка (скрыта по умолчанию) -->
-                <Button x:Name="btn_new_load_fast"
-                        Content="Загрузить данные быстро (ПОЛНАЯ ЗАГРУЗКА)"
-                        MinHeight="45"
-                        Padding="10,8"
-                        IsVisible="False"
-                        Click="btn_new_load_fast_Click"/>
-                        
-            </StackPanel>
-        </ScrollViewer>        
-    </Grid>    
+    <Grid Margin="10">
+        <StackPanel Spacing="15">
+            <!-- Заголовок -->
+            <TextBlock Text="Загрузка данных из системы"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
+            
+            <!-- Информация о времени -->
+            <TextBlock x:Name="timeInfoText"
+                       Text="Время загрузки: 00:00"
+                       FontSize="16"
+                       Foreground="#666666"
+                       HorizontalAlignment="Center"
+                       IsVisible="False"/>
+            
+            <!-- Кнопка загрузки -->
+            <Button x:Name="btn_new_load"
+                    Content="Начать загрузку данных"
+                    Height="40"
+                    FontSize="14"
+                    HorizontalAlignment="Center"
+                    MinWidth="200"/>
+            
+            <!-- Панель прогресса -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="10"
+                    Background="#F8F8F8">
+                <StackPanel x:Name="progressPanel" 
+                            Orientation="Vertical" 
+                            Spacing="8"
+                            IsVisible="False">
+                    <TextBlock x:Name="statusText" 
+                               FontSize="12"
+                               Text="Подготовка..."
+                               HorizontalAlignment="Center"/>
+                    
+                    <ProgressBar x:Name="progressBar1" 
+                                 Height="20"
+                                 Minimum="0" 
+                                 Maximum="100"
+                                 Value="0"
+                                 IsIndeterminate="False"/>
+                    
+                    <!-- Убрал время отсюда, оставил только проценты -->
+                    <TextBlock x:Name="progressPercent" 
+                               FontSize="11"
+                               Foreground="#666666"
+                               Text="0%"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </Window>

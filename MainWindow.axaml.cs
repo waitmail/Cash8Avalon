@@ -121,24 +121,7 @@ namespace Cash8Avalon
                     MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
                     MainStaticClass.Last_Write_Check = DateTime.Now.AddSeconds(1);
                     MainStaticClass.MainWindow = this;
-
-                    //// 2. Проверка файла конфигурации
-                    //string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
-                    //if (!File.Exists(configPath))
-                    //{
-                    //    await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}", "Проверка файлов настроек ", MessageBoxButton.OK, MessageBoxType.Error);
-                    //    this.Close();
-                    //    return;
-                    //}
-                    //else
-                    //{
-                    //    Console.WriteLine($"Загружаем конфигурацию из: {configPath}");
-                    //    MainStaticClass.loadConfig(configPath);
-                    //    Console.WriteLine($"? Конфиг загружен: {configPath}");
-                    //}
-                        
                     
-
                     string version_program = await MainStaticClass.GetAtolDriverVersion();
                     this.Title = "Касса   " + MainStaticClass.CashDeskNumber;
                     this.Title += " | " + MainStaticClass.Nick_Shop;
@@ -146,19 +129,6 @@ namespace Cash8Avalon
                     this.Title += " | " + LoadDataWebService.last_date_download_tovars().ToString("yyyy-MM-dd hh:mm:ss");
                     PrintingUsingLibraries printing = new PrintingUsingLibraries();
                     this.Title += " | " + version_program;
-
-                    // 1. Обновляем период выгрузки
-                    //await UpdateUnloadingPeriod();
-
-                    //// 2. Настраиваем и запускаем таймер
-                    //int intervalMinutes = await MainStaticClass.GetUnloadingInterval();
-                    //if (intervalMinutes > 0)
-                    //{
-                    //    _unloadingTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
-                    //    _unloadingTimer.Start();
-                    //    Console.WriteLine($"✓ Таймер выгрузки запущен с интервалом {intervalMinutes} минут");
-                    //}
-
 
                     // 3. Проверка обновлений (только если не A01)
                     //if (MainStaticClass.Nick_Shop != "A01")
@@ -175,10 +145,22 @@ namespace Cash8Avalon
                         _ = InventoryManager.FillDictionaryProductDataAsync(this);
                         _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);
 
+
+                        // 1. Обновляем период выгрузки
+                        await UpdateUnloadingPeriod();
+
+                        // 2. Настраиваем и запускаем таймер
+                        int intervalMinutes = await MainStaticClass.GetUnloadingInterval();
+                        if (intervalMinutes > 0)
+                        {
+                            _unloadingTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+                            _unloadingTimer.Start();
+                            Console.WriteLine($"✓ Таймер выгрузки запущен с интервалом {intervalMinutes} минут");
+                        }
+
                         //await ShowErrorMessage("В базе данных нет таблицы constants!");
                         //this.Close();
                         //return;
-
 
                         // 5. Установка заголовка окна
                         //SetWindowTitle();
@@ -239,19 +221,7 @@ namespace Cash8Avalon
                         }
 
                         // 12. Проверка файлов и папок
-                        _ = CheckFilesAndFolders();
-
-                        // 13. Отправка статуса открытия магазина
-                        //await SendShopStatus(true);
-
-                        // 2. Настраиваем и запускаем таймер
-                        int intervalMinutes = await MainStaticClass.GetUnloadingInterval();
-                        if (intervalMinutes > 0)
-                        {
-                            _unloadingTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
-                            _unloadingTimer.Start();
-                            Console.WriteLine($"✓ Таймер выгрузки запущен с интервалом {intervalMinutes} минут");
-                        }
+                        _ = CheckFilesAndFolders();                       
 
                         Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
                        
@@ -1106,7 +1076,7 @@ namespace Cash8Avalon
         private async Task loadBonusClients()
         {
             LoadDataWebService ld = new LoadDataWebService();
-            await Task.Run(() => ld.load_bonus_clients(false));            
+            await Task.Run(() => ld.load_bonus_clients(false));
         }
 
         private async Task<int> check_system_taxation()
