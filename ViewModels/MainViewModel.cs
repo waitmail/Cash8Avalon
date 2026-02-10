@@ -70,24 +70,24 @@ namespace Cash8Avalon.ViewModels
         //    StatusMessage = "Параметры соединения с БД открыты";
         //}
 
-        private void OpenSettingConnect()
-        {
-            StatusMessage = "Открытие параметров соединения с БД...";
-            Console.WriteLine("Открываем параметры базы данных в отдельном окне");
+        //private void OpenSettingConnect()
+        //{
+        //    StatusMessage = "Открытие параметров соединения с БД...";
+        //    Console.WriteLine("Открываем параметры базы данных в отдельном окне");
 
-            // Открываем SettingConnect как отдельное окно
-            var settingConnectWindow = new SettingConnect();
+        //    // Открываем SettingConnect как отдельное окно
+        //    var settingConnectWindow = new SettingConnect();
 
-            // Подписываемся на событие закрытия окна
-            settingConnectWindow.Closed += (sender, e) =>
-            {
-                Console.WriteLine("Окно SettingConnect закрыто");
-                StatusMessage = "Готово";
-            };
+        //    // Подписываемся на событие закрытия окна
+        //    settingConnectWindow.Closed += (sender, e) =>
+        //    {
+        //        Console.WriteLine("Окно SettingConnect закрыто");
+        //        StatusMessage = "Готово";
+        //    };
 
-            settingConnectWindow.Show();
-            StatusMessage = "Параметры соединения с БД открыты в отдельном окне";
-        }
+        //    settingConnectWindow.Show();
+        //    StatusMessage = "Параметры соединения с БД открыты в отдельном окне";
+        //}
 
         // Обработчик закрытия окна параметров БД
         private void OnSettingConnectRequestClose(object sender, EventArgs e)
@@ -96,19 +96,45 @@ namespace Cash8Avalon.ViewModels
             CloseCurrentContent();
         }
 
-        // Остальные методы остаются без изменений
+        //// Остальные методы остаются без изменений
+        //private void OpenInternetDataLoad()
+        //{
+        //    StatusMessage = "Открытие загрузки данных...";
+        //    Console.WriteLine("Открываем загрузку данных ВНУТРИ главного окна");
+
+        //    var loadDataControl = new LoadDataWebService();
+
+        //    // Подписываемся через именованный метод
+        //    loadDataControl.RequestClose += OnLoadDataRequestClose;
+
+        //    CurrentContent = loadDataControl;
+        //    StatusMessage = "Загрузка данных из интернет открыта";
+        //}
+
+        // Использование:
+        private void OpenSettingConnect()
+        {
+            ShowWindow(new SettingConnect(), "параметров соединения с БД");
+        }
+
         private void OpenInternetDataLoad()
         {
-            StatusMessage = "Открытие загрузки данных...";
-            Console.WriteLine("Открываем загрузку данных ВНУТРИ главного окна");
+            ShowWindow(new LoadDataWebService(), "загрузки данных из интернет");
+        }
 
-            var loadDataControl = new LoadDataWebService();
+        private void ShowWindow(Window window, string operationName)
+        {
+            StatusMessage = $"Открытие {operationName}...";
+            Console.WriteLine($"Открываем {operationName} в отдельном окне");
 
-            // Подписываемся через именованный метод
-            loadDataControl.RequestClose += OnLoadDataRequestClose;
+            window.Closed += (sender, e) =>
+            {
+                Console.WriteLine($"Окно {operationName} закрыто");
+                StatusMessage = "Готово";
+            };
 
-            CurrentContent = loadDataControl;
-            StatusMessage = "Загрузка данных из интернет открыта";
+            window.Show();
+            StatusMessage = $"{operationName} открыт в отдельном окне";
         }
 
         private void OpenConstants()

@@ -217,7 +217,7 @@ namespace Cash8Avalon
             }
         }
 
-        private int count_users()
+        private async Task<int> count_users()
         {
             int rezult = 0;
 
@@ -238,7 +238,7 @@ namespace Cash8Avalon
             {
                 // MessageBox.Show асинхронный, но мы используем GetAwaiter().GetResult()
                 // для синхронного ожидания
-                MessageBox.Show(ex.Message);//.GetAwaiter().GetResult();
+                await MessageBox.Show(ex.Message);//.GetAwaiter().GetResult();
             }
 
             return rezult;
@@ -428,7 +428,7 @@ namespace Cash8Avalon
             }
 
             // Подсчет пользователей
-            int userCount = count_users();
+            int userCount = await count_users();
 
             if ((userCount == 0) && (inputBarcode.Text.Trim() == "1"))
             {
@@ -495,7 +495,7 @@ namespace Cash8Avalon
             CloseWithSuccess(password);
         }
 
-        private void HandleCashierSuccess(string password)
+        private async void HandleCashierSuccess(string password)
         {
             if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
             {
@@ -504,7 +504,7 @@ namespace Cash8Avalon
 
             if (!MainStaticClass.First_Login_Admin)
             {
-                MessageBox.Show("Первая регистрация должна с правами администратора");
+                await MessageBox.Show("Первая регистрация должна с правами администратора");
                 return; // Не закрываем окно
             }
 

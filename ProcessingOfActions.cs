@@ -1358,27 +1358,27 @@ namespace Cash8Avalon
                 {
                     // Если данных для текущего документа нет, можно вывести предупреждение
                     await MessageBox.Show($"Данные для документа {num_doc} отсутствуют в словаре.");
-                    MainStaticClass.WriteRecordErrorLog("Данные для документа {num_doc} отсутствуют в словаре.", "marked_action_tovar_dt(int num_doc, string comment, Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)", num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
+                    MainStaticClass.WriteRecordErrorLog($"Данные для документа {num_doc} отсутствуют в словаре.", "marked_action_tovar_dt(int num_doc, string comment, Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)", num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
                 }
             }
             catch (Exception ex)
             {
                 // Обработка ошибок
                 await MessageBox.Show(ex.Message, "Ошибка при пометке товарных позиций");
-                MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
+                MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участвовавших в акции");
             }
         }
 
 
 
 
-        /// <summary>
-        /// Возвращает true если в табличной части условия акций есть строки и false
-        /// если строк нет
-        /// </summary>
-        /// <param name="num_action_doc"></param>
-        /// <returns></returns>
-        private async Task<bool> checked_action_table_rows(int num_action_doc)
+        ///// <summary>
+        ///// Возвращает true если в табличной части условия акций есть строки и false
+        ///// если строк нет
+        ///// </summary>
+        ///// <param name="num_action_doc"></param>
+        ///// <returns></returns>
+        private async Task<bool> CheckedActionTableRows(int num_action_doc)
         {
             bool result = false;
 
@@ -1402,11 +1402,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message);
             }
             finally
             {
@@ -1437,7 +1437,7 @@ namespace Cash8Avalon
                 NpgsqlDataReader reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    if (await checked_action_table_rows(Convert.ToInt32(reader[1].ToString())))
+                    if (await CheckedActionTableRows(Convert.ToInt32(reader[1].ToString())))
                     {
                         continue;
                     }
@@ -1635,7 +1635,7 @@ namespace Cash8Avalon
         * sum_null если true тогда сумма и сумма со скидкой 0 иначе как обычный товар
         * это для акции 
         */
-        public async Task find_barcode_or_code_in_tovar_action_dt(string barcode, int count, bool sum_null, int num_doc, int mode, DataTable dtCopy = null)
+        public async Task FindBarcodeOrCodeInTovarAction_dt(string barcode, int count, bool sum_null, int num_doc, int mode, DataTable dtCopy = null)
         {
 
             NpgsqlConnection conn = null;
@@ -1686,14 +1686,14 @@ namespace Cash8Avalon
                     string retail_price = GetGiftPrice(num_doc);
                     if (retail_price != "")
                     {
-                        //row["price_at_discount"] = reader.GetDecimal(2);//Цена соскидкой    
+                        //row["price_at_discount"] = reader.GetDecimal(2);//Цена со скидкой    
                         row["price_at_discount"] = Decimal.Parse(retail_price);
                     }
 
                     //if (sum_null)//это пережиток
                     //{
                     //    row["sum_full"] = 0;// reader.GetDecimal(2);//Цена
-                    //    row["sum_at_discount"] = 0;// reader.GetDecimal(2);//Цена соскидкой                            
+                    //    row["sum_at_discount"] = 0;// reader.GetDecimal(2);//Цена со скидкой                            
                     //}
                     //else
                     //{
@@ -1744,33 +1744,119 @@ namespace Cash8Avalon
                 }
 
             }
-        }       
-
-        private async Task<bool> show_query_window_barcode(int call_type, int count, int num_doc, int mode)
+        }
+        private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc, int mode)
         {
-            InputActionBarcode ib = new InputActionBarcode();
-            ib.count = count;
-            //ib.caller2 = this;
-            ib.call_type = call_type;
-            ib.num_doc = num_doc;
-            ib.mode = mode;
+            bool? result = null;
 
-            // Просто показываем как модальное окно без указания owner
-            return await ib.ShowDialog<bool>(cc);
+            //InputActionBarcode ib = new InputActionBarcode();
+            //ib.count = count;
+            //ib.caller = this;
+            //ib.call_type = call_type;
+            //ib.num_doc = num_doc;
+            InputActionBarcode dialog = null;
 
+            try
+            {
+                dialog = new InputActionBarcode();
+                dialog.count = count;
+                dialog.num_doc = num_doc;
+                dialog.mode = mode;
+                dialog.call_type = 1;
+                dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                dialog.CanResize = false;
+                dialog.SystemDecorations = SystemDecorations.None;
+                dialog.Topmost = true;
+
+                result = await dialog.ShowModalBlocking(cc);
+                string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
+                if (result == true && !string.IsNullOrEmpty(enteredBarcode))
+                {                    
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}", "Поиск клиента", MessageBoxButton.OK, MessageBoxType.Error, cc);
+            }
+            finally
+            {
+                //dialog?.Close();
+                //InputSearchProduct.Focus();
+            }
+
+
+            return result;
         }
 
-        private async Task<bool> show_query_window_barcode(int call_type, int count, int num_doc, int mode, DataTable dtCopy)
+        private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc, int mode,DataTable dtCopy)
         {
-            InputActionBarcode ib = new InputActionBarcode();
-            ib.count = count;
-            //ib.caller2 = this;
-            ib.call_type = call_type;
-            ib.num_doc = num_doc;
-            ib.mode = mode;
-            ib.dtCopy = dtCopy;
-            return await ib.ShowDialog<bool>(cc);
+            bool? result = null;
+
+            //InputActionBarcode ib = new InputActionBarcode();
+            //ib.count = count;
+            //ib.caller = this;
+            //ib.call_type = call_type;
+            //ib.num_doc = num_doc;
+            InputActionBarcode dialog = null;
+
+            try
+            {
+                dialog = new InputActionBarcode();
+                dialog.count = count;
+                dialog.num_doc = num_doc;
+                dialog.mode = mode;
+                dialog.call_type = 1;
+                dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                dialog.CanResize = false;
+                dialog.SystemDecorations = SystemDecorations.None;
+                dialog.Topmost = true;
+
+                result = await dialog.ShowModalBlocking(cc);
+                string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
+                if (result == true && !string.IsNullOrEmpty(enteredBarcode))
+                {
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}", "Поиск клиента", MessageBoxButton.OK, MessageBoxType.Error, cc);
+            }
+            finally
+            {
+                //dialog?.Close();
+                //InputSearchProduct.Focus();
+            }
+
+
+            return result;
         }
+
+        //private async Task<bool> show_query_window_barcode(int call_type, int count, int num_doc, int mode)
+        //{
+        //    InputActionBarcode ib = new InputActionBarcode();
+        //    ib.count = count;
+        //    //ib.caller2 = this;
+        //    ib.call_type = call_type;
+        //    ib.num_doc = num_doc;
+        //    ib.mode = mode;
+
+        //    return await ib.ShowDialog<bool>(cc);
+
+        //}
+
+        //private async Task<bool> show_query_window_barcode(int call_type, int count, int num_doc, int mode, DataTable dtCopy)
+        //{
+        //    InputActionBarcode ib = new InputActionBarcode();
+        //    ib.count = count;
+        //    //ib.caller2 = this;
+        //    ib.call_type = call_type;
+        //    ib.num_doc = num_doc;
+        //    ib.mode = mode;
+        //    ib.dtCopy = dtCopy;
+        //    return await ib.ShowDialog<bool>(cc);
+        //}
         
         /// <summary>                
         ///Обработать акцию по типу 1
@@ -2113,7 +2199,7 @@ namespace Cash8Avalon
 
                         if (marker == 1)
                         {
-                            var result = show_query_window_barcode(2, 1, num_doc, 1, dtCopy);
+                            var result = ShowQueryWindowBarcode(2, 1, num_doc, 1, dtCopy);
                             //if (result == DialogResult.OK)
                             //{
                             //    // Дополнительная логика, если требуется
@@ -2747,7 +2833,7 @@ namespace Cash8Avalon
                         if (marker == 1)
                         {
                             //var dr = show_query_window_barcode(2, 1, num_doc, 0);
-                            await show_query_window_barcode(2, 1, num_doc, 0, dtCopy);
+                            await ShowQueryWindowBarcode(2, 1, num_doc, 0, dtCopy);
                         }
                     }
 
@@ -2930,7 +3016,7 @@ namespace Cash8Avalon
                             await MessageBox.Show(comment, " АКЦИЯ !!!");
                             if (marker == 1)
                             {
-                                var dr = show_query_window_barcode(2, 1, num_doc, 0, dtCopy);
+                                var dr = ShowQueryWindowBarcode(2, 1, num_doc, 0, dtCopy);
                                 //var dr = show_query_window_barcode(2, 1, num_doc, 1);
 
                             }
@@ -3001,20 +3087,41 @@ namespace Cash8Avalon
                 conn = MainStaticClass.NpgsqlConn();
                 conn.Open();
 
-                string query = "select COUNT(*) from information_schema.tables 		where table_schema='public' 	and table_name='tovar_action'	";
+                string query = "select COUNT(*) from information_schema.tables where table_schema='public' and table_name='tovar_action'";
                 command = new NpgsqlCommand(query, conn);
 
                 if (Convert.ToInt16(command.ExecuteScalar()) == 0)
                 {
-                    query = "CREATE TABLE tovar_action(  code bigint NOT NULL,  retail_price numeric(10,2) NOT NULL,  quantity integer, retail_price_discount numeric(10,2) ,characteristic_name character varying(100),characteristic_guid character varying(36) )WITH (  OIDS=FALSE);ALTER TABLE tovar_action  OWNER TO postgres;";
+                    // СОЗДАЕМ ТАБЛИЦУ С ПОЛЕМ ДЛЯ МАРКИРОВКИ
+                    query = @"CREATE TABLE tovar_action(
+                code bigint NOT NULL,
+                retail_price numeric(10,2) NOT NULL,
+                quantity integer,
+                retail_price_discount numeric(10,2),
+                characteristic_name character varying(100),
+                characteristic_guid character varying(36),
+                marking character varying(200)  -- ДОБАВЛЕНО ПОЛЕ ДЛЯ МАРКИРОВКИ
+            ) WITH (OIDS=FALSE);
+            ALTER TABLE tovar_action OWNER TO postgres;";
                 }
                 else
                 {
-                    query = "DROP TABLE tovar_action;CREATE TABLE tovar_action(  code bigint NOT NULL,  retail_price numeric(10,2) NOT NULL,  quantity integer, retail_price_discount numeric(10,2) ,characteristic_name character varying(100),characteristic_guid character varying(36) )WITH (  OIDS=FALSE);ALTER TABLE tovar_action  OWNER TO postgres;";
+                    // УДАЛЯЕМ И ПЕРЕСОЗДАЕМ ТАБЛИЦУ С ПОЛЕМ ДЛЯ МАРКИРОВКИ
+                    query = @"DROP TABLE tovar_action;
+            CREATE TABLE tovar_action(
+                code bigint NOT NULL,
+                retail_price numeric(10,2) NOT NULL,
+                quantity integer,
+                retail_price_discount numeric(10,2),
+                characteristic_name character varying(100),
+                characteristic_guid character varying(36),
+                marking character varying(200)  -- ДОБАВЛЕНО ПОЛЕ ДЛЯ МАРКИРОВКИ
+            ) WITH (OIDS=FALSE);
+            ALTER TABLE tovar_action OWNER TO postgres;";
                 }
+
                 command = new NpgsqlCommand(query, conn);
                 command.ExecuteNonQuery();
-                //                conn.Close();
                 command.Dispose();
             }
             catch (NpgsqlException ex)
@@ -3029,10 +3136,9 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn != null && conn.State == ConnectionState.Open)
                 {
                     conn.Close();
-                    // conn.Dispose();
                 }
             }
 
@@ -3047,8 +3153,7 @@ namespace Cash8Avalon
         */
         private async Task action_4_dt(int num_doc, decimal persent, decimal sum, string comment)
         {
-
-            if (! await create_temp_tovar_table_4())
+            if (!await create_temp_tovar_table_4())
             {
                 return;
             }
@@ -3057,8 +3162,7 @@ namespace Cash8Avalon
             dt2.Rows.Clear();
             NpgsqlConnection conn = null;
             NpgsqlCommand command = null;
-            decimal quantity_on_doc = 0;//количество позиций в документе            
-            //ListView clon = new ListView();
+            decimal quantity_on_doc = 0; //количество позиций в документе            
             StringBuilder query = new StringBuilder();
             try
             {
@@ -3066,35 +3170,36 @@ namespace Cash8Avalon
                 conn.Open();
                 string query_string = "";
 
-                //int index = -1;
                 foreach (DataRow row in dt.Rows)
                 {
-                    //index++;
-                    if (Convert.ToInt32(row["action2"]) > 0)//Этот товар уже участвовал в акции значит его пропускаем                  
+                    if (Convert.ToInt32(row["action2"]) > 0) //Этот товар уже участвовал в акции значит его пропускаем                  
                     {
                         DataRow row2 = dt2.NewRow();
                         row2.ItemArray = row.ItemArray;
                         dt2.Rows.Add(row2);
                         continue;
                     }
+
                     query_string = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query_string, conn);
 
                     if (Convert.ToInt16(command.ExecuteScalar()) != 0)
                     {
-
+                        // ВСТАВКА С МАРКИРОВКОЙ И ПРАВИЛЬНЫМ ПРЕОБРАЗОВАНИЕМ
                         for (int i = 0; i < Convert.ToInt32(row["quantity"]); i++)
                         {
-                            query.Append("INSERT INTO tovar_action(code, retail_price, quantity,characteristic_name,characteristic_guid)VALUES(" +
+                            query.Append(@"INSERT INTO tovar_action(code, retail_price, quantity, characteristic_name, characteristic_guid, marking)
+                        VALUES(" +
                                 row["tovar_code"].ToString() + "," +
                                 row["price"].ToString().Replace(",", ".") + "," +
-                               "1,'" +
-                               row["characteristic_name"].ToString() + "','" +
-                               row["characteristic_code"].ToString() + "');");
+                                "1,'" +
+                                row["characteristic_name"].ToString().Replace("'", "''") + "','" + // ЭКРАНИРОВАНИЕ АПОСТРОФОВ
+                                row["characteristic_code"].ToString() + "','" +
+                                row["marking"].ToString().Replace("'", "vasya2021") + "');"); // ПРАВИЛЬНОЕ ПРЕОБРАЗОВАНИЕ МАРКИРОВКИ
                         }
                         quantity_on_doc += Convert.ToDecimal(row["quantity"]);
                     }
-                    else//Не участвует в акции убираем пока в сторонку
+                    else //Не участвует в акции убираем пока в сторонку
                     {
                         DataRow row2 = dt2.NewRow();
                         row2.ItemArray = row.ItemArray;
@@ -3102,10 +3207,9 @@ namespace Cash8Avalon
                     }
                 }
 
-
-                if (quantity_on_doc >= sum)//Есть вхождение в акцию
+                if (quantity_on_doc >= sum) //Есть вхождение в акцию
                 {
-                    have_action = true;//Признак того что в документе есть сработка по акции                    
+                    have_action = true; //Признак того что в документе есть сработка по акции                    
                     dt.Rows.Clear();
                     foreach (DataRow row2 in dt2.Rows)
                     {
@@ -3114,110 +3218,135 @@ namespace Cash8Avalon
                         dt.Rows.Add(row);
                     }
 
-                    command = new NpgsqlCommand(query.ToString(), conn);//устанавливаем акционные позиции во временную таблицу
+                    command = new NpgsqlCommand(query.ToString(), conn); //устанавливаем акционные позиции во временную таблицу
                     command.ExecuteNonQuery();
-                    query.Append("DELETE FROM tovar_action;");//Очищаем таблицу акционных товаров 
-                    //иначе результат задваивается ранее эта строка была закомментирована и при 2 товарах по 1 шт. учавстсующих в акции
-                    //работала неверно
+                    query.Append("DELETE FROM tovar_action;"); //Очищаем таблицу акционных товаров 
 
                     int multiplication_factor = (int)(quantity_on_doc / sum);
-                    query_string = " SELECT code, retail_price, quantity,characteristic_name,characteristic_guid FROM tovar_action ORDER BY retail_price desc";//запросим товары отсортированные по цене, теперь еще и с характеристиками
+                    int totalItems = (int)quantity_on_doc;
+
+                    // ЗАПРОС С ИМЕНАМИ КОЛОНОК И СОРТИРОВКОЙ ПО ВОЗРАСТАНИЮ ЦЕНЫ
+                    query_string = @"SELECT 
+                code AS code,
+                retail_price AS retail_price,
+                quantity AS quantity,
+                characteristic_name AS characteristic_name,
+                characteristic_guid AS characteristic_guid,
+                marking AS marking
+            FROM tovar_action 
+            ORDER BY retail_price ASC"; // СОРТИРОВКА ПО ВОЗРАСТАНИЮ (САМЫЕ ДЕШЕВЫЕ ПЕРВЫМИ)
+
                     command = new NpgsqlCommand(query_string, conn);
                     NpgsqlDataReader reader = command.ExecuteReader();
+                    int currentItemIndex = 0; // Индекс текущего товара (начинаем с 0)
 
-                    Decimal sum_on_string = sum;
-
-                    int num_records = 1;
+                    query.Clear(); // Очищаем StringBuilder для новой вставки
 
                     while (reader.Read())
                     {
-                        if (multiplication_factor > 0)
-                        {
-                            if ((decimal)num_records / sum == Math.Round(num_records / sum, 0, MidpointRounding.AwayFromZero))//(sum_on_string == sum) && 
-                            {
-                                query.Append("INSERT INTO tovar_action(code, retail_price, quantity,characteristic_name,characteristic_guid,retail_price_discount)VALUES(" +
-                                  reader[0].ToString() + "," +
-                                  reader[1].ToString().Replace(",", ".") + "," + //Цена
-                                  "1,'" +
-                                  reader[3].ToString() + "','" +
-                                  reader[4].ToString() + "'," +
-                                  (Math.Round(Convert.ToDecimal(reader[1].ToString()) - Convert.ToDecimal(reader[1].ToString()) * persent / 100, 2)).ToString().Replace(",", ".") + //Цена со скидкой            
-                                  ");");
-                                multiplication_factor--;
-                            }
-                            else
-                            {
-                                query.Append("INSERT INTO tovar_action(code, retail_price, quantity,characteristic_name,characteristic_guid,retail_price_discount)VALUES(" +
-                                                         reader[0].ToString() + "," +
-                                                         reader[1].ToString().Replace(",", ".") + "," +
-                                                         "1,'" +
-                                                        reader[3].ToString() + "','" +
-                                                        reader[4].ToString() + "'," +
-                                                        reader[1].ToString().Replace(",", ".") + ");");
-                            }
+                        // ПОЛУЧАЕМ ЗНАЧЕНИЯ ПО ИМЕНАМ КОЛОНОК
+                        long code = reader.GetInt64(reader.GetOrdinal("code"));
+                        decimal retailPrice = reader.GetDecimal(reader.GetOrdinal("retail_price"));
+                        string characteristicName = reader.GetString(reader.GetOrdinal("characteristic_name"));
+                        string characteristicGuid = reader.GetString(reader.GetOrdinal("characteristic_guid"));
+                        string marking = reader.GetString(reader.GetOrdinal("marking")); // Маркировка из БД (уже с vasya2021)
 
+                        // ПРАВИЛЬНАЯ ПРОВЕРКА: каждый sum-й товар получает скидку
+                        bool hasDiscount = multiplication_factor > 0 &&
+                                          (currentItemIndex % (int)sum == 0) &&
+                                          (currentItemIndex + (int)sum <= totalItems);
+
+                        decimal discountPrice;
+                        if (hasDiscount)
+                        {
+                            // ТОВАР СО СКИДКОЙ
+                            discountPrice = Math.Round(retailPrice - retailPrice * persent / 100, 2);
+                            multiplication_factor--;
                         }
                         else
                         {
-                            query.Append("INSERT INTO tovar_action(code, retail_price, quantity,characteristic_name,characteristic_guid,retail_price_discount)VALUES(" +
-                                                        reader[0].ToString() + "," +
-                                                        reader[1].ToString().Replace(",", ".") + "," +
-                                                        "1,'" +
-                                                       reader[3].ToString() + "','" +
-                                                       reader[4].ToString() + "'," +
-                                                       reader[1].ToString().Replace(",", ".") + ");");
+                            // ТОВАР БЕЗ СКИДКИ
+                            discountPrice = retailPrice;
                         }
-                        num_records++;
+
+                        // ВСТАВКА С МАРКИРОВКОЙ (сохраняем как есть из БД)
+                        query.Append(@"INSERT INTO tovar_action(code, retail_price, quantity, characteristic_name, characteristic_guid, retail_price_discount, marking)
+                    VALUES(" +
+                            code + "," +
+                            retailPrice.ToString().Replace(",", ".") + "," +
+                            "1,'" +
+                            characteristicName.Replace("'", "''") + "','" +
+                            characteristicGuid + "'," +
+                            discountPrice.ToString().Replace(",", ".") + ",'" +
+                            marking + "');"); // Маркировка уже содержит vasya2021 вместо апострофов
+
+                        currentItemIndex++;
                     }
+                    reader.Close();
 
                     command = new NpgsqlCommand(query.ToString(), conn);
                     command.ExecuteNonQuery();
 
-                    query_string = " SELECT tovar_action.code,tovar.name, tovar_action.retail_price,tovar_action.retail_price_discount ," +
-                    " SUM(quantity),characteristic_name,characteristic_guid FROM tovar_action " +
-                    " LEFT JOIN tovar ON tovar_action.code=tovar.code " +
-                    " GROUP BY tovar_action.code,tovar.name, tovar.retail_price,tovar_action.retail_price,characteristic_name,characteristic_guid," +
-                    " retail_price_discount";
+                    // ФИНАЛЬНЫЙ ЗАПРОС С ГРУППИРОВКОЙ И МАРКИРОВКОЙ
+                    query_string = @"SELECT 
+                tovar_action.code AS code,
+                tovar.name AS name,
+                tovar_action.retail_price AS retail_price,
+                tovar_action.retail_price_discount AS retail_price_discount,
+                SUM(tovar_action.quantity) AS total_quantity,
+                tovar_action.characteristic_name AS characteristic_name,
+                tovar_action.characteristic_guid AS characteristic_guid,
+                tovar_action.marking AS marking
+            FROM tovar_action 
+            LEFT JOIN tovar ON tovar_action.code = tovar.code 
+            GROUP BY tovar_action.code, tovar.name, tovar_action.retail_price, tovar_action.retail_price_discount,
+                     tovar_action.characteristic_name, tovar_action.characteristic_guid, tovar_action.marking";
 
                     command = new NpgsqlCommand(query_string, conn);
                     reader = command.ExecuteReader();
+
                     while (reader.Read())
                     {
+                        // ПОЛУЧАЕМ ЗНАЧЕНИЯ ПО ИМЕНАМ КОЛОНОК
+                        long code = reader.GetInt64(reader.GetOrdinal("code"));
+                        string name = reader.GetString(reader.GetOrdinal("name"));
+                        decimal retailPrice = reader.GetDecimal(reader.GetOrdinal("retail_price"));
+                        decimal discountPrice = reader.GetDecimal(reader.GetOrdinal("retail_price_discount"));
+                        decimal totalQuantity = reader.GetDecimal(reader.GetOrdinal("total_quantity"));
+                        string characteristicName = reader.GetString(reader.GetOrdinal("characteristic_name"));
+                        string characteristicGuid = reader.GetString(reader.GetOrdinal("characteristic_guid"));
+                        string marking = reader.GetString(reader.GetOrdinal("marking")).Replace("vasya2021", "'"); // ВОССТАНАВЛИВАЕМ АПОСТРОФЫ
+
                         DataRow row = dt.NewRow();
-                        row["tovar_code"] = reader[0].ToString();
-                        row["tovar_name"] = reader[1].ToString().Trim();
-                        row["characteristic_name"] = reader[5].ToString();
-                        row["characteristic_code"] = reader[6].ToString();
-                        row["quantity"] = reader[4].ToString().Trim();
-                        row["price"] = reader.GetDecimal(2).ToString();
-                        row["price_at_discount"] = reader.GetDecimal(3).ToString();
-                        row["sum_full"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price"])).ToString();
-                        row["sum_at_discount"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price_at_discount"])).ToString();
-                        if (Convert.ToDecimal(row["price"]) != Convert.ToDecimal(row["price_at_discount"]))
-                        {
-                            row["action"] = num_doc.ToString();
-                        }
-                        else
-                        {
-                            row["action"] = "0";
-                        }
+                        row["tovar_code"] = code;
+                        row["tovar_name"] = name.Trim();
+                        row["characteristic_name"] = characteristicName;
+                        row["characteristic_code"] = characteristicGuid;
+                        row["quantity"] = totalQuantity;
+                        row["price"] = retailPrice;
+                        row["price_at_discount"] = discountPrice;
+                        row["sum_full"] = totalQuantity * retailPrice;
+                        row["sum_at_discount"] = totalQuantity * discountPrice;
+
+                        // УСТАНАВЛИВАЕМ action В ЗАВИСИМОСТИ ОТ СКИДКИ
+                        row["action"] = (retailPrice != discountPrice) ? num_doc.ToString() : "0";
                         row["gift"] = "0";
                         row["action2"] = num_doc.ToString();
                         row["bonus_reg"] = 0;
                         row["bonus_action"] = 0;
                         row["bonus_action_b"] = 0;
-                        row["marking"] = "0";
+                        row["marking"] = marking; // СОХРАНЯЕМ МАРКИРОВКУ С ВОССТАНОВЛЕННЫМИ АПОСТРОФАМИ
+
                         dt.Rows.Add(row);
-                        //SendDataToCustomerScreen(1, 0);
                     }
+                    reader.Close();
 
                     /*акция сработала
-             * надо отметить все товарные позиции 
-             * чтобы они не участвовали в других акциях 
-             */
+                     * надо отметить все товарные позиции 
+                     * чтобы они не участвовали в других акциях 
+                     */
                     marked_action_tovar_dt(num_doc, comment);
                 }
-
             }
             catch (NpgsqlException ex)
             {
@@ -3229,7 +3358,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn != null && conn.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -3248,12 +3377,12 @@ namespace Cash8Avalon
         /// <param name="comment"></param>
         /// <param name="actionPricesByDoc"></param>
         private async Task action_4_dt(int num_doc,
-                                decimal percent,
-                                decimal sum,
-                                string comment,
-                                Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)
+                    decimal percent,
+                    decimal sum,
+                    string comment,
+                    Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)
         {
-            // Проверка на цело численность sum
+            // Проверка на целочисленность sum
             if (sum != Math.Floor(sum))
                 throw new ArgumentException("Параметр 'sum' должен быть целым числом");
 
@@ -3273,7 +3402,7 @@ namespace Cash8Avalon
                     }
                 }
 
-                // 2. Подготовка данных для обработки
+                // 2. Подготовка данных для обработки С МАРКИРОВКОЙ
                 var items = new List<ItemData>();
                 foreach (DataRow row in originalDt.Rows)
                 {
@@ -3287,23 +3416,24 @@ namespace Cash8Avalon
                         continue;
                     }
 
-                    long tovarCode = (long)row.Field<double>("tovar_code"); // Преобразуем double в long
+                    long tovarCode = (long)row.Field<double>("tovar_code");
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
 
                     items.Add(new ItemData
                     {
                         Code = row.Field<double>("tovar_code"),
-                        TovarName = row.Field<string>("tovar_name"), // Сохраняем наименование товара
+                        TovarName = row.Field<string>("tovar_name"),
                         CharName = row.Field<string>("characteristic_name"),
                         CharGuid = row.Field<string>("characteristic_code"),
                         Price = row.Field<decimal>("price"),
-                        Quantity = row.Field<double>("quantity")
+                        Quantity = row.Field<double>("quantity"),
+                        Marking = row.Field<string>("marking") ?? "0" // ДОБАВЛЕНО МАРКИРОВКУ
                     });
                 }
 
-                bool isActionApplied; // Переменная для флага
-                // 3. Обработка и группировка
-                var processedItems = ProcessItems(items, num_doc, percent, (int)sum, out isActionApplied); // Преобразуем sum в int
+                bool isActionApplied;
+                // 3. Обработка и группировка С МАРКИРОВКОЙ
+                var processedItems = ProcessItems(items, num_doc, percent, (int)sum, out isActionApplied);
 
                 // 4. Заполнение таблицы
                 dt.BeginLoadData();
@@ -3333,12 +3463,11 @@ namespace Cash8Avalon
                 if (isActionApplied)
                 {
                     // 5. Отмечаем товары, участвовавшие в акции
-                    marked_action_tovar_dt(dt, num_doc, comment, actionPricesByDoc);
+                    await marked_action_tovar_dt(dt, num_doc, comment, actionPricesByDoc);
                 }
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Акция 4 типа без обращения к бд",MessageBoxButton.OK,MessageBoxType.Error);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акция 4 типа без обращения к бд");
                 // Восстановление данных при ошибке
                 dt.Clear();
@@ -3355,18 +3484,16 @@ namespace Cash8Avalon
             }
         }
 
-
-
-
         // Вспомогательные классы
         private class ItemData
         {
             public double Code { get; set; }
-            public string TovarName { get; set; } // Наименование товара
-            public string CharName { get; set; }  // Название характеристики
-            public string CharGuid { get; set; }  // Идентификатор характеристики
-            public decimal Price { get; set; }    // Цена товара
+            public string TovarName { get; set; }  // Наименование товара
+            public string CharName { get; set; }   // Название характеристики
+            public string CharGuid { get; set; }   // Идентификатор характеристики
+            public decimal Price { get; set; }     // Цена товара
             public double Quantity { get; set; }  // Количество товара
+            public string Marking { get; set; }   // Маркировка
         }
 
         private class GroupedItem
@@ -3381,8 +3508,10 @@ namespace Cash8Avalon
             public decimal SumFull { get; set; }  // Сумма без скидки
             public decimal SumDiscount { get; set; } // Сумма со скидкой
             public int Action { get; set; }       // Флаг акции
-            public int Gift { get; set; }         //флаг подарка     
+            public int Gift { get; set; }         //флаг подарка    
+            public string Marking { get; set; }   // Маркировка
         }
+
 
         private List<GroupedItem> ProcessItems(
      List<ItemData> items,
@@ -3391,14 +3520,14 @@ namespace Cash8Avalon
      int sum,
      out bool isActionApplied)
         {
-            isActionApplied = false; // Инициализация флага
+            isActionApplied = false;
             var flatItems = new List<ItemData>();
 
-            // Преобразуем товары в "плоский" список, где каждый товар представлен отдельной строкой
+            // "Разворачиваем" товары
             foreach (var item in items)
             {
                 if (item.Quantity != Math.Floor(item.Quantity))
-                    throw new ArgumentException("Количество должно быть целым числом");
+                    throw new ArgumentException("Quantity must be integer value");
 
                 int quantity = (int)item.Quantity;
 
@@ -3407,65 +3536,85 @@ namespace Cash8Avalon
                     flatItems.Add(new ItemData
                     {
                         Code = item.Code,
-                        TovarName = item.TovarName, // Сохраняем наименование товара
+                        TovarName = item.TovarName,
                         CharName = item.CharName,
                         CharGuid = item.CharGuid,
                         Price = item.Price,
-                        Quantity = 1.0
+                        Quantity = 1.0,
+                        Marking = item.Marking // СОХРАНЯЕМ МАРКИРОВКУ
                     });
                 }
             }
 
-            // Сортируем товары по цене (от меньшей к большей)
+            // Сортируем по цене (самые дешевые первыми)
             flatItems.Sort((a, b) => a.Price.CompareTo(b.Price));
 
-            var result = new List<GroupedItem>();
+            var groups = new Dictionary<string, GroupedItem>();
 
-            // Проходим по всем товарам и применяем скидку только на первую позицию в каждой группе
+            // Обрабатываем все товары
             for (int i = 0; i < flatItems.Count; i++)
             {
                 var item = flatItems[i];
 
-                // Определяем, является ли текущая позиция началом новой группы
-                bool applyDiscount = (i % sum) == 0 && i + sum <= flatItems.Count;
+                // Определяем, является ли товар со скидкой (каждый sum-й товар)
+                bool hasDiscount = (i % sum) == 0 && i + sum <= flatItems.Count;
 
-                // Если скидка применяется, устанавливаем флаг
-                if (applyDiscount)
+                if (hasDiscount)
                 {
                     isActionApplied = true;
                 }
 
-                // Цена товара: если это начало группы, применяем скидку, иначе — обычная цена
-                decimal discount = applyDiscount
-                    ? Math.Round(item.Price * (1 - percent / 100m), 2)
+                // Цена со скидкой или обычная
+                decimal price = hasDiscount
+                    ? Math.Round(item.Price - item.Price * percent / 100, 2)
                     : item.Price;
 
-                // Создаем новый GroupedItem для каждого товара
-                var groupedItem = new GroupedItem
+                // Ключ для группировки
+                // Для маркированных товаров используем уникальный ключ
+                string key;
+                if (item.Marking != "0")
                 {
-                    Code = item.Code,
-                    TovarName = item.TovarName, // Сохраняем наименование товара
-                    CharName = item.CharName,
-                    CharGuid = item.CharGuid,
-                    Price = item.Price,
-                    Discount = discount,
-                    Action = applyDiscount ? num_doc : 0,
-                    Count = 1.0,
-                    SumFull = item.Price,
-                    SumDiscount = discount
-                };
+                    // Уникальный ключ для каждого маркированного товара
+                    key = $"{item.Code}|{item.CharName}|{item.CharGuid}|{item.Price}|{price}|{item.Marking}|{Guid.NewGuid()}";
+                }
+                else
+                {
+                    // Обычный ключ для немаркированных
+                    key = $"{item.Code}|{item.CharName}|{item.CharGuid}|{item.Price}|{price}|{item.Marking}";
+                }
 
-                result.Add(groupedItem);
+                if (!groups.TryGetValue(key, out GroupedItem group))
+                {
+                    group = new GroupedItem
+                    {
+                        Code = item.Code,
+                        TovarName = item.TovarName,
+                        CharName = item.CharName,
+                        CharGuid = item.CharGuid,
+                        Price = item.Price,
+                        Discount = price,
+                        Action = hasDiscount ? num_doc : 0,
+                        Gift = 0, // Не подарок, а скидка
+                        Count = 0.0,
+                        SumFull = 0.0m,
+                        SumDiscount = 0.0m,
+                        Marking = item.Marking // СОХРАНЯЕМ МАРКИРОВКУ
+                    };
+                    groups[key] = group;
+                }
+
+                group.Count += 1.0;
+                group.SumFull += item.Price;
+                group.SumDiscount += price;
             }
 
-            return result;
+            return groups.Values.ToList();
         }
-
 
         private void FillDataRow(DataRow row, GroupedItem item, int num_doc)
         {
             row["tovar_code"] = item.Code;
-            row["tovar_name"] = item.TovarName ?? string.Empty; // Заполняем наименование товара
+            row["tovar_name"] = item.TovarName ?? string.Empty;
             row["characteristic_name"] = item.CharName ?? string.Empty;
             row["characteristic_code"] = item.CharGuid ?? string.Empty;
             row["quantity"] = item.Count;
@@ -3473,13 +3622,13 @@ namespace Cash8Avalon
             row["price_at_discount"] = item.Discount;
             row["sum_full"] = item.SumFull;
             row["sum_at_discount"] = item.SumDiscount;
-            row["action"] = item.Action;
-            row["action2"] = item.Action; //isActionApplied ? num_doc : 0 ;
-            row["gift"] = 0;
+            row["action"] = item.Action; // 0 или num_doc
+            row["gift"] = 0; // Не подарок
+            row["action2"] = item.Action; // 0 или num_doc
             row["bonus_reg"] = 0m;
             row["bonus_action"] = 0m;
             row["bonus_action_b"] = 0m;
-            row["marking"] = "0";
+            row["marking"] = item.Marking ?? "0"; // ВОССТАНОВИТЬ МАРКИРОВКУ
         }
 
         private bool IsTovarInAction(
@@ -3649,8 +3798,7 @@ namespace Cash8Avalon
             dt2.Rows.Clear();
             NpgsqlConnection conn = null;
             NpgsqlCommand command = null;
-            decimal quantity_on_doc = 0;//количество позиций в документе            
-            //ListView clon = new ListView();
+            decimal quantity_on_doc = 0; //количество позиций в документе            
             StringBuilder query = new StringBuilder();
             try
             {
@@ -3660,7 +3808,7 @@ namespace Cash8Avalon
 
                 foreach (DataRow row in dt.Rows)
                 {
-                    if (Convert.ToInt32(row["action2"]) > 0)//Этот товар уже участвовал в акции значит его пропускаем                  
+                    if (Convert.ToInt32(row["action2"]) > 0) //Этот товар уже участвовал в акции значит его пропускаем                  
                     {
                         DataRow row2 = dt2.NewRow();
                         row2.ItemArray = row.ItemArray;
@@ -3671,19 +3819,18 @@ namespace Cash8Avalon
                     command = new NpgsqlCommand(query_string, conn);
                     if (Convert.ToInt16(command.ExecuteScalar()) != 0)
                     {
+                        // ВСТАВКА С МАРКИРОВКОЙ И ЭКРАНИРОВАНИЕМ АПОСТРОФОВ
+                        query.Append("INSERT INTO tovar_action(code, retail_price, quantity, characteristic_name, characteristic_guid, marking) VALUES(" +
+                            row["tovar_code"].ToString() + "," +
+                            row["price"].ToString().Replace(",", ".") + "," +
+                            "1,'" +
+                            row["characteristic_name"].ToString().Replace("'", "''") + "','" + // ЭКРАНИРОВАНИЕ АПОСТРОФОВ
+                            row["characteristic_code"].ToString() + "','" +
+                            row["marking"].ToString().Replace("'", "vasya2021") + "');");
 
-                        for (int i = 0; i < Convert.ToInt32(row["quantity"]); i++)
-                        {
-                            query.Append("INSERT INTO tovar_action(code, retail_price, quantity,characteristic_name,characteristic_guid)VALUES(" +
-                                row["tovar_code"].ToString() + "," +
-                                row["price"].ToString().Replace(",", ".") + "," +
-                               "1,'" +
-                               row["characteristic_name"].ToString() + "','" +
-                               row["characteristic_code"].ToString() + "');");
-                        }
                         quantity_on_doc += Convert.ToDecimal(row["quantity"]);
                     }
-                    else//Не участвует в акции убираем пока в сторону
+                    else //Не участвует в акции убираем пока в сторону
                     {
                         DataRow row2 = dt2.NewRow();
                         row2.ItemArray = row.ItemArray;
@@ -3691,9 +3838,9 @@ namespace Cash8Avalon
                     }
                 }
 
-                if (quantity_on_doc >= sum)//Есть вхождение в акцию
+                if (quantity_on_doc >= sum) //Есть вхождение в акцию
                 {
-                    have_action = true;//Признак того что в документе есть сработка по акции                    
+                    have_action = true; //Признак того что в документе есть сработка по акции                    
                     dt.Rows.Clear();
                     foreach (DataRow row2 in dt2.Rows)
                     {
@@ -3701,121 +3848,91 @@ namespace Cash8Avalon
                         row.ItemArray = row2.ItemArray;
                         dt.Rows.Add(row);
                     }
-                    command = new NpgsqlCommand(query.ToString(), conn);//устанавливаем акционные позиции во временную таблицу
+
+                    command = new NpgsqlCommand(query.ToString(), conn); //устанавливаем акционные позиции во временную таблицу
                     command.ExecuteNonQuery();
-                    query.Append("DELETE FROM tovar_action;");//Очищаем таблицу акционных товаров 
-                    //иначе результат задваивается ранее эта строка была закомментирована и при 2 товарах по 1 шт. учавстсующих в акции
-                    //работала неверно
+                    query.Append("DELETE FROM tovar_action;"); //Очищаем таблицу акционных товаров 
+
                     int multiplication_factor = (int)(quantity_on_doc / sum);
-                    //query_string = " SELECT code, retail_price, quantity,characteristic_name,characteristic_guid FROM tovar_action ORDER BY retail_price desc";//запросим товары отсортированные по цене, теперь еще и с характеристиками
-                    query_string = " SELECT tovar_action.code,tovar.name, tovar_action.retail_price,tovar_action.retail_price,tovar_action.quantity,tovar_action.characteristic_name,tovar_action.characteristic_guid " +
-                       " FROM tovar_action LEFT JOIN tovar ON tovar_action.code=tovar.code " +
-                       //" LEFT JOIN characteristic ON tovar_action.characteristic_guid = characteristic.guid " +
-                       " order by tovar_action.retail_price desc ";
+                    int totalItems = (int)quantity_on_doc; // Общее количество товаров участвующих в акции
+
+                    // ЗАПРОС С ИМЕНАМИ КОЛОНОК И СОРТИРОВКОЙ ПО ВОЗРАСТАНИЮ ЦЕНЫ
+                    query_string = @"SELECT 
+                tovar_action.code AS code,
+                tovar.name AS name,
+                tovar_action.retail_price AS retail_price,
+                tovar_action.quantity AS quantity,
+                tovar_action.characteristic_name AS characteristic_name,
+                tovar_action.characteristic_guid AS characteristic_guid,
+                tovar_action.marking AS marking
+            FROM tovar_action 
+            LEFT JOIN tovar ON tovar_action.code = tovar.code 
+            ORDER BY tovar_action.retail_price ASC";
+
                     command = new NpgsqlCommand(query_string, conn);
                     NpgsqlDataReader reader = command.ExecuteReader();
-                    Decimal sum_on_string = sum;
+                    int currentItemIndex = 0; // Индекс текущего товара (начинаем с 0)
 
-                    int num_records = 1;
                     while (reader.Read())
                     {
-                        if (multiplication_factor > 0)//Это количество позиций которые будут выданы в качестве подарка
+                        // ПОЛУЧАЕМ ЗНАЧЕНИЯ ПО ИМЕНАМ КОЛОНОК
+                        long code = reader.GetInt64(reader.GetOrdinal("code"));
+                        string name = reader.GetString(reader.GetOrdinal("name"));
+                        decimal retailPrice = reader.GetDecimal(reader.GetOrdinal("retail_price"));
+                        string characteristicName = reader.GetString(reader.GetOrdinal("characteristic_name"));
+                        string characteristicGuid = reader.GetString(reader.GetOrdinal("characteristic_guid"));
+                        string marking = reader.GetString(reader.GetOrdinal("marking")).Replace("vasya2021", "'");
+
+                        DataRow row = dt.NewRow();
+                        row["tovar_code"] = code;
+                        row["tovar_name"] = name.Trim();
+                        row["characteristic_name"] = characteristicName;
+                        row["characteristic_code"] = characteristicGuid;
+                        row["quantity"] = 1;
+                        row["price"] = retailPrice;
+
+                        // ПРАВИЛЬНАЯ ПРОВЕРКА: каждый sum-й товар является подарком
+                        // Пример: sum = 3, тогда товары с индексами 0, 3, 6, 9... - подарки
+                        bool isGift = multiplication_factor > 0 &&
+                                     (currentItemIndex % (int)sum == 0) &&
+                                     (currentItemIndex + (int)sum <= totalItems);
+
+                        if (isGift)
                         {
-                            if ((decimal)num_records / sum == Math.Round(num_records / sum, 0, MidpointRounding.AwayFromZero))
-                            {
-                                DataRow row = dt.NewRow();
-                                row["tovar_code"] = reader[0].ToString();
-                                row["tovar_name"] = reader[1].ToString().Trim();
-                                row["characteristic_name"] = reader[5].ToString();
-                                row["characteristic_code"] = reader[6].ToString();
-                                row["quantity"] = 1;
-                                row["price"] = reader.GetDecimal(2).ToString();
-                                row["price_at_discount"] = GetGiftPrice(num_doc);
-                                row["sum_full"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price"])).ToString();
-                                row["sum_at_discount"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price_at_discount"])).ToString();
-                                //if (Convert.ToDecimal(row["price"]) != Convert.ToDecimal(row["price_at_discount"]))
-                                //{
-                                //    row["action"] = num_doc.ToString();
-                                //}
-                                //else
-                                //{
-                                row["action"] = "0";
-                                //}
-                                //row["gift"] = "0";
-                                row["gift"] = num_doc.ToString();
-                                row["action2"] = num_doc.ToString();
-                                row["bonus_reg"] = 0;
-                                row["bonus_action"] = 0;
-                                row["bonus_action_b"] = 0;
-                                row["marking"] = "0";
-                                dt.Rows.Add(row);
-                                multiplication_factor--;
-                            }
-                            else
-                            {
-                                DataRow row = dt.NewRow();
-                                row["tovar_code"] = reader[0].ToString();
-                                row["tovar_name"] = reader[1].ToString().Trim();
-                                row["characteristic_name"] = reader[5].ToString();
-                                row["characteristic_code"] = reader[6].ToString();
-                                row["quantity"] = 1;
-                                row["price"] = reader.GetDecimal(2).ToString();
-                                row["price_at_discount"] = reader.GetDecimal(3).ToString();
-                                row["sum_full"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price"])).ToString();
-                                row["sum_at_discount"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price_at_discount"])).ToString();
-                                if (Convert.ToDecimal(row["price"]) != Convert.ToDecimal(row["price_at_discount"]))
-                                {
-                                    row["action"] = num_doc.ToString();
-                                }
-                                else
-                                {
-                                    row["action"] = "0";
-                                }
-                                row["gift"] = "0";
-                                //row["gift"] = num_doc.ToString();
-                                row["action2"] = num_doc.ToString();
-                                row["bonus_reg"] = 0;
-                                row["bonus_action"] = 0;
-                                row["bonus_action_b"] = 0;
-                                row["marking"] = "0";
-                                dt.Rows.Add(row);
-                            }
+                            // ЭТО ПОДАРОК - ИСПОЛЬЗУЕМ АКЦИОННУЮ ЦЕНУ
+                            decimal giftPrice = Convert.ToDecimal(GetGiftPrice(num_doc));
+                            row["price_at_discount"] = giftPrice;
+                            row["sum_full"] = retailPrice;
+                            row["sum_at_discount"] = giftPrice;
+                            row["action"] = "0";
+                            row["gift"] = num_doc.ToString();
+                            multiplication_factor--;
                         }
                         else
                         {
-                            DataRow row = dt.NewRow();
-                            row["tovar_code"] = reader[0].ToString();
-                            row["tovar_name"] = reader[1].ToString().Trim();
-                            row["characteristic_name"] = reader[3].ToString();
-                            row["characteristic_code"] = reader[4].ToString();
-                            row["quantity"] = 1;
-                            row["price"] = reader.GetDecimal(2).ToString();
-                            row["price_at_discount"] = reader.GetDecimal(3).ToString();
-                            row["sum_full"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price"])).ToString();
-                            row["sum_at_discount"] = (Convert.ToDecimal(row["quantity"]) * Convert.ToDecimal(row["price_at_discount"])).ToString();
-                            if (Convert.ToDecimal(row["price"]) != Convert.ToDecimal(row["price_at_discount"]))
-                            {
-                                row["action"] = num_doc.ToString();
-                            }
-                            else
-                            {
-                                row["action"] = "0";
-                            }
+                            // НЕ ПОДАРОК - ОБЫЧНАЯ ЦЕНА
+                            row["price_at_discount"] = retailPrice;
+                            row["sum_full"] = retailPrice;
+                            row["sum_at_discount"] = retailPrice;
+                            row["action"] = "0";
                             row["gift"] = "0";
-                            //row["gift"] = num_doc.ToString();
-                            row["action2"] = num_doc.ToString();
-                            row["bonus_reg"] = 0;
-                            row["bonus_action"] = 0;
-                            row["bonus_action_b"] = 0;
-                            row["marking"] = "0";
-                            dt.Rows.Add(row);
                         }
-                        num_records++;
+
+                        row["action2"] = num_doc.ToString();
+                        row["bonus_reg"] = 0;
+                        row["bonus_action"] = 0;
+                        row["bonus_action_b"] = 0;
+                        row["marking"] = marking; // СОХРАНЯЕМ МАРКИРОВКУ
+
+                        dt.Rows.Add(row);
+                        currentItemIndex++; // Увеличиваем индекс для следующего товара
                     }
+                    reader.Close();
+
                     /*акция сработала
-             * надо отметить все товарные позиции 
-             * чтобы они не участвовали в других акциях 
-             */
+                     * надо отметить все товарные позиции 
+                     * чтобы они не участвовали в других акциях 
+                     */
                     marked_action_tovar_dt(num_doc, comment);
                 }
                 roll_up_dt();
@@ -3830,7 +3947,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn != null && conn.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -3881,9 +3998,7 @@ namespace Cash8Avalon
 
                     long tovarCode = (long)row.Field<double>("tovar_code");
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
-
-
-
+                    
                     items.Add(new ItemData
                     {
                         Code = row.Field<double>("tovar_code"),
@@ -3891,7 +4006,8 @@ namespace Cash8Avalon
                         CharName = row.Field<string>("characteristic_name") ?? string.Empty,
                         CharGuid = row.Field<string>("characteristic_code") ?? string.Empty,
                         Price = row.Field<decimal>("price"),
-                        Quantity = row.Field<double>("quantity")  //Convert.ToDouble(row["quantity"]) 
+                        Quantity = row.Field<double>("quantity"),
+                        Marking = row.Field<string>("marking") ?? "0"
                     });
                 }
 
@@ -3935,12 +4051,11 @@ namespace Cash8Avalon
                 if (isActionApplied)
                 {
                     // Помечаем товары, участвующие в акции
-                    marked_action_tovar_dt(dt, num_doc, comment, actionPricesByDoc);
+                    await marked_action_tovar_dt(dt, num_doc, comment, actionPricesByDoc);
                 }
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Акция 4 типа без обращения к бд", MessageBoxButton.OK, MessageBoxType.Error);
                 // Логирование ошибки
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акция 4 типа без обращения к бд");
 
@@ -3984,7 +4099,7 @@ namespace Cash8Avalon
             row["bonus_reg"] = 0m; // Бонусы (по умолчанию 0)
             row["bonus_action"] = 0m; // Бонусы акции (по умолчанию 0)
             row["bonus_action_b"] = 0m; // Дополнительные бонусы акции (по умолчанию 0)
-            row["marking"] = "0"; // Маркировка товара (по умолчанию "0")
+            row["marking"] = item.Marking ?? "0"; // Маркировка товара (по умолчанию "0")
         }
 
         /// <summary>
@@ -3998,13 +4113,11 @@ namespace Cash8Avalon
     List<ItemData> items,
     int num_doc,
     int sum,
-    out bool isActionApplied // Добавляем out-параметр
-)
+    out bool isActionApplied)
         {
-            isActionApplied = false; // Инициализация флага
+            isActionApplied = false;
             var flatItems = new List<ItemData>();
 
-            // Преобразуем товары в "плоский" список, где каждый товар представлен отдельной строкой
             foreach (var item in items)
             {
                 if (item.Quantity != Math.Floor(item.Quantity))
@@ -4021,37 +4134,50 @@ namespace Cash8Avalon
                         CharName = item.CharName,
                         CharGuid = item.CharGuid,
                         Price = item.Price,
-                        Quantity = 1.0
+                        Quantity = 1.0,
+                        Marking = item.Marking // СОХРАНИТЬ МАРКИРОВКУ
                     });
                 }
             }
 
-            // Сортируем товары по цене (от меньшей к большей)
-            flatItems.Sort((a, b) => a.Price.CompareTo(b.Price));
+            // РАЗДЕЛИМ НА МАРКИРОВАННЫЕ И НЕМАРКИРОВАННЫЕ ДЛЯ ОБРАБОТКИ
+            var markedItems = flatItems.Where(x => x.Marking != "0").ToList();
+            var nonMarkedItems = flatItems.Where(x => x.Marking == "0").ToList();
+
+            // ДЛЯ РАСЧЕТА АКЦИИ ИСПОЛЬЗУЕМ ВСЕ ТОВАРЫ
+            var allItemsForCalculation = flatItems;
+            allItemsForCalculation.Sort((a, b) => a.Price.CompareTo(b.Price));
 
             var groups = new Dictionary<string, GroupedItem>();
 
-            // Проходим по всем товарам и группируем их
-            for (int i = 0; i < flatItems.Count; i++)
+            // ОБРАБОТКА ВСЕХ ТОВАРОВ ДЛЯ РАСЧЕТА АКЦИИ
+            for (int i = 0; i < allItemsForCalculation.Count; i++)
             {
-                var item = flatItems[i];
+                var item = allItemsForCalculation[i];
+                bool isGift = (i % sum) == 0 && i + sum <= allItemsForCalculation.Count;
 
-                // Определяем, является ли текущая позиция началом новой группы
-                bool isGift = (i % sum) == 0 && i + sum <= flatItems.Count;
-
-                // Если товар является подарком, устанавливаем флаг
                 if (isGift)
                 {
                     isActionApplied = true;
                 }
 
-                // Цена товара: если это подарок, используем цену акции, иначе — обычную цену
                 decimal price = isGift
                     ? Convert.ToDecimal(GetGiftPrice(num_doc))
                     : Convert.ToDecimal(item.Price);
 
-                // Ключ для группировки
-                string key = $"{item.Code}|{item.CharName}|{item.CharGuid}|{item.Price}|{price}|{isGift}";
+                // ЕСЛИ ТОВАР МАРКИРОВАН - ОН НИКОГДА НЕ ГРУППИРУЕТСЯ
+                // ДЛЯ МАРКИРОВАННЫХ КЛЮЧ ДОЛЖЕН БЫТЬ УНИКАЛЬНЫМ
+                string key;
+                if (item.Marking != "0")
+                {
+                    // УНИКАЛЬНЫЙ КЛЮЧ ДЛЯ КАЖДОГО МАРКИРОВАННОГО ТОВАРА
+                    key = $"{item.Code}|{item.CharName}|{item.CharGuid}|{item.Price}|{price}|{isGift}|{item.Marking}|{Guid.NewGuid()}";
+                }
+                else
+                {
+                    // ГРУППИРОВКА ДЛЯ НЕМАРКИРОВАННЫХ
+                    key = $"{item.Code}|{item.CharName}|{item.CharGuid}|{item.Price}|{price}|{isGift}|{item.Marking}";
+                }
 
                 if (!groups.TryGetValue(key, out GroupedItem group))
                 {
@@ -4067,12 +4193,12 @@ namespace Cash8Avalon
                         Gift = isGift ? num_doc : 0,
                         Count = 0.0,
                         SumFull = 0.0m,
-                        SumDiscount = 0.0m
+                        SumDiscount = 0.0m,
+                        Marking = item.Marking // СОХРАНИТЬ МАРКИРОВКУ
                     };
                     groups[key] = group;
                 }
 
-                // Обновляем количество и суммы
                 group.Count += 1.0;
                 group.SumFull += Convert.ToDecimal(item.Price);
                 group.SumDiscount += price;
@@ -4234,7 +4360,7 @@ namespace Cash8Avalon
                 {
                     for (int i = 0; i < quantity_of_gifts; i++)
                     {
-                        show_query_window_barcode(2, 1, num_doc, 0);
+                        ShowQueryWindowBarcode(2, 1, num_doc, 0);
                     }
                 }
                 marked_action_tovar_dt(num_doc, comment);
@@ -4250,59 +4376,59 @@ namespace Cash8Avalon
          * подарков было такое, которое позволяет купон со стикерами, если вдруг в чеке будут обычные товары, то их цена не должна меняться 
          * или можно выдать предупреждение, что для этого типа акции наличие в чеке не акционных товаров недопустимо.
          */
-        private void action_7(int num_doc, long code_tovar)
-        {
-            NpgsqlConnection conn = null;
-            NpgsqlCommand command = null;
-            int gift = 0;
-            Int16 result = 0;
-            try
-            {
-                conn = MainStaticClass.NpgsqlConn();
-                conn.Open();
-                //Поскольку документ не записан еще найти строки которые могут участвовать в акции можно только последовательным перебором 
-                string query = "";
-                foreach (DataRow row in dt.Rows)
-                {
-                    query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
-                    command = new NpgsqlCommand(query, conn);
-                    result = Convert.ToInt16(command.ExecuteScalar());
-                    if (result > 0)
-                    {
-                        have_action = true;//Признак того что в документе есть сработка по акции
+        //private void action_7(int num_doc, long code_tovar)
+        //{
+        //    NpgsqlConnection conn = null;
+        //    NpgsqlCommand command = null;
+        //    int gift = 0;
+        //    Int16 result = 0;
+        //    try
+        //    {
+        //        conn = MainStaticClass.NpgsqlConn();
+        //        conn.Open();
+        //        //Поскольку документ не записан еще найти строки которые могут участвовать в акции можно только последовательным перебором 
+        //        string query = "";
+        //        foreach (DataRow row in dt.Rows)
+        //        {
+        //            query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
+        //            command = new NpgsqlCommand(query, conn);
+        //            result = Convert.ToInt16(command.ExecuteScalar());
+        //            if (result > 0)
+        //            {
+        //                have_action = true;//Признак того что в документе есть сработка по акции
 
-                        //lvi.SubItems[4].Text = ((decimal)1 / 100).ToString();
-                        row["sum_full"] = "0";
-                        row["sum_at_discount"] = "0"; //((Convert.ToDecimal(lvi.SubItems[2].Text) * Convert.ToDecimal(lvi.SubItems[4].Text)).ToString());
-                        row["action"] = num_doc.ToString(); //Номер акционного документа
-                        row["action"] = num_doc.ToString(); //Номер акционного документа
-                        gift += Convert.ToInt32(row["quantity"]);
-                    }
-                    //else
-                    //{
-                    //    MessageBox.Show("Обнаружен неакционный товар " + row["code"]);
-                    //}
-                }
-                find_barcode_or_code_in_tovar_action_dt(code_tovar.ToString(), gift, false, num_doc, 0);
-                //                conn.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                MessageBox.Show(ex.Message, "Ошибка при работе с базой данных");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "ошибка при обработке 7 типа акций");
-            }
-            finally
-            {
-                if (conn.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                    // conn.Dispose();
-                }
-            }
-        }
+        //                //lvi.SubItems[4].Text = ((decimal)1 / 100).ToString();
+        //                row["sum_full"] = "0";
+        //                row["sum_at_discount"] = "0"; //((Convert.ToDecimal(lvi.SubItems[2].Text) * Convert.ToDecimal(lvi.SubItems[4].Text)).ToString());
+        //                row["action"] = num_doc.ToString(); //Номер акционного документа
+        //                row["action"] = num_doc.ToString(); //Номер акционного документа
+        //                gift += Convert.ToInt32(row["quantity"]);
+        //            }
+        //            //else
+        //            //{
+        //            //    MessageBox.Show("Обнаружен неакционный товар " + row["code"]);
+        //            //}
+        //        }
+        //        find_barcode_or_code_in_tovar_action_dt(code_tovar.ToString(), gift, false, num_doc, 0);
+        //        //                conn.Close();
+        //    }
+        //    catch (NpgsqlException ex)
+        //    {
+        //        MessageBox.Show(ex.Message, "Ошибка при работе с базой данных");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show(ex.Message, "ошибка при обработке 7 типа акций");
+        //    }
+        //    finally
+        //    {
+        //        if (conn.State == ConnectionState.Open)
+        //        {
+        //            conn.Close();
+        //            // conn.Dispose();
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// При покупке указанного количества 
@@ -4556,7 +4682,7 @@ namespace Cash8Avalon
                     {
                         for (int i = 0; i < multiplication_factor; i++)
                         {
-                            await show_query_window_barcode(2, 1, num_doc, 0);
+                            await ShowQueryWindowBarcode(2, 1, num_doc, 0);
                         }
                     }
                     marked_action_tovar_dt(num_doc, comment);
@@ -4818,8 +4944,7 @@ namespace Cash8Avalon
             }
         }
 
-
-        private async Task roll_up_dt()
+        private void roll_up_dt()
         {
             //return;
             string query = "";
@@ -4853,43 +4978,48 @@ namespace Cash8Avalon
                 foreach (DataRow row in dt.Rows)
                 {
                     query = "INSERT INTO roll_up_temp(code_tovar," +
-                                                            " name_tovar, " +
-                                                            "characteristic_guid, " +
-                                                            "characteristic_name, " +
-                                                            "quantity, " +
-                                                            "price, " +
-                                                            "price_at_a_discount, " +
-                                                            "sum, " +
-                                                            "sum_at_a_discount, " +
-                                                            "action_num_doc, " +
-                                                            "action_num_doc1, " +
-                                                            "action_num_doc2, " +
-                                                            "item_marker)VALUES(" +
-                                                             row["tovar_code"] + ",'" +
-                                                             row["tovar_name"] + "','" +
-                                                             row["characteristic_code"] + "','" +
-                                                             row["characteristic_name"] + "'," +
-                                                             row["quantity"].ToString().Replace(",", ".") + "," +
-                                                             row["price"].ToString().Replace(",", ".") + "," +
-                                                             row["price_at_discount"].ToString().Replace(",", ".") + "," +
-                                                             row["sum_full"].ToString().Replace(",", ".") + "," +
-                                                             row["sum_at_discount"].ToString().Replace(",", ".") + "," +
-                                                             row["action"] + "," +
-                                                             row["gift"] + "," +
-                                                             row["action2"] + ",'" +
-                                                             row["marking"].ToString().Replace("'", "vasya2021") + "')";
+                        " name_tovar, " +
+                        "characteristic_guid, " +
+                        "characteristic_name, " +
+                        "quantity, " +
+                        "price, " +
+                        "price_at_a_discount, " +
+                        "sum, " +
+                        "sum_at_a_discount, " +
+                        "action_num_doc, " +
+                        "action_num_doc1, " +
+                        "action_num_doc2, " +
+                        "item_marker)VALUES(" +
+                        row["tovar_code"] + ",'" +
+                        row["tovar_name"] + "','" +
+                        row["characteristic_code"] + "','" +
+                        row["characteristic_name"] + "'," +
+                        row["quantity"].ToString().Replace(",", ".") + "," +
+                        row["price"].ToString().Replace(",", ".") + "," +
+                        row["price_at_discount"].ToString().Replace(",", ".") + "," +
+                        row["sum_full"].ToString().Replace(",", ".") + "," +
+                        row["sum_at_discount"].ToString().Replace(",", ".") + "," +
+                        row["action"] + "," +
+                        row["gift"] + "," +
+                        row["action2"] + ",'" +
+                        row["marking"].ToString().Replace("'", "vasya2021") + "')";
 
                     command = new NpgsqlCommand(query, conn);
                     command.Transaction = trans;
                     command.ExecuteNonQuery();
                 }
+
+                // ИЗМЕНЕНИЕ ЗДЕСЬ: добавили item_marker в GROUP BY
                 query = "SELECT code_tovar, name_tovar, characteristic_guid, characteristic_name, SUM(quantity) AS quantity, price," +
                     " price_at_a_discount, SUM(sum), SUM(sum_at_a_discount), action_num_doc, action_num_doc1, action_num_doc2, item_marker" +
-                    " FROM roll_up_temp    GROUP BY code_tovar, name_tovar, characteristic_guid, characteristic_name, price," +
+                    " FROM roll_up_temp" +
+                    " GROUP BY code_tovar, name_tovar, characteristic_guid, characteristic_name, price," +
                     " price_at_a_discount, action_num_doc, action_num_doc1, action_num_doc2, item_marker;";
+
                 command = new NpgsqlCommand(query, conn);
                 command.Transaction = trans;
                 NpgsqlDataReader reader = command.ExecuteReader();
+
                 dt.Rows.Clear();
                 while (reader.Read())
                 {
@@ -4918,15 +5048,15 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message);
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn != null && conn.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }

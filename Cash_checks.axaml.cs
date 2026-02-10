@@ -1843,6 +1843,7 @@ namespace Cash8Avalon
                 });
 
                 Console.WriteLine($"✓ Асинхронная загрузка завершена: {checkItems.Count} записей");
+                RestoreFocusAfterLoad();                
             }
             catch (Exception ex)
             {
@@ -1850,6 +1851,121 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка загрузки: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Получает текущий элемент с фокусом в Avalonia
+        /// </summary>
+        private IInputElement GetFocusedElement()
+        {
+            try
+            {
+                // В Avalonia можно получить TopLevel и через него фокус
+                var topLevel = TopLevel.GetTopLevel(this);
+                if (topLevel != null)
+                {
+                    return topLevel.FocusManager?.GetFocusedElement();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении элемента с фокусом: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        ///// <summary>
+        ///// Получает текущий элемент с фокусом как Control
+        ///// </summary>
+        //private Control GetFocusedControl()
+        //{
+        //    return GetFocusedElement() as Control;
+        //}
+
+        /// <summary>
+        /// Восстановление фокуса после загрузки данных
+        /// </summary>
+        private void RestoreFocusAfterLoad()
+        {
+            try
+            {
+                Console.WriteLine("Восстановление фокуса после загрузки данных...");
+
+                // Даем немного времени для завершения обновления UI
+                DispatcherTimer focusTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(100)
+                };
+
+                focusTimer.Tick += (s, e) =>
+                {
+                    focusTimer.Stop();
+
+                    try
+                    {
+                        // Просто устанавливаем фокус на UserControl
+                        this.Focus();
+                        Console.WriteLine("✓ Фокус установлен на UserControl");
+
+                        // Дополнительно: через небольшой промежуток пробуем установить на таблицу
+                        DispatcherTimer tableFocusTimer = new DispatcherTimer
+                        {
+                            Interval = TimeSpan.FromMilliseconds(50)
+                        };
+
+                        tableFocusTimer.Tick += (s2, e2) =>
+                        {
+                            tableFocusTimer.Stop();
+
+                            if (_scrollViewer != null)
+                            {
+                                _scrollViewer.Focus();
+                                Console.WriteLine("✓ Дополнительная попытка фокуса на ScrollViewer");
+                            }
+                        };
+
+                        tableFocusTimer.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"✗ Ошибка при восстановлении фокуса: {ex.Message}");
+                    }
+                };
+
+                focusTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Критическая ошибка при восстановлении фокуса: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Упрощенная принудительная установка фокуса
+        /// </summary>
+        public void ForceFocusToTable()
+        {
+            try
+            {
+                Console.WriteLine("Принудительная установка фокуса на таблицу...");
+
+                // Простой подход: сначала на UserControl, потом на ScrollViewer
+                this.Focus();
+
+                if (_scrollViewer != null)
+                {
+                    _scrollViewer.Focus();
+                }
+
+                Console.WriteLine("✓ Фокус установлен");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при установке фокуса: {ex.Message}");
+            }
+        }
+
+
 
         /// <summary>
         /// Добавление строки с сообщением (если нет данных)

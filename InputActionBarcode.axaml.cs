@@ -49,16 +49,16 @@ namespace Cash8Avalon
          * 5.вызов для ввод 4 последних цифр телефона 
          * 6.вызов для ввода QR - кода маркера товара
          */
-        //public Cash_check caller = null;
+        public Cash_check caller = null;
         //public ProcessingOfActions caller2 = null;
-        //public CheckActions caller3 = null;
+        //public VerifyActions caller3 = null;
         public DataTable dtCopy = null;
-
 
         public int call_type = 0;
         public int count = 0;
         public int num_doc = 0; //номер акционного документа по которому выдается подарок
-        public int mode = 0;//Это для акционных подарков когда перебирается основная dt тогда нужна другая dt,эта переменная показывает в какую dt вствлять строки
+        public int mode = 0;//Это для акционных подарков когда перебирается основная dt тогда нужна другая dt,эта переменная показывает в какую dt вставлять строки
+
         //System.Windows.Forms.Timer input_barcode_timer = null;
         //DialogResult dialogResult = DialogResult.None;
 
@@ -183,161 +183,133 @@ namespace Cash8Avalon
             {
                 //Cash_check parent = ((Cash_check)this.Parent);
 
-                //if (e.Key == Key.Enter)
-                //{
-                //    if (caller != null)//Чек продажи 
-                //    {
-                //        if (!(caller.check_action(_inputBarcodeTextBox.Text)))
-                //        {
-                //            await MessageBox.Show("Акция с таким штрихкодом не найдена");
-                //        }
-                //        else
-                //        {
-                //            if (_inputBarcodeTextBox.Text.Trim().Length > 4)
-                //            {
-                //                if (caller.action_barcode_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
-                //                {
-                //                    caller.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Для обычных акций
-                //                }
-                //            }
-                //            else
-                //            {
-                //                if (caller.action_barcode_bonus_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
-                //                {
-                //                    caller.action_barcode_bonus_list.Add(_inputBarcodeTextBox.Text);//Для бонусных акций
-                //                }
-                //            }
-                //        }
-                //        caller.inpun_action_barcode = false;
-                //    }
-                //    else if (caller3 != null)//проверка акций
-                //    {
-                //        if (!(caller3.check_action(_inputBarcodeTextBox.Text)))
-                //        {
-                //            await MessageBox.Show("Акция с таким штрихкодом не найдена");
-                //        }
-                //        else
-                //        {
-                //            if (_inputBarcodeTextBox.Text.Trim().Length > 4)
-                //            {
-                //                if (caller3.action_barcode_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
-                //                {
-                //                    caller3.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Для обычных акций
-                //                }
-                //            }
-                //            //else
-                //            //{
-                //            //    if (caller3.action_barcode_bonus_list.IndexOf(input_barcode.Text) == -1)
-                //            //    {
-                //            //        caller3.action_barcode_bonus_list.Add(input_barcode.Text);//Для бонусных акций
-                //            //    }
-                //            //}
-                //        }
+                if (e.Key == Key.Enter)
+                {
+                    //if (caller3 != null)//проверка акций
+                    //{
+                    //    //if (!(caller3.check_action(_inputBarcodeTextBox.Text)))
+                    //    //{
+                    //    //    await MessageBox.Show("Акция с таким штрихкодом не найдена");
+                    //    //}
+                    //    //else
+                    //    //{
+                    //    //    if (_inputBarcodeTextBox.Text.Trim().Length > 4)
+                    //    //    {
+                    //    //        if (caller3.action_barcode_list.IndexOf(_inputBarcodeTextBox.Text) == -1)
+                    //    //        {
+                    //    //            caller3.action_barcode_list.Add(_inputBarcodeTextBox.Text);//Для обычных акций
+                    //    //        }
+                    //    //    }
 
-                //    }
+                    //    //}
+                    //}
 
-                //    this.Close();
-                //}
-                //else if (e.Key == Key.Escape)
-                //{
-                //    if (call_type == 1)
-                //    {
-                //        caller.inpun_action_barcode = false;
-                //    }
-                //    //this.Close();
-                //    // Закрываем окно с результатом false (отмена)
-                //    Close(false);
-                //    e.Handled = true;
-                //}
+                    //    this.Close();
+                    //}
+                    //else if (e.Key == Key.Escape)
+                    //{
+                    //    if (call_type == 1)
+                    //    {
+                    //        caller.inpun_action_barcode = false;
+                    //    }
+                    //    //this.Close();
+                    //    // Закрываем окно с результатом false (отмена)
+                    //    Close(false);
+                    //    e.Handled = true;
+                    // Или используем безопасное закрытие с сохранением результата
+                    e.Handled = true;
+
+                    // Закрываем с результатом true
+                    CloseWithResult(true);
+                }
             }
             else if (call_type == 2)//После сообщения о подарке ввод штрихкода товара
             {
-            //    //Cash_check parent = ((Cash_check)this.Parent);
-            //    if (e.KeyChar == 13)
-            //    {
-            //        if (caller != null)
-            //        {
-            //            caller.find_barcode_or_code_in_tovar_action(this._inputBarcodeTextBox.Text, count, true, num_doc);
-            //        }
-            //        else
-            //        {
-            //            //if (dtCopy == null)
-            //            //{
-            //            //caller2.find_barcode_or_code_in_tovar_action_dt(this.input_barcode.Text, count, true, num_doc, mode);
-            //            //}
-            //            //else
-            //            //{
-            //            caller2.find_barcode_or_code_in_tovar_action_dt(this._inputBarcodeTextBox.Text, count, true, num_doc, mode, dtCopy);
-            //            //}
-            //        }
+                //    //Cash_check parent = ((Cash_check)this.Parent);
+                if (e.Key == Key.Enter)
+                {
+                    if (caller != null)
+                    {
+                        //caller.find_barcode_or_code_in_tovar_action(this._inputBarcodeTextBox.Text, count, true, num_doc);
+                    }
+                    else
+                    {
+                        //            //if (dtCopy == null)
+                        //            //{
+                        //            //caller2.find_barcode_or_code_in_tovar_action_dt(this.input_barcode.Text, count, true, num_doc, mode);
+                        //            //}
+                        //            //else
+                        //            //{
+                        //            caller2.find_barcode_or_code_in_tovar_action_dt(this._inputBarcodeTextBox.Text, count, true, num_doc, mode, dtCopy);
+                        //            //}
+                    }
 
-            //        this.Close();
-            //    }
-            //}
-            //else if (call_type == 3)//Проверка на удаление документа
-            //{
-            //    if (e.KeyChar == 13)
-            //    {
-            //        caller.inpun_action_barcode = false;
-            //        this.Close();
-            //    }
-            //}
-            //else if (call_type == 5)//Проверка на 4 последние цифры телефона 
-            //{
-            //    //if (e.KeyChar != 13)
-            //    //{
-            //    //    //MessageBox.Show("необходимо ввести 4 цифры ");
-            //    //    return;
-            //    //}
-            //    //if (input_barcode.Text.Trim().Length < 4)
-            //    //{
-            //    //    await MessageBox.Show("Необходимо ввести 4 цифры ");
-            //    //    return;
-            //    //}
-            //    //int result = 0;
-            //    //string client = caller.client.Tag.ToString();
-            //    //NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+                    //        this.Close();
+                    //    }
+                    //}
+                    //else if (call_type == 3)//Проверка на удаление документа
+                    //{
+                    //    if (e.KeyChar == 13)
+                    //    {
+                    //        caller.inpun_action_barcode = false;
+                    //        this.Close();
+                    //    }
+                    //}
+                    //else if (call_type == 5)//Проверка на 4 последние цифры телефона 
+                    //{
+                    //    //if (e.KeyChar != 13)
+                    //    //{
+                    //    //    //MessageBox.Show("необходимо ввести 4 цифры ");
+                    //    //    return;
+                    //    //}
+                    //    //if (input_barcode.Text.Trim().Length < 4)
+                    //    //{
+                    //    //    await MessageBox.Show("Необходимо ввести 4 цифры ");
+                    //    //    return;
+                    //    //}
+                    //    //int result = 0;
+                    //    //string client = caller.client.Tag.ToString();
+                    //    //NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
 
-            //    //try
-            //    //{
-            //    //    conn.Open();
-            //    //    string query = "SELECT COUNT(*) FROM clients where right(phone, 4)='" + input_barcode.Text + "' AND code='" + caller.client.Tag.ToString() + "'";
-            //    //    NpgsqlCommand command = new NpgsqlCommand(query, conn);
-            //    //    result = Convert.ToInt16(command.ExecuteScalar());
-            //    //    conn.Close();
-            //    //}
-            //    //catch (NpgsqlException ex)
-            //    //{
-            //    //    await MessageBox.Show("Ошибка при проверке номера телефона " + ex.Message);
-            //    //}
-            //    //catch (Exception ex)
-            //    //{
-            //    //    await MessageBox.Show("Ошибка при проверке номера телефона " + ex.Message);
-            //    //}
-            //    //finally
-            //    //{
-            //    //    if (conn.State == ConnectionState.Open)
-            //    //    {
-            //    //        conn.Close();
-            //    //    }
-            //    //}
-            //    //if (result != 1)
-            //    //{
-            //    //    await MessageBox.Show("Введенные цифры не верны");
-            //    //    _inputBarcodeTextBox.Text = "";
-            //    //    if (MainStaticClass.ckeck_failed_input_phone_on_client(caller.client.Tag.ToString()) > 2)
-            //    //    {
-            //    //        await MessageBox.Show("Вы превысили число попыток(3) ввести последние 4 цифры номера телефона");
-            //    //        this.Close();
-            //    //    }
-            //    //    insert_record_failed_input_phone();
-            //    //}
-            //    //else
-            //    //{
-            //    //    this.DialogResult = DialogResult.OK;
-            //    //    this.Close();
-            //    //}
-
+                    //    //try
+                    //    //{
+                    //    //    conn.Open();
+                    //    //    string query = "SELECT COUNT(*) FROM clients where right(phone, 4)='" + input_barcode.Text + "' AND code='" + caller.client.Tag.ToString() + "'";
+                    //    //    NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                    //    //    result = Convert.ToInt16(command.ExecuteScalar());
+                    //    //    conn.Close();
+                    //    //}
+                    //    //catch (NpgsqlException ex)
+                    //    //{
+                    //    //    await MessageBox.Show("Ошибка при проверке номера телефона " + ex.Message);
+                    //    //}
+                    //    //catch (Exception ex)
+                    //    //{
+                    //    //    await MessageBox.Show("Ошибка при проверке номера телефона " + ex.Message);
+                    //    //}
+                    //    //finally
+                    //    //{
+                    //    //    if (conn.State == ConnectionState.Open)
+                    //    //    {
+                    //    //        conn.Close();
+                    //    //    }
+                    //    //}
+                    //    //if (result != 1)
+                    //    //{
+                    //    //    await MessageBox.Show("Введенные цифры не верны");
+                    //    //    _inputBarcodeTextBox.Text = "";
+                    //    //    if (MainStaticClass.ckeck_failed_input_phone_on_client(caller.client.Tag.ToString()) > 2)
+                    //    //    {
+                    //    //        await MessageBox.Show("Вы превысили число попыток(3) ввести последние 4 цифры номера телефона");
+                    //    //        this.Close();
+                    //    //    }
+                    //    //    insert_record_failed_input_phone();
+                    //    //}
+                    //    //else
+                    //    //{
+                    //    //    this.DialogResult = DialogResult.OK;
+                    //    //    this.Close();
+                }
             }
             else if (call_type == 6)//Проверка на длину кода маркировки
             {
@@ -348,7 +320,7 @@ namespace Cash8Avalon
                 //длина строки маркера не должна быть меньше 31 символов
                 if (_inputBarcodeTextBox.Text.Trim().Length < 14)
                 {
-                    await MessageBox.Show("Длина строки кода маркера меньше 14 символа, это ошибка !!! ","Проверка штрихкода",MessageBoxButton.OK,MessageBoxType.Error,this as Window);
+                    await MessageBox.Show("Длина строки кода маркера меньше 14 символа, это ошибка !!! ", "Проверка штрихкода", MessageBoxButton.OK, MessageBoxType.Error, this as Window);
                     _inputBarcodeTextBox.Text = "";
                     return;
                 }
@@ -359,7 +331,7 @@ namespace Cash8Avalon
                 Regex reg = new Regex("[а-яА-ЯёЁ]");
                 if (reg.IsMatch(_inputBarcodeTextBox.Text.Trim()))
                 {
-                    await MessageBox.Show("Обнаружены кириллические символы,ПЕРЕКЛЮЧИТЕ ЯЗЫК ВВОДА НА АНГЛИЙСКИЙ И ПОВТОРИТЕ ВВОД КОДА МАРКИРОВКИ ЕЩЕ РАЗ","Проверка ввода кода маркировки", MessageBoxButton.OK, MessageBoxType.Error, this as Window);
+                    await MessageBox.Show("Обнаружены кириллические символы,ПЕРЕКЛЮЧИТЕ ЯЗЫК ВВОДА НА АНГЛИЙСКИЙ И ПОВТОРИТЕ ВВОД КОДА МАРКИРОВКИ ЕЩЕ РАЗ", "Проверка ввода кода маркировки", MessageBoxButton.OK, MessageBoxType.Error, this as Window);
                     _inputBarcodeTextBox.Text = "";
                     return;
                 }
@@ -368,42 +340,7 @@ namespace Cash8Avalon
                 //this.Close();
                 e.Handled = true;
                 CloseWithResult(true);
-            }
-            //else if (call_type == 7)
-            //{
-            //    if (e.Key == Key.Enter)
-            //    {
-            //        Console.WriteLine("Нажатие Enter в форме ввода кода/телефона клиента");
-            //        string code = _inputBarcodeTextBox.Text?.Trim() ?? "";
-
-            //        if (string.IsNullOrEmpty(code))
-            //        {
-            //            await MessageBox.Show("Введите код клиента");
-            //            return;
-            //        }
-
-            //        if (code.Length != 10 && code.Length != 13)
-            //        {
-            //            await MessageBox.Show("Код должен содержать 10 или 13 символов");
-            //            _inputBarcodeTextBox.SelectAll();
-            //            return;
-            //        }
-
-            //        // Проверяем, если телефон должен начинаться с 9
-            //        if (code.Length == 13 && !code.StartsWith("9"))
-            //        {
-            //            await MessageBox.Show("Номер телефона должен начинаться с 9");
-            //            _inputBarcodeTextBox.SelectAll();
-            //            return;
-            //        }
-            //        //EnteredBarcode = _inputBarcodeTextBox.Text;
-            //        this.DialogResult = true;
-            //        this.Close();
-            //        e.Handled = true;
-
-            //        //Console.WriteLine("Форма успешно закрывается, был введен код "+ code+" общая переменная модуля "+ EnteredBarcode);
-            //    }
-            //}
+            }           
             else if (call_type == 7)
             {
                 if (e.Key == Key.Enter)
@@ -450,26 +387,27 @@ namespace Cash8Avalon
                 }
             }
 
-            //if (e.Key == Key.Escape)
-            //{
-            //    if (call_type == 1)
-            //    {
-            //        caller.inpun_action_barcode = false;
-            //    }
-            //    //this.Close();
-            //    // Закрываем окно с результатом false (отмена)
-            //    Close(false);
-            //    e.Handled = true;
-            //}
+                //if (e.Key == Key.Escape)
+                //{
+                //    if (call_type == 1)
+                //    {
+                //        caller.inpun_action_barcode = false;
+                //    }
+                //    //this.Close();
+                //    // Закрываем окно с результатом false (отмена)
+                //    Close(false);
+                //    e.Handled = true;
+                //}
 
-            //else if (e.KeyChar == 27)
-            //{
-            //    if (call_type == 1)
-            //    {
-            //        caller.inpun_action_barcode = false;
-            //    }
-            //    this.Close();
-            //}
+                //else if (e.KeyChar == 27)
+                //{
+                //    if (call_type == 1)
+                //    {
+                //        caller.inpun_action_barcode = false;
+                //    }
+                //    this.Close();
+                //}
+            
         }
               
 

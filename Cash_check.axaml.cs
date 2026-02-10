@@ -64,7 +64,7 @@ namespace Cash8Avalon
         public int to_print_certainly = 0;
         public int to_print_certainly_p = 0;
         public bool closing = true;
-        public bool inpun_action_barcode = false;
+        //public bool inpun_action_barcode = false;
         public ArrayList action_barcode_list = new ArrayList();
         public ArrayList action_barcode_bonus_list = new ArrayList();
         private double discount = 0;
@@ -1569,6 +1569,11 @@ namespace Cash8Avalon
                 // Можно добавить и другие глобальные горячие клавиши
                 switch (e.Key)
                 {
+                    case Key.F5:
+                        // Вместо перехода в поле - открываем диалог
+                        ShowQueryWindowBarcode(1, 0, 0);
+                        e.Handled = true;
+                        break;                        
                     case Key.F6:
                         // Вместо перехода в поле - открываем диалог
                         ShowSimpleClientDialog();
@@ -1596,7 +1601,121 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
             }
         }
-        
+
+        private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc)
+        {
+            bool? result = null;
+
+            //InputActionBarcode ib = new InputActionBarcode();
+            //ib.count = count;
+            //ib.caller = this;
+            //ib.call_type = call_type;
+            //ib.num_doc = num_doc;
+            InputActionBarcode dialog = null;
+
+            try
+            {
+                dialog = new InputActionBarcode();
+                dialog.count = count;
+                dialog.num_doc = num_doc;
+                dialog.call_type = 1;
+                dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                dialog.CanResize = false;
+                dialog.SystemDecorations = SystemDecorations.None;
+                dialog.Topmost = true;
+
+                result = await dialog.ShowModalBlocking(this);
+                string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
+                if (result == true && !string.IsNullOrEmpty(enteredBarcode))
+                {
+                    if (!(await CheckAction(enteredBarcode)))
+                    {
+                        await MessageBox.Show("Акция с таким штрихкодом не найдена", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Warning, this);
+                    }
+                    else
+                    {
+                        if (enteredBarcode.Trim().Length > 4)
+                        {
+                            if (action_barcode_list.IndexOf(enteredBarcode) == -1)
+                            {
+                                action_barcode_list.Add(enteredBarcode);//Для обычных акций
+                            }
+                        }
+                        else
+                        {
+                            if (action_barcode_bonus_list.IndexOf(enteredBarcode) == -1)
+                            {
+                                action_barcode_bonus_list.Add(enteredBarcode);//Для бонусных акций
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}", "Поиск клиента", MessageBoxButton.OK, MessageBoxType.Error, this);
+            }
+            finally
+            {
+                //dialog?.Close();
+                InputSearchProduct.Focus();
+            }
+
+
+            return result;
+        }
+
+        /*Проверяет есть ли акция с таким штрихкодом в настоящее время или нет ?
+        * если есть возвращает true иначе false
+        */
+        public async Task<bool> CheckAction(string barcode)
+        {
+            if (barcode.Trim().Length == 0)
+            {
+                return false;
+            }
+            NpgsqlConnection conn = null;
+            NpgsqlCommand command = null;
+            int count_action = 0;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                conn.Open();
+                string query = "";
+                if (barcode.Trim().Length > 4)
+                {
+                    query = "SELECT COUNT(*) FROM action_header WHERE '" + DateTime.Now.Date.ToString("yyy-MM-dd") + "' between date_started AND date_end AND barcode='" + barcode + "'";
+                }
+                else
+                {
+                    query = "SELECT COUNT(*) FROM action_header WHERE '" + DateTime.Now.Date.ToString("yyy-MM-dd") + "' between date_started AND date_end AND promo_code='" + barcode + "'";
+                }
+                command = new NpgsqlCommand(query, conn);
+                count_action = Convert.ToInt32(command.ExecuteScalar());
+                conn.Close();
+            }
+            catch (NpgsqlException ex)
+            {
+                await MessageBox.Show("Ошибка при работе с базой данных " + ex.Message);
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+            if (count_action > 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         //private async void ShowSimpleClientDialog()
         //{
         //    try

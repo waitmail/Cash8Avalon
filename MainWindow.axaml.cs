@@ -259,10 +259,11 @@ namespace Cash8Avalon
                     else
                     {
                         await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд");
-                    }                   
+                    }
 
                     // ТОЛЬКО ПОСЛЕ ВСЕХ ПРОВЕРОК СОЗДАЕМ ViewModel!
                     //this.DataContext = new MainViewModel();
+                    _viewModel.OpenCashChecks();
 
                 }
                 catch (Exception ex)
@@ -433,10 +434,10 @@ namespace Cash8Avalon
                 if (loginSuccess)
                 {
                     UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
-                    if (MainStaticClass.Code_right_of_user == 2)
-                    {
-                        _viewModel.OpenCashChecks();
-                    }
+                    //if (MainStaticClass.Code_right_of_user == 2)
+                    //{
+                    _viewModel.OpenCashChecks();
+                    //}
                 }
             }
             catch (Exception ex)

@@ -1492,57 +1492,121 @@ namespace Cash8Avalon
             }
         }
 
-        private async void ShowQueryWindowBarcode(int callType, int count, int numDoc)
+        //private async void ShowQueryWindowBarcode(int callType, int count, int numDoc)
+        //{
+        //    var dialog = new Window
+        //    {
+        //        Title = "Ввод акционного штрихкода",
+        //        Width = 400,
+        //        Height = 200,
+        //        WindowStartupLocation = WindowStartupLocation.CenterOwner
+        //    };
+
+        //    var textBox = new TextBox
+        //    {
+        //        Watermark = "Введите акционный штрихкод",
+        //        Margin = new Thickness(20),
+        //        FontSize = 16
+        //    };
+
+        //    var button = new Button
+        //    {
+        //        Content = "OK",
+        //        Width = 100,
+        //        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+        //        Margin = new Thickness(0, 0, 0, 20)
+        //    };
+
+        //    var panel = new StackPanel
+        //    {
+        //        Children = { textBox, button }
+        //    };
+
+        //    dialog.Content = panel;
+
+        //    bool result = false;
+        //    button.Click += (s, e) =>
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(textBox.Text))
+        //        {
+        //            action_barcode_list.Add(textBox.Text);
+        //            result = true;
+        //        }
+        //        dialog.Close();
+        //    };
+
+        //    await dialog.ShowDialog(this);
+
+        //    if (result)
+        //    {
+        //        Console.WriteLine("Акционный штрихкод добавлен");
+        //        BtnCheckActionsClick();
+        //    }
+        //}
+
+        private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc)
         {
-            var dialog = new Window
-            {
-                Title = "Ввод акционного штрихкода",
-                Width = 400,
-                Height = 200,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
+            bool? result = null;
 
-            var textBox = new TextBox
-            {
-                Watermark = "Введите акционный штрихкод",
-                Margin = new Thickness(20),
-                FontSize = 16
-            };
+            //InputActionBarcode ib = new InputActionBarcode();
+            //ib.count = count;
+            //ib.caller = this;
+            //ib.call_type = call_type;
+            //ib.num_doc = num_doc;
+            InputActionBarcode dialog = null;
 
-            var button = new Button
+            try
             {
-                Content = "OK",
-                Width = 100,
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 20)
-            };
+                dialog = new InputActionBarcode();
+                dialog.count = count;
+                dialog.num_doc = num_doc;
+                dialog.call_type = 1;
+                dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                dialog.CanResize = false;
+                dialog.SystemDecorations = SystemDecorations.None;
+                dialog.Topmost = true;
 
-            var panel = new StackPanel
-            {
-                Children = { textBox, button }
-            };
-
-            dialog.Content = panel;
-
-            bool result = false;
-            button.Click += (s, e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(textBox.Text))
+                result = await dialog.ShowModalBlocking(this);
+                string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
+                if (result == true && !string.IsNullOrEmpty(enteredBarcode))
                 {
-                    action_barcode_list.Add(textBox.Text);
-                    result = true;
+                    if (!(CheckAction(enteredBarcode)))
+                    {
+                        await MessageBox.Show("Акция с таким штрихкодом не найдена", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Warning, this);
+                    }
+                    else
+                    {
+                        if (enteredBarcode.Trim().Length > 4)
+                        {
+                            if (action_barcode_list.IndexOf(enteredBarcode) == -1)
+                            {
+                                action_barcode_list.Add(enteredBarcode);//Для обычных акций
+                            }
+                        }
+                        //else
+                        //{
+                        //    if (action_barcode_bonus_list.IndexOf(enteredBarcode) == -1)
+                        //    {
+                        //        action_barcode_bonus_list.Add(enteredBarcode);//Для бонусных акций
+                        //    }
+                        //}
+                    }
                 }
-                dialog.Close();
-            };
-
-            await dialog.ShowDialog(this);
-
-            if (result)
-            {
-                Console.WriteLine("Акционный штрихкод добавлен");
-                BtnCheckActionsClick();
             }
-        }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                await MessageBox.Show($"Ошибка: {ex.Message}", "Поиск клиента", MessageBoxButton.OK, MessageBoxType.Error, this);
+            }
+            finally
+            {
+                //dialog?.Close();
+                //InputSearchProduct.Focus();
+            }
+
+
+            return result;
+        }      
 
         private void ClearAll()
         {
@@ -2012,6 +2076,7 @@ namespace Cash8Avalon
 
                 case Key.F5:
                     ShowQueryWindowBarcode(1, 0, 0);
+                    BtnCheckActionsClick();
                     e.Handled = true;
                     break;
 

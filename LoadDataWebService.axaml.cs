@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Cash8Avalon
 {
-    public partial class LoadDataWebService : UserControl
+    public partial class LoadDataWebService : Window
     {
         // Элементы управления из XAML
         //public Button btn_update_only;
@@ -924,17 +924,17 @@ namespace Cash8Avalon
                 tran.Commit();
                 if (!await MainStaticClass.SendResultGetData())
                 {
-                    await MessageBox.Show("Не удалось отправить информацию об успешной загрузке");
+                    await MessageBox.Show("Не удалось отправить информацию об успешной загрузке", "Информация о загрузке", MessageBoxButton.OK, MessageBoxType.Info, this);
                     MainStaticClass.write_event_in_log("Не удалось отправить информацию об успешной загрузке ", "Загрузка данных", "0");
                 }
                 conn.Close();
                 command.Dispose();
                 command = null;
                 tran = null;
-                await MessageBox.Show("Загрузка успешно завершена");
+                await MessageBox.Show("Загрузка успешно завершена","Информация по загрузке",MessageBoxButton.OK, MessageBoxType.Info,this);
                 if (CheckFirstLoadData())
                 {
-                    await MessageBox.Show(" Это была первая загрузка данных, для применения новых параметров программа будет закрыта");
+                    await MessageBox.Show(" Это была первая загрузка данных, для применения новых параметров программа будет закрыта","Информация о загрузке", MessageBoxButton.OK, MessageBoxType.Info, this);
                     //Application.Exit();
                 }
             }
