@@ -1451,13 +1451,12 @@ namespace Cash8Avalon
                             //    return;
                             //}
                         }
-                    }
-
-                    cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-                    cc.closing = false;
-                    //this.DialogResult = DialogResult.OK;
-                    this.Close();
+                    }                
                 }
+                cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
+                cc.closing = false;
+                //this.DialogResult = DialogResult.OK;
+                this.Close();
             }
         }
             

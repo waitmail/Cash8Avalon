@@ -127,6 +127,7 @@ namespace Cash8Avalon
         //public event EventHandler Closed;
 
         // Контролы
+        public Button BtnFillOnSales { get; private set; }
         public ComboBox CheckType { get; private set; }
         public TextBox NumCash { get; private set; }
         public TextBox User { get; private set; }
@@ -136,8 +137,11 @@ namespace Cash8Avalon
         public TextBox InputSearchProduct { get; private set; }
         public Button Pay { get; private set; }
         public TextBox Comment { get; private set; }
-        
-        
+
+        // Добавьте в поля класса Cash_check
+        //private TextBlock statusText;
+
+
 
         // Контролы TabItems
         private TabItem _tabProducts;
@@ -178,7 +182,8 @@ namespace Cash8Avalon
             public string Mark { get; set; } = "0";
             public bool IsSertificate { get; set; } = false;//Это сертификат
             public bool IsFractional { get; set; } = false;//Весовой
-            public bool IsMarked { get; set; } = false;//Маркированный
+            public bool IsMarked { get; set; } = false;//Маркированный            
+            public int MaxQuantity { get; set; } = 0;// Новое поле для хранения максимально допустимого количества для возврата
         }
 
         // Классы данных для сертификатов
@@ -1820,12 +1825,19 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("=== Проверка и заполнение контролов ===");
 
+                var BtnFillOnSales = this.FindControl<Button>("btn_fill_on_sales");
+                if (BtnFillOnSales != null)
+                {
+                    BtnFillOnSales.Click += BtnFillOnSales_Click;
+                }
+
                 CheckType = this.FindControl<ComboBox>("check_type");
 
                 if (CheckType != null)
                 {
                     CheckType.SelectionChanged += CheckType_SelectionChanged;
                 }
+
 
                 Client = this.FindControl<TextBox>("client");
                 NumCash = this.FindControl<TextBox>("num_cash");
@@ -1865,6 +1877,392 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
             }
         }
+
+        private async void BtnFillOnSales_Click(object? sender, RoutedEventArgs e)
+        {
+            await FillOnSalesAsync();
+        }
+
+        #region Заполнение возврата из продажи
+        /// <summary>
+        /// Заполнение товаров по чеку продажи (для возврата)
+        /// </summary>
+        private async Task FillOnSalesAsync()
+        {
+            try
+            {
+                // Проверяем, что номер чека введен
+                if (string.IsNullOrWhiteSpace(NumSales?.Text))
+                {
+                    await MessageBox.Show("Введите номер чека продажи",
+                        "Информация",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Warning,
+                        this);
+                    return;
+                }
+
+                // Проверяем, что это чек возврата
+                if (CheckType.SelectedIndex != 1)
+                {
+                    await MessageBox.Show("Данная функция доступна только для чеков возврата",
+                        "Информация",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Warning,
+                        this);
+                    return;
+                }
+
+                // Подтверждение перезаполнения
+                if (_productsData.Count > 0)
+                {
+                    var result = await MessageBox.Show(
+                        "Перезаполнить товары в чеке?",
+                        "Подтверждение",
+                        MessageBoxButton.YesNo,
+                        MessageBoxType.Question,
+                        this);
+
+                    if (result != MessageBoxResult.Yes)
+                        return;
+
+                    // Очищаем текущие товары
+                    _productsData.Clear();
+                    _certificatesData.Clear();
+                    RefreshProductsGrid();
+                    UpdateTotalSum();
+                }
+
+                // Загружаем товары из указанного чека продажи
+                await LoadSalesItemsAsync(NumSales.Text.Trim());
+
+                // Обновляем общую сумму
+                UpdateTotalSum();
+
+                // Выделяем первую строку, если есть товары
+                if (_productsData.Count > 0)
+                {
+                    SelectProductRow(0);
+                    _productsScrollViewer?.Focus();
+                }
+
+                // Блокируем ввод товаров
+                if (txtB_search_product != null)
+                    txtB_search_product.IsEnabled = false;
+                if (CheckType != null)
+                    CheckType.IsEnabled = false;
+                if (NumSales != null)
+                    NumSales.IsEnabled = false;
+                if (btn_fill_on_sales != null)
+                    btn_fill_on_sales.IsEnabled = false;
+
+                // Показываем информацию о чеках продажи
+                if (!string.IsNullOrEmpty(sale_id_transaction_terminal) || !string.IsNullOrEmpty(sale_code_authorization_terminal))
+                {
+                    Comment.Text = $"Возврат по чеку №{NumSales.Text} от {sale_date:dd.MM.yyyy HH:mm}";
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка в FillOnSalesAsync: {ex.Message}");
+                await MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}",
+                    "Ошибка",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this);
+            }
+        }
+
+        /// <summary>
+        /// Загрузка товаров из чека продажи с учетом возвратов
+        /// </summary>
+        private async Task LoadSalesItemsAsync(string documentNumber)
+        {
+            MainStaticClass.write_event_in_log($"Загрузка товаров по чеку продажи №{documentNumber}",
+                "Документ чек",
+                numdoc.ToString());
+
+            NpgsqlConnection conn = null;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                await conn.OpenAsync();
+
+                // 1. Получаем информацию о чеке продажи
+                string query = @"
+            SELECT id_transaction_terminal, code_authorization_terminal, date_time_write, 
+                   non_cash_money, guid 
+            FROM checks_header 
+            WHERE document_number = @docNumber";
+
+                using (var cmd = new NpgsqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@docNumber", Convert.ToInt64(documentNumber));
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            sale_id_transaction_terminal = reader["id_transaction_terminal"]?.ToString() ?? "";
+                            sale_code_authorization_terminal = reader["code_authorization_terminal"]?.ToString() ?? "";
+                            sale_date = Convert.ToDateTime(reader["date_time_write"]);
+                            sale_non_cash_money = Convert.ToDouble(reader["non_cash_money"]);
+                            id_sale = reader["guid"]?.ToString() ?? "";
+                        }
+                        else
+                        {
+                            await MessageBox.Show($"Чек продажи №{documentNumber} не найден за последние 14 дней",
+                                "Информация",
+                                MessageBoxButton.OK,
+                                MessageBoxType.Warning,
+                                this);
+                            return;
+                        }
+                    }
+                }
+
+                // 2. Получаем товары из чека продажи и вычитаем возвращенные
+                query = @"
+            SELECT 
+                dt.tovar_code, 
+                dt.name,
+                SUM(dt.quantity) AS quantity,
+                dt.price, 
+                dt.price_at_a_discount, 
+                SUM(dt.sum) AS sum,
+                SUM(dt.sum_at_a_discount) AS sum_at_a_discount, 
+                dt.id_transaction,
+                dt.client,
+                dt.item_marker,
+                dt.fractional,
+                dt.its_marked,
+                dt.its_certificate
+            FROM (
+                -- Товары из чека продажи
+                SELECT 
+                    ct.tovar_code, 
+                    t.name,
+                    ct.quantity AS quantity, 
+                    ct.price, 
+                    ct.price_at_a_discount, 
+                    ct.sum, 
+                    ct.sum_at_a_discount,
+                    ch.id_transaction, 
+                    ch.client, 
+                    ct.item_marker,
+                    t.fractional,
+                    t.its_marked,
+                    t.its_certificate
+                FROM checks_table ct
+                LEFT JOIN tovar t ON ct.tovar_code = t.code
+                LEFT JOIN checks_header ch ON ct.document_number = ch.document_number
+                WHERE ct.guid = @id_sale 
+                  AND ch.check_type = 0 
+                  AND ch.its_deleted = 0
+                  AND ch.date_time_write BETWEEN @date_start AND @date_end
+                
+                UNION ALL
+                
+                -- Возвращенные товары (с минусом)
+                SELECT 
+                    ct.tovar_code, 
+                    t.name,
+                    -ct.quantity, 
+                    ct.price, 
+                    ct.price_at_a_discount, 
+                    -ct.sum, 
+                    -ct.sum_at_a_discount, 
+                    ch.id_transaction,
+                    ch.client, 
+                    ct.item_marker,
+                    t.fractional,
+                    t.its_marked,
+                    t.its_certificate
+                FROM checks_table ct
+                LEFT JOIN tovar t ON ct.tovar_code = t.code
+                LEFT JOIN checks_header ch ON ct.document_number = ch.document_number
+                WHERE ch.id_sale = @id_sale 
+                  AND ch.check_type = 1 
+                  AND ch.its_deleted = 0
+                  AND ch.date_time_write BETWEEN @date_start AND @date_end
+            ) AS dt
+            GROUP BY 
+                dt.tovar_code, 
+                dt.name, 
+                dt.price, 
+                dt.price_at_a_discount, 
+                dt.id_transaction,
+                dt.client,
+                dt.item_marker,
+                dt.fractional,
+                dt.its_marked,
+                dt.its_certificate
+            HAVING SUM(dt.quantity) > 0";
+
+                using (var cmd = new NpgsqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@id_sale", id_sale);
+                    cmd.Parameters.AddWithValue("@date_start", DateTime.Now.AddDays(-14).Date);
+                    cmd.Parameters.AddWithValue("@date_end", DateTime.Now.AddDays(1).Date);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        bool hasItems = false;
+
+                        while (await reader.ReadAsync())
+                        {
+                            hasItems = true;
+
+                            // Получаем общее количество из чека продажи
+                            int saleQuantity = Convert.ToInt32(reader["quantity"]);
+
+                            // Проверяем, является ли товар сертификатом
+                            bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
+
+                            if (isCertificate)
+                            {
+                                // Добавляем сертификат (без ограничений)
+                                var certItem = new CertificateItem
+                                {
+                                    Code = reader["tovar_code"].ToString(),
+                                    Certificate = reader["name"].ToString().Trim(),
+                                    Nominal = Math.Abs(Convert.ToDecimal(reader["sum_at_a_discount"])),
+                                    Barcode = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
+                                };
+                                _certificatesData.Add(certItem);
+                            }
+                            else
+                            {
+                                // Получаем флаги товара
+                                ProductFlags flags = ProductFlags.None;
+                                if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
+                                if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
+                                if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
+
+                                // Создаем объект ProductData для получения имени
+                                var productData = new ProductData(
+                                    Convert.ToInt64(reader["tovar_code"]),
+                                    reader["name"].ToString().Trim(),
+                                    Convert.ToDecimal(reader["price"]),
+                                    flags
+                                );
+
+                                // Сохраняем id_transaction для связи
+                                if (string.IsNullOrEmpty(id_transaction_sale))
+                                {
+                                    id_transaction_sale = reader["id_transaction"]?.ToString() ?? "";
+                                }
+
+                                // Если есть клиент в чеке продажи
+                                if (!string.IsNullOrEmpty(reader["client"]?.ToString()))
+                                {
+                                    string clientCode = reader["client"].ToString().Trim();
+                                    if (!string.IsNullOrEmpty(clientCode) && Client != null)
+                                    {
+                                        Client.Tag = clientCode;
+                                        Client.Text = clientCode;
+                                        if (ClientBarcodeOrPhone != null)
+                                            ClientBarcodeOrPhone.IsEnabled = false;
+                                    }
+                                }
+
+                                // Добавляем товар в коллекцию с сохранением максимального количества
+                                var productItem = new ProductItem
+                                {
+                                    Code = Convert.ToInt32(reader["tovar_code"]),
+                                    Tovar = reader["name"].ToString().Trim(),
+                                    Quantity = saleQuantity, // Текущее количество для возврата
+                                    MaxQuantity = saleQuantity, // Максимально допустимое количество
+                                    Price = Convert.ToDecimal(reader["price"]),
+                                    PriceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]),
+                                    Sum = Convert.ToDecimal(reader["sum"]),
+                                    SumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]),
+                                    Action = 0,
+                                    Gift = 0,
+                                    Action2 = 0,
+                                    Mark = reader["item_marker"]?.ToString().Replace("vasya2021", "'").Trim() ?? "0",
+                                    IsSertificate = false,
+                                    IsFractional = Convert.ToBoolean(reader["fractional"]),
+                                    IsMarked = Convert.ToBoolean(reader["its_marked"])
+                                };
+
+                                _productsData.Add(productItem);
+                                Console.WriteLine($"✓ Добавлен товар: {productItem.Tovar}, кол-во: {productItem.Quantity}, макс: {productItem.MaxQuantity}");
+                            }
+                        }
+
+                        if (!hasItems)
+                        {
+                            await MessageBox.Show($"В чеке продажи №{documentNumber} нет доступных для возврата товаров",
+                                "Информация",
+                                MessageBoxButton.OK,
+                                MessageBoxType.Info,
+                                this);
+                        }
+                    }
+                }
+
+                // 3. Обновляем Grid товаров
+                if (_productsData.Count > 0 || _certificatesData.Count > 0)
+                {
+                    RefreshProductsGrid();
+
+                    // Обновляем Grid сертификатов
+                    if (_certificatesData.Count > 0 && _certificatesTableGrid != null)
+                    {
+                        while (_certificatesTableGrid.RowDefinitions.Count > 1)
+                            _certificatesTableGrid.RowDefinitions.RemoveAt(_certificatesTableGrid.RowDefinitions.Count - 1);
+
+                        var elementsToRemove = _certificatesTableGrid.Children
+                            .Where(c => Grid.GetRow(c) > 0)
+                            .ToList();
+
+                        foreach (var element in elementsToRemove)
+                            _certificatesTableGrid.Children.Remove(element);
+
+                        _certificatesCurrentRow = 1;
+                        AddCertificatesGridRows(_certificatesTableGrid, ref _certificatesCurrentRow, _certificatesData);
+                    }
+
+                    // Блокируем ввод новых товаров - ЭТО ВАЖНО!
+                    if (txtB_search_product != null)
+                    {
+                        txtB_search_product.IsEnabled = false;
+                        txtB_search_product.Text = string.Empty;
+                    }
+
+                    // Блокируем кнопку повторного заполнения
+                    if (btn_fill_on_sales != null)
+                    {
+                        btn_fill_on_sales.IsEnabled = false;
+                    }
+
+                    MainStaticClass.write_event_in_log($"Загружено товаров: {_productsData.Count}, сертификатов: {_certificatesData.Count}",
+                        "Документ чек", numdoc.ToString());
+                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                Console.WriteLine($"✗ Ошибка БД: {ex.Message}");
+                await MessageBox.Show($"Ошибка базы данных: {ex.Message}",
+                    "Ошибка",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка: {ex.Message}");
+                throw;
+            }
+            finally
+            {
+                if (conn?.State == ConnectionState.Open)
+                    await conn.CloseAsync();
+            }
+        }
+        #endregion
+
 
         /// <summary>
         /// Создать резервную копию данных товаров (аналог клонирования ListView)
@@ -2045,11 +2443,11 @@ namespace Cash8Avalon
                         {
                             if (this.check_type.SelectedIndex == 0)
                             {
-                                fiscall_print_pay(this.p_sum_doc);
+                                await fiscall_print_pay(this.p_sum_doc);
                             }
                             else
                             {
-                                //fiscall_print_disburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
+                                FiscallPrintDisburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
                             }
                         }
                     }
@@ -2059,11 +2457,11 @@ namespace Cash8Avalon
                         {
                             if (this.check_type.SelectedIndex == 0)
                             {
-                                fiscall_print_pay(this.p_sum_doc);
+                                await fiscall_print_pay(this.p_sum_doc);
                             }
                             else
                             {
-                                //                fiscall_print_disburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
+                                FiscallPrintDisburse(txtB_cash_money.Text, txtB_non_cash_money.Text);
                             }
                         }
 
@@ -2075,6 +2473,33 @@ namespace Cash8Avalon
                 }
             }
 
+        }
+
+        private async void FiscallPrintDisburse(string cash_money, string non_cash_money)
+        {           
+            if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+            {         
+                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                if (IsNewCheck)
+                {
+                    await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                }
+                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                this.Close();              
+            }
+            else
+            {                
+                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                if (IsNewCheck)
+                {
+                    await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                }                
+                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                await printingUsingLibraries.print_sell_2_or_return_sell(this);                
+                this.Close();                
+            }
         }
 
         // Метод для показа Avalonia диалога из WinForms
@@ -2378,9 +2803,8 @@ namespace Cash8Avalon
         }
 
 
-
         /// <summary>
-        /// печть возвратной накладной
+        /// печать возвратной накладной
         /// 
         /// </summary>
         /// <param name="sender"></param>
@@ -2395,7 +2819,35 @@ namespace Cash8Avalon
 
             if (MainStaticClass.Use_Fiscall_Print)
             {
-                //fiscall_print_disburse(cash_money, non_cash_money);
+                fiscall_print_disburse(cash_money, non_cash_money);
+            }
+        }
+
+        private async void fiscall_print_disburse(string cash_money, string non_cash_money)
+        {           
+            if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+            {
+                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                if (IsNewCheck)
+                {
+                    await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                }
+                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                this.Close();
+            }
+            else
+            {              
+                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                if (IsNewCheck)
+                {
+                    await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                }
+                
+                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                await printingUsingLibraries.print_sell_2_or_return_sell(this);                
+                this.Close();                
             }
         }
 
@@ -2408,22 +2860,7 @@ namespace Cash8Avalon
             if (IsNewCheck)
             {
                 MainStaticClass.write_event_in_log(" Финальная запись документа ", "Документ чек", numdoc.ToString());
-                result = await write_new_document(pay, sum_doc, remainder, pay_bonus_many, last_rewrite, cash_money, non_cash_money, sertificate_money, "0");
-                //if (result)
-                //{
-                //    if (MainStaticClass.Use_Usb_to_Com_Barcode_Scaner)
-                //    {
-                //        if (workerThread != null)//При нажатии клавиши ESC уже могло все завершится
-                //        {
-                //            stop_com_barcode_scaner();
-                //            this.timer.Stop();
-                //            this.timer = null;
-                //            workerThread = null;
-                //            rd = null;
-                //            GC.Collect();
-                //        }
-                //    }
-                //}
+                result = await write_new_document(pay, sum_doc, remainder, pay_bonus_many, last_rewrite, cash_money, non_cash_money, sertificate_money, "0");               
             }
 
             if (result)
@@ -3587,6 +4024,17 @@ namespace Cash8Avalon
         private async void find_product()
         {
             string search_param = InputSearchProduct.Text?.Trim();
+
+            if (CheckType.SelectedIndex == 1)
+            {
+                await MessageBox.Show("В чек возврата нельзя добавлять новые товары.\nВы можете только изменить количество уже добавленных товаров.",
+                    "Информация",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Warning,
+                    this);
+                InputSearchProduct.Text = string.Empty;
+                return;
+            }
 
             // Проверка на null и пустую строку
             if (string.IsNullOrEmpty(search_param))
@@ -5125,7 +5573,7 @@ namespace Cash8Avalon
         //    }
         //}
         // В методе OnGlobalKeyDownForProducts добавьте:
-        private void OnGlobalKeyDownForProducts(object sender, KeyEventArgs e)
+        private async Task OnGlobalKeyDownForProducts(object sender, KeyEventArgs e)
         {
             // Проверяем, есть ли фокус в таблице товаров
             bool isProductsTableFocused = _productsScrollViewer?.IsFocused == true ||
@@ -5181,7 +5629,14 @@ namespace Cash8Avalon
                 case Key.Enter:
                     if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
                     {
-                        ShowQuantityEditDialog(_selectedProductRowIndex);
+                        if (CheckType.SelectedIndex == 0)
+                        {
+                            ShowQuantityEditDialog(_selectedProductRowIndex);
+                        }
+                        else if (CheckType.SelectedIndex != 0)
+                        {
+                            await MessageBox.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);    
+                        }
                         e.Handled = true;
                     }
                     break;
@@ -5334,13 +5789,21 @@ namespace Cash8Avalon
                 {
                     var product = _productsData[dataIndex];
 
+                    // Проверяем, что это чек возврата и есть ограничение по количеству
+                    if (CheckType.SelectedIndex == 1 && product.MaxQuantity > 0)
+                    {
+                        if (product.Quantity >= product.MaxQuantity)
+                        {
+                            // Показываем предупреждение
+                            ShowQuantityLimitWarning(dataIndex, product.MaxQuantity);
+                            Console.WriteLine($"⚠ Нельзя увеличить количество больше {product.MaxQuantity}");
+                            return;
+                        }
+                    }
+
                     // ПРОВЕРКА: нельзя увеличивать количество для весового, маркированного товара или сертификата
                     if (!CanIncreaseQuantity(product))
                     {
-                        // Показываем сообщение о запрете увеличения
-                        //ShowCannotIncreaseMessage(product);
-                        //// Эффект ошибки/предупреждения
-                        //ShowWarningEffect(dataIndex);
                         return;
                     }
 
@@ -5350,20 +5813,117 @@ namespace Cash8Avalon
                     UpdateProductRowInGrid(dataIndex);
                     UpdateTotalSum();
 
-                    ShowQuantityEffect(dataIndex, true); // true = увеличение (зеленый)
+                    ShowQuantityEffect(dataIndex, true);
                     await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
                                    "0", "0", false, "0", "0", "0", "0");
 
-                    // ВОССТАНАВЛИВАЕМ ВЫДЕЛЕНИЕ И ФОКУС
                     SelectProductRow(dataIndex);
                     _productsScrollViewer?.Focus();
 
-                    Console.WriteLine($"✓ Увеличено количество товара '{product.Tovar}' до {product.Quantity}");
+                    Console.WriteLine($"✓ Увеличено количество товара '{product.Tovar}' до {product.Quantity} (макс: {product.MaxQuantity})");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при увеличении количества: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Отображение предупреждения о превышении максимального количества для возврата
+        /// </summary>
+        private void ShowQuantityLimitWarning(int dataIndex, int maxQuantity)
+        {
+            try
+            {
+                int gridRowIndex = dataIndex + 1;
+
+                // Ищем ячейку количества (колонка 2)
+                foreach (Control child in _productsTableGrid.Children)
+                {
+                    if (child is TextBlock textBlock &&
+                        Grid.GetRow(textBlock) == gridRowIndex &&
+                        Grid.GetColumn(textBlock) == 2)
+                    {
+                        // Сохраняем оригинальные значения
+                        var originalForeground = textBlock.Foreground;
+                        var originalBackground = textBlock.Background;
+                        var originalText = textBlock.Text;
+
+                        // Устанавливаем эффект предупреждения
+                        textBlock.Foreground = Brushes.Red;
+                        textBlock.Background = Brushes.LightYellow;
+                        textBlock.FontWeight = FontWeight.Bold;
+                        textBlock.Text = $"{_productsData[dataIndex].Quantity} (макс: {maxQuantity})";
+
+                        // Возвращаем оригинальный вид через 2 секунды
+                        DispatcherTimer timer = new DispatcherTimer
+                        {
+                            Interval = TimeSpan.FromMilliseconds(2000)
+                        };
+
+                        timer.Tick += (s, e) =>
+                        {
+                            textBlock.Foreground = originalForeground;
+                            textBlock.Background = originalBackground;
+                            textBlock.FontWeight = FontWeight.Normal;
+                            textBlock.Text = _productsData[dataIndex].Quantity.ToString();
+                            timer.Stop();
+                        };
+
+                        timer.Start();
+                        break;
+                    }
+                }
+
+                // Показываем всплывающее сообщение
+                ShowTooltip($"Нельзя вернуть больше {maxQuantity} шт.!", dataIndex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Показ всплывающей подсказки для строки товара
+        /// </summary>
+        private void ShowTooltip(string message, int dataIndex)
+        {
+            try
+            {
+                int gridRowIndex = dataIndex + 1;
+
+                // Находим Border строки
+                foreach (Control child in _productsTableGrid.Children)
+                {
+                    if (child is Border border && Grid.GetRow(border) == gridRowIndex && Grid.GetColumnSpan(border) == 11)
+                    {
+                        // Устанавливаем всплывающую подсказку
+                        ToolTip.SetTip(border, message);
+                        ToolTip.SetShowDelay(border, 0);
+                        ToolTip.SetPlacement(border, Avalonia.Controls.PlacementMode.Top);
+
+                        // Скрываем через 2 секунды
+                        DispatcherTimer timer = new DispatcherTimer
+                        {
+                            Interval = TimeSpan.FromMilliseconds(2000)
+                        };
+
+                        timer.Tick += (s, e) =>
+                        {
+                            ToolTip.SetTip(border, null);
+                            timer.Stop();
+                        };
+
+                        timer.Start();
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Ошибка в ShowTooltip: {ex.Message}");
             }
         }
 
@@ -6481,7 +7041,7 @@ namespace Cash8Avalon
         /// регистрация продажного чека
         /// </summary>
         /// <param name="pay"></param>
-        private async void fiscall_print_pay(string pay)
+        private async Task fiscall_print_pay(string pay)
         {
             if (MainStaticClass.SystemTaxation == 0)
             {
@@ -6514,18 +7074,18 @@ namespace Cash8Avalon
                 {
 
                     PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                    printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);//Если первый печатать без маркировки то очищается буфер в проверенных
-                    printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);//Если первый печатать без маркировки то очищается буфер в проверенных
+                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
                 }
                 else if (print_to_button == 1)
                 {
                     if (this.checkBox_to_print_repeatedly.IsChecked==true)
                     {
-                        new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
+                        await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
                     }
                     if (this.checkBox_to_print_repeatedly_p.IsChecked==true)
                     {
-                        new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 1);
+                        await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 1);
                     }
                 }
                 closing = false;
@@ -7053,7 +7613,7 @@ namespace Cash8Avalon
         }
 
 
-        private void set_sale_disburse_button()
+        private async void set_sale_disburse_button()
         {
             //if ((!itsnew) && (itc_printed()))
             if (!IsNewCheck)//Если документ не новый он для чтения и там ничего менять нельзя
@@ -7073,7 +7633,7 @@ namespace Cash8Avalon
                 {
                     if (client.Tag.ToString().Trim() != "")//Выбрана дисконтная карта, тип документа изенен быть не может
                     {
-                        MessageBox.Show(" Выбрана дисконтная карта, тип документа изменен быть не может ");
+                        await MessageBox.Show(" Выбрана дисконтная карта, тип документа изменен быть не может ","Проверки ввода",MessageBoxButton.OK,MessageBoxType.Error,this);
                         this.check_type.SelectedIndex = 0;
                         return;
                     }

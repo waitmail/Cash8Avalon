@@ -1183,8 +1183,9 @@ namespace Cash8Avalon
                 bool? dialogResult = checkWindow.Tag as bool?;
                 if (dialogResult == true)
                 {
-                    Console.WriteLine("Чек успешно обработан");
+                    Console.WriteLine("Чек успешно обработан");                    
                 }
+                LoadDocuments(); // Обновляем список после создания чека
             }
             catch (Exception ex)
             {
