@@ -1590,12 +1590,14 @@ namespace Cash8Avalon
                         // Вместо перехода в поле - открываем диалог
                         ShowQueryWindowBarcode(1, 0, 0);
                         e.Handled = true;
-                        break;                        
+                        break; 
+                        
                     case Key.F6:
                         // Вместо перехода в поле - открываем диалог
                         ShowSimpleClientDialog();
                         e.Handled = true;
                         break;
+
                     case Key.F7:
                         // Обновить данные
                         e.Handled = true;
@@ -1604,12 +1606,20 @@ namespace Cash8Avalon
 
                     case Key.Escape:
                         e.Handled = true;
-                        this.Close();                        
+                        if ((_productsData.Count == 0)||(!IsNewCheck))
+                        {
+                            this.Close();
+                        }
                         break;
 
                     case Key.F8:
                         this.Pay_Click(null, null);
                         e.Handled = true;                    
+                        break;
+
+                    case Key.F9:
+                        DeletedThisDocument();
+                        e.Handled = true;
                         break;
                 }
             }
@@ -1617,6 +1627,54 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
             }
+        }
+
+        private async void DeletedThisDocument()
+        {
+            if (_productsData.Count == 0)
+            {
+                await MessageBox.Show("Нет строк", "Проверка при удалении", this);
+                return;
+            }
+
+            if (MainStaticClass.Code_right_of_user != 1)
+            {
+                // Для обычных пользователей показываем диалог подтверждения
+                enable_delete = false;
+                var interfaceSwitching = new Interface_switching();
+                interfaceSwitching.caller_type = 3;
+                interfaceSwitching.cc = this;
+                interfaceSwitching.not_change_Cash_Operator = true;
+
+                var result = await interfaceSwitching.ShowDialog<bool?>(this);
+
+                if (!enable_delete)
+                {
+                    await MessageBox.Show("Вам запрещено удалять документы",
+                                         "Права доступа",
+                                         MessageBoxButton.OK,
+                                         MessageBoxType.Warning, this);
+                    return;
+                }
+            }
+
+            var reasonsDialog = new ReasonsDeletionCheck();
+            reasonsDialog.Title = "Удаление документа";
+
+            var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+            if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+            {
+                Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                return;
+            }
+
+            this.comment.Text += " >>" + reasonsDialog.Reason + "<<";
+            calculation_of_the_sum_of_the_document();
+            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), "0", "0", false, "0", "0", "0", "1"); //Это удаляемый документ
+            closing = false;
+            this.Close();
+
         }
 
         private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc)
