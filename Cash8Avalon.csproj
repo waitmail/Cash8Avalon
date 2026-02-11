@@ -8,18 +8,11 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	<AvaloniaUseCompiledBindings>true</AvaloniaUseCompiledBindings>
 	
-	 <!--<<CodePage>65001</CodePage>
-    <CharacterSet>Unicode</CharacterSet>
-    <Utf8Output>true</Utf8Output>
-	<EnableDefaultItems>false</EnableDefaultItems>
-	-->
-	  <!-- ВАЖНО: Отключаем детерминизм -->
-	  <Deterministic>false</Deterministic>
-
-	  <!-- Версия как в старом проекте -->
-	  <AssemblyVersion>1.0.*</AssemblyVersion>
-	  <FileVersion>1.0.*</FileVersion>
-	  
+	<!-- Отключаем детерминизм -->
+	<Deterministic>false</Deterministic>
+	
+	<!-- Отключаем SourceLink и прочие автогенерации версии -->
+	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 		
 
@@ -52,5 +45,29 @@
     <Compile Update="TovarNoFound.axaml.cs">
       <DependentUpon>TovarNoFound.axaml</DependentUpon>
     </Compile>
-  </ItemGroup>  
+  </ItemGroup>
+  
+  <!-- Автоматическая установка версии на основе Unix timestamp -->
+  <Target Name="SetVersionFromUnixTimestamp" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo">
+    <PropertyGroup>
+      <!-- Получаем Unix timestamp -->
+      <_UnixTimestamp>$([System.DateTimeOffset]::UtcNow.ToUnixTimeSeconds())</_UnixTimestamp>
+      
+      <!-- Разбиваем на части для FileVersion -->
+      <_FileVersionPart1>$([MSBuild]::Divide($(_UnixTimestamp), 65536))</_FileVersionPart1>
+      <_FileVersionPart2>$([MSBuild]::Modulo($(_UnixTimestamp), 65536))</_FileVersionPart2>
+      
+      <!-- Устанавливаем версии -->
+      <AssemblyVersion>1.0.0.0</AssemblyVersion>
+      <FileVersion>$(_FileVersionPart1).$(_FileVersionPart2).0.0</FileVersion>
+      <InformationalVersion>$(_UnixTimestamp)</InformationalVersion>
+      <Version>$(_UnixTimestamp)</Version>
+    </PropertyGroup>
+    
+    <!-- Выводим версию в лог сборки -->
+    <Message Text="=== Версия сборки ===" Importance="high" />
+    <Message Text="Unix Timestamp: $(_UnixTimestamp)" Importance="high" />
+    <Message Text="FileVersion (с точками): $(_FileVersionPart1).$(_FileVersionPart2).0.0" Importance="high" />
+    <Message Text="InformationalVersion (без суффиксов): $(_UnixTimestamp)" Importance="high" />
+  </Target>
 </Project>
