@@ -1958,6 +1958,7 @@ namespace Cash8Avalon
 
         private async void Pay_Click(object? sender, RoutedEventArgs e)
         {
+            Console.WriteLine($"Перед проверкой возможности печати");
             if (MainStaticClass.PrintingUsingLibraries == 1)
             {
                 if (MainStaticClass.GetFiscalsForbidden)
@@ -1966,6 +1967,7 @@ namespace Cash8Avalon
                     return;
                 }
             }
+            Console.WriteLine($"После проверки возможности печати");
 
 
             if (IsNewCheck)
@@ -2030,6 +2032,7 @@ namespace Cash8Avalon
             if (IsNewCheck)
             {
                 //kitchen_print(this);
+                Console.WriteLine($"Перед show_pay_form()");
                 show_pay_form();
             }
             else
@@ -2138,12 +2141,13 @@ namespace Cash8Avalon
                 BackupProductsData();
 
                 MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
-
+                Console.WriteLine($"✓ Попытка обработать акции: {_productsDataBackup.Count} записей");
                 DataTable dataTable = await to_define_the_action_dt(true);//Обработка на дисконтные акции с использованием datatable 
-
+                Console.WriteLine($"✓ После обработки акция: {_productsDataBackup.Count} записей");
                 _productsData = CreateProductsFromDataTable(dataTable);
-                await RecalculateAllProducts(true);              
-
+                Console.WriteLine($"✓ Загрузка данных в коллекцию из обработки акций: {_productsDataBackup.Count} записей");
+                await RecalculateAllProducts(true);
+                Console.WriteLine($"✓ Пересчет в чеке : {_productsDataBackup.Count} записей");
                 selection_goods = false;
 
                 MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
@@ -2154,8 +2158,9 @@ namespace Cash8Avalon
                 //MessageBox.Show(calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture));
 
                 pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
-
+                Console.WriteLine($"✓ Перед записью документа: {_productsDataBackup.Count} записей");
                 write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);//нужно для того чтобы в окне оплаты взять сумму из БД
+                Console.WriteLine($"✓ После записи документа: {_productsDataBackup.Count} записей");
             }
             else//Это возврат
             {
@@ -2164,8 +2169,10 @@ namespace Cash8Avalon
 
             pay_form.txtB_cash_sum.Focus();
 
+            Console.WriteLine($"✓ Перед передачей на 2 экран : {_productsDataBackup.Count} записей");
             //При переходе в окно оплаты цены должны быть отрисованы
             SendDataToCustomerScreen(1, 1, 1);
+            Console.WriteLine($"✓ После передачи на 2 экран : {_productsDataBackup.Count} записей");
 
             // Создаем окно оплаты
             //var payWindow = new Pay();
@@ -2179,7 +2186,7 @@ namespace Cash8Avalon
 
             // Устанавливаем сумму чека и другие данные
             //payWindow.pay_sum.Text = calculation_of_the_discount_of_the_document().ToString("N2");  // Или через публичное свойство
-
+            Console.WriteLine($"✓ Начинаем искать родителя для окна оплаты : {_productsDataBackup.Count} записей");
             // Находим активное окно
             Window parentWindow = null;
 
@@ -2239,7 +2246,7 @@ namespace Cash8Avalon
                 pay_form.Height = 800;
                 pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }
-
+            Console.WriteLine($"✓ Перед подпиской на закрытие : {_productsDataBackup.Count} записей");
             //EventHandler handler = null;
             // Подписываемся на событие закрытия если нужно
             pay_form.Closed += (s, e) =>
@@ -3054,19 +3061,24 @@ namespace Cash8Avalon
             ProcessingOfActions processingOfActions = new ProcessingOfActions();
             processingOfActions.cc = this;
             action_num_doc = new List<int>();//При каждом пересчете список предварительно обнуляется
-
+            Console.WriteLine($"✓ Создание дт ");
             processingOfActions.dt = processingOfActions.CreateDataTableFromProducts(_productsData);
+            Console.WriteLine($"✓ Установка флага показа сообщений ");
             processingOfActions.show_messages = show_messages;
+            
             MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
+            Console.WriteLine($"✓ Перед  Попытка обработать акции по штрихкодам");
             foreach (string barcode in action_barcode_list)
             {
                 processingOfActions.to_define_the_action_dt(barcode);
             }
-
+            Console.WriteLine($"✓ После обработки акции по штрихкодам");
+            Console.WriteLine($"✓ Перед  Попытка обработать акции по клиентам");
             if (client.Tag != null)
             {
                 processingOfActions.to_define_the_action_personal_dt(this.client.Tag.ToString());
             }
+            Console.WriteLine($"✓ После обработки акции по клиентам и перед основной обработкой акций ");
 
             await processingOfActions.to_define_the_action_dt();
 

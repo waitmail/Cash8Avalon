@@ -62,12 +62,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message, "Акция день рождения");
+                MessageBox.Show(ex.Message, "Акция день рождения", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 result = false;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Акция день рождения");
+                MessageBox.Show(ex.Message, "Акция день рождения", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 result = false;
             }
             finally
@@ -126,12 +126,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 result = false;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 result = false;
 
             }
@@ -248,7 +248,7 @@ namespace Cash8Avalon
        * и добвление его в табличную часть
        * стандартное добавление товара
        */
-        public void find_barcode_or_code_in_tovar_dt(string barcode)
+        public async void find_barcode_or_code_in_tovar_dt(string barcode)
         {
             NpgsqlConnection conn = null;
 
@@ -315,7 +315,7 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -613,7 +613,8 @@ namespace Cash8Avalon
                         {
                             //int multiplicity = (int)(calculation_of_the_sum_of_the_document_dt() / action_10_dt(Convert.ToInt32(reader["num_doc"])));
                             int multiplicity = (int)(calculation_of_the_sum_of_the_document_dt() / divisor);
-                            await MessageBox.Show("Кратность " + multiplicity.ToString() + " " + reader["comment"].ToString());
+                            Console.WriteLine($"✓ Перед показом сообщения по акции  ");
+                            await MessageBox.Show("Кратность " + multiplicity.ToString() + " " + reader["comment"].ToString(),"Проверка на акции",MessageBoxButton.OK,MessageBoxType.Info,cc);
                             int num = Convert.ToInt32(reader["num_doc"]);
                             if (cc != null)
                             {
@@ -640,11 +641,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK,MessageBoxType.Error,cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "ошибка при обработке акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -814,7 +815,7 @@ namespace Cash8Avalon
                     }
                     else
                     {
-                        await MessageBox.Show("Неопознанный тип акции в документе  № " + reader["num_doc"].ToString(), " Обработка акций ");
+                        await MessageBox.Show("Неопознанный тип акции в документе  № " + reader["num_doc"].ToString(), " Обработка акций ", MessageBoxButton.OK, MessageBoxType.Error, cc);                    
                     }
                 }
                 reader.Close();
@@ -825,11 +826,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "ошибка при обработке акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -1139,11 +1140,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "ошибка при обработке акций");
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -1188,11 +1189,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "пометка товарных позиций участвующих в акции");
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
 
             finally
@@ -1236,11 +1237,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "пометка товарных позиций участвующих в акции");
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
 
             finally
@@ -1306,7 +1307,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 // Обработка ошибок
-                MessageBox.Show(ex.Message, "Ошибка при пометке товарных позиций");
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
             }
         }
@@ -1364,7 +1365,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 // Обработка ошибок
-                await MessageBox.Show(ex.Message, "Ошибка при пометке товарных позиций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участвовавших в акции");
             }
         }
@@ -1402,11 +1403,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -1461,11 +1462,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -1512,11 +1513,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -1594,12 +1595,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 13 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 13 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 13 типа");
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 13 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 13 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 13 типа");
             }
         }
@@ -1729,12 +1730,12 @@ namespace Cash8Avalon
                 conn.Close();
                 if (!there_are_goods)
                 {
-                    await MessageBox.Show("ВНИМАНИЕ ПОДАРОК НЕ НАЙДЕН !!! СООБЩИТЕ АДМИНИСТРАТОРУ !!! ", "ОШИБКА ПРИ РАБОТЕ С АКЦИЯМИ");
+                    await MessageBox.Show("ВНИМАНИЕ ПОДАРОК НЕ НАЙДЕН !!! СООБЩИТЕ АДМИНИСТРАТОРУ !!! ", "ОШИБКА ПРИ РАБОТЕ С АКЦИЯМИ",cc);
                 }
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -1904,11 +1905,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка базы данных");
+                await MessageBox.Show(ex.Message, "Ошибка базы данных",MessageBoxButton.OK,MessageBoxType.Error,cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 1 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 1 типа акций",MessageBoxButton.OK,MessageBoxType.Error,cc);
             }
             finally
             {
@@ -2041,7 +2042,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 // Обработка ошибок
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 1 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 1 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -2085,12 +2086,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка базы данных");
+                await MessageBox.Show(ex.Message, "Ошибка базы данных", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 1 типа подарок чтение с диска, номер документа здесь это номер ак. док.");
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке акции 1 типа");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акции 1 типа", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 1 типа подарок чтение с диска, номер документа здесь это номер ак. док.");
             }
             finally
@@ -2154,7 +2155,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке акции 1 типа");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акции 1 типа", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 1 типа подарок со словарем, номер документа здесь это номер ак. док.");
             }
             finally
@@ -2255,7 +2256,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, Convert.ToInt16(num_doc), MainStaticClass.CashDeskNumber, "Обработка акций 2 типа с предварительно загруженным словарем");
             }
         }
@@ -2326,12 +2327,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, Convert.ToInt16(num_doc), MainStaticClass.CashDeskNumber, "Обработка акций 2 типа чтение с диска ");
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, Convert.ToInt16(num_doc), MainStaticClass.CashDeskNumber, "Обработка акций 2 типа чтение с диска");
             }
         }
@@ -2412,7 +2413,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, Convert.ToInt16(num_doc), MainStaticClass.CashDeskNumber, "Обработка акций 2 типа общий метод для чтения с диска и словаря");
             }
         }
@@ -2536,7 +2537,7 @@ namespace Cash8Avalon
                 // Обработка ошибок
                 if (show_messages)
                 {
-                    MessageBox.Show(ex.Message, "Пометка товарных позиций участвующих в акции");
+                    MessageBox.Show(ex.Message, "Пометка товарных позиций участвующих в акции", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 }
 
                 // Логирование ошибки
@@ -2624,12 +2625,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 2 типа выдается сообщение о подарке");
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 2 типа выдается сообщение о подарке");
             }
         }
@@ -2733,7 +2734,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций");
+                await MessageBox.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog("Ошибка при обработке акции.", @"ProcessGifts(int num_doc, string comment,
               Dictionary<int, List<long>> listItems,
               Dictionary<int, int> listQuantities, bool show_messages)", num_doc, MainStaticClass.CashDeskNumber, "Акции 2 типа выдается сообщение о подарке");
@@ -2777,7 +2778,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 3 типа скидка");
             }
         }
@@ -2847,7 +2848,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 3 типа сообщение о подарке");
             }
         }
@@ -2894,13 +2895,13 @@ namespace Cash8Avalon
             catch (NpgsqlException ex)
             {
                 //Logger.LogError(ex, "Ошибка при работе с базой данных");
-                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 3 типа скидка");
             }
             catch (Exception ex)
             {
                 //Logger.LogError(ex, "Ошибка при обработке акции");
-                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 3 типа скидка");
             }
         }
@@ -3035,14 +3036,14 @@ namespace Cash8Avalon
             {
                 // В случае ошибки при чтении из базы, dt остается неизменной
                 //Logger.LogError(ex, "Ошибка при работе с базой данных");
-                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 3 типа сообщение о подарке");
             }
             catch (Exception ex)
             {
                 // В случае любой другой ошибки, dt остается неизменной
                 //Logger.LogError(ex, "Ошибка при обработке акции");
-                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 3 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Акции 3 типа сообщение о подарке");
             }
         }
@@ -3126,12 +3127,12 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, " Ошибка при создании временной таблицы ");
+                await MessageBox.Show(ex.Message, " Ошибка при создании временной таблицы ", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 result = false;
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, " Ошибка при создании временной таблицы ");
+                await MessageBox.Show(ex.Message, " Ошибка при создании временной таблицы ", MessageBoxButton.OK, MessageBoxType.Error, cc);
                 result = false;
             }
             finally
@@ -3350,11 +3351,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, " Ошибка при обработке 4 типа акций ");
+                await MessageBox.Show(ex.Message, " Ошибка при обработке 4 типа акций ", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -3939,11 +3940,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "ошибка при обработке 4 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 4 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -4275,11 +4276,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "ошибка при обработке 5 типа акций");
+                MessageBox.Show(ex.Message, "ошибка при обработке 5 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -4329,11 +4330,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message, "Ошибка при работе с базой данных");
+                MessageBox.Show(ex.Message, "Ошибка при работе с базой данных", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "ошибка при обработке 6 типа акций");
+                MessageBox.Show(ex.Message, "ошибка при обработке 6 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -4605,11 +4606,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message, " 8 акция ");
+                MessageBox.Show(ex.Message, " 8 акция ", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, " 8 акция ");
+                MessageBox.Show(ex.Message, " 8 акция ", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -4691,11 +4692,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, " 8 акция ");
+                await MessageBox.Show(ex.Message, " 8 акция ", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, " 8 акция ");
+                await MessageBox.Show(ex.Message, " 8 акция ", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -4932,7 +4933,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "ошибка при обработке 12 типа акций");
+                await MessageBox.Show(ex.Message, "ошибка при обработке 12 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
@@ -5048,11 +5049,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
             }
             finally
             {
