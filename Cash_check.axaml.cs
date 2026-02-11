@@ -1213,6 +1213,10 @@ namespace Cash8Avalon
                 txtB_name.IsEnabled = !readOnly;
                 btn_get_name.IsEnabled = !readOnly;
                 txtB_email_telephone.IsEnabled = !readOnly;
+                //txtB_num_sales.IsVisible= !readOnly;
+                NumSales.IsVisible = false;
+                btn_fill_on_sales.IsEnabled = !readOnly;
+
 
                 // Добавляем/удаляем водяной знак
                 if (readOnly)
@@ -1422,6 +1426,8 @@ namespace Cash8Avalon
             {
                 reopened = true;
                 checkBox_print_check.IsEnabled = false;
+                BtnFillOnSales.IsEnabled = false;                
+                NumSales.IsVisible = false;
                 //Документ не новый поэтому запретим в нем ввод и изменение                
                 last_tovar.IsEnabled = false;
                 //txtB_email_telephone.Enabled = false;
@@ -1429,7 +1435,7 @@ namespace Cash8Avalon
                 btn_get_name.IsEnabled = false;
                 txtB_email_telephone.IsEnabled = false;                
                 txtB_name.IsEnabled = false;
-                comment.IsEnabled = false;
+                comment.IsEnabled = false;                
 
                 int status = await get_its_deleted_document();
                 if ((status == 0) || (status == 1))
@@ -1568,6 +1574,7 @@ namespace Cash8Avalon
 
             // 4. Отладочная информация
             //DebugGridInfo();
+            //Cash_check_Loaded(null, null);
         }
 
         
@@ -1825,7 +1832,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("=== Проверка и заполнение контролов ===");
 
-                var BtnFillOnSales = this.FindControl<Button>("btn_fill_on_sales");
+                BtnFillOnSales = this.FindControl<Button>("btn_fill_on_sales");
                 if (BtnFillOnSales != null)
                 {
                     BtnFillOnSales.Click += BtnFillOnSales_Click;
@@ -2343,16 +2350,7 @@ namespace Cash8Avalon
             }
 
             Console.WriteLine($"✓ Восстановлено из резервной копии: {_productsData.Count} записей");
-        }
-
-        /// <summary>
-        /// Очистить резервную копию
-        /// </summary>
-        private void ClearBackup()
-        {
-            _productsDataBackup.Clear();
-            Console.WriteLine("✓ Резервная копия очищена");
-        }
+        }      
 
         private async void Pay_Click(object? sender, RoutedEventArgs e)
         {
@@ -4886,13 +4884,15 @@ namespace Cash8Avalon
                     // Делаем CheckType недоступным
                     CheckType.IsEnabled = false;
                     Console.WriteLine("✓ CheckType отключен (IsEnabled = false)");
+                    if (IsNewCheck)
+                    {
+                        // Делаем NumSales видимым
+                        NumSales.IsVisible = true;
+                        Console.WriteLine("✓ NumSales включен (IsVisible = true)");
 
-                    // Делаем NumSales видимым
-                    NumSales.IsVisible = true;
-                    Console.WriteLine("✓ NumSales включен (IsVisible = true)");
-
-                    btn_fill_on_sales.IsVisible = true;
-                    Console.WriteLine("✓ btn_fill_on_sales включен (IsVisible = true)");
+                        btn_fill_on_sales.IsVisible = true;
+                        Console.WriteLine("✓ btn_fill_on_sales включен (IsVisible = true)");
+                    }
                 }
                 else
                 {
@@ -6084,9 +6084,9 @@ namespace Cash8Avalon
                 Console.WriteLine($"⚠ Ошибка при мигании бордера ячейки: {ex.Message}");
             }
         }
-                       
-        
-        // Метод для уменьшения количества (минимальное изменение)
+
+
+        // Метод для уменьшения количества        
         private async void DecreaseProductQuantity(int dataIndex)
         {
             try
@@ -6118,47 +6118,46 @@ namespace Cash8Avalon
                             }
                         }
 
-                        // 4. Показываем диалог указания причины удаления
-                        var reasonsDialog = new ReasonsDeletionCheck();
-                        reasonsDialog.Title = "Уменьшение количества";
-
-                        var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-                        if (dialogResult == true && !string.IsNullOrEmpty(reasonsDialog.Reason))
+                        // ✅ ВАЖНО: Диалог причины ТОЛЬКО для чеков продажи!
+                        if (CheckType.SelectedIndex == 0) // Только продажа
                         {
-                            // 5. Записываем в лог
+                            // Показываем диалог указания причины удаления
+                            var reasonsDialog = new ReasonsDeletionCheck();
+                            reasonsDialog.Title = "Уменьшение количества";
+
+                            var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                            if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                            {
+                                Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                                return;
+                            }
+
+                            // Записываем в лог
                             await InsertIncidentRecordAsync(
                                 product.Code.ToString(),
                                 product.Quantity.ToString("F2"),
                                 "1",
                                 reasonsDialog.Reason
                             );
-
-                            product.Quantity--;
-
-                            RecalculateProductSums(product);
-                            UpdateProductRowInGrid(dataIndex);
-                            UpdateTotalSum();
-
-                            // Замените эту строку (если есть):
-                            // ShowSimpleQuantityEffect(dataIndex, false);
-
-                            // На эту:
-                            ShowQuantityEffect(dataIndex, false); // false = уменьшение (желтый)
-                            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                                          "0", "0", false, "0", "0", "0", "0");
-                            Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
                         }
-                        else
-                        {
-                            Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
-                        }
+
+                        // Уменьшаем количество
+                        product.Quantity--;
+
+                        RecalculateProductSums(product);
+                        UpdateProductRowInGrid(dataIndex);
+                        UpdateTotalSum();
+
+                        ShowQuantityEffect(dataIndex, false);
+                        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                      "0", "0", false, "0", "0", "0", "0");
+                        Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
                     }
                     else
                     {
                         Console.WriteLine("⚠ Невозможно уменьшить количество меньше 1");
-                        // Красный эффект минимального количества
-                        ShowQuantityEffect(dataIndex, false, true); // true = минимальное количество
+                        ShowQuantityEffect(dataIndex, false, true);
                     }
                 }
             }
@@ -6234,48 +6233,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при удалении товара: {ex.Message}");
             }
-        }
-
-        //// Простой метод удаления с подтверждением
-        //private async void DeleteProductWithConfirmation(ProductItem product)
-        //{
-        //    // Можно реализовать простой диалог или сразу удалять
-        //    // Для простоты сразу удаляем
-        //    // Удаляем товар из данных
-        //    _productsData.RemoveAt(_selectedProductRowIndex);
-
-        //    // Обновляем Grid
-        //    RefreshProductsGrid();
-
-        //    // Обновляем общую сумму
-        //    UpdateTotalSum();
-
-        //    Console.WriteLine($"✓ Товар '{product.Tovar}' удален");
-
-        //    // Выделяем следующую строку или снимаем выделение
-        //    if (_productsData.Count > 0)
-        //    {
-        //        if (_selectedProductRowIndex >= _productsData.Count)
-        //            _selectedProductRowIndex = _productsData.Count - 1;
-        //        SelectProductRow(_selectedProductRowIndex);
-        //    }
-        //    else
-        //    {
-        //        ClearProductSelection();
-        //    }
-        //    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-        //                       "0", "0", false, "0", "0", "0", "0");
-
-        //    // Выделяем следующую строку или снимаем выделение
-        //    if (_productsData.Count > 0)
-        //    {
-        //        _productsScrollViewer?.Focus();
-        //    }
-        //    else
-        //    {
-        //        ClearProductSelection();
-        //    }
-        //}
+        }      
 
         private async void DeleteProductWithConfirmation(ProductItem product)
         {
@@ -6291,15 +6249,6 @@ namespace Cash8Avalon
                     return;
                 }
 
-                if (CheckType.SelectedIndex != 0) // Только для чека продажи
-                {
-                    //await MessageBox.Show("Удаление строк возможно только в чеке продажи",
-                    //                     "Удаление",
-                    //                     MessageBoxButton.OK,
-                    //                     MessageBoxType.Warning);
-                    return;
-                }
-
                 // 2. Проверяем количество строк (как в WinForms)
                 if (_productsData.Count == 1)
                 {
@@ -6310,69 +6259,25 @@ namespace Cash8Avalon
                     return;
                 }
 
-                // 3. Проверяем права пользователя (код 1 - администратор)
-                if (MainStaticClass.Code_right_of_user != 1)
+                // ✅ ВАЖНО: Для возвратов - удаляем без диалога причины
+                if (CheckType.SelectedIndex == 1)
                 {
-                    // Для обычных пользователей показываем диалог подтверждения
-                    enable_delete = false;
-                    var interfaceSwitching = new Interface_switching();
-                    interfaceSwitching.caller_type = 3;
-                    interfaceSwitching.cc = this;
-                    interfaceSwitching.not_change_Cash_Operator = true;
-
-                    var result = await interfaceSwitching.ShowDialog<bool?>(this);
-
-                    if (!enable_delete)
-                    {
-                        await MessageBox.Show("Вам запрещено удалять строки",
-                                             "Права доступа",
-                                             MessageBoxButton.OK,
-                                             MessageBoxType.Warning);
-                        return;
-                    }
-                }
-
-                // 4. Показываем диалог указания причины удаления
-                var reasonsDialog = new ReasonsDeletionCheck();
-                reasonsDialog.Title = "Удаление строки";
-
-                var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-                if (dialogResult == true && !string.IsNullOrEmpty(reasonsDialog.Reason))
-                {
-                    // 5. Записываем в лог
-                    await InsertIncidentRecordAsync(
-                        product.Code.ToString(),                        
-                        product.Quantity.ToString("F2"),
-                        "0",
-                        reasonsDialog.Reason
-                    );
-
-                    // 6. Удаляем товар из данных
-                    bool reloadKM = false;
-                    if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 13)
-                    {
-                        reloadKM = true;
-                    }
-                    
+                    // Просто удаляем товар из данных
                     _productsData.RemoveAt(_selectedProductRowIndex);
 
-                    // 7. Обновляем Grid
+                    // Обновляем Grid
                     RefreshProductsGrid();
 
-                    // 8. Обновляем общую сумму
+                    // Обновляем общую сумму
                     UpdateTotalSum();
 
-                    // 9. Записываем изменения в БД
+                    // Записываем изменения в БД
                     await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
                                            "0", "0", false, "0", "0", "0", "0");
 
-                    // 10. Устанавливаем флаг reopened (как в WinForms)
-                    reopened = true;
+                    Console.WriteLine($"✓ Товар '{product.Tovar}' удален из чека возврата");
 
-                    Console.WriteLine($"✓ Товар '{product.Tovar}' удален с причиной: {reasonsDialog.Reason}");
-
-                    // 11. Выделяем следующую строку или снимаем выделение
+                    // Выделяем следующую строку или снимаем выделение
                     if (_productsData.Count > 0)
                     {
                         if (_selectedProductRowIndex >= _productsData.Count)
@@ -6383,11 +6288,91 @@ namespace Cash8Avalon
                     {
                         ClearProductSelection();
                     }
-                }
-                else
-                {
-                    Console.WriteLine("✓ Удаление отменено пользователем");
+
                     return;
+                }
+
+                // 3. Для продажи - проверяем права пользователя (код 1 - администратор)
+                if (CheckType.SelectedIndex == 0)
+                {
+                    if (MainStaticClass.Code_right_of_user != 1)
+                    {
+                        // Для обычных пользователей показываем диалог подтверждения
+                        enable_delete = false;
+                        var interfaceSwitching = new Interface_switching();
+                        interfaceSwitching.caller_type = 3;
+                        interfaceSwitching.cc = this;
+                        interfaceSwitching.not_change_Cash_Operator = true;
+
+                        var result = await interfaceSwitching.ShowDialog<bool?>(this);
+
+                        if (!enable_delete)
+                        {
+                            await MessageBox.Show("Вам запрещено удалять строки",
+                                                 "Права доступа",
+                                                 MessageBoxButton.OK,
+                                                 MessageBoxType.Warning);
+                            return;
+                        }
+                    }
+
+                    // 4. Показываем диалог указания причины удаления (только для продажи)
+                    var reasonsDialog = new ReasonsDeletionCheck();
+                    reasonsDialog.Title = "Удаление строки";
+
+                    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                    if (dialogResult == true && !string.IsNullOrEmpty(reasonsDialog.Reason))
+                    {
+                        // 5. Записываем в лог
+                        await InsertIncidentRecordAsync(
+                            product.Code.ToString(),
+                            product.Quantity.ToString("F2"),
+                            "0",
+                            reasonsDialog.Reason
+                        );
+
+                        // 6. Удаляем товар из данных
+                        bool reloadKM = false;
+                        if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 13)
+                        {
+                            reloadKM = true;
+                        }
+
+                        _productsData.RemoveAt(_selectedProductRowIndex);
+
+                        // 7. Обновляем Grid
+                        RefreshProductsGrid();
+
+                        // 8. Обновляем общую сумму
+                        UpdateTotalSum();
+
+                        // 9. Записываем изменения в БД
+                        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                               "0", "0", false, "0", "0", "0", "0");
+
+                        // 10. Устанавливаем флаг reopened (как в WinForms)
+                        reopened = true;
+
+                        Console.WriteLine($"✓ Товар '{product.Tovar}' удален с причиной: {reasonsDialog.Reason}");
+
+                        // 11. Выделяем следующую строку или снимаем выделение
+                        if (_productsData.Count > 0)
+                        {
+                            if (_selectedProductRowIndex >= _productsData.Count)
+                                _selectedProductRowIndex = _productsData.Count - 1;
+                            SelectProductRow(_selectedProductRowIndex);
+                        }
+                        else
+                        {
+                            ClearProductSelection();
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("✓ Удаление отменено пользователем");
+                        return;
+                    }
                 }
             }
             catch (Exception ex)
@@ -7654,8 +7639,8 @@ namespace Cash8Avalon
                         await MessageBox.Show("Тип чека необходимо выбирать перед добавлением строк");
                         return;
                     }
-                    btn_fill_on_sales.IsVisible = true;
-                    txtB_num_sales.IsVisible = true;
+                    BtnFillOnSales.IsVisible = true;
+                    NumSales.IsVisible = true;
                     //if (MainStaticClass.Code_right_of_user != 1)
                     //{
                     //inputbarcode.Enabled = false;

@@ -2893,11 +2893,46 @@ namespace Cash8Avalon
 
         //}
 
+        //public static string version()
+        //{
+        //    var assembly = Assembly.GetEntryAssembly();
+        //    var version = assembly?.GetName().Version;
+        //    return version?.ToString() ?? "1.0.0";
+        //}
+
         public static string version()
         {
-            var assembly = Assembly.GetEntryAssembly();
-            var version = assembly?.GetName().Version;
-            return version?.ToString() ?? "1.0.0";
+            var versionStr = GetProductVersion();
+
+            //// Пробуем распарсить как Unix timestamp
+            //if (long.TryParse(versionStr, out long timestamp))
+            //{
+            //    var date = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
+            //    // Возвращаем в старом формате "1.0.0.0" для совместимости
+            //    //return "1.0.0.0";
+            //    return date;
+            //}
+
+            return "1"+versionStr;//костыль для веб сервиса предыдущей версии
+        }
+
+        private static string GetProductVersion()
+        {
+            try
+            {
+                var assembly = Assembly.GetEntryAssembly();
+                var location = assembly?.Location;
+
+                if (string.IsNullOrEmpty(location) || !File.Exists(location))
+                    return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+
+                var versionInfo = FileVersionInfo.GetVersionInfo(location);
+                return versionInfo.ProductVersion ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            }
+            catch
+            {
+                return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            }
         }
 
 

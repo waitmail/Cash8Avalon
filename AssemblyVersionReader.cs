@@ -11,7 +11,7 @@ namespace Cash8Avalon
         /// </summary>
         /// <param name="assemblyPath">Путь к .exe или .dll файлу</param>
         /// <returns>Значение InformationalVersion или null</returns>
-        public static string GetProductVersion(string assemblyPath)
+        public static string? GetProductVersion(string assemblyPath)
         {
             if (!File.Exists(assemblyPath))
                 return null;
@@ -49,7 +49,7 @@ namespace Cash8Avalon
         /// </summary>
         /// <param name="assemblyPath">Путь к .exe или .dll файлу</param>
         /// <returns>FileVersion или null</returns>
-        public static string GetFileVersion(string assemblyPath)
+        public static string? GetFileVersion(string assemblyPath)
         {
             if (!File.Exists(assemblyPath))
                 return null;
