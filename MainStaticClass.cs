@@ -1132,13 +1132,12 @@ namespace Cash8Avalon
             return result;
         }
 
-        public static string FiscalDriveNumber
+        public static async Task<string> FiscalDriveNumber()
         {
-            get
-            {
+           
                 if (fiscal_drive_number == "")
                 {
-                    if (MainStaticClass.PrintingUsingLibraries == 1)
+                    if (await MainStaticClass.PrintingUsingLibraries() == 1)
                     {
                         IFptr fptr = MainStaticClass.FPTR;
                         if (!fptr.isOpened())
@@ -1179,8 +1178,7 @@ namespace Cash8Avalon
 
                     //}
                 }
-                return fiscal_drive_number;
-            }
+                return fiscal_drive_number;           
         }
 
         public static string CDN_Token
@@ -1570,49 +1568,55 @@ namespace Cash8Avalon
             //}
         }
 
-        public static int PrintingUsingLibraries
+        public static async Task<int> PrintingUsingLibraries(Window owner=null)
         {
-            get
-            {
+            //get
+            //{
                 if (printing_using_libraries == -1)
                 {
 
                     NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-                    try
-                    {
-                        conn.Open();
-                        string query = "SELECT printing_using_libraries FROM constants";
-                        NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                        object result_query = command.ExecuteScalar();
-                        if (Convert.ToBoolean(result_query) == false)
-                        {
-                            printing_using_libraries = 0;
-                        }
-                        else
-                        {
-                            printing_using_libraries = 1;
-                        }
-                    }
-                    catch (NpgsqlException ex)
+                try
+                {
+                    conn.Open();
+                    string query = "SELECT printing_using_libraries FROM constants";
+                    NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                    object result_query = command.ExecuteScalar();
+                    if (Convert.ToBoolean(result_query) == false)
                     {
                         printing_using_libraries = 0;
-                        MessageBox.Show(" Ошибка при чтении флага печати с помощью библиотек " + ex.Message);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        printing_using_libraries = 0;
-                        MessageBox.Show(" Ошибка при чтении флага печати с помощью библиотек " + ex.Message);
-                    }
-                    finally
-                    {
-                        if (conn.State == ConnectionState.Open)
-                        {
-                            conn.Close();
-                        }
+                        printing_using_libraries = 1;
                     }
                 }
+                catch (NpgsqlException ex)
+                {
+                    printing_using_libraries = 0;
+                    if (owner != null)
+                    {
+                        await MessageBox.Show(" Ошибка при чтении флага печати с помощью библиотек " + ex.Message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    printing_using_libraries = 0;
+                    if (owner != null)
+                    {
+                        await MessageBox.Show(" Ошибка при чтении флага печати с помощью библиотек " + ex.Message);
+                    }
+                }
+                finally
+                {
+                    if (conn.State == ConnectionState.Open)
+                    {
+                        conn.Close();
+                    }
+                }
+                }
                 return printing_using_libraries;
-            }
+            //}
         }
 
         public static int AuthorizationRequired
@@ -3359,7 +3363,7 @@ namespace Cash8Avalon
             {
                 resultGetData.DeviceInfo = get_device_info_printing_libraries();
             }
-            resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries.ToString();
+            resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries().ToString();
             //string vatin = get_registration_info();
             //if (vatin.Trim() != "")
             //{
@@ -3403,7 +3407,7 @@ namespace Cash8Avalon
             resultGetData.Successfully = "Successfully";
             resultGetData.Version = MainStaticClass.version().Replace(".", "");
             resultGetData.NumCash = MainStaticClass.CashDeskNumber.ToString();
-            resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries.ToString();
+            resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries().ToString();
             resultGetData.VariantUsePrintingLibrary = MainStaticClass.variant_connect_fn.ToString();
             resultGetData.VersionPrintingLibrary = await GetAtolDriverVersion();
             string data = JsonConvert.SerializeObject(resultGetData, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });

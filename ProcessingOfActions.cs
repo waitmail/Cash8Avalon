@@ -3681,9 +3681,7 @@ namespace Cash8Avalon
         {
             price = 0;
 
-            if (!InventoryManager.completeDictionaryProductData)
-                return false;
-
+            // DictionaryPriceGiftAction сам управляет своей инициализацией и состоянием
             return InventoryManager.DictionaryPriceGiftAction.TryGetValue(numDoc, out price);
         }
 

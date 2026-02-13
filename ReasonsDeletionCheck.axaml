@@ -6,13 +6,43 @@
         x:Class="Cash8Avalon.ReasonsDeletionCheck"
         Title="Причины удаления чека"
         Width="550"
-        Height="350"
+        Height="400"
         SizeToContent="Manual"
         WindowStartupLocation="CenterScreen"
         CanResize="False">
     
+    <!-- Стили для черной рамки при фокусе -->
+    <Window.Styles>
+        <!-- Убираем стандартный FocusAdorner чтобы контролировать сами -->
+        <Style Selector="Button">
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+        
+        <!-- Черная рамка при ЛЮБОМ фокусе (и Tab, и Enter) -->
+        <Style Selector="Button:focus /template/ ContentPresenter">
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BoxShadow" Value="0 0 0 1 #CCCCCC"/>
+        </Style>
+        
+        <!-- Для синей кнопки "Перенести" -->
+        <Style Selector="Button#btn_ok:focus /template/ ContentPresenter">
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BoxShadow" Value="0 0 0 1 #2196F3"/>
+        </Style>
+        
+        <!-- Для красной кнопки "Отмена" -->
+        <Style Selector="Button#btn_cancel:focus /template/ ContentPresenter">
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BoxShadow" Value="0 0 0 1 #F44336"/>
+        </Style>
+    </Window.Styles>
+    
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -24,16 +54,27 @@
                    FontSize="16"
                    FontWeight="Bold"
                    HorizontalAlignment="Center"
-                   Margin="0,0,0,20"/>
+                   Margin="0,0,0,10"/>
+        
+        <!-- Текст с выбранной причиной -->
+        <TextBlock Grid.Row="1"
+                   Name="txt_selected_reason"
+                   Text="Причина не выбрана"
+                   FontSize="16"
+                   Foreground="Gray"
+                   FontStyle="Italic"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"/>
         
         <!-- ComboBox с причинами -->
-        <ComboBox Grid.Row="1"
+        <ComboBox Grid.Row="2"
                   Name="comboBox_reasons"
                   HorizontalAlignment="Center"
                   Margin="0,0,0,30"
                   Width="500"
                   Height="45"
-                  FontSize="14.25">
+                  FontSize="14.25"
+                  SelectionChanged="_comboBoxReasons_SelectionChanged">
             <ComboBox.Items>
                 <ComboBoxItem>Проверка акции.</ComboBoxItem>
                 <ComboBoxItem>Несрабатывание акции, переоценки, уценки.</ComboBoxItem>
@@ -46,8 +87,8 @@
             </ComboBox.Items>
         </ComboBox>
         
-        <!-- Кнопки - занимают всю ширину комбобокса (500px) -->
-        <Grid Grid.Row="2"
+        <!-- Кнопки -->
+        <Grid Grid.Row="3"
               Width="500"
               HorizontalAlignment="Center">
             
@@ -57,10 +98,10 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <!-- Кнопка "Выбрать" - прижата к левому краю комбобокса -->
+            <!-- Кнопка "Перенести" -->
             <Button Grid.Column="0"
                     Name="btn_ok"
-                    Content="Выбрать"
+                    Content="Перенести"
                     FontSize="14"
                     FontWeight="Bold"
                     Foreground="White"
@@ -71,7 +112,7 @@
                     CornerRadius="3"
                     Click="Btn_ok_Click"/>
             
-            <!-- Кнопка "Отмена" - прижата к правому краю комбобокса -->
+            <!-- Кнопка "Отмена" -->
             <Button Grid.Column="2"
                     Name="btn_cancel"
                     Content="Отмена"
@@ -84,8 +125,6 @@
                     Height="40"
                     CornerRadius="3"
                     Click="Btn_cancel_Click"/>
-            
         </Grid>
-        
     </Grid>
 </Window>

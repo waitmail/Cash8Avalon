@@ -1203,70 +1203,101 @@ namespace Cash8Avalon
         {
             try
             {
+                // ВЫПОЛНЯЕМ ВСЕ ТЯЖЕЛЫЕ ОПЕРАЦИИ В ПОТОКЕ ТАЙМЕРА, А НЕ В UI
+                int documentsNotOut = MainStaticClass.get_documents_not_out();
+                string documents_not_out = documentsNotOut.ToString();
+
+                int documents_out_of_the_range_of_dates = MainStaticClass.get_documents_out_of_the_range_of_dates();
+
+                string result = "";
+
+                if (documents_not_out == "-1")
+                {
+                    result = " Произошли ошибки при получении кол-ва неотправленных документов, ";
+                }
+                else
+                {
+                    result = " Не отправлено документов " + documents_not_out + ",";
+                }
+
+                if (documents_out_of_the_range_of_dates == -1)
+                {
+                    result += " Не удалось получить дату с сервера ";
+                }
+                else if (documents_out_of_the_range_of_dates == -2)
+                {
+                    result += " Не удалось получить количество документов вне диапазона ";
+                }
+                else if (documents_out_of_the_range_of_dates > 0)
+                {
+                    result += " За диапазоном находится " + documents_out_of_the_range_of_dates.ToString();
+                }
+
+                result += "  " + DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
+
+                // ТОЛЬКО ОБНОВЛЕНИЕ UI - В ДИСПЕТЧЕРЕ
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
                     {
-                        string result = "";
-
-                        // Вызываем статический метод для получения количества неотправленных документов
-                        int documentsNotOut = MainStaticClass.get_documents_not_out();
-                        string documents_not_out = documentsNotOut.ToString();
-
-                        if (documents_not_out == "-1")
-                        {
-                            result = " Произошли ошибки при получении кол-ва неотправленных документов, ";
-                        }
-                        else
-                        {
-                            result = " Не отправлено документов " + documents_not_out + ",";
-                        }
-
-                        // Получаем количество документов вне диапазона дат
-                        int documents_out_of_the_range_of_dates = MainStaticClass.get_documents_out_of_the_range_of_dates();
-
-                        if (documents_out_of_the_range_of_dates == -1)
-                        {
-                            result += " Не удалось получить дату с сервера ";
-                        }
-                        else if (documents_out_of_the_range_of_dates == -2)
-                        {
-                            result += " Не удалось получить количество документов вне диапазона ";
-                        }
-                        else if (documents_out_of_the_range_of_dates > 0)
-                        {
-                            result += " За диапазоном находится " + documents_out_of_the_range_of_dates.ToString();
-                        }
-
-                        result += "  " + DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
-
-                        // Обновляем TextBox со статусом
                         if (_txtStatusBox != null)
                         {
                             _txtStatusBox.Text = result;
                         }
                         else
                         {
-                            // Если ссылка еще не установлена, пытаемся найти элемент
                             _txtStatusBox = this.FindControl<TextBox>("txtB_not_unloaded_docs");
                             if (_txtStatusBox != null)
                             {
                                 _txtStatusBox.Text = result;
                             }
                         }
-
-                        // Проверяем наличие новой версии программы
-                        CheckNewVersion();
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"✗ Ошибка в GetStatusSendDocument: {ex.Message}");
+                        Console.WriteLine($"✗ Ошибка обновления UI: {ex.Message}");
+                    }
+                });
+
+                // Проверка версии - тоже в фоне
+                bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
+
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
+                        if (pictureBox != null)
+                        {
+                            pictureBox.IsVisible = hasNewVersion;
+                            if (hasNewVersion)
+                            {
+                                Console.WriteLine("✓ Обнаружена новая версия программы");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Ошибка при вызове GetStatusSendDocument: {ex.Message}");
+                Console.WriteLine($"✗ Ошибка в GetStatusSendDocument: {ex.Message}");
+
+                // Показываем ошибку в UI
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        if (_txtStatusBox != null)
+                        {
+                            _txtStatusBox.Text = $"⚠ Ошибка связи с БД {DateTime.Now:dd-MM-yyyy HH:mm:ss}";
+                        }
+                    }
+                    catch { }
+                });
             }
         }
 
@@ -1275,29 +1306,35 @@ namespace Cash8Avalon
         /// </summary>
         private void CheckNewVersion()
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
+            try
             {
-                try
-                {
-                    // Получаем ссылку на изображение
-                    var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
-                    if (pictureBox != null)
-                    {
-                        // Вызываем статический метод проверки версии
-                        bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
-                        pictureBox.IsVisible = hasNewVersion;
+                bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
 
-                        if (hasNewVersion)
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
+                        if (pictureBox != null)
                         {
-                            Console.WriteLine("✓ Обнаружена новая версия программы");
+                            pictureBox.IsVisible = hasNewVersion;
+
+                            if (hasNewVersion)
+                            {
+                                Console.WriteLine("✓ Обнаружена новая версия программы");
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
-                }
-            });
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"✗ Ошибка при обновлении UI: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -1307,12 +1344,10 @@ namespace Cash8Avalon
         {
             try
             {
-                // Получаем интервал выгрузки (в минутах)
                 int unloadInterval = await MainStaticClass.GetUnloadingInterval();
 
                 if (unloadInterval > 0)
                 {
-                    // Создаем таймер с интервалом в миллисекундах
                     _statusTimer = new System.Timers.Timer(unloadInterval * 60 * 1000);
                     _statusTimer.Elapsed += StatusTimer_Elapsed;
                     _statusTimer.AutoReset = true;
@@ -1320,11 +1355,8 @@ namespace Cash8Avalon
 
                     Console.WriteLine($"✓ Таймер статуса инициализирован с интервалом {unloadInterval} мин.");
 
-                    // Первоначальное обновление статуса
-                    Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        Task.Run(() => GetStatusSendDocument());
-                    });
+                    // Первоначальное обновление статуса - в фоне
+                    Task.Run(() => GetStatusSendDocument());
                 }
                 else
                 {

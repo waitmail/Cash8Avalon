@@ -10,6 +10,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using static Cash8Avalon.Cash_check;
+using static Cash8Avalon.LoadDataWebService;
+
 
 
 //using System.Windows.Forms;
@@ -552,13 +554,28 @@ namespace Cash8Avalon
 
                         string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
 
-                        if (InventoryManager.completeDictionaryProductData)
+                        //if (InventoryManager.completeDictionaryProductData)
+                        //{
+                        //    productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
+                        //}
+                        //else
+                        //{
+                        //    productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
+                        //}
+                        // Получаем данные о товаре по штрихкоду
+                        //ProductData productData;
+                        string tovarCode = productItem.Code.ToString().Trim();
+
+                        // Пытаемся получить данные из кэша (потокобезопасно)
+                        if (InventoryManager.TryGetItem(Convert.ToInt64(tovarCode), out productData))
                         {
-                            productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
+                            // Данные успешно получены из кэша
                         }
                         else
                         {
-                            productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
+                            // Кэш невалиден, словарь перестраивается или товар не найден в кэше
+                            // Получаем данные напрямую из базы данных
+                            productData = check.GetProductDataInDB(tovarCode);
                         }
 
                         //if (productData.IsCDNCheck())//&& check.check_type.SelectedIndex == 0 
@@ -1142,14 +1159,30 @@ namespace Cash8Avalon
 
                             string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
 
-                            if (InventoryManager.completeDictionaryProductData)
+                            // Правильный способ получения данных о товаре
+                            Int64 tovarCode = Convert.ToInt64(productItem.Code.ToString().Trim());
+
+                            // Пытаемся получить данные из кэша с использованием потокобезопасного метода
+                            if (InventoryManager.TryGetItem(Convert.ToInt64(tovarCode), out productData))
                             {
-                                productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
+                                // Данные успешно получены из кэша
+                                // productData уже содержит валидные данные
                             }
                             else
                             {
-                                productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
+                                // Кэш невалиден, словарь перестраивается или товар не найден в кэше
+                                // Получаем данные напрямую из базы данных
+                                productData = check.GetProductDataInDB(tovarCode.ToString());
                             }
+
+                            //if (InventoryManager.completeDictionaryProductData)
+                            //{
+                            //    productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
+                            //}
+                            //else
+                            //{
+                            //    productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
+                            //}
 
                             //if (productData.IsCDNCheck())// && check.check_type.SelectedIndex == 0)
                             //{

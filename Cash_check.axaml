@@ -169,7 +169,7 @@
                                 </Grid>
                                 
                                 <!-- Строка 3: Информация об оплате (обернута в Border) -->
-                                <Border x:Name="PaymentInfoRow" Grid.Row="2" Margin="0,5,0,5">
+                                <Border x:Name="PaymentInfoRow" Grid.Row="2" IsVisible="False" Margin="0,5,0,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>

@@ -345,28 +345,52 @@ namespace Cash8Avalon
 {
     public static class InventoryManager
     {
+        // ================ ПОТОКОБЕЗОПАСНАЯ РАБОТА СО СЛОВАРЕМ ТОВАРОВ ================
+
+        /// <summary>
+        /// Основной словарь товаров. Ключом может быть как код товара, так и штрихкод.
+        /// </summary>
         private static Dictionary<long, ProductData> dictionaryProductData = new Dictionary<long, ProductData>();
+
+        /// <summary>
+        /// Словарь цен подарков по акциям.
+        /// </summary>
         private static Dictionary<int, double> giftPriceAction = new Dictionary<int, double>();
 
-        // Минимальное изменение: добавляем volatile и lock
-        private static volatile bool _completeDictionaryProductData = false;
-        private static readonly object _completeDictionaryLock = new object();
+        /// <summary>
+        /// ReaderWriterLockSlim обеспечивает потокобезопасный доступ к словарю:
+        /// - Множество потоков могут одновременно читать (EnterReadLock/ExitReadLock)
+        /// - Только один поток может писать (EnterWriteLock/ExitWriteLock)
+        /// - Во время записи чтение блокируется и наоборот
+        /// </summary>
+        private static readonly ReaderWriterLockSlim _dictionaryLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+
+        /// <summary>
+        /// Флаг валидности словаря. 
+        /// Используется для быстрой проверки, можно ли доверять данным в словаре.
+        /// Защищен блокировкой на чтение/запись.
+        /// </summary>
+        private static bool _dictionaryIsValid = false;
 
         // Добавляем статическую переменную для хранения владельца MessageBox
         private static Window _owner = null;
 
-        public static bool completeDictionaryProductData
+        /// <summary>
+        /// Свойство для проверки валидности словаря.
+        /// Рекомендуется использовать его для проверки перед чтением данных.
+        /// </summary>
+        public static bool IsDictionaryValid
         {
             get
             {
-                // Простое чтение volatile переменной
-                return _completeDictionaryProductData;
-            }
-            set
-            {
-                lock (_completeDictionaryLock)
+                _dictionaryLock.EnterReadLock();
+                try
                 {
-                    _completeDictionaryProductData = value;
+                    return _dictionaryIsValid;
+                }
+                finally
+                {
+                    _dictionaryLock.ExitReadLock();
                 }
             }
         }
@@ -392,11 +416,25 @@ namespace Cash8Avalon
             return null;
         }
 
+        /// <summary>
+        /// Очистка словаря товаров.
+        /// Безопасно выполняется под WriteLock, чтобы другие потоки не могли 
+        /// читать словарь во время его очистки.
+        /// </summary>
         public static void ClearDictionaryProductData()
         {
-            completeDictionaryProductData = false;
-            dictionaryProductData.Clear();
-            giftPriceAction.Clear();
+            // WriteLock гарантирует, что никто не читает словарь в момент его очистки
+            _dictionaryLock.EnterWriteLock();
+            try
+            {
+                _dictionaryIsValid = false;
+                dictionaryProductData.Clear();
+                giftPriceAction.Clear();
+            }
+            finally
+            {
+                _dictionaryLock.ExitWriteLock();
+            }
         }
 
         public static async Task FillDictionaryProductDataAsync(Window parentWindow = null)
@@ -584,9 +622,23 @@ namespace Cash8Avalon
             });
         }
 
+        /// <summary>
+        /// Заполняет словарь товаров данными из базы.
+        /// Используется паттерн "Копирование на запись" (Copy-on-Write):
+        /// 1. Создаем временный словарь
+        /// 2. Заполняем его данными
+        /// 3. Под блокировкой заменяем ссылку на основной словарь
+        /// 4. Устанавливаем флаги валидности
+        /// 
+        /// Преимущества:
+        /// - Минимальное время блокировки (только на замену ссылки)
+        /// - Читающие потоки не блокируются на время заполнения
+        /// - Атомарная замена словаря
+        /// </summary>
         public static bool FillDictionaryProductData()
         {
-            dictionaryProductData.Clear();
+            // Создаем временный словарь для заполнения
+            var tempDictionary = new Dictionary<long, ProductData>();
 
             using (var conn = MainStaticClass.NpgsqlConn())
             {
@@ -620,30 +672,50 @@ namespace Cash8Avalon
                             if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
                             if (Convert.ToBoolean(reader["rr_not_control_owner"])) flags |= ProductFlags.RrNotControlOwner;
 
-                            // Добавляем товар по его коду
-                            if (!dictionaryProductData.ContainsKey(code))
-                            {
-                                var productData = new ProductData(code, name, retailPrice, flags);
-                                dictionaryProductData[code] = productData;
-                            }
+                            var productData = new ProductData(code, name, retailPrice, flags);
 
-                            // Добавляем товар по штрихкоду
+                            // Добавляем во временный словарь по коду товара
+                            tempDictionary[code] = productData;
+
+                            // Добавляем во временный словарь по штрихкоду
                             if (!string.IsNullOrEmpty(barcode) && long.TryParse(barcode, out var barcodeValue))
                             {
-                                if (!dictionaryProductData.ContainsKey(barcodeValue))
-                                {
-                                    var productData = new ProductData(code, name, retailPrice, flags);
-                                    dictionaryProductData[barcodeValue] = productData;
-                                }
+                                tempDictionary[barcodeValue] = productData;
                             }
                         }
                     }
-                    completeDictionaryProductData = true;
-                    return completeDictionaryProductData;
+
+                    // ===== КРИТИЧЕСКАЯ СЕКЦИЯ - минимальное время блокировки =====
+                    // Блокируем словарь только для атомарной замены ссылки
+                    _dictionaryLock.EnterWriteLock();
+                    try
+                    {
+                        // Атомарно заменяем ссылку на словарь
+                        dictionaryProductData = tempDictionary;
+
+                        // Устанавливаем флаг валидности
+                        _dictionaryIsValid = true;
+                    }
+                    finally
+                    {
+                        _dictionaryLock.ExitWriteLock();
+                    }
+                    // ===== КОНЕЦ КРИТИЧЕСКОЙ СЕКЦИИ =====
+
+                    return true;
                 }
                 catch (NpgsqlException ex)
                 {
-                    completeDictionaryProductData = false;
+                    // В случае ошибки сбрасываем флаг валидности под блокировкой
+                    _dictionaryLock.EnterWriteLock();
+                    try
+                    {
+                        _dictionaryIsValid = false;
+                    }
+                    finally
+                    {
+                        _dictionaryLock.ExitWriteLock();
+                    }
 
                     // Показываем ошибку с владельцем
                     ShowErrorDialogAsync(null, new Exception($"Ошибка при заполнении словаря данными о товарах: {ex.Message}", ex));
@@ -652,7 +724,16 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    completeDictionaryProductData = false;
+                    // В случае ошибки сбрасываем флаг валидности под блокировкой
+                    _dictionaryLock.EnterWriteLock();
+                    try
+                    {
+                        _dictionaryIsValid = false;
+                    }
+                    finally
+                    {
+                        _dictionaryLock.ExitWriteLock();
+                    }
 
                     // Показываем ошибку с владельцем
                     ShowErrorDialogAsync(null, ex);
@@ -662,27 +743,97 @@ namespace Cash8Avalon
             }
         }
 
+        /// <summary>
+        /// Добавляет новый товар в словарь.
+        /// Выполняется под WriteLock для безопасности.
+        /// </summary>
         public static void AddItem(long id, ProductData data)
         {
-            if (!dictionaryProductData.ContainsKey(id))
+            _dictionaryLock.EnterWriteLock();
+            try
             {
-                dictionaryProductData.Add(id, data);
+                if (!dictionaryProductData.ContainsKey(id))
+                {
+                    dictionaryProductData.Add(id, data);
+                }
+                else
+                {
+                    throw new ArgumentException($"Товар с идентификатором {id} уже существует.");
+                }
             }
-            else
+            finally
             {
-                throw new ArgumentException($"Товар с идентификатором {id} уже существует.");
+                _dictionaryLock.ExitWriteLock();
             }
         }
 
+        /// <summary>
+        /// Получает товар из словаря по идентификатору (код или штрихкод).
+        /// Выполняется под ReadLock, что позволяет множеству потоков 
+        /// одновременно читать данные.
+        /// </summary>
         public static ProductData GetItem(long id)
         {
-            if (dictionaryProductData.TryGetValue(id, out var data))
+            // EnterReadLock позволяет множеству потоков одновременно читать
+            _dictionaryLock.EnterReadLock();
+            try
             {
-                return data;
+                // Проверяем валидность словаря
+                if (!_dictionaryIsValid)
+                {
+                    return new ProductData(0, string.Empty, 0, ProductFlags.None);
+                }
+
+                return dictionaryProductData.TryGetValue(id, out var data)
+                    ? data
+                    : new ProductData(0, string.Empty, 0, ProductFlags.None);
             }
-            else
+            finally
             {
-                return new ProductData(0, string.Empty, 0, ProductFlags.None);
+                // Всегда освобождаем блокировку
+                _dictionaryLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Безопасно пытается получить товар из словаря.
+        /// Возвращает true, если товар найден и словарь валиден.
+        /// Рекомендуемый метод получения товаров.
+        /// </summary>
+        public static bool TryGetItem(long id, out ProductData data)
+        {
+            _dictionaryLock.EnterReadLock();
+            try
+            {
+                if (!_dictionaryIsValid)
+                {
+                    data = new ProductData(0, string.Empty, 0, ProductFlags.None);
+                    return false;
+                }
+
+                return dictionaryProductData.TryGetValue(id, out data);
+            }
+            finally
+            {
+                _dictionaryLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Получает копию текущего словаря.
+        /// Полезно для операций, требующих консистентного снимка данных.
+        /// </summary>
+        public static Dictionary<long, ProductData> GetDictionarySnapshot()
+        {
+            _dictionaryLock.EnterReadLock();
+            try
+            {
+                // Создаем копию словаря для безопасной работы вне блокировки
+                return new Dictionary<long, ProductData>(dictionaryProductData);
+            }
+            finally
+            {
+                _dictionaryLock.ExitReadLock();
             }
         }
     }

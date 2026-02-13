@@ -117,7 +117,7 @@ namespace Cash8Avalon
                     int status_code = (int)response.StatusCode;
                     if (status_code != 200)
                     {
-                        MessageBox.Show("Получен неверный ответ от сервера при запросе списка CDN серверов, кодответа = " + status_code.ToString(), "Получение списка CDN серверов");
+                        //MessageBox.Show("Получен неверный ответ от сервера при запросе списка CDN серверов, кодответа = " + status_code.ToString(), "Получение списка CDN серверов");
                         MainStaticClass.write_cdn_log("Получен неверный ответ от сервера при запросе списка CDN серверов, код ответа = " + status_code.ToString(), "0", "", "3");
                         return list;
                     }
@@ -140,7 +140,7 @@ namespace Cash8Avalon
             {
                 //MainStaticClass.write_event_in_log("Получение списка CDN get_cdn_info " + ex.Message, "Документ чек", "0");
                 MainStaticClass.write_cdn_log("Получение списка CDN get_cdn_info " + ex.Message, "0", "", "3");
-                MessageBox.Show("Ошибка при запросе списка CDN площадок " + ex.Message);
+                //MessageBox.Show("Ошибка при запросе списка CDN площадок " + ex.Message);
             }
 
             if (list == null)//Необходимо заполнить его из кеша
@@ -177,11 +177,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show("Произошла ошибка при попытке загрузить список CDN из кеша" + ex.Message, "Загрузка списка CDN из кеша");
+                //MessageBox.Show("Произошла ошибка при попытке загрузить список CDN из кеша" + ex.Message, "Загрузка списка CDN из кеша");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Произошла ошибка при попытке загрузить список CDN из кеша" + ex.Message, "Загрузка списка CDN из кеша");
+                //MessageBox.Show("Произошла ошибка при попытке загрузить список CDN из кеша" + ex.Message, "Загрузка списка CDN из кеша");
             }
             finally
             {
@@ -475,7 +475,7 @@ namespace Cash8Avalon
             return markingCode;
         }
 
-        public bool check_lm_ch_z(Cash_check cash_Check, string mark_str)
+        public async Task<bool> check_lm_ch_z(Cash_check cash_Check, string mark_str)
         {
             bool result_check = false;
             AnswerCheckMark answer_check_mark = null;
@@ -488,7 +488,7 @@ namespace Cash8Avalon
             string cis = mark_str;//"0104640043469202215Y1a67"; // ваш КИ
             string username = "admin";
             string password = "admin";
-            string xClientId = MainStaticClass.FiscalDriveNumber;//."8710000100123456"; // опционально
+            string xClientId = await MainStaticClass.FiscalDriveNumber();//."8710000100123456"; // опционально
                                                                  //string xClientId = MainStaticClass.CDN_Token;// "8710000100123456"; // опционально
 
 
@@ -547,17 +547,17 @@ namespace Cash8Avalon
                     using (var reader = new StreamReader(errorResponse.GetResponseStream()))
                     {
                         string errorText = reader.ReadToEnd();
-                        MessageBox.Show($"Ошибка HTTP при проверке кода в лм чз {(int)errorResponse.StatusCode}: {errorText}");
+                        await MessageBox.Show($"Ошибка HTTP при проверке кода в лм чз {(int)errorResponse.StatusCode}: {errorText}");
                     }
                 }
                 else
                 {
-                    MessageBox.Show($"Сетевая ошибка при проверке кода в лм чз: {ex.Message}");
+                    await MessageBox.Show($"Сетевая ошибка при проверке кода в лм чз: {ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Неизвестная ошибка при проверке кода в лм чз: {ex.Message}");
+                await MessageBox.Show($"Неизвестная ошибка при проверке кода в лм чз: {ex.Message}");
             }
 
             return result_check;
@@ -592,7 +592,7 @@ namespace Cash8Avalon
 
             CheckMark check_mark = new CheckMark();
             check_mark.codes = codes;
-            check_mark.fiscalDriveNumber = MainStaticClass.FiscalDriveNumber;
+            check_mark.fiscalDriveNumber = await MainStaticClass.FiscalDriveNumber();
 
             string body = JsonConvert.SerializeObject(check_mark, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             body = body.Replace("\\u001d", @"u001d");
@@ -762,7 +762,7 @@ namespace Cash8Avalon
                             sb.Append(s);
                             sb.AppendLine(d_tovar.Keys.ElementAt(0));
                             sb.AppendLine(d_tovar[d_tovar.Keys.ElementAt(0)]);
-                            await MessageBox.Show(sb.ToString());
+                            await MessageBox.Show(sb.ToString(),"Ошибки при проверке кода маркировки",MessageBoxButton.OK,MessageBoxType.Error,cash_Check);
                         }
                     }
                 }
@@ -802,7 +802,7 @@ namespace Cash8Avalon
                                 }
                                 else
                                 {
-                                    await MessageBox.Show("При проверке кода маркировки на сервере CDN произошла ошибка \r\n Код  " + answer_check_mark.code + " \r\n Описание " + answer_check_mark.description);
+                                    await MessageBox.Show("При проверке кода маркировки на сервере CDN произошла ошибка \r\n Код  " + answer_check_mark.code + " \r\n Описание " + answer_check_mark.description,"Проверка кода маркировки ЧЗ",MessageBoxButton.OK,MessageBoxType.Error, cash_Check);
                                 }
                             }
                         }
@@ -811,7 +811,7 @@ namespace Cash8Avalon
                         error = true;
                         if (error_5000 == 0)
                         {
-                            await MessageBox.Show("WebException check_marker_code " + host.host + " " + ex.Message, "check_marker_code");
+                            await MessageBox.Show("WebException check_marker_code " + host.host + " " + ex.Message, "check_marker_code",MessageBoxButton.OK,MessageBoxType.Error, cash_Check);
                             //host.dateTime = DateTime.Now.AddMinutes(15);
                         }
                         else if (error_5000 > 1)
@@ -826,7 +826,7 @@ namespace Cash8Avalon
                     else
                     {
                         // Другие WebException без Response
-                        await MessageBox.Show("WebException without response: " + ex.Message);
+                        await MessageBox.Show("WebException without response: " + ex.Message,"Проверка кода маркировки",MessageBoxButton.OK,MessageBoxType.Error,cash_Check);
                         //MainStaticClass.write_cdn_log("WebException without response: " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
                         error = true;
                     }
@@ -835,7 +835,7 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    await MessageBox.Show("Exception check_marker_code " + host.host + " " + ex.Message, "check_marker_code");
+                    await MessageBox.Show("Exception check_marker_code " + host.host + " " + ex.Message, "check_marker_code",MessageBoxButton.OK,MessageBoxType.Error, cash_Check);
                     await MainStaticClass.write_cdn_log("check_marker_code " + host.host + " " + ex.Message, numdoc.ToString(), codes[0].ToString(), "3");
                     //MainStaticClass.UpdateHostDateTimeCdnHost(host.host, DateTime.Now.AddMinutes(15));
                     error = true;
@@ -850,7 +850,7 @@ namespace Cash8Avalon
             {
                 if (MainStaticClass.GetIpAddrLmChZ != "")//ip адрес сервера лм чз не пустой, значит он установлен
                 {
-                    result_check = check_lm_ch_z(cash_Check, mark_str);
+                    result_check = await check_lm_ch_z(cash_Check, mark_str);
                 }
             }
 

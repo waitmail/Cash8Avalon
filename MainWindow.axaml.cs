@@ -107,6 +107,7 @@ namespace Cash8Avalon
             // Показываем как модальное окно
             await loginWindow.ShowDialog(this);
 
+            
             if (loginSuccess)
             {
                 try
@@ -524,9 +525,9 @@ namespace Cash8Avalon
             public bool ItsSent { get; set; }
         }
 
-        private void sent_open_close_shop()
+        private async void sent_open_close_shop()
         {
-            List<OpenCloseShop> closeShops = get_open_close_shop();
+            List<OpenCloseShop> closeShops = await get_open_close_shop();
             if (closeShops.Count > 0)
             {
                 DS ds = MainStaticClass.get_ds();
@@ -597,7 +598,7 @@ namespace Cash8Avalon
             }
         }
 
-        private List<OpenCloseShop> get_open_close_shop()
+        private async Task<List<OpenCloseShop>> get_open_close_shop()
         {
             List<OpenCloseShop> openCloseShops = new List<OpenCloseShop>();
 
@@ -634,12 +635,12 @@ namespace Cash8Avalon
                 }
                 catch (NpgsqlException ex)
                 {
-                    MessageBox.Show("При отправке даты открытия и закрытия магазина произошли ошибки: " + ex.Message);
+                    //await MessageBox.Show("При отправке даты открытия и закрытия магазина произошли ошибки: " + ex.Message,"Отправка данных",this);
                     MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Отправка даты открытия/закрытия магазина");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("При отправке даты открытия и закрытия магазина произошли ошибки: " + ex.Message);
+                    //await MessageBox.Show("При отправке даты открытия и закрытия магазина произошли ошибки: " + ex.Message,"Отправка данных",this);
                     MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Отправка даты открытия/закрытия магазина");
                 }
             }

@@ -1977,7 +1977,8 @@ namespace Cash8Avalon
                 // 5. Проверяем, что кэш загружен
                 await Task.Delay(200, cancellationToken);
 
-                if (!InventoryManager.completeDictionaryProductData)
+                // Сначала проверяем валидность словаря
+                if (!InventoryManager.IsDictionaryValid)
                 {
                     return (false, "Кэш товаров не был успешно загружен");
                 }

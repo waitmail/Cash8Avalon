@@ -783,7 +783,7 @@ public partial class FPTK22 : ControlBase
         }
     }
 
-    private void btn_date_mark_Click(object sender, RoutedEventArgs e)
+    private async void btn_date_mark_Click(object sender, RoutedEventArgs e)
     {
         var txtBLastSendMark = this.FindControl<TextBox>("txtB_last_send_mark");
         var btnDateMark = this.FindControl<Button>("btn_date_mark");
@@ -797,7 +797,7 @@ public partial class FPTK22 : ControlBase
         // Ждем асинхронно
         Task.Delay(1000);
 
-        if (MainStaticClass.PrintingUsingLibraries == 1)
+        if (await MainStaticClass.PrintingUsingLibraries() == 1)
         {
             try
             {
@@ -825,9 +825,9 @@ public partial class FPTK22 : ControlBase
         }
     }
 
-    private void btn_openDrawer_Click(object sender, RoutedEventArgs e)
+    private async void btn_openDrawer_Click(object sender, RoutedEventArgs e)
     {
-        if (MainStaticClass.PrintingUsingLibraries == 1)
+        if (await MainStaticClass.PrintingUsingLibraries() == 1)
         {
             try
             {
