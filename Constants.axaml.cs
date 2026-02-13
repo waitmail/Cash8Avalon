@@ -15,18 +15,15 @@ using System.Threading.Tasks;
 
 namespace Cash8Avalon
 {
-    public partial class Constants : UserControl
+    public partial class Constants : Window
     {
-
-
-        public event EventHandler RequestClose;
         private int m_cash_desk_number = 0;
 
         public Constants()
         {
             InitializeComponent();
-            
-            // Устанавливаем шрифт для всего контрола
+
+            // Устанавливаем шрифт для всего окна
             this.FontFamily = new FontFamily("Segoe UI");
 
             // Заполняем ComboBox
@@ -41,12 +38,21 @@ namespace Cash8Avalon
             // Подписываемся на события
             SubscribeToEvents();
 
-        }       
+            // Устанавливаем владельца - главное окно
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                if (desktop.MainWindow != null && desktop.MainWindow != this)
+                {
+                    this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                    this.Owner = desktop.MainWindow;
+                }
+            }
+        }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            RequestClose?.Invoke(this, EventArgs.Empty);
-        }      
+            this.Close();
+        }
 
         private void FillComboBoxes()
         {
@@ -159,7 +165,7 @@ namespace Cash8Avalon
         private void SubscribeToEvents()
         {
             var writeButton = this.FindControl<Button>("write");
-            var closeButton = this.FindControl<Button>("_close_");
+            var closeButton = this.FindControl<Button>("btnCloseBottom");
             var btnGetWeight = this.FindControl<Button>("btn_get_weight");
             var btnTestConnection = this.FindControl<Button>("btn_test_connection");
             var btnStatus = this.FindControl<Button>("btn_status");
@@ -181,27 +187,21 @@ namespace Cash8Avalon
         {
             try
             {
-                // Сначала установим значения по умолчанию
-                //SetDefaultValues();
-
-                // Затем загрузим из БД
                 LoadFromDatabase();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка загрузки настроек: {ex.Message}");
-                await MessageBox.Show($"Не удалось загрузить настройки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show($"Не удалось загрузить настройки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
         }
-        
+
         private async void LoadFromDatabase()
         {
             NpgsqlConnection conn = null;
             try
             {
-                // Получаем подключение
-                conn = MainStaticClass.NpgsqlConn(); // Если у вас есть такой метод
-                //conn = DatabaseHelper.GetConnection(); // Используем наш хелпер
+                conn = MainStaticClass.NpgsqlConn();
                 conn.Open();
 
                 string query = @"SELECT nick_shop, cash_desk_number, code_shop,
@@ -219,10 +219,8 @@ namespace Cash8Avalon
                 {
                     if (reader.Read())
                     {
-                        // Получаем контролы
                         var nickShop = this.FindControl<TextBox>("nick_shop");
                         var cashDeskNumber = this.FindControl<TextBox>("cash_desk_number");
-                        var pathForWebService = this.FindControl<TextBox>("path_for_web_service");
                         var unloadingPeriod = this.FindControl<TextBox>("unloading_period");
                         var txtLastDateDownload = this.FindControl<TextBox>("txtB_last_date_download_bonus_clients");
                         var comboBoxSystemTaxation = this.FindControl<ComboBox>("comboBox_system_taxation");
@@ -241,13 +239,10 @@ namespace Cash8Avalon
                         var txtIpAddrLmChZ = this.FindControl<TextBox>("txtB_ip_addr_lm_ch_z");
                         var comboBoxNdsIp = this.FindControl<ComboBox>("comboBox_nds_ip");
 
-                        // Заполняем данные из БД
                         if (nickShop != null) nickShop.Text = reader["nick_shop"].ToString();
                         if (cashDeskNumber != null) cashDeskNumber.Text = reader["cash_desk_number"].ToString();
-                        if (pathForWebService != null) pathForWebService.Text = reader["path_for_web_service"].ToString();
                         if (unloadingPeriod != null) unloadingPeriod.Text = reader["unloading_period"].ToString();
 
-                        // Дата загрузки карточек
                         if (txtLastDateDownload != null)
                         {
                             var lastDate = reader["last_date_download_bonus_clients"];
@@ -257,7 +252,6 @@ namespace Cash8Avalon
                             }
                         }
 
-                        // Система налогообложения
                         if (comboBoxSystemTaxation != null && reader["system_taxation"] != DBNull.Value)
                         {
                             int taxIndex = Convert.ToInt32(reader["system_taxation"]);
@@ -265,14 +259,11 @@ namespace Cash8Avalon
                                 comboBoxSystemTaxation.SelectedIndex = taxIndex;
                         }
 
-                        // Версия ФН
                         if (txtVersionFn != null) txtVersionFn.Text = reader["version_fn"].ToString();
 
-                        // Эквайринг
                         if (txtIdAcquiringTerminal != null) txtIdAcquiringTerminal.Text = reader["id_acquirer_terminal"].ToString();
                         if (txtIpAddressAcquiringTerminal != null) txtIpAddressAcquiringTerminal.Text = reader["ip_address_acquiring_terminal"].ToString();
 
-                        // CheckBox'ы
                         if (checkBoxPrintingUsingLibraries != null)
                             checkBoxPrintingUsingLibraries.IsChecked = Convert.ToBoolean(reader["printing_using_libraries"]);
 
@@ -282,7 +273,6 @@ namespace Cash8Avalon
                         if (checkBoxIncludePIot != null)
                             checkBoxIncludePIot.IsChecked = Convert.ToBoolean(reader["include_piot"]);
 
-                        // Вариант подключения ФН
                         if (comboBoxVariantConnectFn != null && reader["variant_connect_fn"] != DBNull.Value)
                         {
                             int variantIndex = Convert.ToInt32(reader["variant_connect_fn"]);
@@ -290,11 +280,9 @@ namespace Cash8Avalon
                                 comboBoxVariantConnectFn.SelectedIndex = variantIndex;
                         }
 
-                        // Константы
                         if (txtConstantConversion != null) txtConstantConversion.Text = reader["constant_conversion_to_kilograms"].ToString();
                         if (txtFnIpAddr != null) txtFnIpAddr.Text = reader["fn_ipaddr"].ToString();
 
-                        // Порт ФН
                         if (comboBoxFnPort != null)
                         {
                             string fnPort = reader["fn_serial_port"].ToString();
@@ -306,7 +294,6 @@ namespace Cash8Avalon
                             }
                         }
 
-                        // Порт весов
                         if (comboBoxScalePort != null)
                         {
                             string scalePort = reader["scale_serial_port"].ToString();
@@ -318,7 +305,6 @@ namespace Cash8Avalon
                             }
                         }
 
-                        // Банк эквайринга
                         if (comboBoxAcquiringBank != null && reader["acquiring_bank"] != DBNull.Value)
                         {
                             int bankIndex = Convert.ToInt32(reader["acquiring_bank"]);
@@ -326,10 +312,8 @@ namespace Cash8Avalon
                                 comboBoxAcquiringBank.SelectedIndex = bankIndex;
                         }
 
-                        // IP адрес ЛМ ЧЗ
                         if (txtIpAddrLmChZ != null) txtIpAddrLmChZ.Text = reader["ip_adress_local_ch_z"].ToString();
 
-                        // НДС для ИП
                         if (comboBoxNdsIp != null && reader["nds_ip"] != DBNull.Value)
                         {
                             int ndsIndex = Convert.ToInt32(reader["nds_ip"]);
@@ -342,12 +326,12 @@ namespace Cash8Avalon
             catch (NpgsqlException ex)
             {
                 Console.WriteLine($"Ошибка БД: {ex.Message}");
-                await MessageBox.Show(ex.Message, "Ошибка БД",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show(ex.Message, "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка: {ex.Message}");
-                await MessageBox.Show("Ошибка", ex.Message, MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Ошибка", ex.Message, MessageBoxButton.OK, MessageBoxType.Error,this);
             }
             finally
             {
@@ -355,7 +339,6 @@ namespace Cash8Avalon
             }
         }
 
-        // Обработчики событий с nullable sender
         private void Write_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             SaveSettings();
@@ -363,9 +346,7 @@ namespace Cash8Avalon
 
         private void Close_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            //var window = this.FindAncestorOfType<Window>();
-            //window?.Close();
-            RequestClose?.Invoke(this, EventArgs.Empty);
+            this.Close();
         }
 
         private async void Btn_get_weight_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -375,12 +356,12 @@ namespace Cash8Avalon
 
             if (string.IsNullOrEmpty(selectedPort))
             {
-                await MessageBox.Show("Порт весов не выбран!", "Ошибка");
+                await MessageBox.Show("Порт весов не выбран!", "Ошибка",MessageBoxButton.OK,MessageBoxType.Error, this);
                 return;
             }
             double weight = MainStaticClass.GetWeight();
-            string formattedWeight = weight.ToString("F3"); // 3 знака после запятой
-            await MessageBox.Show($"Вес получен с порта {selectedPort}\nВес: {formattedWeight} кг", "Вес");
+            string formattedWeight = weight.ToString("F3");
+            await MessageBox.Show($"Вес получен с порта {selectedPort}\nВес: {formattedWeight} кг", "Вес",this);
         }
 
         private async void Btn_test_connection_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -391,12 +372,12 @@ namespace Cash8Avalon
                 fptr.open();
             }
             if (fptr.printText() < 0)
-            {                
-                await MessageBox.Show($"Проверка подключения к ФН\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}",  "Проверка");
+            {
+                await MessageBox.Show($"Проверка подключения к ФН\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "Проверка", this);
             }
             else
             {
-                await MessageBox.Show($"Проверка подключения к ФН \nСтатус: Успешно","Проверка");
+                await MessageBox.Show($"Проверка подключения к ФН \nСтатус: Успешно", "Проверка", this);
             }
         }
 
@@ -407,18 +388,17 @@ namespace Cash8Avalon
 
             if (string.IsNullOrEmpty(ip))
             {
-                await MessageBox.Show("IP адрес ЛМ ЧЗ не указан!", "Ошибка");
+                await MessageBox.Show("IP адрес ЛМ ЧЗ не указан!", "Ошибка", this);
                 return;
             }
 
-            await MessageBox.Show($"Проверка подключения к ЛМ ЧЗ по IP: {ip}\nСтатус: Успешно", "Проверка");
+            await MessageBox.Show($"Проверка подключения к ЛМ ЧЗ по IP: {ip}\nСтатус: Успешно", "Проверка", this);
         }
 
         private void ComboBox_variant_connect_fn_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             var comboBoxVariantConnectFn = sender as ComboBox;
             var variant = comboBoxVariantConnectFn?.SelectedItem?.ToString();
-
             Console.WriteLine($"Выбран вариант подключения ФН: {variant}");
         }
 
@@ -432,10 +412,7 @@ namespace Cash8Avalon
 
             if ((variant_connect_fn.SelectedIndex == 0) || (printing_using_libraries.IsChecked! != true))
             {
-                //if (fn_ipaddr.Text.Trim().Length == 0)
-                //{
                 return result;
-                //}
             }
 
             if (string.IsNullOrEmpty(fn_ipaddr.Text))
@@ -443,18 +420,9 @@ namespace Cash8Avalon
                 return false;
             }
 
-
-
-            // Паттерн для проверки IP:порт
             string pattern = @"^(\d{1,3}(\.\d{1,3}){3}:\d+)?$";
             bool isValid = Regex.IsMatch(fn_ipaddr.Text, pattern) && !fn_ipaddr.Text.Contains(",");
-
-            // Проверяем условие (прямая печать включена И выбран ETHERNET)
-            //if (printing_using_libraries.IsChecked == true && variant_connect_fn.SelectedIndex == 1)
-            //{
-            // Если условие истинно, строка не должна быть пустой
-            isValid = isValid && !string.IsNullOrEmpty(txtB_fn_ipaddr.Text);
-            //}
+            isValid = isValid && !string.IsNullOrEmpty(fn_ipaddr.Text);
 
             if (!isValid)
             {
@@ -462,7 +430,7 @@ namespace Cash8Avalon
                     "Строка IP адрес:порт не соответствует формату!\n" +
                     "Формат: XXX.XXX.XXX.XXX:PORT\n" +
                     "Пример: 192.168.1.100:5555",
-                    "Проверка ввода IP адреса");
+                    "Проверка ввода IP адреса", this);
                 result = false;
             }
 
@@ -507,11 +475,9 @@ namespace Cash8Avalon
                 return;
             }
 
-            // НАХОДИМ ВСЕ КОНТРОЛЫ ОДИН РАЗ
             var cashDeskNumber = this.FindControl<TextBox>("cash_desk_number");
             var nickShop = this.FindControl<TextBox>("nick_shop");
             var unloadingPeriod = this.FindControl<TextBox>("unloading_period");
-            var pathForWebService = this.FindControl<TextBox>("path_for_web_service");
             var txtB_last_date_download_bonus_clients = this.FindControl<TextBox>("txtB_last_date_download_bonus_clients");
             var comboBoxSystemTaxation = this.FindControl<ComboBox>("comboBox_system_taxation");
             var txtB_version_fn = this.FindControl<TextBox>("txtB_version_fn");
@@ -532,43 +498,39 @@ namespace Cash8Avalon
             var txtIpAddressAcquiringTerminal = this.FindControl<TextBox>("txtB_ip_address_acquiring_terminal");
             var txtConstantConversion = this.FindControl<TextBox>("txtB_constant_conversion_to_kilograms");
 
-            // ПРОВЕРЯЕМ НА NULL ВСЕ ОСНОВНЫЕ КОНТРОЛЫ
             if (cashDeskNumber == null || nickShop == null || unloadingPeriod == null ||
                 comboBoxSystemTaxation == null || txtB_version_fn == null)
             {
-                await MessageBox.Show("Не удалось найти элементы управления", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Не удалось найти элементы управления", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return;
             }
 
-            // ПРОВЕРЯЕМ ЗАПОЛНЕНИЕ
             if (string.IsNullOrWhiteSpace(cashDeskNumber.Text))
             {
-                await MessageBox.Show("Не заполнен номер кассы", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Не заполнен номер кассы", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 cashDeskNumber.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(nickShop.Text))
             {
-                await MessageBox.Show("Не заполнен код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Не заполнен код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 nickShop.Focus();
                 return;
             }
 
-            // ПРОВЕРКА НОМЕРА КАССЫ (теперь через переменную)
             if (m_cash_desk_number != 0)
             {
                 if (Convert.ToInt16(cashDeskNumber.Text) != m_cash_desk_number)
                 {
                     if (await check_exists())
                     {
-                        await MessageBox.Show("За сегодня существуют чеки, номер кассы изменить невозможно", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                        await MessageBox.Show("За сегодня существуют чеки, номер кассы изменить невозможно", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                         return;
                     }
                 }
             }
 
-            // ПРОВЕРКА ПЕРИОДА ВЫГРУЗКИ
             string periodText = unloadingPeriod.Text.Trim();
             if (string.IsNullOrEmpty(periodText))
             {
@@ -579,25 +541,23 @@ namespace Cash8Avalon
             {
                 if (!int.TryParse(periodText, out int periodValue))
                 {
-                    await MessageBox.Show("Период выгрузки должен быть числом", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBox.Show("Период выгрузки должен быть числом", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                     unloadingPeriod.Focus();
                     return;
                 }
 
                 if (periodValue != 0 && (periodValue < 1 || periodValue > 10))
                 {
-                    await MessageBox.Show("Период выгрузки может быть равен нулю или быть в диапазоне 1-10", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBox.Show("Период выгрузки может быть равен нулю или быть в диапазоне 1-10", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                     unloadingPeriod.Focus();
                     return;
                 }
             }
 
-            // ПОЛУЧАЕМ ЗНАЧЕНИЯ ИЗ CHECKBOX
             string printing_using_libraries = (checkBoxPrinting?.IsChecked == true) ? "true" : "false";
             string get_weight_automatically = (checkBoxWeight?.IsChecked == true) ? "true" : "false";
             string include_piot = (checkBoxPIot?.IsChecked == true) ? "true" : "false";
 
-            // ПОЛУЧАЕМ ЗНАЧЕНИЯ ИЗ COMBOBOX И TEXTBOX
             string fn_serial_port = comboBoxFnPort?.SelectedIndex >= 0 ? comboBoxFnPort.SelectedItem?.ToString() ?? "" : "";
             string scale_serial_port = comboBoxScalePort?.SelectedIndex >= 0 ? comboBoxScalePort.SelectedItem?.ToString() ?? "" : "";
             string variant_connect_fn = comboBoxVariantConnectFn?.SelectedIndex >= 0 ? comboBoxVariantConnectFn.SelectedIndex.ToString() : "0";
@@ -610,7 +570,6 @@ namespace Cash8Avalon
             string systemTaxation = comboBoxSystemTaxation.SelectedIndex.ToString();
             string versionFn = txtB_version_fn.Text;
             string acquiringBank = comboBoxAcquiringBank?.SelectedIndex.ToString() ?? "0";
-            string pathWebService = pathForWebService?.Text ?? "";
             string lastDateDownload = txtB_last_date_download_bonus_clients?.Text ?? "";
 
             try
@@ -619,15 +578,13 @@ namespace Cash8Avalon
                 conn.Open();
                 NpgsqlTransaction tran = conn.BeginTransaction();
 
-                // ТЕПЕРЬ ИСПОЛЬЗУЕМ ПЕРЕМЕННЫЕ ВМЕСТО ПРЯМОГО ОБРАЩЕНИЯ К КОНТРОЛАМ
                 string query = "UPDATE constants SET " +
-                    "cash_desk_number =" + cashDeskNumber.Text + "," +  // ? ИСПРАВЛЕНО
-                    "nick_shop ='" + nickShop.Text + "'," +             // ? ИСПРАВЛЕНО
-                    //"path_for_web_service ='" + pathWebService + "'," +
-                    "unloading_period =" + periodText + "," +           // ? ИСПРАВЛЕНО
+                    "cash_desk_number =" + cashDeskNumber.Text + "," +
+                    "nick_shop ='" + nickShop.Text + "'," +
+                    "unloading_period =" + periodText + "," +
                     "last_date_download_bonus_clients ='" + lastDateDownload + "'," +
-                    "system_taxation = '" + systemTaxation + "'," +     // ? ИСПРАВЛЕНО
-                    "version_fn = " + versionFn + "," +                 // ? ИСПРАВЛЕНО
+                    "system_taxation = '" + systemTaxation + "'," +
+                    "version_fn = " + versionFn + "," +
                     "id_acquirer_terminal='" + idAcquirerTerminal + "'," +
                     "ip_address_acquiring_terminal='" + ipAddressAcquiringTerminal + "'," +
                     "printing_using_libraries=" + printing_using_libraries + "," +
@@ -636,10 +593,10 @@ namespace Cash8Avalon
                     "get_weight_automatically=" + get_weight_automatically + "," +
                     "variant_connect_fn = " + variant_connect_fn + "," +
                     "fn_ipaddr='" + fn_ipaddr + "'" + "," +
-                    "acquiring_bank= " + acquiringBank + "," +          // ? ИСПРАВЛЕНО
+                    "acquiring_bank= " + acquiringBank + "," +
                     "constant_conversion_to_kilograms=" + constantConversion + "," +
                     "nds_ip=" + nds_ip + "," +
-                    "ip_adress_local_ch_z='" + ipAddrLmChZ + "'," +     // ? ИСПРАВЛЕНО
+                    "ip_adress_local_ch_z='" + ipAddrLmChZ + "'," +
                     "include_piot=" + include_piot;
 
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
@@ -647,10 +604,8 @@ namespace Cash8Avalon
 
                 if (resul_update == 0)
                 {
-                    // INSERT запрос тоже нужно исправить
                     query = "INSERT INTO constants(cash_desk_number," +
                         "nick_shop," +
-                        //"path_for_web_service," +
                         "unloading_period," +
                         "last_date_download_bonus_clients," +
                         "system_taxation," +
@@ -668,13 +623,12 @@ namespace Cash8Avalon
                         "nds_ip," +
                         "ip_adress_local_ch_z," +
                         "include_piot) VALUES(" +
-                        cashDeskNumber.Text + ",'" +                    // ? ИСПРАВЛЕНО
-                        nickShop.Text + "'," +                          // ? ИСПРАВЛЕНО
-                        //"'" + pathWebService + "'," +
-                        periodText + ",'" +                             // ? ИСПРАВЛЕНО
+                        cashDeskNumber.Text + ",'" +
+                        nickShop.Text + "'," +
+                        periodText + ",'" +
                         lastDateDownload + "','" +
-                        systemTaxation + "'," +                         // ? ИСПРАВЛЕНО
-                        versionFn + ",'" +                              // ? ИСПРАВЛЕНО
+                        systemTaxation + "'," +
+                        versionFn + ",'" +
                         idAcquirerTerminal + "','" +
                         ipAddressAcquiringTerminal + "'," +
                         printing_using_libraries + ",'" +
@@ -683,10 +637,10 @@ namespace Cash8Avalon
                         get_weight_automatically + "," +
                         variant_connect_fn + ",'" +
                         fn_ipaddr + "'," +
-                        acquiringBank + "," +                           // ? ИСПРАВЛЕНО
+                        acquiringBank + "," +
                         constantConversion + "," +
                         nds_ip + ",'" +
-                        ipAddrLmChZ + "'," +                           // ? ИСПРАВЛЕНО
+                        ipAddrLmChZ + "'," +
                         include_piot + ")";
 
                     command = new NpgsqlCommand(query, conn);
@@ -696,10 +650,8 @@ namespace Cash8Avalon
                 tran.Commit();
                 conn.Close();
 
-                //ShowMessage("Успех", "Для применения новых параметров программа будет закрыта");
+                MessageBoxResult result = await MessageBox.Show("Для применения новых параметров программа будет закрыта.", "", MessageBoxButton.OK, MessageBoxType.Info, this);
 
-                MessageBoxResult result = await MessageBox.Show("Для применения новых параметров программа будет закрыта.", "", MessageBoxButton.OK, MessageBoxType.Info); 
-               
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
                 {
                     desktopLifetime.Shutdown();
@@ -708,27 +660,20 @@ namespace Cash8Avalon
                 {
                     Environment.Exit(0);
                 }
-
-                // Application.Exit(); // Если нужно закрыть приложение
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show(ex.Message, "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
             catch (Exception ex)
-            {                
-                await MessageBox.Show($"Ошибка сохранения: {ex.Message}", " Ошибка ", MessageBoxButton.OK, MessageBoxType.Error);
+            {
+                await MessageBox.Show($"Ошибка сохранения: {ex.Message}", " Ошибка ", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
-        }       
+        }
 
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
-        }
-
-        private void TextBlock_ActualThemeVariantChanged(object? sender, EventArgs e)
-        {
-
         }
     }
 }

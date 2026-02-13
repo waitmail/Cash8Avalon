@@ -139,16 +139,17 @@ namespace Cash8Avalon.ViewModels
 
         private void OpenConstants()
         {
-            StatusMessage = "Открытие констант...";
-            Console.WriteLine("Открываем константы ВНУТРИ главного окна");
+            ShowWindow(new Constants(), "Настройки");
+            //StatusMessage = "Открытие констант...";
+            //Console.WriteLine("Открываем константы ВНУТРИ главного окна");
 
-            var constantsControl = new Constants();
+            //var constantsControl = new Constants();
 
-            // Подписываемся через именованный метод
-            constantsControl.RequestClose += OnConstantsRequestClose;
+            //// Подписываемся через именованный метод
+            //constantsControl.RequestClose += OnConstantsRequestClose;
 
-            CurrentContent = constantsControl;
-            StatusMessage = "Константы открыты";
+            //CurrentContent = constantsControl;
+            //StatusMessage = "Константы открыты";
         }
 
         private void OnLoadDataRequestClose(object sender, EventArgs e)
@@ -173,16 +174,17 @@ namespace Cash8Avalon.ViewModels
 
         private void OpenFiscalPrinter()
         {
-            StatusMessage = "Настройка фискального принтера...";
-            Console.WriteLine("Открываем фискальный принтер");
+            ShowWindow(new FPTK22(), "Настройка фискального принтера...");
+            //StatusMessage = "Настройка фискального принтера...";
+            //Console.WriteLine("Открываем фискальный принтер");
 
-            var fptk22Control = new FPTK22();
+            //var fptk22Control = new FPTK22();
 
-            // Подписываемся на событие закрытия
-            fptk22Control.CloseRequested += OnFPTK22RequestClose;
+            //// Подписываемся на событие закрытия
+            //fptk22Control.CloseRequested += OnFPTK22RequestClose;
 
-            CurrentContent = fptk22Control;
-            StatusMessage = "Фискальный регистратор открыт";
+            //CurrentContent = fptk22Control;
+            //StatusMessage = "Фискальный регистратор открыт";
         }
 
         // Метод для обработки закрытия FPTK22

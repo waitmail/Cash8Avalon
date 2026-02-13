@@ -1,4 +1,5 @@
 ﻿using Atol.Drivers10.Fptr;
+using Avalonia.Controls;
 using Cash8Avalon;
 using Npgsql;
 using System;
@@ -109,7 +110,7 @@ namespace Cash8Avalon
             return result;
         }
 
-        public bool validate_date_time_with_fn(int minutes)
+        public async Task<bool> validate_date_time_with_fn(int minutes, Window owner = null)
         {
             bool result = true;
 
@@ -122,7 +123,10 @@ namespace Cash8Avalon
             fptr.queryData();
             if (fptr.errorCode() != 0)
             {
-                MessageBox.Show(" При проверке даты и времени в ФН произошла ошибка \r\n" + fptr.errorDescription(), " Проверка даты и времени в фн ");
+                if (owner != null)
+                {
+                    await MessageBox.Show(" При проверке даты и времени в ФН произошла ошибка \r\n" + fptr.errorDescription(), " Проверка даты и времени в фн ", owner);
+                }
                 result = false;
             }
             else
@@ -130,13 +134,18 @@ namespace Cash8Avalon
                 DateTime dateTime = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_DATE_TIME);
                 if (Math.Abs((dateTime - DateTime.Now).Minutes) > minutes)//Поскольку может быть как больше так и меньше 
                 {
-                    MessageBox.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА" + minutes.ToString() + " МИНУТ ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ " +
-                        "\r\nПосле отправки заявки вы можете продолжить работу в обычном режиме.    ", " Проверка даты и времени в фн ");
+                    if (owner != null)
+                    {
+                        await MessageBox.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА" + minutes.ToString() + " МИНУТ ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ " +
+                            "\r\nПосле отправки заявки вы можете продолжить работу в обычном режиме.    ", " Проверка даты и времени в фн ", owner);
+                    }
                     MainStaticClass.write_event_in_log(" Не схождение даты и времени между ФР и компьютером больше чем на" + minutes.ToString() + " минут ", "Документ", "0");
 
                     result = false;
                 }
             }
+        
+            
             //if (MainStaticClass.GetVariantConnectFN == 1)
             //{
             //    fptr.close();
@@ -146,38 +155,27 @@ namespace Cash8Avalon
         }
 
 
-        public async Task getShiftStatus()
+        public async Task getShiftStatus(Window owner = null)
         {
-            IFptr fptr = MainStaticClass.FPTR;
-            //setConnectSetting(fptr);
+            //Console.WriteLine("Перед проверкой системы налогообложения старт");
+            IFptr fptr = MainStaticClass.FPTR;            
             if (!fptr.isOpened())
-            {
-                fptr.open();
+            {                
+                fptr.open();                
             }
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
             fptr.queryData();
             uint state = fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE);
-            //uint number = fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_NUMBER);
-            //DateTime dateTime = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_DATE_TIME);
-
+            
             if (state == AtolConstants.LIBFPTR_SS_EXPIRED)
-            {
-                //if ((DateTime.Now - dateTime).TotalHours > 0)
-                //{
-                //MessageBox.Show(" Период открытой смены превысил 24 часа !!!\r\n СНИМИТЕ Z-ОТЧЁТ. ЕСЛИ СОМНЕВАЕТЕСЬ В ЧЁМ-ТО, ТО ВСЁ РАВНО СНИМИТЕ Z-ОТЧЁТ");
-                await MessageBox.Show(" Период открытой смены превысил 24 часа!\r\nСмена будет закрыта автоматически!\r\n" +
-                    "В ИТ отдел звонить не надо, если хотите кому нибудь позвонить, звоните в бухгалтерию");
-                reportZ();
-                //}
-            }
-            //else
-            //{
-            //    //if (MainStaticClass.GetVariantConnectFN == 1)
-            //    //{
-            //    //    fptr.close();
-            //    //}
-            //}
-            //fptr.close();
+            {                
+                if (owner != null)
+                {
+                    await MessageBox.Show(" Период открытой смены превысил 24 часа!\r\nСмена будет закрыта автоматически!\r\n" +
+                        "В ИТ-отдел звонить не надо, если хотите кому-нибудь позвонить., звоните в бухгалтерию", "Проверка длительности смены",owner);
+                    reportZ(owner);
+                }             
+            }            
         }
 
         public string getFiscallInfo()
@@ -364,7 +362,7 @@ namespace Cash8Avalon
             //}
         }
 
-        public async void reportZ()
+        public async void reportZ(Window owner=null)
         {
             IFptr fptr = MainStaticClass.FPTR;
             //setConnectSetting(fptr);
@@ -378,8 +376,11 @@ namespace Cash8Avalon
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_REPORT_TYPE, AtolConstants.LIBFPTR_RT_CLOSE_SHIFT);
             if (fptr.report() != 0)
             {
-                await MessageBox.Show(string.Format("Ошибка при закрытии смены.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
-                    "Ошибка закрытия смены", MessageBoxButton.OK, MessageBoxType.Error);
+                if (owner != null)
+                {
+                    await MessageBox.Show(string.Format("Ошибка при закрытии смены.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
+                        "Ошибка закрытия смены", MessageBoxButton.OK, MessageBoxType.Error,owner);
+                }
             }
             //if (MainStaticClass.GetVariantConnectFN == 1)
             //{
@@ -690,7 +691,7 @@ namespace Cash8Avalon
                 if (fptr.errorCode() == 82)
                 {
                     fptr.cancelReceipt();
-                    await MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                 }
                 return;
             }
@@ -738,7 +739,7 @@ namespace Cash8Avalon
                         }
                         else
                         {
-                            await MessageBox.Show("Код маркировки " + mark + " не найден в проверенных","Проверка по маркировке",MessageBoxButton.OK,MessageBoxType.Error);
+                            await MessageBox.Show("Код маркировки " + mark + " не найден в проверенных","Проверка по маркировке",MessageBoxButton.OK,MessageBoxType.Error, check);
                         }
 
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim());
@@ -796,7 +797,7 @@ namespace Cash8Avalon
                     }
                     else
                     {
-                        await MessageBox.Show("Неизвестная ставка ндс","Проверка ставки ндс",MessageBoxButton.OK,MessageBoxType.Error);
+                        await MessageBox.Show("Неизвестная ставка ндс","Проверка ставки ндс",MessageBoxButton.OK,MessageBoxType.Error, check);
                         error = true;
                     }
                     if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
@@ -806,15 +807,15 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    if (MainStaticClass.GetNdsIp == 0)
+                    if (await MainStaticClass.GetNdsIp(check) == 0)
                     {
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
                     }
-                    else if (MainStaticClass.GetNdsIp == 5)
+                    else if (await MainStaticClass.GetNdsIp(check) == 5)
                     {
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
                     }
-                    else if (MainStaticClass.GetNdsIp == 7)
+                    else if (await MainStaticClass.GetNdsIp(check) == 7)
                     {
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
                     }
@@ -837,7 +838,7 @@ namespace Cash8Avalon
                 if (fptr.errorCode() > 0)
                 {
                     await MessageBox.Show("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-                        "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+                        "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error, check);
                     MainStaticClass.WriteRecordErrorLog("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() + "\r\n " + fptr.errorDescription().ToString(), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                     error = true;
                     fptr.cancelReceipt();
@@ -942,7 +943,7 @@ namespace Cash8Avalon
             if (fptr.errorCode() > 0)
             {
                 await MessageBox.Show("При печати чека произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-                    "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+                    "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error, check);
                 error = true;
                 fptr.cancelReceipt();
                 return;
@@ -973,7 +974,7 @@ namespace Cash8Avalon
             {
                 // Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
                 fptr.cancelReceipt();
-                await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 error = true;
                 //fptr.close();
@@ -986,7 +987,7 @@ namespace Cash8Avalon
                 while (fptr.continuePrint() < 0)
                 {
                     // Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
-                    await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                     MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                     //*********************************
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHORT_STATUS);
@@ -994,7 +995,7 @@ namespace Cash8Avalon
                     bool isPaperPresent = fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_RECEIPT_PAPER_PRESENT);
                     if (!isPaperPresent)
                     {
-                        await MessageBox.Show("В ФР закончилась бумага.","Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                        await MessageBox.Show("В ФР закончилась бумага.","Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                     }
                     //*********************************
                     continue;
@@ -1016,7 +1017,7 @@ namespace Cash8Avalon
             }
             else
             {
-                await MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 fptr.cancelReceipt();
             }
@@ -1357,13 +1358,13 @@ namespace Cash8Avalon
             if (fptr.openReceipt() != 0)
             {
                 await MessageBox.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
-                        "Ошибка откртия чека", MessageBoxButton.OK, MessageBoxType.Error);
+                        "Ошибка открытия чека", MessageBoxButton.OK, MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 //fptr.close();
                 if (fptr.errorCode() == 82)
                 {
                     fptr.cancelReceipt();
-                    await MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error,check);
                 }
                 return;
             }
@@ -1435,7 +1436,7 @@ namespace Cash8Avalon
                         }
                         else
                         {
-                            await MessageBox.Show("Код маркировки " + mark + " не найден в проверенных");
+                            await MessageBox.Show("Код маркировки " + mark + " не найден в проверенных","Проверка маркировки",check);
                         }
 
                         //Cash_check.Requisite1260 requisite1260;
@@ -1473,15 +1474,15 @@ namespace Cash8Avalon
                 }
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_QUANTITY, productItem.Quantity.ToString().Replace(",", "."));
 
-                if (MainStaticClass.GetNdsIp == 0)
+                if (await MainStaticClass.GetNdsIp(check) == 0)
                 {
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
                 }
-                else if (MainStaticClass.GetNdsIp == 1)
+                else if (await MainStaticClass.GetNdsIp(check) == 1)
                 {
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
                 }
-                else if (MainStaticClass.GetNdsIp == 2)
+                else if (await MainStaticClass.GetNdsIp(check) == 2)
                 {
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
                 }
@@ -1503,7 +1504,7 @@ namespace Cash8Avalon
                 if (fptr.errorCode() > 0)
                 {
                     await MessageBox.Show("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-                        "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                        "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                     error = true;
                     fptr.cancelReceipt();
                     MainStaticClass.WriteRecordErrorLog("При печати позиции " + productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim() + " произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
@@ -1605,7 +1606,7 @@ namespace Cash8Avalon
             if (fptr.errorCode() > 0)
             {
                 await MessageBox.Show("При печати чека произошли ошибки \r\n Код ошибки " + fptr.errorCode().ToString() +
-                    "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error);
+                    "\r\n " + fptr.errorDescription().ToString(),"Ошибка при печати",MessageBoxButton.OK,MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog($"Ошибка при закрытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 error = true;
                 fptr.cancelReceipt();
@@ -1631,7 +1632,7 @@ namespace Cash8Avalon
             while (fptr.checkDocumentClosed() < 0)
             {
                 // Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
-                await MessageBox.Show(fptr.errorCode().ToString() + " " + fptr.errorDescription(), " Ошибка при печати чека ",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show(fptr.errorCode().ToString() + " " + fptr.errorDescription(), " Ошибка при печати чека ",MessageBoxButton.OK,MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog($"Ошибка при закрытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 if (await MessageBox.Show(" Продолжать попытки печати чека ", "Ошибка при печати чека", MessageBoxButton.YesNo, MessageBoxType.Error) == MessageBoxResult.Yes)
                 {
@@ -1658,7 +1659,7 @@ namespace Cash8Avalon
                 while (fptr.continuePrint() < 0)
                 {
                     // Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
-                    await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()),"Ошибка при печати чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                     MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_3_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                     continue;
                 }
@@ -1675,7 +1676,7 @@ namespace Cash8Avalon
             }
             else
             {
-                await MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека",MessageBoxButton.OK,MessageBoxType.Error, check);
                 fptr.cancelReceipt();
             }
         }

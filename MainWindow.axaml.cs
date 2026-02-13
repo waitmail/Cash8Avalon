@@ -128,7 +128,7 @@ namespace Cash8Avalon
                     this.Title += " | " + MainStaticClass.Nick_Shop;
                     this.Title += " | " + MainStaticClass.version();
                     this.Title += " | " + LoadDataWebService.last_date_download_tovars().ToString("yyyy-MM-dd hh:mm:ss");
-                    PrintingUsingLibraries printing = new PrintingUsingLibraries();
+                    
                     this.Title += " | " + version_program;
 
                     // 3. Проверка обновлений (только если не A01)
@@ -178,6 +178,7 @@ namespace Cash8Avalon
                         // 9. Проверки для реальных касс (не тестовой №9)
                         if (MainStaticClass.CashDeskNumber != 9)
                         {
+                            PrintingUsingLibraries printing = new PrintingUsingLibraries();
                             if (MainStaticClass.Use_Fiscall_Print)
                             {
                                 printing = new PrintingUsingLibraries();

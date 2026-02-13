@@ -484,87 +484,53 @@ namespace Cash8Avalon
             }
         }
 
-
-
-        public static void validate_date_time_with_fn(int minutes)
+        public static async void validate_date_time_with_fn(int minutes)
         {
             if (MainStaticClass.CashDeskNumber != 9)
-            {
-                //if (MainStaticClass.PrintingUsingLibraries == 1)
-                //{
+            {                
                 PrintingUsingLibraries usingLibraries = new PrintingUsingLibraries();
-                usingLibraries.validate_date_time_with_fn(minutes);
-                //    }
-                //    else
-                //    {
-
-                //        try
-                //        {
-                //            Cash8.FiscallPrintJason2.RootObject result = FiscallPrintJason2.execute_operator_type("getDeviceStatus");
-                //            if (result != null)
-                //            {
-                //                if (result.results[0].status == "ready")//Задание выполнено успешно 
-                //                {
-                //                    DateTime dateTime = Convert.ToDateTime(result.results[0].result.deviceStatus.currentDateTime);
-
-                //                    if (Math.Abs((dateTime - DateTime.Now).Minutes) > minutes)//Поскольку может быть как больше так и меньше 
-                //                    {
-                //                        MessageBox.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА "+ minutes.ToString()+" МИНУТ ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ ", "Проверка даты и времени");
-                //                        MainStaticClass.write_event_in_log(" Не схождение даты и времени между ФР и компьютером больше чем на  " + minutes.ToString() +" минут ", "Документ", "0");
-                //                    }
-                //                }
-                //                else
-                //                {
-                //                    MessageBox.Show(" Ошибка !!! " + result.results[0].status + " | " + result.results[0].errorDescription);
-                //                }
-                //            }
-                //            else
-                //            {
-                //                MessageBox.Show("Общая ошибка");
-                //            }
-                //        }
-                //        catch (Exception ex)
-                //        {
-                //            MessageBox.Show(" OnKeyDown " + ex.Message);
-                //        }
-                //    }
+                await usingLibraries.validate_date_time_with_fn(minutes);               
             }
         }
 
-        public static int GetNdsIp
+        public static async Task<int> GetNdsIp(Window owner)
         {
-            get
+            if (nds_ip == -1)
             {
-                if (nds_ip == -1)
+                NpgsqlConnection conn = null;
+                NpgsqlCommand command = null;
+                conn = MainStaticClass.NpgsqlConn();
+                try
                 {
-                    NpgsqlConnection conn = null;
-                    NpgsqlCommand command = null;
-                    conn = MainStaticClass.NpgsqlConn();
-                    try
+                    conn.Open();
+                    string query = "SELECT nds_ip FROM constants";
+                    command = new NpgsqlCommand(query, conn);
+                    nds_ip = Convert.ToInt16(command.ExecuteScalar());
+                }
+                catch (NpgsqlException ex)
+                {
+                    if (owner != null)
                     {
-                        conn.Open();
-                        string query = "SELECT nds_ip FROM constants";
-                        command = new NpgsqlCommand(query, conn);
-                        nds_ip = Convert.ToInt16(command.ExecuteScalar());
-                    }
-                    catch (NpgsqlException ex)
-                    {
-                        MessageBox.Show("Ошибка при чтении nds_ip" + ex.ToString());
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Ошибка при чтении nds_ip" + ex.ToString());
-                    }
-                    finally
-                    {
-                        if (conn.State == ConnectionState.Open)
-                        {
-                            conn.Close();
-                        }
+                        await MessageBox.Show("Ошибка при чтении nds_ip" + ex.ToString());
                     }
                 }
-                return nds_ip;
+                catch (Exception ex)
+                {
+                    if (owner != null)
+                    {
+                        await MessageBox.Show("Ошибка при чтении nds_ip" + ex.ToString());
+                    }
+
+                }
+                finally
+                {
+                    if (conn.State == ConnectionState.Open)
+                    {
+                        conn.Close();
+                    }
+                }
             }
+            return nds_ip;
         }
 
 

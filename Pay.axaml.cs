@@ -836,16 +836,39 @@ namespace Cash8Avalon
                 get_non_cash_sum() +
                 double.Parse(sertificates_sum.Text) - double.Parse(pay_sum.Text)), 2).ToString("F", System.Globalization.CultureInfo.CurrentCulture);
 
-                if (Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) + double.Parse(non_cash_sum.Text) +
-                double.Parse(sertificates_sum.Text) + double.Parse(pay_bonus_many.Text) +
-                Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100), 2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) < 0)
+                //if (Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) + double.Parse(non_cash_sum.Text) +
+                //double.Parse(sertificates_sum.Text) + double.Parse(pay_bonus_many.Text) +
+                //Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100), 2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) < 0)
+                //{
+                //    //this.button_pay.IsEnabled = false;
+                //    await Dispatcher.UIThread.InvokeAsync(() =>
+                //    {
+                //        button_pay.IsEnabled = false;
+                //    }, DispatcherPriority.Render);
+                //}
+                //else
+                //{
+                //    //this.button_pay.IsEnabled = true;
+                //    await Dispatcher.UIThread.InvokeAsync(() =>
+                //    {
+                //        button_pay.IsEnabled = true;
+                //    }, DispatcherPriority.Render);
+                //}
+                // Вычисляем условие
+                bool shouldEnable = Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) +
+                                  double.Parse(non_cash_sum.Text) +
+                                  double.Parse(sertificates_sum.Text) +
+                                  double.Parse(pay_bonus_many.Text) +
+                                  Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100),
+                                  2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) >= 0;
+
+                // Обновляем кнопку через Dispatcher с высоким приоритетом
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    this.button_pay.IsEnabled = false;
-                }
-                else
-                {
-                    this.button_pay.IsEnabled = true;
-                }
+                    button_pay.IsEnabled = shouldEnable;
+                }, DispatcherPriority.Render); // Используем Render для немедленного обновления
+                //await Task.Delay(2000);
+
                 Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
             }
             catch (Exception ex)
@@ -856,13 +879,16 @@ namespace Cash8Avalon
 
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
-            this.button_pay.IsEnabled = false;
-
             if (!await copFilledCorrectly())
             {
                 calculate();
                 return;
             }
+                        
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                this.button_pay.IsEnabled = false;
+            }, DispatcherPriority.Render); // Используем Render для немедленного обновления
 
             //Проверить заполнены копейки или нет 
 
@@ -1374,7 +1400,7 @@ namespace Cash8Avalon
                                                     "Продолжать опрос по возврату оплаты по СБП",
                                                     "Опрос по возврату оплаты по СБП",
                                                     MessageBoxButton.YesNo,
-                                                    MessageBoxType.Question);
+                                                    MessageBoxType.Question,this);
 
                                                 if (result == MessageBoxResult.No)
                                                 {

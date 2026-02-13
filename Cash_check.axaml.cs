@@ -244,10 +244,23 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ ОШИБКА в конструкторе: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
             }
-            
-            Console.WriteLine("=== Конструктор Cash_check завершен ===");
+
             UpdateWindowTitle();
+            this.Opened += OnOpened;
+            Console.WriteLine("=== Конструктор Cash_check завершен ===");
         }
+
+        private async void OnOpened(object sender, EventArgs e)
+        {
+            Console.WriteLine("Окно открыто (Opened)");
+
+            // Если это новый чек, устанавливаем фокус на поле поиска
+            if (IsNewCheck)
+            {
+                await SetFocusToSearchBox();
+            }
+        }
+
 
         #region Вспомогательные методы для работы с шириной колонок
 
@@ -1568,16 +1581,43 @@ namespace Cash8Avalon
         public void OnFormLoaded()
         {
             Console.WriteLine("Форма чека загружена и данные инициализированы");
-            
-            // 3. Инициализируем данные формы
-            InitializeFormData();
 
-            // 4. Отладочная информация
-            //DebugGridInfo();
-            //Cash_check_Loaded(null, null);
+            // 3. Инициализируем данные формы
+            InitializeFormData();            
         }
 
-        
+        // В класс Cash_check добавьте этот метод
+        public async Task SetFocusToSearchBox()
+        {
+            // Находим TextBox для поиска товара
+            var searchBox = this.FindControl<TextBox>("txtB_search");
+
+            if (searchBox != null)
+            {
+                // Для Linux нужна небольшая задержка
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    await Task.Delay(50);
+                    this.Activate();
+                    await Task.Delay(50);
+                }
+
+                // Устанавливаем фокус
+                searchBox.Focus();
+
+                // Дополнительная попытка через Dispatcher для гарантии
+                Dispatcher.UIThread.Post(() => searchBox.Focus(), DispatcherPriority.Input);
+
+                Console.WriteLine($"✓ Фокус установлен на поле поиска");
+            }
+            else
+            {
+                Console.WriteLine("✗ Поле поиска (txtB_search) не найдено");
+            }
+        }
+
+
+
         // Новый глобальный обработчик для всей формы
         private void OnGlobalKeyDownForForm(object sender, KeyEventArgs e)
         {
@@ -1665,7 +1705,7 @@ namespace Cash8Avalon
 
             if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
             {
-                Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                Console.WriteLine("⚠ Удаление документа отменено пользователем");
                 return;
             }
 
@@ -6194,12 +6234,42 @@ namespace Cash8Avalon
                         }
 
                         // ✅ ВАЖНО: Диалог причины ТОЛЬКО для чеков продажи!
+                        //if (CheckType.SelectedIndex == 0) // Только продажа
+                        //{
+                        //    // Показываем диалог указания причины удаления
+                        //    var reasonsDialog = new ReasonsDeletionCheck();
+                        //    reasonsDialog.Title = "Уменьшение количества";
+
+                        //    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                        //    if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                        //    {
+                        //        Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                        //        return;
+                        //    }
+
+                        //    // Записываем в лог
+                        //    await InsertIncidentRecordAsync(
+                        //        product.Code.ToString(),
+                        //        product.Quantity.ToString("F2"),
+                        //        "1",
+                        //        reasonsDialog.Reason
+                        //    );
+                        //}
+
                         if (CheckType.SelectedIndex == 0) // Только продажа
                         {
                             // Показываем диалог указания причины удаления
                             var reasonsDialog = new ReasonsDeletionCheck();
                             reasonsDialog.Title = "Уменьшение количества";
 
+                            // Для Linux добавляем небольшую задержку перед показом
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                            {
+                                await Task.Delay(50);
+                            }
+
+                            // Владелец устанавливается через параметр ShowDialog, а не через свойство Owner
                             var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
 
                             if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
@@ -7021,7 +7091,6 @@ namespace Cash8Avalon
                     Console.WriteLine("✓ CheckType инициализирован");
                 }
 
-
                 if (NumCash != null)
                 {
                     NumCash.Text = $"КАССА № {MainStaticClass.CashDeskNumber}";
@@ -7051,7 +7120,6 @@ namespace Cash8Avalon
                     Console.WriteLine($"✓ Поле date_time_write заполнено: {date_time_write}");
                     Console.WriteLine("Вызываем метод загрузки данных из БД...");
 
-                    // Вызываем асинхронно, чтобы не блокировать конструктор
                     Dispatcher.UIThread.Post(() =>
                     {
                         try
@@ -7063,7 +7131,7 @@ namespace Cash8Avalon
                             Console.WriteLine($"✗ Ошибка при загрузке данных из БД: {ex.Message}");
                         }
                     });
-                }
+                }                
 
                 InitializeQrCodeLengths();
 
