@@ -489,13 +489,6 @@ namespace Cash8Avalon
                 // Проверяем, нужно ли отправлять данные о продажах
                 if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
                 {
-                    //await SendSalesData();
-                    //await UploadDeletedItems();
-                    //await SendCdnLogs();
-                    //await UploadErrorsLog();
-                    //await SentOpenCloseShop();
-
-
                     MainStaticClass.SendOnlineStatus();
                     if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
                     {

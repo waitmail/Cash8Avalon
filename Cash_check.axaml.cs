@@ -23,6 +23,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -1349,6 +1350,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении водяного знака: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при добавлении водяного знака: {ex.Message}", "Добавление водяного знака",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -1376,211 +1382,13 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при удалении водяного знака: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при удалении водяного знака: {ex.Message}", "Удаление водяного знака",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
-        }
-
-
-        //private async void Cash_check_Loaded(object? sender, EventArgs e)
-        //{
-        //    this.num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
-        //    this.num_cash.Tag = MainStaticClass.CashDeskNumber;
-
-        //    //Создание таблицы для перераспределения акций
-        //    DataColumn dc = new DataColumn("Code", System.Type.GetType("System.Int32"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Tovar", System.Type.GetType("System.String"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Quantity", System.Type.GetType("System.Int32"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Price", System.Type.GetType("System.Decimal"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("PriceAtDiscount", System.Type.GetType("System.Decimal"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Sum", System.Type.GetType("System.Decimal"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("SumAtDiscount", System.Type.GetType("System.Decimal"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Action", System.Type.GetType("System.Int32"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Gift", System.Type.GetType("System.Int32"));
-        //    table.Columns.Add(dc);
-        //    dc = new DataColumn("Action2", System.Type.GetType("System.Int32"));
-        //    table.Columns.Add(dc);
-
-        //    //this.inputbarcode.Focus();
-        //    this.txtB_search_product.Focus();
-
-        //    if (MainStaticClass.GetVersionFn == 1)
-        //    {
-        //        checkBox_print_check.IsVisible = false;
-        //    }
-        //    checkBox_print_check.IsChecked = true;
-
-        //    if (IsNewCheck)
-        //    {
-        //        guid = Guid.NewGuid().ToString();
-
-
-        //        checkBox_to_print_repeatedly.IsVisible = false;
-        //        //label9.Visible = false;
-        //        //label10.Visible = false;
-        //        //label11.Visible = false;
-        //        //label13.Visible = false;
-        //        txtB_non_cash_money.IsVisible = false;
-        //        txtB_sertificate_money.IsVisible = false;
-        //        txtB_cash_money.IsVisible = false;
-        //        txtB_bonus_money.IsVisible = false;
-
-        //        //inputbarcode.Focus();
-        //        this.txtB_search_product.Focus();
-
-
-        //        this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
-        //        this.Discount = 0;
-        //        this.user.Text = MainStaticClass.Cash_Operator;
-        //        this.user.Tag = MainStaticClass.Cash_Operator_Client_Code;//gaa поменять на инн
-        //        numdoc = get_new_number_document();
-        //        if (numdoc == 0)
-        //        {
-        //            await MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номера документа", MessageBoxButton.OK,MessageBoxType.Error);
-        //            MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
-        //            this.Close();
-        //        }
-        //        this.txtB_num_doc.Text = this.numdoc.ToString();
-        //        MainStaticClass.write_event_in_log(" Ввод нового документа ", "Документ чек", numdoc.ToString());
-        //        this.check_type.SelectedIndex = 0;
-        //        this.check_type.IsEnabled = true;
-        //        set_sale_disburse_button();
-        //    }
-        //    else
-        //    {
-        //        reopened = true;
-        //        checkBox_print_check.IsEnabled = false;
-        //        BtnFillOnSales.IsEnabled = false;                
-        //        NumSales.IsVisible = false;
-        //        //Документ не новый поэтому запретим в нем ввод и изменение                
-        //        last_tovar.IsEnabled = false;
-        //        //txtB_email_telephone.Enabled = false;
-        //        txtB_inn.IsEnabled = false;
-        //        btn_get_name.IsEnabled = false;
-        //        txtB_email_telephone.IsEnabled = false;                
-        //        txtB_name.IsEnabled = false;
-        //        comment.IsEnabled = false;                
-
-        //        int status = await get_its_deleted_document();
-        //        if ((status == 0) || (status == 1))
-        //        {
-        //            //this.type_pay.Enabled = false;
-        //            //this.label4.Enabled = false;
-        //            this.check_type.IsEnabled = false;
-        //            //this.inputbarcode.Enabled = false;
-        //            this.txtB_search_product.IsEnabled = false;
-        //            //this.client_barcode.IsEnabled = false;
-        //            //this.sale_cancellation.Enabled = false;
-        //            //this.inventory.Enabled = false;
-        //            //this.comment.Enabled = false;
-        //            //to_open_the_written_down_document();
-        //            enable_print();
-        //            if (MainStaticClass.Code_right_of_user != 1)
-        //            {
-        //                this.pay.IsEnabled = false;
-        //            }
-        //            //itsnew = true;
-        //        }
-        //        else if (status == 2)
-        //        {
-        //            IsNewCheck = true;
-        //            Discount = 0;
-        //            //this.label4.Enabled = true;
-        //            this.check_type.IsEnabled = true;
-        //            //this.inputbarcode.Enabled = true;
-        //            this.txtB_search_product.IsEnabled = true;
-        //            //this.client_barcode.IsEnabled = false;
-        //            ToOpenTheWrittenDownDocument();
-        //            get_old_document_Discount();
-        //            check_type.IsEnabled = false;
-        //            IsNewCheck = true;
-        //        }
-        //    }
-
-        //    //this.Top = 0;
-        //    //this.Left = 0;
-        //    //this.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height);
-        //    //this.panel2.Left = 0;
-        //    //this.listView2.Left = 20;
-
-        //    //this.panel2.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height / 2);
-        //    //this.listView2.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width - 50, SystemInformation.PrimaryMonitorSize.Height / 2 - 50);
-
-
-        //    if (IsNewCheck)
-        //    {
-        //        //first_start_com_barcode_scaner();
-        //        selection_goods = true;
-        //        //inputbarcode.Focus();
-        //        this.txtB_search_product.Focus();
-        //        //список допустимых длин qr кодов                
-        //        qr_code_lenght.Add(29);
-        //        qr_code_lenght.Add(30);
-        //        qr_code_lenght.Add(31);
-        //        qr_code_lenght.Add(32);
-        //        qr_code_lenght.Add(37);
-        //        qr_code_lenght.Add(40);
-        //        qr_code_lenght.Add(41);
-        //        qr_code_lenght.Add(76);
-        //        qr_code_lenght.Add(83);
-        //        qr_code_lenght.Add(115);
-        //        qr_code_lenght.Add(127);
-
-        //        if (MainStaticClass.PrintingUsingLibraries == 1)
-        //        {
-        //            IFptr fptr = MainStaticClass.FPTR;
-
-        //            if (!fptr.isOpened())
-        //            {
-        //                fptr.open();
-        //            }
-
-        //            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
-        //            fptr.queryData();
-        //            if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
-        //            {
-        //                await MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (MainStaticClass.Use_Fiscall_Print)
-        //        {
-        //            if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
-        //            {
-        //                if (await ItcPrinted())
-        //                {
-        //                    this.pay.IsEnabled = false;
-        //                    this.checkBox_to_print_repeatedly.IsEnabled = false;
-        //                }
-        //            }
-        //            else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
-        //            {
-        //                if (await ItcPrinted())
-        //                {
-        //                    this.checkBox_to_print_repeatedly.IsEnabled = false;
-        //                }
-        //                if (await ItcPrintedP())
-        //                {
-        //                    this.checkBox_to_print_repeatedly_p.IsEnabled = false;
-        //                }
-        //                if (await ItcPrinted() && await this.ItcPrintedP())
-        //                {
-        //                    this.pay.IsEnabled = false;
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-
-        
+        }        
 
         public double Discount
         {
@@ -1630,6 +1438,9 @@ namespace Cash8Avalon
             else
             {
                 Console.WriteLine("✗ Поле поиска (txtB_search) не найдено");
+               
+                    await MessageBox.Show("✗ Поле поиска (txtB_search) не найдено", "Поиск поля (txtB_search)",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);               
             }
         }
 
@@ -1683,6 +1494,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}", "OnGlobalKeyDownForForm",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -1737,12 +1553,7 @@ namespace Cash8Avalon
         private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc)
         {
             bool? result = null;
-
-            //InputActionBarcode ib = new InputActionBarcode();
-            //ib.count = count;
-            //ib.caller = this;
-            //ib.call_type = call_type;
-            //ib.num_doc = num_doc;
+                       
             InputActionBarcode dialog = null;
 
             try
@@ -1807,8 +1618,8 @@ namespace Cash8Avalon
             {
                 return false;
             }
-            NpgsqlConnection conn = null;
-            NpgsqlCommand command = null;
+            NpgsqlConnection? conn = null;
+            NpgsqlCommand? command = null;
             int count_action = 0;
             try
             {
@@ -1826,16 +1637,20 @@ namespace Cash8Avalon
                 command = new NpgsqlCommand(query, conn);
                 count_action = Convert.ToInt32(command.ExecuteScalar());
                 conn.Close();
-            }
-            catch (NpgsqlException ex)
+            }            
+            catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при работе с базой данных " + ex.Message);
+                await MessageBox.Show("Ошибка при работе с базой данных " + ex.Message, "CheckAction", MessageBoxButton.OK, MessageBoxType.Error, this);
             }
+
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn != null)
                 {
-                    conn.Close();
+                    if (conn?.State == ConnectionState.Open)
+                    {
+                        conn.Close();
+                    }
                 }
             }
             if (count_action > 0)
@@ -1846,69 +1661,11 @@ namespace Cash8Avalon
             {
                 return false;
             }
-        }
-
-        //private async void ShowSimpleClientDialog()
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine("Проверяем заполнен ли уже клиент");
-        //        if (this.Client.Tag != null)
-        //        {
-        //            return;
-        //        }
-        //        Console.WriteLine("Клиент не заполнен, создаем диалог выбора");
-
-        //        // Создаем диалог
-        //        var dialog = new InputActionBarcode();
-        //        dialog.call_type = 7;
-
-        //        //dialog.SetAuthorizationMessage("Введите код карты (10 символов)\nили номер телефона (начинается с 9, 13 символов)");
-
-        //        // Настройка окна для стабильной работы на Linux
-        //        dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        //        dialog.CanResize = false;
-        //        dialog.SystemDecorations = SystemDecorations.None;               
-
-        //        Console.WriteLine("Показываем диалог ввода кода клиента");
-        //        dialog.Topmost = true;
-        //        // ✅ ВСЁ УПРАВЛЕНИЕ МОДАЛЬНОСТЬЮ — В ОДНОЙ СТРОЧКЕ!
-        //        //bool? result = await dialog.ShowModal(owner);                
-        //        //bool? result = await dialog.ShowModal(null);
-        //        bool? result = await dialog.ShowModalBlocking(this as Window);
-
-        //        Console.WriteLine($"Результат: {result}");
-
-        //        // ✅ ОБРАБАТЫВАЕМ РЕЗУЛЬТАТ — как и раньше
-        //        if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
-        //        {
-        //            if (this.Client.Tag != null) return; // защита от повтора
-        //            //Console.WriteLine("Получили результат ввода и обрабатываем");
-        //            //Console.WriteLine("Получили результат ввода и обрабатываем "+ dialog.EnteredBarcode);
-        //            string codeOrTelephone = dialog.EnteredBarcode;
-        //            //Console.WriteLine("Вася готов");                    
-        //            dialog = null;
-        //            GC.Collect();
-        //            ProcessClientDiscount(codeOrTelephone);
-        //        }
-        //        else
-        //        {
-        //            Console.WriteLine("НЕ получили результат ввода и обрабатываем");
-        //        }
-
-        //        // Возвращаем фокус на поиск товара
-        //        InputSearchProduct.Focus();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка в диалоге клиента: {ex.Message}");
-        //        await MessageBox.Show($"Ошибка: {ex.Message}");
-        //    }
-        //}
+        }       
 
         private async void ShowSimpleClientDialog()
         {
-            InputActionBarcode dialog = null;
+            InputActionBarcode? dialog = null;
 
             try
             {
@@ -1997,6 +1754,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при проверке контролов: {ex.Message}", "Проверка контролов",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -2104,7 +1866,7 @@ namespace Cash8Avalon
                 "Документ чек",
                 numdoc.ToString());
 
-            NpgsqlConnection conn = null;
+            NpgsqlConnection? conn = null;
             try
             {
                 conn = MainStaticClass.NpgsqlConn();
@@ -2362,8 +2124,8 @@ namespace Cash8Avalon
                         "Документ чек", numdoc.ToString());
                     await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
                 }
-            }
-            catch (NpgsqlException ex)
+            }            
+            catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка БД: {ex.Message}");
                 await MessageBox.Show($"Ошибка базы данных: {ex.Message}",
@@ -2371,10 +2133,6 @@ namespace Cash8Avalon
                     MessageBoxButton.OK,
                     MessageBoxType.Error,
                     this);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Ошибка: {ex.Message}");
                 throw;
             }
             finally
@@ -2493,7 +2251,8 @@ namespace Cash8Avalon
                         await MessageBox.Show("В чеке менее 3 строк, предложить покупателю доп.товар.",
                                              "В чеке менее 3 строк",
                                              MessageBoxButton.OK,
-                                             MessageBoxType.Info);
+                                             MessageBoxType.Info,
+                                             this);
                         //return; // Прерываем дальнейшее выполнение
                     }
                 }
@@ -2504,14 +2263,14 @@ namespace Cash8Avalon
             // Дополнительные проверки из вашего оригинального кода
             if (_productsData.Count == 0)
             {
-                await MessageBox.Show("Нет строк", "Проверки перед записью документа");
+                await MessageBox.Show("Нет строк", "Проверки перед записью документа",MessageBoxButton.OK,MessageBoxType.Warning,this);
                 return;
             }
 
 
             if (await GetItsDeletedDocument() == 1)
             {
-                await MessageBox.Show("Удаленный чек не может быть распечатан", "Проверка при печати", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Удаленный чек не может быть распечатан", "Проверка при печати", MessageBoxButton.OK, MessageBoxType.Error,this);
                 return;
             }
 
@@ -2534,7 +2293,9 @@ namespace Cash8Avalon
                 await MessageBox.Show("Если заполнен ИНН, то должно быть заполнено и наименование, и наоборот",
                                      "Проверка при печати",
                                      MessageBoxButton.OK,
-                                     MessageBoxType.Error);
+                                     MessageBoxType.Error,
+                                     this
+                                     );
                 return;
             }
 
@@ -2905,7 +2666,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                     conn.Dispose();
@@ -3497,7 +3258,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn != null && conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -3586,7 +3347,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message);
+                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message, "SendDataToCustomerScreen ",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
         }
 
@@ -3670,7 +3431,7 @@ namespace Cash8Avalon
             return products;
         }
 
-        private async static void SendUDPMessage(string message)
+        private async void SendUDPMessage(string message)
         {
             UdpClient sender = new UdpClient(); // создаем UdpClient для отправки сообщений
             try
@@ -3680,11 +3441,12 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message);
+                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message, "SendUDPMessage",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
                 sender.Close();
+                sender.Dispose();
             }
         }
 
@@ -3799,7 +3561,7 @@ namespace Cash8Avalon
                     {
                         Console.WriteLine("this.Client.Tag == null " + barcode);
                         MainStaticClass.write_event_in_log(" Клиент не найден ", "Документ чек", numdoc.ToString());
-                        await MessageBox.Show("Клиент не найден","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Info,this as Window);
+                        await MessageBox.Show("Клиент не найден","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Info,this);
                         return;
                     }
                     else
@@ -3818,7 +3580,7 @@ namespace Cash8Avalon
                     if (Discount != 0)//Пересчитать цены 
                     {
                         MainStaticClass.write_event_in_log(" Начало пересчета ТЧ " + barcode, " Документ ", numdoc.ToString());
-                        RecalculateAllProducts();
+                        await RecalculateAllProducts();
                         MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ " + barcode, " Документ ", numdoc.ToString());
                     }
                 }
@@ -3832,178 +3594,12 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine("ProcessClientDiscount ОШИБКА !!!" + ex.Message + " " + ex.StackTrace.ToString());
+                
+                    await MessageBox.Show("ProcessClientDiscount ОШИБКА !!!" + ex.Message + " " + ex.StackTrace.ToString(),
+                        "ProcessClientDiscount",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);                
             }
-        }
-
-        //private async Task ProcessClientDiscountAsync(string barcode)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine("Начинаем поиск клиента " + barcode);
-
-        //        Discount = 0;
-
-        //        string trimmedBarcode = barcode.Trim();
-
-        //        if (trimmedBarcode.Length == 10 || trimmedBarcode.Length == 13)
-        //        {
-        //            Console.WriteLine("Прошли проверку 10-13 " + trimmedBarcode);
-        //            MainStaticClass.write_event_in_log(" Код клиента имеет нормальную длину " + trimmedBarcode,
-        //                " Документ ", numdoc.ToString());
-
-        //            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
-        //            {
-        //                await conn.OpenAsync();
-
-        //                using (NpgsqlCommand command = new NpgsqlCommand())
-        //                {
-        //                    command.Connection = conn;
-
-        //                    if (trimmedBarcode.StartsWith("9"))
-        //                    {
-        //                        Console.WriteLine("check_and_verify_phone_number " + trimmedBarcode);
-        //                        check_and_verify_phone_number(trimmedBarcode);
-
-        //                        command.CommandText = @"
-        //                    SELECT 5.00, clients.code, clients.name, clients.phone AS clients_phone,
-        //                           temp_phone_clients.phone AS temp_phone_clients_phone, 
-        //                           attribute, clients.its_work, 
-        //                           COALESCE(clients.bonus_is_on, 0) AS bonus_is_on  
-        //                    FROM clients 
-        //                    LEFT JOIN temp_phone_clients ON clients.code = temp_phone_clients.barcode 
-        //                    WHERE clients.phone = @phone AND clients.its_work = 1";
-        //                        command.Parameters.AddWithValue("@phone", trimmedBarcode);
-        //                    }
-        //                    else
-        //                    {
-        //                        Console.WriteLine("Текст по карте " + trimmedBarcode);
-        //                        command.CommandText = @"
-        //                    SELECT 5.00, clients.code, clients.name, clients.phone AS clients_phone,
-        //                           temp_phone_clients.phone AS temp_phone_clients_phone, 
-        //                           attribute, clients.its_work, 
-        //                           COALESCE(clients.bonus_is_on, 0) AS bonus_is_on  
-        //                    FROM clients 
-        //                    LEFT JOIN temp_phone_clients ON clients.code = temp_phone_clients.barcode 
-        //                    WHERE clients.code = @code AND clients.its_work = 1";
-        //                        command.Parameters.AddWithValue("@code", trimmedBarcode);
-        //                    }
-
-        //                    MainStaticClass.write_event_in_log("Старт поиска клиента",
-        //                        "Документ чек", numdoc.ToString());
-
-        //                    bool clientFound = false;
-
-        //                    Console.WriteLine("Перед началом поиска клиента, выборка из базы " + trimmedBarcode);
-
-        //                    //Console.WriteLine(" Ридер  "+await command.ExecuteReaderAsync().Result.ReadAsync());
-        //                    await using (NpgsqlDataReader reader = await command.ExecuteReaderAsync())
-        //                    {
-        //                        while (await reader.ReadAsync())
-        //                        {
-        //                            Console.WriteLine("Начинаем поиск клиента, выборка из базы " + trimmedBarcode);
-
-        //                            string itsWork = reader["its_work"].ToString();
-        //                            if (itsWork != "1")
-        //                            {
-        //                                Console.WriteLine("Карта клиента заблокирована");
-        //                                continue;
-        //                            }
-
-        //                            clientFound = true;
-        //                            client_barcode_scanned = 1;
-
-        //                            Discount = Convert.ToDouble(await reader.GetFieldValueAsync<decimal>(0)) / 100;
-
-        //                            string attribute = reader["attribute"].ToString().Trim();
-        //                            if (attribute == "1")
-        //                            {
-        //                                await Dispatcher.UIThread.InvokeAsync(() =>
-        //                                {
-        //                                    client.Background = Brushes.LightGreen;
-        //                                });
-        //                            }
-
-        //                            MainStaticClass.write_event_in_log(" Клиент найден ",
-        //                                "Документ чек", numdoc.ToString());
-
-        //                            MainStaticClass.write_event_in_log(" Присвоение значения реквизиту на форме ",
-        //                                " Документ ", numdoc.ToString());
-
-        //                            string clientCode = reader["code"].ToString();
-        //                            string clientName = reader["name"].ToString();
-
-        //                            await Dispatcher.UIThread.InvokeAsync(() =>
-        //                            {
-        //                                this.client.Tag = clientCode;
-        //                                this.client.Text = clientName;
-        //                            });
-
-        //                            break; // Нашли клиента, выходим
-        //                        }
-        //                    }
-
-        //                    if (!clientFound || this.client.Tag == null)
-        //                    {
-        //                        MainStaticClass.write_event_in_log(" Клиент не найден ",
-        //                            "Документ чек", numdoc.ToString());
-        //                        Console.WriteLine("Клиент не найден");
-
-        //                        await Dispatcher.UIThread.InvokeAsync(() =>
-        //                        {
-        //                            this.client.Tag = null;
-        //                            this.client.Text = "";
-        //                            this.client.Background = Brushes.Transparent;
-        //                        });
-        //                        return;
-        //                    }
-
-        //                    if (check_type.SelectedIndex == 1) // При возврате
-        //                    {
-        //                        Discount = 0;
-        //                    }
-
-        //                    if (Discount != 0) // Пересчитать цены
-        //                    {
-        //                        MainStaticClass.write_event_in_log(" Начало пересчета ТЧ " + trimmedBarcode,
-        //                            " Документ ", numdoc.ToString());
-
-        //                        // Предполагаем, что RecalculateAllProducts тоже нужно сделать асинхронным
-        //                        RecalculateAllProducts();
-
-        //                        MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ " + trimmedBarcode,
-        //                            " Документ ", numdoc.ToString());
-        //                    }
-        //                }
-        //            }
-        //        }
-        //        else
-        //        {
-        //            Console.WriteLine("Введено неверное количество символов: " + trimmedBarcode.Length);
-        //        }
-
-        //        // Предполагаем, что SendDataToCustomerScreen тоже нужно сделать асинхронным
-        //        //await SendDataToCustomerScreenAsync(1, 0, 1);
-
-        //        MainStaticClass.write_event_in_log(" Выход из процедуры поиска клиента " + trimmedBarcode,
-        //            " Документ ", numdoc.ToString());
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ ProcessClientDiscount ОШИБКА: {ex.Message} {ex.StackTrace}");
-
-        //        await Dispatcher.UIThread.InvokeAsync(async () =>
-        //        {
-        //            try
-        //            {
-        //                this.client.Tag = null;
-        //                this.client.Text = "";
-        //                this.client.Background = Brushes.Transparent;
-        //                await MessageBox.Show($"Ошибка при поиске клиента: {ex.Message}");
-        //            }
-        //            catch { }
-        //        });
-        //    }
-        //}
+        }        
 
         private async Task RecalculateAllProducts(bool write = true)
         {
@@ -4041,6 +3637,10 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при пересчете всех товаров: {ex.Message}");
+                
+                    await MessageBox.Show($"✗ Ошибка при пересчете всех товаров: {ex.Message}",
+                        "Пересчет всех товаров",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
 
@@ -4074,9 +3674,6 @@ namespace Cash8Avalon
                     client.Tag = reader["code"].ToString();
                     client.Text = reader["name"].ToString();
                     Discount = Convert.ToDouble(0.05);
-                    //txtB_client_phone.IsEnabled = false;
-                    //client_barcode.IsEnabled = false;
-
                 }
                 reader.Close();
 
@@ -4095,23 +3692,17 @@ namespace Cash8Avalon
                         MainStaticClass.write_event_in_log(" Присвоение значения реквизиту на форме ", " Документ ", numdoc.ToString());
                         client.Tag = phone_number;
                         client.Text = phone_number;
-                        Discount = Convert.ToDouble(0.05);
-                        //txtB_client_phone.IsEnabled = false;
-                        //client_barcode.IsEnabled = false;
+                        Discount = Convert.ToDouble(0.05);                        
                     }
                 }
                 //Пересчет ТЧ в любом случае
                 MainStaticClass.write_event_in_log(" Начало пересчета ТЧ " + phone_number, " Документ ", numdoc.ToString());
                 await RecalculateAllProducts();
                 MainStaticClass.write_event_in_log(" Окончание пересчета ТЧ " + phone_number, " Документ ", numdoc.ToString());
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show(" Ошибки при записи номера телефона " + ex.Message);
-            }
+            }            
             catch (Exception ex)
             {
-                await MessageBox.Show(" Ошибки при записи номера телефона " + ex.Message);
+                await MessageBox.Show(" Ошибки при записи номера телефона " + ex.Message, "Запись номера телефона",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
@@ -4228,13 +3819,13 @@ namespace Cash8Avalon
             {
                 if (barcode.Trim().Length > 6)
                 {
-                    await MessageBox.Show("Поиск товара прерван ! Длина кода превышает 6 символов ");
+                    await MessageBox.Show("Поиск товара прерван ! Длина кода превышает 6 символов ", "Поиск товара",MessageBoxButton.OK,MessageBoxType.Error, this);
                     return;
                 }
             }
             else if (this.check_type.SelectedIndex < 0)
             {
-                await MessageBox.Show(" Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново.", "Проверки при получении типа чека.",MessageBoxButton.OK,MessageBoxType.Error,this as Window);
+                await MessageBox.Show(" Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново.", "Проверки при получении типа чека.",MessageBoxButton.OK,MessageBoxType.Error,this);
                 MainStaticClass.WriteRecordErrorLog("Произошла ошибка при получении типа чека", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново");
                 var window = this.FindAncestorOfType<Window>();
                 if (window != null)
@@ -4330,8 +3921,7 @@ namespace Cash8Avalon
                                 "Проверка qr-кода",
                                 MessageBoxButton.OK,
                                 MessageBoxType.Error,
-                                this as Window
-                            );
+                                this);
                             error = true;
                         }
                         else if (string.IsNullOrEmpty(marking_code))
@@ -4362,7 +3952,7 @@ namespace Cash8Avalon
                     bool markingExists = CheckMarkingExists(marking_code);
                     if (markingExists)
                     {
-                        await MessageBox.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error);
+                        await MessageBox.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error, this);
                         return;
                     }
                 }               
@@ -4399,7 +3989,7 @@ namespace Cash8Avalon
             if (this._productsTableGrid.RowDefinitions.Count - 1 > 70)//Превышен предел строк
             {
 
-                await MessageBox.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error, this);
 
                 last_tovar.Text = barcode;
                 await ShowTovarNotFoundWindow();
@@ -4413,7 +4003,7 @@ namespace Cash8Avalon
 
                 if (find_sertificate)
                 {
-                    await MessageBox.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
                     return;
                 }
             }           
@@ -4424,7 +4014,7 @@ namespace Cash8Avalon
             {
                 if (WeightFromScales != 0)
                 {
-                    await MessageBox.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error,this);
                     return;
                 }
             }  
@@ -4463,14 +4053,14 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    await MessageBox.Show(" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
-                    MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "Провекрка активации сертификата при продаже");
+                    await MessageBox.Show(" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
                     return;
                 }
                 if (status == "-1")
                 {
-                    await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами","Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
-                    MainStaticClass.WriteRecordErrorLog("Произошли ошибки на сервере при работе с сертификатами", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Провекрка активации сертификата при продаже");
+                    await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами","Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    MainStaticClass.WriteRecordErrorLog("Произошли ошибки на сервере при работе с сертификатами", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
                     return;
                 }
                 else
@@ -4478,7 +4068,7 @@ namespace Cash8Avalon
                     string decrypt_data = CryptorEngine.Decrypt(status, true, key);
                     if (decrypt_data == "1")
                     {
-                        await MessageBox.Show("Сертификат уже активирован","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error);
+                        await MessageBox.Show("Сертификат уже активирован","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
                         return;
                     }
                 }
@@ -4516,23 +4106,7 @@ namespace Cash8Avalon
 
                 return;
             }
-
-            //// Создаем новый товар для добавления
-            //var productItem = new ProductItem
-            //{
-            //    Code = (int)productData.Code,
-            //    Tovar = productData.GetName(),
-            //    Quantity = 1,
-            //    Price = productData.Price,
-            //    PriceAtDiscount = productData.Price, // По умолчанию без скидки
-            //    Action = 0,
-            //    Gift = 0,
-            //    Action2 = 0,
-            //    Mark = !string.IsNullOrEmpty(marking_code) ? marking_code : "0",
-            //    IsSertificate = productData.isCertificate(),
-            //    IsFractional  = productData.IsFractional(),
-            //    IsMarked = productData.IsMarked()
-            //};
+            
             var productItem = new ProductItem
             {
                 Code = (int)productData.Code,
@@ -4654,6 +4228,12 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке маркировки: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при проверке маркировки: {ex.Message}", "Проверка маркировки",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
+
                 return false;
             }
         }
@@ -4690,6 +4270,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 return false;
             }
         }
@@ -4826,7 +4411,7 @@ namespace Cash8Avalon
                 NpgsqlDataReader reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    await MessageBox.Show(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBox.Show(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error, this);
                     MainStaticClass.write_event_in_log(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", "Документ", numdoc.ToString());
                     result = false;
                 }
@@ -6245,7 +5830,7 @@ namespace Cash8Avalon
                                 await MessageBox.Show("Вам запрещено уменьшать количество",
                                                      "Права доступа",
                                                      MessageBoxButton.OK,
-                                                     MessageBoxType.Warning);
+                                                     MessageBoxType.Warning, this);
                                 return;
                             }
                         }
@@ -6407,7 +5992,7 @@ namespace Cash8Avalon
                     await MessageBox.Show("Нельзя удалять строки в уже созданном чеке",
                                          "Удаление",
                                          MessageBoxButton.OK,
-                                         MessageBoxType.Warning);
+                                         MessageBoxType.Warning, this);
                     return;
                 }
 
@@ -6417,7 +6002,7 @@ namespace Cash8Avalon
                     await MessageBox.Show("Единственную строку удалить нельзя, можно только удалить документ целиком",
                                          "Удаление",
                                          MessageBoxButton.OK,
-                                         MessageBoxType.Warning);
+                                         MessageBoxType.Warning, this);
                     return;
                 }
 
@@ -6473,7 +6058,7 @@ namespace Cash8Avalon
                             await MessageBox.Show("Вам запрещено удалять строки",
                                                  "Права доступа",
                                                  MessageBoxButton.OK,
-                                                 MessageBoxType.Warning);
+                                                 MessageBoxType.Warning, this);
                             return;
                         }
                     }
@@ -6543,7 +6128,8 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка при удалении товара: {ex.Message}",
                                      "Ошибка",
                                      MessageBoxButton.OK,
-                                     MessageBoxType.Error);
+                                     MessageBoxType.Error,
+                                     this);
             }
         }
 
@@ -6635,6 +6221,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 // В случае ошибки устанавливаем безопасные значения
                 product.PriceAtDiscount = product.Price;
                 product.Sum = product.Quantity * product.Price;
@@ -6665,6 +6256,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 return false;
             }
         }
@@ -6722,6 +6318,11 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при обновлении строки в Grid: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при обновлении строки в Grid: {ex.Message}", "Обновление строки в Grid",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -6794,6 +6395,11 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при обновлении Grid: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при обновлении Grid: {ex.Message}", "Обновление Grid",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -7082,6 +6688,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при позиционировании диалога: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при позиционировании диалога: {ex.Message}", "Позиционировании диалог",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -7148,7 +6759,7 @@ namespace Cash8Avalon
                             Console.WriteLine($"✗ Ошибка при загрузке данных из БД: {ex.Message}");
                         }
                     });
-                }                
+                }
 
                 InitializeQrCodeLengths();
 
@@ -7157,6 +6768,9 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при инициализации данных формы: {ex.Message}");
+
+                await MessageBox.Show($"✗ Ошибка при инициализации данных формы: {ex.Message}", "Инициализация данных формы",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
 
@@ -7296,9 +6910,9 @@ namespace Cash8Avalon
         /// </summary>
         public async void its_print_p(int variant)
         {
-            NpgsqlConnection conn = null;
-            NpgsqlCommand command = null;
-            NpgsqlTransaction trans = null;
+            NpgsqlConnection? conn = null;
+            NpgsqlCommand? command = null;
+            NpgsqlTransaction? trans = null;
             try
             {
                 conn = MainStaticClass.NpgsqlConn();
@@ -7327,30 +6941,22 @@ namespace Cash8Avalon
                 command.Dispose();
                 conn.Close();
 
-            }
-            catch (NpgsqlException ex)
-            {
-                if (trans != null)
-                {
-                    trans.Rollback();
-                }
-                await MessageBox.Show("Ошибка при установке флага распечатан " + ex.Message);
-            }
+            }            
             catch (Exception ex)
             {
                 if (trans != null)
                 {
                     trans.Rollback();
                 }
-                await MessageBox.Show("Ошибка при установке флага распечатан " + ex.Message);
+                await MessageBox.Show("Ошибка при установке флага распечатан " + ex.Message, "Установка флага распечатан",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
-                conn.Dispose();
+                conn?.Dispose();
             }
         }
 
@@ -7363,8 +6969,8 @@ namespace Cash8Avalon
         /// <returns></returns>
         private async Task<bool>  ItcPrinted()
         {
-            NpgsqlConnection conn = null;
-            NpgsqlCommand command = null;
+            NpgsqlConnection? conn = null;
+            NpgsqlCommand? command = null;
             bool result = true;
             try
             {
@@ -7372,7 +6978,7 @@ namespace Cash8Avalon
                 conn.Open();
                 string query = "SELECT its_print  FROM checks_header WHERE date_time_write = '" + this.date_time_write + "'";
                 command = new NpgsqlCommand(query, conn);
-                object result_query = command.ExecuteScalar();
+                object? result_query = command.ExecuteScalar();
 
                 if (result_query != DBNull.Value)
                 {
@@ -7385,18 +6991,14 @@ namespace Cash8Avalon
 
                 conn.Close();
 
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Ошибка при получении флага распечатан " + ex.Message);
-            }
+            }           
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при получении флага распечатан " + ex.Message);
+                await MessageBox.Show("Ошибка при получении флага распечатан " + ex.Message, "Получение флага распечатан",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -7421,7 +7023,7 @@ namespace Cash8Avalon
                 conn.Open();
                 string query = "SELECT its_print_p  FROM checks_header WHERE date_time_write = '" + this.date_time_write + "'";
                 command = new NpgsqlCommand(query, conn);
-                object result_query = command.ExecuteScalar();
+                object? result_query = command.ExecuteScalar();
 
                 if (result_query != DBNull.Value)
                 {
@@ -7445,7 +7047,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -7481,7 +7083,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -7725,7 +7327,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn != null && conn.State == ConnectionState.Open)
+                if (conn != null && conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                     Console.WriteLine("✓ Соединение с БД закрыто");
@@ -8124,7 +7726,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -8201,7 +7803,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
@@ -8235,7 +7837,7 @@ namespace Cash8Avalon
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
