@@ -214,7 +214,7 @@ namespace Cash8Avalon
                             _ = loadBonusClients();
                             if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                             {
-                                await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error);
+                                await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error,this);
                             }
                             else
                             {
@@ -230,7 +230,7 @@ namespace Cash8Avalon
                     }
                     else
                     {
-                        await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд");
+                        await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд","Проверка наличия таблицы",this);
                     }
 
                     // ТОЛЬКО ПОСЛЕ ВСЕХ ПРОВЕРОК СОЗДАЕМ ViewModel!
@@ -268,21 +268,21 @@ namespace Cash8Avalon
             public string fiscals_forbidden { get; set; }
         }
 
-        private void GetUsers()
+        private async void GetUsers()
         {
             DS ds = MainStaticClass.get_ds();
             ds.Timeout = 3000;
             string nick_shop = MainStaticClass.Nick_Shop.Trim();
             if (nick_shop.Trim().Length == 0)
             {
-                MessageBox.Show(" Не удалось получить название магазина ");
+                await MessageBox.Show(" Не удалось получить название магазина ","Проверка названия магазина",this);
                 return;
             }
 
             string code_shop = MainStaticClass.Code_Shop.Trim();
             if (code_shop.Trim().Length == 0)
             {
-                MessageBox.Show(" Не удалось получить код магазина ");
+                await MessageBox.Show(" Не удалось получить код магазина ","Проверка кода магазина",this);
                 return;
             }
 
@@ -297,7 +297,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Произошли ошибки при при получении пользователей от веб сервиса " + ex.Message + ".", "Синхронизация пользователей");
+                await MessageBox.Show("Произошли ошибки при при получении пользователей от веб сервиса " + ex.Message + ".", "Синхронизация пользователей",this);
             }
             if (answer == "")
             {
@@ -307,7 +307,7 @@ namespace Cash8Avalon
             string decrypt_string = CryptorEngine.Decrypt(answer, true, key);
             Users users = JsonConvert.DeserializeObject<Users>(decrypt_string);
             NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-            NpgsqlTransaction trans = null;
+            NpgsqlTransaction? trans = null;
 
             try
             {
@@ -351,13 +351,19 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show("Произошли ошибки sql при обновлении пользователей " + ex.Message);
-                trans.Rollback();
+                await MessageBox.Show("Произошли ошибки sql при обновлении пользователей " + ex.Message, "Ошибки при обновлении пользователей", this);
+                if (trans != null)
+                {
+                    trans.Rollback();
+                }            
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Произошли общие ошибки при обновлении пользователей " + ex.Message);
-                trans.Rollback();
+                await MessageBox.Show("Произошли общие ошибки при обновлении пользователей " + ex.Message, "Ошибки при обновлении пользователей", this);
+                if (trans != null)
+                {
+                    trans.Rollback();
+                }
             }
             finally
             {

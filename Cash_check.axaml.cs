@@ -210,7 +210,7 @@ namespace Cash8Avalon
 
         public Cash_check()
         {
-            Console.WriteLine("=== Конструктор Cash_check начат ===");            
+            Console.WriteLine("=== Конструктор Cash_check начат ===");
 
             try
             {
@@ -243,6 +243,11 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ ОШИБКА в конструкторе: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        await MessageBox.Show(ex.Message, "ОШИБКА в конструкторе:",
+                            MessageBoxButton.OK, MessageBoxType.Error, this);
+                    });
             }
 
             UpdateWindowTitle();
@@ -355,6 +360,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠ Ошибка расчета ширины текста: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show(ex.Message, "Ошибка расчета ширины текста",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 return text.Length * 7; // Фолбэк: 7px на символ
             }
         }
@@ -421,6 +431,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка автонастройки колонки {columnIndex}: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка автонастройки колонки {columnIndex}: {ex.Message}", "Автонастройка колонки",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -442,6 +457,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка установки ширины колонки: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка установки ширины колонки: {ex.Message}", "Установки ширины колонки",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -466,6 +486,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка сброса ширины колонок: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка сброса ширины колонок: {ex.Message}", "Сброс ширины колонок",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -606,6 +631,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка настройки контекстного меню: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка настройки контекстного меню: {ex.Message}", "Настройка контекстного меню",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -737,6 +767,9 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка показа диалога ширины колонки: {ex.Message}");
+
+                await MessageBox.Show($"✗ Ошибка показа диалога ширины колонки: {ex.Message}", "Показ диалога ширины колонки",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
 
@@ -868,6 +901,8 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка показа диалога настроек колонок: {ex.Message}");
+                await MessageBox.Show($"✗ Ошибка показа диалога настроек колонок: {ex.Message}", "Показ диалога настроек колонок",
+                MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
 
@@ -962,8 +997,7 @@ namespace Cash8Avalon
             table.Columns.Add(dc);
             dc = new DataColumn("Action2", System.Type.GetType("System.Int32"));
             table.Columns.Add(dc);
-
-            //this.inputbarcode.Focus();
+                        
             this.txtB_search_product.Focus();
 
             if (MainStaticClass.GetVersionFn == 1)
@@ -976,17 +1010,12 @@ namespace Cash8Avalon
             {
                 guid = Guid.NewGuid().ToString();
 
-                checkBox_to_print_repeatedly.IsVisible = false;
-                //label9.Visible = false;
-                //label10.Visible = false;
-                //label11.Visible = false;
-                //label13.Visible = false;
+                checkBox_to_print_repeatedly.IsVisible = false;                
                 txtB_non_cash_money.IsVisible = false;
                 txtB_sertificate_money.IsVisible = false;
                 txtB_cash_money.IsVisible = false;
                 txtB_bonus_money.IsVisible = false;
-
-                //inputbarcode.Focus();
+                                
                 this.txtB_search_product.Focus();
 
                 this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
@@ -1009,61 +1038,27 @@ namespace Cash8Avalon
             else
             {
                 reopened = true;
-                SetFormReadOnly(true);
-                //checkBox_print_check.IsEnabled = false;
-                ////Документ не новый поэтому запретим в нем ввод и изменение                
-                //last_tovar.IsEnabled = false;
-                //txtB_email_telephone.IsEnabled = false;
-                //txtB_inn.IsEnabled = false;
-                //btn_get_name.IsEnabled = false;
-                ////txtB_client_phone.Enabled = false;
-                //txtB_name.IsEnabled = false;
-                //comment.IsEnabled = false;
-                
+                SetFormReadOnly(true);                
 
                 int status = await get_its_deleted_document();
                 if ((status == 0) || (status == 1))
-                {
-                    
-                    //this.label4.Enabled = false;
-                    this.check_type.IsEnabled = false;
-                    //this.inputbarcode.Enabled = false;
-                    this.txtB_search_product.IsEnabled = false;
-                    //this.client_barcode.IsEnabled = false;
-                    //this.sale_cancellation.Enabled = false;
-                    //this.inventory.Enabled = false;
+                {                    
+                    this.check_type.IsEnabled = false;                    
+                    this.txtB_search_product.IsEnabled = false;                    
                     this.comment.IsEnabled = false;                    
                     ToOpenTheWrittenDownDocument();
                     enable_print();
                     if (MainStaticClass.Code_right_of_user != 1)
                     {
                         this.pay.IsEnabled = false;
-                    }
-                    //IsNewCheck = false;
-                }
-                //else if (status == 2)
-                //{
-                //    return;
-                //    //IsNewCheck = true;
-                //    //Discount = 0;
-                //    ////this.label4.Enabled = true;
-                //    //this.check_type.IsEnabled = true;
-                //    ////this.inputbarcode.Enabled = true;
-                //    //this.txtB_search_product.IsEnabled = true;
-                //    //this.client_barcode.IsEnabled = false;
-                //    //ToOpenTheWrittenDownDocument();
-                //    //get_old_document_Discount();
-                //    //check_type.IsEnabled = false;
-                //    //IsNewCheck = false;
-                //}
+                    }                    
+                }                
             }        
 
 
             if (IsNewCheck)
-            {
-                //first_start_com_barcode_scaner();
-                selection_goods = true;
-                //inputbarcode.Focus();
+            {                
+                selection_goods = true;                
                 this.txtB_search_product.Focus();
                 //список допустимых длин qr кодов                
                 qr_code_lenght.Add(29);
@@ -1155,6 +1150,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при обновлении видимости строки платежей: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при обновлении видимости строки платежей: {ex.Message}", "Обновление видимости строки платежей",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -1205,6 +1205,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при обновлении заголовка: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при обновлении заголовка: {ex.Message}", "Обновление заголовка окна",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 this.Title = "Чек";
             }
         }
@@ -1257,6 +1262,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при установке режима только для чтения: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при установке режима только для чтения: {ex.Message}", "Установка режима только для чтения",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -1273,7 +1283,14 @@ namespace Cash8Avalon
                     Console.WriteLine("✓ Водяной знак удален");
                 }
             }
-            catch { }
+            catch(Exception ex)
+            {
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при удалении водяного знака: {ex.Message}", "Удаление водяного знака",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
+            }
         }
 
         private void AddSimpleWatermark(string text)
