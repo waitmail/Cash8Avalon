@@ -2655,14 +2655,14 @@ namespace Cash8Avalon
                 }
                 reader.Close();
                 command.Dispose();
-            }
-            catch (NpgsqlException ex)
-            {
-                MessageBox.Show(" Ошибки при чтении 2 суммы " + ex.Message);
-            }
+            }           
             catch (Exception ex)
-            {
-                MessageBox.Show(" Ошибки при чтении 2 суммы " + ex.Message);
+            {                
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show(ex.Message, "Чтение 2 суммы ",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
             finally
             {
@@ -2908,20 +2908,14 @@ namespace Cash8Avalon
                         sum_print = Math.Round(sum_print - result[2], 2, MidpointRounding.AwayFromZero);
                     }
                 }
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты: " + ex.Message,
-                                    "Ошибка БД",
-                                    MessageBoxButton.OK,
-                                    MessageBoxType.Error);
-            }
+            }            
             catch (Exception ex)
             {
                 await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты: " + ex.Message,
                                     "Ошибка",
                                     MessageBoxButton.OK,
-                                    MessageBoxType.Error);
+                                    MessageBoxType.Error,
+                                    this);
             }
 
             return result;
@@ -3236,17 +3230,7 @@ namespace Cash8Avalon
                     }
                 }
                 result = true;
-            }
-            catch (NpgsqlException ex)
-            {
-                if (tran != null)
-                {
-                    tran.Rollback();
-                }
-
-                await MessageBox.Show("Ошибка при записи документа " + ex.Message,"Запись документа",MessageBoxButton.OK,MessageBoxType.Error,this);
-                result = false;
-            }
+            }            
             catch (Exception ex)
             {
                 if (tran != null)
@@ -4053,7 +4037,7 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    await MessageBox.Show(" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBox.Show(ex.Message+"\r\n"+" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
                     MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
                     return;
                 }
@@ -4309,6 +4293,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при прокрутке: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при прокрутке: {ex.Message}", "Прокрутка",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4371,6 +4360,11 @@ namespace Cash8Avalon
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
+                    Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        await MessageBox.Show($"Ошибка при добавлении строки в Grid: {ex.Message}", "Добавление строки в Grid",
+                            MessageBoxButton.OK, MessageBoxType.Error, this);
+                    });
                 }
             });
         }
@@ -4417,15 +4411,10 @@ namespace Cash8Avalon
                 }
                 conn.Close();
                 command.Dispose();
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ",MessageBoxButton.OK,MessageBoxType.Error);
-                result = false;
-            }
+            }            
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error,this);
                 result = false;
             }
             finally
@@ -4506,22 +4495,21 @@ namespace Cash8Avalon
                 //    t_n_f.ShowDialog();
                 //    t_n_f.Dispose();
                 //}
-            }
-            catch (NpgsqlException ex)
-            {
-                MessageBox.Show(@"Произошла ошибка при получении товара по коду\штрихкоду " + ex.Message);
-            }
+            }           
             catch (Exception ex)
             {
-                MessageBox.Show(@"Произошла ошибка при получении товара по коду\штрихкоду " + ex.Message);
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show("Произошла ошибка при получении товара по коду/штрихкоду " + ex.Message, "GetProductDataInDB",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
-
             }
 
             return productData;
@@ -4579,6 +4567,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при очистке QR-кода: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка при очистке QR-кода: {ex.Message}", "CleanQrCodeString",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 return input; // Возвращаем оригинал при ошибке
             }
         }
@@ -4622,6 +4615,12 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка в CheckType_SelectionChanged: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка в CheckType_SelectionChanged: {ex.Message}",
+                        "CheckType_SelectionChanged",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4642,6 +4641,11 @@ namespace Cash8Avalon
                     catch (Exception ex)
                     {
                         Console.WriteLine($"✗ Ошибка при загрузке данных чека: {ex.Message}");
+                        Dispatcher.UIThread.InvokeAsync(async () =>
+                        {
+                            await MessageBox.Show($"✗ Ошибка при загрузке данных чека: {ex.Message}", "OpenCheck",
+                                MessageBoxButton.OK, MessageBoxType.Error, this);
+                        });
                     }
                 });
             }
@@ -4664,6 +4668,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании Grid: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при создании Grid: {ex.Message}", "CreateAllGridsProgrammatically",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4739,6 +4748,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании Grid товаров: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при создании Grid товаров: {ex.Message}", "CreateProductsGrid",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4796,6 +4810,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании Grid сертификатов: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при создании Grid сертификатов: {ex.Message}", "CreateCertificatesGrid",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4837,6 +4856,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании заголовков: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при создании заголовков: {ex.Message}", "CreateHeaderRow",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4898,6 +4922,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}", "AddProductsGridRows",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -4988,6 +5017,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении данных в Grid сертификатов: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid сертификатов: {ex.Message}", "AddCertificatesGridRows",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5084,6 +5118,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при выделении строки товаров: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при выделении строки товаров: {ex.Message}", "SelectProductRow",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5132,6 +5171,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при прокрутке: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при прокрутке: {ex.Message}", "ScrollToSelectedRow",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5158,6 +5202,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при снятии выделения товаров: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при снятии выделения товаров: {ex.Message}", "ClearProductSelection",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5178,6 +5227,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка в обработчике клика строки товаров: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка в обработчике клика строки товаров: {ex.Message}", "OnProductRowPointerPressed",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5436,35 +5490,10 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 await MessageBox.Show("При поиске по ИНН произошли ошибки " + ex.Message);
+
+                await MessageBox.Show("При поиске по ИНН произошли ошибки " + ex.Message, "btn_get_name_Click",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
             }
-        }
-
-        // Простая вспомогательная функция для мигания рамки
-        private void FlashBorderTemporarily(Border border, Color flashColor)
-        {
-            try
-            {
-                var originalColor = border.BorderBrush;
-
-                border.BorderBrush = new SolidColorBrush(flashColor);
-                border.BorderThickness = new Thickness(2);
-
-                // Возвращаем исходный вид через 300 мс
-                DispatcherTimer timer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(300)
-                };
-
-                timer.Tick += (s, e) =>
-                {
-                    border.BorderBrush = originalColor;
-                    border.BorderThickness = new Thickness(0, 0, 0, 1);
-                    timer.Stop();
-                };
-
-                timer.Start();
-            }
-            catch { /* Игнорируем ошибки при мигании */ }
         }      
 
         private void MoveProductSelectionUp()
@@ -5543,6 +5572,9 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при увеличении количества: {ex.Message}");
+
+                await MessageBox.Show($"✗ Ошибка при увеличении количества: {ex.Message}", "IncreaseProductQuantity",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
 
@@ -5599,6 +5631,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}", "ShowQuantityLimitWarning",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5641,6 +5678,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠ Ошибка в ShowTooltip: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"⚠ Ошибка в ShowTooltip: {ex.Message}", "ShowTooltip",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5709,6 +5751,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}", "CanIncreaseQuantity",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
                 // В случае ошибки разрешаем увеличение, чтобы не блокировать пользователя
                 return true;
             }
@@ -5743,6 +5790,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠ Ошибка в эффекте: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"⚠ Ошибка в эффекте: {ex.Message}", "ShowQuantityEffect",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5799,6 +5851,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠ Ошибка при мигании бордера ячейки: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"⚠ Ошибка при мигании бордера ячейки: {ex.Message}", "FlashCellBorder",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -5911,56 +5968,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при уменьшении количества: {ex.Message}");
+                
+                    await MessageBox.Show($"✗ Ошибка при уменьшении количества: {ex.Message}", "DecreaseProductQuantity",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
             }
-        }
-
-        // Метод для эффекта ошибки/предупреждения
-        private void ShowWarningEffect(int dataIndex)
-        {
-            try
-            {
-                int gridRowIndex = dataIndex + 1;
-
-                // Ищем TextBlock в ячейке количества (колонка 2)
-                foreach (Control child in _productsTableGrid.Children)
-                {
-                    if (child is TextBlock textBlock &&
-                        Grid.GetRow(textBlock) == gridRowIndex &&
-                        Grid.GetColumn(textBlock) == 2)
-                    {
-                        // Сохраняем оригинальные значения
-                        var originalForeground = textBlock.Foreground;
-                        var originalBackground = textBlock.Background;
-
-                        // Устанавливаем эффект ошибки (оранжевый)
-                        textBlock.Foreground = Brushes.OrangeRed;
-                        textBlock.Background = Brushes.LightYellow;
-                        textBlock.FontWeight = FontWeight.Bold;
-
-                        // Возвращаем оригинальный вид через 0.5 секунды
-                        DispatcherTimer timer = new DispatcherTimer
-                        {
-                            Interval = TimeSpan.FromMilliseconds(500)
-                        };
-
-                        timer.Tick += (s, e) =>
-                        {
-                            textBlock.Foreground = originalForeground;
-                            textBlock.Background = originalBackground;
-                            textBlock.FontWeight = FontWeight.Normal;
-                            timer.Stop();
-                        };
-
-                        timer.Start();
-                        break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠ Ошибка в эффекте предупреждения: {ex.Message}");
-            }
-        }
+        }     
 
         // Метод для удаления выбранного товара
         private void DeleteSelectedProduct()
@@ -5979,6 +5991,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при удалении товара: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при удалении товара: {ex.Message}", "DeleteSelectedProduct",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }      
 
@@ -6757,6 +6774,11 @@ namespace Cash8Avalon
                         catch (Exception ex)
                         {
                             Console.WriteLine($"✗ Ошибка при загрузке данных из БД: {ex.Message}");
+                            Dispatcher.UIThread.InvokeAsync(async () =>
+                            {
+                                await MessageBox.Show($"✗ Ошибка при загрузке данных из БД: {ex.Message}", "InitializeFormData",
+                                    MessageBoxButton.OK, MessageBoxType.Error, this);
+                            });
                         }
                     });
                 }
@@ -6883,14 +6905,13 @@ namespace Cash8Avalon
                 reader.Close();
                 command.Dispose();
                 conn.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
-            }
+            }            
             catch (Exception ex)
             {
                 await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
+                
+                    await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message, "get_cash_on_type_payment",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
             {
@@ -7036,14 +7057,13 @@ namespace Cash8Avalon
 
                 conn.Close();
 
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message);
-            }
+            }            
             catch (Exception ex)
             {
                 await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message);
+                
+                    await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message, "ItcPrintedP",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
             {
@@ -7071,14 +7091,12 @@ namespace Cash8Avalon
                 result = Convert.ToInt16(command.ExecuteScalar());
                 conn.Close();
             }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
-                result = 1;
-            }
             catch (Exception ex)
             {
                 await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+
+                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message, "GetItsDeletedDocument",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
                 result = 1;
             }
             finally
@@ -7109,6 +7127,11 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при обновлении общей суммы: {ex.Message}");
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Ошибка при обновлении общей суммы: {ex.Message}", "UpdateTotalSum",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
         }
 
@@ -7315,15 +7338,16 @@ namespace Cash8Avalon
 
                 // Обновляем общую сумму
                 UpdateTotalSum();
-            }
-            catch (NpgsqlException ex)
-            {
-                Console.WriteLine($"✗ Npgsql ошибка в ToOpenTheWrittenDownDocument: {ex.Message}");
-            }
+            }            
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Общая ошибка в ToOpenTheWrittenDownDocument: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"✗ Общая ошибка в ToOpenTheWrittenDownDocument: {ex.Message}", "ToOpenTheWrittenDownDocument",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                });
             }
             finally
             {
@@ -7393,8 +7417,9 @@ namespace Cash8Avalon
             {
                 MainStaticClass.write_event_in_log(" ОШИБКА получения номера документа",
                     ex.GetType().Name, ex.Message);
-                Console.WriteLine($"✗ {ex.Message}");
-                await MessageBox.Show(ex.Message, "Ошибка при получении номера", this);
+                Console.WriteLine($"✗ {ex.Message}");               
+                    await MessageBox.Show(ex.Message, "Ошибка при получении номера",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
             }
 
             return -1;
@@ -7690,48 +7715,7 @@ namespace Cash8Avalon
                     checkBox_to_print_repeatedly_p.IsEnabled = true;
                 }
             }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        private void get_old_document_Discount()
-        {
-
-            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-            try
-            {
-                conn.Open();
-                NpgsqlCommand command = new NpgsqlCommand();
-                command.Connection = conn;
-                Discount = 0;
-                command.CommandText = "SELECT discount_types.discount_percent,clients.code,clients.name  FROM clients left join discount_types ON clients.discount_types_code= discount_types.code WHERE clients.code='" + client.Tag.ToString() + "'";
-                NpgsqlDataReader reader = command.ExecuteReader();
-
-                while (reader.Read())
-                {
-                    Discount = Convert.ToDouble(reader.GetDecimal(0));
-                    Discount = Discount / 100;
-                }
-                reader.Close();
-                conn.Close();
-            }
-            catch (NpgsqlException)
-            {
-
-            }
-            catch (Exception)
-            {
-
-            }
-            finally
-            {
-                if (conn?.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                }
-            }
-        }
+        }      
 
         public void SetCertificatesFromPay(List<InputSertificates.CertificateItem> certificatesFromPay)
         {
@@ -7792,14 +7776,11 @@ namespace Cash8Avalon
                 command.ExecuteNonQuery();
                 command.Dispose();
                 conn.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show(" insert_incident_record" + ex.Message);
-            }
+            }            
             catch (Exception ex)
             {
-                await MessageBox.Show(" insert_incident_record " + ex.Message);
+                await MessageBox.Show(" insert_incident_record " + ex.Message, "InsertIncidentRecordAsync",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
             {
@@ -7825,14 +7806,12 @@ namespace Cash8Avalon
                 result = Convert.ToInt16(command.ExecuteScalar());
                 conn.Close();
             }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
-                result = 1;
-            }
             catch (Exception ex)
             {
                 await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+
+                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message, "get_its_deleted_document",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
                 result = 1;
             }
             finally
