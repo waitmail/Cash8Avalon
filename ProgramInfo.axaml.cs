@@ -15,16 +15,7 @@ public partial class ProgramInfo : Window
     public ProgramInfo()
     {
         InitializeComponent();
-
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        if (version != null)
-        {
-            var versionText = this.FindControl<TextBlock>("VersionText");
-            if (versionText != null)
-            {
-                versionText.Text = $"Версия {version.Major}.{version.Minor}.{version.Build}";
-            }
-        }
+        this.CanResize = false;      
         LoadLogo();
         SetVersion();
     }
