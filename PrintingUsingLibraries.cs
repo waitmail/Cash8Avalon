@@ -553,41 +553,25 @@ namespace Cash8Avalon
                     if (productItem.Mark.Trim().Length > 13)
                     {
 
-                        string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
-
-                        //if (InventoryManager.completeDictionaryProductData)
-                        //{
-                        //    productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
-                        //}
-                        //else
-                        //{
-                        //    productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
-                        //}
-                        // Получаем данные о товаре по штрихкоду
-                        //ProductData productData;
+                        string marking_code = productItem.Mark.Trim().Replace("vasya2021", "'");                                                
                         string tovarCode = productItem.Code.ToString().Trim();
-
-                        // Пытаемся получить данные из кэша (потокобезопасно)
-                        if (InventoryManager.TryGetItem(Convert.ToInt64(tovarCode), out productData))
+                        productData = await InventoryManager.FindProductAsync(tovarCode, check);
+                        if (productData.IsEmpty())
                         {
-                            // Данные успешно получены из кэша
-                        }
-                        else
-                        {
-                            // Кэш невалиден, словарь перестраивается или товар не найден в кэше
-                            // Получаем данные напрямую из базы данных
-                            productData = check.GetProductDataInDB(tovarCode);
+                            await MessageBox.Show("Не удалось найти товар по коду " + tovarCode, "Проверка маркировки", MessageBoxButton.OK, MessageBoxType.Error, check);
+                            error = true;
+                            break;
                         }
 
-                        //if (productData.IsCDNCheck())//&& check.check_type.SelectedIndex == 0 
-                        //{
-                        //    if (!MainStaticClass.cdn_check(productData, mark, lvi, check))
-                        //    {
-                        //        error = true;
-                        //    }
-                        //}
+                        if (productData.IsCDNCheck())
+                        {
+                            if (!await MainStaticClass.cdn_check(productData, marking_code, check))
+                            {
+                                error = true;
+                            }                            
+                        }
 
-                        bool result_check_mark = await check_marking_code(mark, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                        bool result_check_mark = await check_marking_code(marking_code, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
                         if (!result_check_mark)
                         {
                             error = true;
@@ -1111,18 +1095,7 @@ namespace Cash8Avalon
             else if (variant == 1)
             {
                 fptr.openDrawer();
-                //здесь проверяем есть ли строки
-
-                //if (check.to_print_certainly_p == 1)
-                //{
-                //    MainStaticClass.delete_document_wil_be_printed(check.numdoc.ToString(), variant);
-                //}
-
-                //if (MainStaticClass.get_document_wil_be_printed(check.numdoc.ToString(), variant) != 0)
-                //{
-                //    MessageBox.Show("Этот чек уже был успешно отправлен на печать");
-                //    return;
-                //}
+                
                 int count_string = 0;
                 foreach (ProductItem productItem in check._productsData)
                 {
@@ -1134,11 +1107,7 @@ namespace Cash8Avalon
                 if (count_string == 0)
                 {
                     //здесь необходимо поставить флаг распечатан
-                    check.its_print_p(variant);
-                    //if (MainStaticClass.GetVariantConnectFN == 1)
-                    //{
-                    //    fptr.close();
-                    //}
+                    check.its_print_p(variant);                
                     return;
                 }
 
@@ -1153,48 +1122,25 @@ namespace Cash8Avalon
                     {
                         if (productItem.Mark.Trim().Length > 13)
                         {
-                            //if (cdn_check(lvi.SubItems[0].Text.Trim(), check.numdoc.ToString()))
-                            //{
-                            //    continue;
-                            //}
-
-                            string mark = productItem.Mark.Trim().Replace("vasya2021", "'");
-
-                            // Правильный способ получения данных о товаре
-                            Int64 tovarCode = Convert.ToInt64(productItem.Code.ToString().Trim());
-
-                            // Пытаемся получить данные из кэша с использованием потокобезопасного метода
-                            if (InventoryManager.TryGetItem(Convert.ToInt64(tovarCode), out productData))
+                            string marking_code = productItem.Mark.Trim().Replace("vasya2021", "'");
+                            string tovarCode = productItem.Code.ToString().Trim();
+                            productData = await InventoryManager.FindProductAsync(tovarCode, check);
+                            if (productData.IsEmpty())
                             {
-                                // Данные успешно получены из кэша
-                                // productData уже содержит валидные данные
-                            }
-                            else
-                            {
-                                // Кэш невалиден, словарь перестраивается или товар не найден в кэше
-                                // Получаем данные напрямую из базы данных
-                                productData = check.GetProductDataInDB(tovarCode.ToString());
+                                await MessageBox.Show("Не удалось найти товар по коду " + tovarCode, "Проверка маркировки", MessageBoxButton.OK, MessageBoxType.Error, check);                                
+                                error = true;
+                                break;
                             }
 
-                            //if (InventoryManager.completeDictionaryProductData)
-                            //{
-                            //    productData = InventoryManager.GetItem(Convert.ToInt64(productItem.Code.ToString().Trim()));
-                            //}
-                            //else
-                            //{
-                            //    productData = check.GetProductDataInDB(productItem.Code.ToString().Trim());
-                            //}
+                            if (productData.IsCDNCheck())
+                            {
+                                if (!await MainStaticClass.cdn_check(productData, marking_code, check))
+                                {
+                                    error = true;
+                                }
+                            }                            
 
-                            //if (productData.IsCDNCheck())// && check.check_type.SelectedIndex == 0)
-                            //{
-                            //    if (!MainStaticClass.cdn_check(productData, mark, lvi, check))
-                            //    {
-                            //        error = true;
-                            //    }
-                            //}
-
-                            //string mark = lvi.SubItems[14].Text.Trim().Replace("vasya2021", "'");
-                            bool result_check_mark = await check_marking_code(mark, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                            bool result_check_mark = await check_marking_code(marking_code, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
                             if (!result_check_mark)
                             {
                                 error = true;
@@ -1215,31 +1161,7 @@ namespace Cash8Avalon
             fptr.operatorLogin();
 
             print_terminal_check(fptr, check);
-            //if (variant == 0)
-            //{
-            //    fptr.setParam(1055, AtolConstants.LIBFPTR_TT_PATENT);
-            //    MainStaticClass.write_event_in_log("SNO SystemTaxation == LIBFPTR_TT_PATENT variant = 0 не маркировка", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //}
-            //else if (variant == 1)
-            //{
-            //    if (MainStaticClass.SystemTaxation == 3)
-            //    {
-            //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME_OUTCOME);
-            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 3 variant = 1 маркировка LIBFPTR_TT_USN_INCOME_OUTCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    }
-            //    else if (MainStaticClass.SystemTaxation == 5)
-            //    {
-            //        fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
-            //        MainStaticClass.write_event_in_log("SNO SystemTaxation == 5 variant = 1 маркировка LIBFPTR_TT_USN_INCOME", "print_sell_2_3_or_return_sell", check.numdoc.ToString());
-            //    }
-            //}
-            //else
-            //{
-            //    MessageBox.Show("В печать не передан или передан не верный вариант, печать невозможна");
-            //    return;
-            //}
-
-
+           
             if (check.check_type.SelectedIndex == 0)// || (check.check_type.SelectedIndex == 2))
             {
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);

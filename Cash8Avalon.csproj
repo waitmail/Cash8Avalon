@@ -25,8 +25,20 @@
     <PackageReference Include="Avalonia.Markup.Xaml.Loader" Version="11.3.11" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="Svg.Controls.Avalonia" Version="11.3.9.2" />
     <PackageReference Include="System.IO.Ports" Version="10.0.2" />	  
   </ItemGroup>
+  
+  <ItemGroup>
+  <None Update="Assets\logo.png">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>  
+  <None Update="Assets\logo.Svg">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>  
+</ItemGroup>
+  
+  
 
 
   <ItemGroup>
@@ -38,6 +50,7 @@
 
   <ItemGroup>
     <Folder Include="SberDll\" />
+    <Folder Include="Assets\" />
   </ItemGroup>
 
 

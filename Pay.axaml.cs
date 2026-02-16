@@ -62,6 +62,7 @@ namespace Cash8Avalon
             InitializeComponent();
             this.ShowInTaskbar = false;            
             this.Loaded += Pay_Loaded;            
+            this.Opened += Pay_Opened;
         }
 
         private void Pay_Loaded(object? sender, RoutedEventArgs e)
@@ -113,6 +114,25 @@ namespace Cash8Avalon
 
             ToolTip.SetTip(checkBox_do_not_send_payment_to_the_terminal, toolTipContent);
             calculate();
+        }
+
+        private void Pay_Opened(object? sender, EventArgs e)
+        {
+            // При открытии окна принудительно устанавливаем фокус
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                this.Focus();
+                this.Activate(); // Пробуем активировать окно
+
+                if (cashSumTextBox != null)
+                {
+                    cashSumTextBox.Focus();
+                }
+
+                // Для Linux особенно важно
+                this.Topmost = true;
+                //this.Topmost = false;
+            }, DispatcherPriority.Render);
         }
 
         private void CashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
@@ -656,8 +676,23 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка открытия формы сертификатов: {ex.Message}",
                     "Ошибка",
                     MessageBoxButton.OK,
-                    MessageBoxType.Error);
+                    MessageBoxType.Error,
+                    this);
             }
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                this.Focus();
+                this.Activate(); // Пробуем активировать окно
+
+                if (cashSumTextBox != null)
+                {
+                    cashSumTextBox.Focus();
+                }
+
+                // Для Linux особенно важно
+                this.Topmost = true;
+                //this.Topmost = false;
+            }, DispatcherPriority.Render);
         }
 
         private async Task ProcessCertificatesData(object certificateData)

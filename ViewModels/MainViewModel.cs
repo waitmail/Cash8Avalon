@@ -49,45 +49,9 @@ namespace Cash8Avalon.ViewModels
         public ICommand CloseContentCommand => new RelayCommand(() => CloseCurrentContent());
         public ICommand OpenSettingConnectCommand => new RelayCommand(() => OpenSettingConnect());
         public ICommand OpenInternetDataLoadCommand => new RelayCommand(() => OpenInternetDataLoad());
+        public ICommand OpenProgramInfoCommand => new RelayCommand(() => OpenProgramInfo());
 
-        //// Метод для открытия параметров базы данных
-        //private void OpenSettingConnect()
-        //{
-        //    StatusMessage = "Открытие параметров соединения с БД...";
-        //    Console.WriteLine("Открываем параметры базы данных ВНУТРИ главного окна");
 
-        //    // Создаем экземпляр SettingConnect как UserControl
-        //    var settingConnectControl = new SettingConnect();
-
-        //    // Подписываемся на событие закрытия (если оно есть в SettingConnect)
-        //    // Если нет события, нужно будет его добавить
-        //    if (settingConnectControl is IClosableControl closable)
-        //    {
-        //        closable.RequestClose += OnSettingConnectRequestClose;
-        //    }
-
-        //    CurrentContent = settingConnectControl;
-        //    StatusMessage = "Параметры соединения с БД открыты";
-        //}
-
-        //private void OpenSettingConnect()
-        //{
-        //    StatusMessage = "Открытие параметров соединения с БД...";
-        //    Console.WriteLine("Открываем параметры базы данных в отдельном окне");
-
-        //    // Открываем SettingConnect как отдельное окно
-        //    var settingConnectWindow = new SettingConnect();
-
-        //    // Подписываемся на событие закрытия окна
-        //    settingConnectWindow.Closed += (sender, e) =>
-        //    {
-        //        Console.WriteLine("Окно SettingConnect закрыто");
-        //        StatusMessage = "Готово";
-        //    };
-
-        //    settingConnectWindow.Show();
-        //    StatusMessage = "Параметры соединения с БД открыты в отдельном окне";
-        //}
 
         // Обработчик закрытия окна параметров БД
         private void OnSettingConnectRequestClose(object sender, EventArgs e)
@@ -96,20 +60,10 @@ namespace Cash8Avalon.ViewModels
             CloseCurrentContent();
         }
 
-        //// Остальные методы остаются без изменений
-        //private void OpenInternetDataLoad()
-        //{
-        //    StatusMessage = "Открытие загрузки данных...";
-        //    Console.WriteLine("Открываем загрузку данных ВНУТРИ главного окна");
-
-        //    var loadDataControl = new LoadDataWebService();
-
-        //    // Подписываемся через именованный метод
-        //    loadDataControl.RequestClose += OnLoadDataRequestClose;
-
-        //    CurrentContent = loadDataControl;
-        //    StatusMessage = "Загрузка данных из интернет открыта";
-        //}
+        private void OpenProgramInfo()
+        {
+            ShowWindow(new ProgramInfo(), "О программе");
+        }
 
         // Использование:
         private void OpenSettingConnect()
@@ -174,17 +128,7 @@ namespace Cash8Avalon.ViewModels
 
         private void OpenFiscalPrinter()
         {
-            ShowWindow(new FPTK22(), "Настройка фискального принтера...");
-            //StatusMessage = "Настройка фискального принтера...";
-            //Console.WriteLine("Открываем фискальный принтер");
-
-            //var fptk22Control = new FPTK22();
-
-            //// Подписываемся на событие закрытия
-            //fptk22Control.CloseRequested += OnFPTK22RequestClose;
-
-            //CurrentContent = fptk22Control;
-            //StatusMessage = "Фискальный регистратор открыт";
+            ShowWindow(new FPTK22(), "Настройка фискального принтера...");          
         }
 
         // Метод для обработки закрытия FPTK22

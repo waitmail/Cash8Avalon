@@ -4425,7 +4425,8 @@ namespace Cash8Avalon
         /// <param name="mark"></param>
         /// <param name="guid"></param>
         /// <param name="status">1 - Ответ от cdn 2 - Отладочная информация 3 - Ошибка при работе с CDN</param> 
-        public async static Task write_cdn_log(string description, string numdoc, string mark, string status)
+        //public async static Task write_cdn_log(string description, string numdoc, string mark, string status)
+        public static void write_cdn_log(string description, string numdoc, string mark, string status)
         {
             NpgsqlConnection conn = null;
             NpgsqlCommand command = null;
@@ -4462,15 +4463,15 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message);
+                //await MessageBox.Show(ex.Message);
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (conn?.State == ConnectionState.Open)
                 {
                     conn.Close();
                 }
-                conn.Dispose();
+                conn?.Dispose();
             }
         }
 

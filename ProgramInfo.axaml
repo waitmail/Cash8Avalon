@@ -1,0 +1,93 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
+        mc:Ignorable="d" 
+        d:DesignWidth="500" 
+        d:DesignHeight="400"
+        x:Class="Cash8Avalon.ProgramInfo"
+        Title="О программе"
+        WindowStartupLocation="CenterOwner"
+        SizeToContent="WidthAndHeight"
+        Padding="20">
+    
+    <!-- Стили определяем как отдельный элемент Window.Styles -->
+    <Window.Styles>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#2196F3"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <!-- Выравнивание текста по центру -->
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="#1976D2"/>
+        </Style>
+        <Style Selector="Button.primary:pressed">
+            <Setter Property="Background" Value="#0D47A1"/>
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+    </Window.Styles>
+    
+    <StackPanel HorizontalAlignment="Center" 
+                VerticalAlignment="Center" 
+                Spacing="15">
+        
+        <!-- SVG логотип с именем для доступа из кода -->
+        <Image x:Name="LogoImage"
+                 Width="128" 
+                 Height="128" 
+                 Stretch="Uniform"/>
+        
+        <!-- Название программы -->
+        <TextBlock Text="Касса 8 (Авалон)"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"/>
+        
+        <!-- Версия -->
+        <TextBlock x:Name="VersionText"
+                   Text="Версия 1.0.0"
+                   FontSize="14"
+                   Foreground="#666"
+                   HorizontalAlignment="Center"/>
+        
+        <!-- Описание -->
+        <TextBlock Text="Программа для кассового обслуживания"
+                   FontSize="12"
+                   Foreground="#888"
+                   HorizontalAlignment="Center"
+                   TextWrapping="Wrap"
+                   MaxWidth="300"
+                   TextAlignment="Center"/>
+        
+        <!-- Копирайт -->
+        <TextBlock Text="© 2026 @gaatech"
+                   FontSize="11"
+                   Foreground="#999"
+                   HorizontalAlignment="Center"/>
+        
+        <!-- Кнопка OK с классом primary для применения стиля -->
+        <Button Content="OK" 
+                Classes="primary"
+                Width="140"
+                Height="40"
+                HorizontalAlignment="Center"
+                Margin="0,15,0,0"
+                Click="OnOkClick"/>
+    </StackPanel>
+</Window>

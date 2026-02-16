@@ -28,11 +28,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
-using static Cash8Avalon.Cash_check;
-using static Cash8Avalon.CDN;
-using static Cash8Avalon.LoadDataWebService;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using AtolConstants = Atol.Drivers10.Fptr.Constants;
 
 
@@ -1695,9 +1690,13 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка: {ex.Message}","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
-            {
-                //dialog?.Close();
+            {                
                 InputSearchProduct.Focus();
+                // Добавляем await
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    this.InputSearchProduct.Focus();
+                }, DispatcherPriority.Render);
             }
         }       
 
@@ -3560,6 +3559,7 @@ namespace Cash8Avalon
                         Console.WriteLine("this.Client.Tag == null " + barcode);
                         MainStaticClass.write_event_in_log(" Клиент не найден ", "Документ чек", numdoc.ToString());
                         await MessageBox.Show("Клиент не найден","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Info,this);
+                        this.InputSearchProduct.Focus();
                         return;
                     }
                     else
@@ -3780,27 +3780,16 @@ namespace Cash8Avalon
             }
         }
 
-        private async Task ShowTovarNotFoundWindow()
+        private async Task ShowTovarNotFoundWindow(Window owner)
         {
             var t_n_f = new TovarNotFound();
+            await t_n_f.ShowDialog(owner);
 
-            // Получаем текущее окно через TopLevel
-            var topLevel = TopLevel.GetTopLevel(this);
-
-            if (topLevel is Window ownerWindow)
+            // Добавляем await
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                await t_n_f.ShowDialog(ownerWindow);
-            }
-            else
-            {
-                // Если TopLevel не вернул окно, ищем через Application
-                var app = Application.Current;
-                if (app?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                {
-                    var owner = desktop.Windows.FirstOrDefault(w => w.IsActive) ?? desktop.MainWindow;
-                    await t_n_f.ShowDialog(owner);
-                }
-            }
+                this.InputSearchProduct.Focus();
+            }, DispatcherPriority.Render);
         }
 
         public async void find_barcode_or_code_in_tovar_new(string barcode, string marking_code)
@@ -3861,27 +3850,27 @@ namespace Cash8Avalon
             //}
 
             // Правильный способ получения данных о товаре
-            ProductData productData;
+            //ProductData productData;
 
-            // Пытаемся получить данные из кэша с использованием потокобезопасного метода
-            if (InventoryManager.TryGetItem(Convert.ToInt64(barcode), out productData))
-            {
-                // Данные успешно получены из кэша
-                // productData уже содержит валидные данные
-            }
-            else
-            {
-                // Кэш невалиден, словарь перестраивается или товар не найден в кэше
-                // Получаем данные напрямую из базы данных
-                productData = GetProductDataInDB(barcode);
-            }
+            //// Пытаемся получить данные из кэша с использованием потокобезопасного метода
+            //if (InventoryManager.TryGetItem(Convert.ToInt64(barcode), out productData))
+            //{
+            //    // Данные успешно получены из кэша
+            //    // productData уже содержит валидные данные
+            //}
+            //else
+            //{
+            //    // Кэш невалиден, словарь перестраивается или товар не найден в кэше
+            //    // Получаем данные напрямую из базы данных
+            //    productData = GetProductDataInDB(barcode);
+            //}
 
-
+            ProductData productData = await InventoryManager.FindProductAsync(barcode, this);
 
             if (productData.IsEmpty())
             {
                 last_tovar.Text = barcode;
-                await ShowTovarNotFoundWindow();
+                await ShowTovarNotFoundWindow(this);                
                 return;
             }
 
@@ -3940,7 +3929,7 @@ namespace Cash8Avalon
                 if (error)
                 {
                     last_tovar.Text = barcode;
-                    await ShowTovarNotFoundWindow();
+                    await ShowTovarNotFoundWindow(this);                    
                     return;
                 }
                 //если все ок тогда проверяем код маркировки в ФР, пока без пиот или сдн, позже добавлю
@@ -3959,7 +3948,7 @@ namespace Cash8Avalon
                 {
                     if (!await MainStaticClass.cdn_check(productData, marking_code, this))
                     {
-                        await ShowTovarNotFoundWindow();
+                        await ShowTovarNotFoundWindow(this);
                         return;
 
                     }
@@ -3979,7 +3968,7 @@ namespace Cash8Avalon
                 {
                     error = true;
                     last_tovar.Text = barcode;
-                    await ShowTovarNotFoundWindow();
+                    await ShowTovarNotFoundWindow(this);
                     return;
                 }
             }
@@ -3990,7 +3979,7 @@ namespace Cash8Avalon
                 await MessageBox.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error, this);
 
                 last_tovar.Text = barcode;
-                await ShowTovarNotFoundWindow();
+                await ShowTovarNotFoundWindow(this);
                 return;                
             }
             
@@ -4443,91 +4432,92 @@ namespace Cash8Avalon
         }
 
 
+        //В ДАЛЬНЕЙШЕМ УДАЛИТЬ ЗА НЕНУЖНОСТЬЮ 
 
-        public ProductData GetProductDataInDB(string barcode)
-        {
-            NpgsqlConnection conn = null;
-            ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
+        //public ProductData GetProductDataInDB(string barcode)
+        //{
+        //    NpgsqlConnection conn = null;
+        //    ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
 
-            try
-            {
-                conn = MainStaticClass.NpgsqlConn();
-                conn.Open();
-                NpgsqlCommand command = new NpgsqlCommand();
-                command.Connection = conn;
-                if (barcode.Length > 6)
-                {
-                    command.CommandText = "select tovar.code,tovar.name,tovar.retail_price,tovar.its_certificate,tovar.its_marked,tovar.cdn_check,tovar.fractional,tovar.refusal_of_marking,tovar.rr_not_control_owner " +
-                        " from  barcode left join tovar ON barcode.tovar_code=tovar.code " +
-                    //" left join characteristic ON tovar.code = characteristic.tovar_code " +
-                    //" where barcode='" + barcode + "' AND its_deleted=0  AND (retail_price<>0 OR characteristic.retail_price_characteristic<>0)";
-                    " where barcode='" + barcode + "' AND its_deleted=0  AND retail_price<>0";
+        //    try
+        //    {
+        //        conn = MainStaticClass.NpgsqlConn();
+        //        conn.Open();
+        //        NpgsqlCommand command = new NpgsqlCommand();
+        //        command.Connection = conn;
+        //        if (barcode.Length > 6)
+        //        {
+        //            command.CommandText = "select tovar.code,tovar.name,tovar.retail_price,tovar.its_certificate,tovar.its_marked,tovar.cdn_check,tovar.fractional,tovar.refusal_of_marking,tovar.rr_not_control_owner " +
+        //                " from  barcode left join tovar ON barcode.tovar_code=tovar.code " +
+        //            //" left join characteristic ON tovar.code = characteristic.tovar_code " +
+        //            //" where barcode='" + barcode + "' AND its_deleted=0  AND (retail_price<>0 OR characteristic.retail_price_characteristic<>0)";
+        //            " where barcode='" + barcode + "' AND its_deleted=0  AND retail_price<>0";
 
-                }
-                else
-                {
-                    command.CommandText = "select tovar.code,tovar.name,tovar.retail_price,tovar.its_certificate,tovar.its_marked,tovar.cdn_check,tovar.fractional,tovar.refusal_of_marking,tovar.rr_not_control_owner " +
-                        " FROM tovar left join characteristic  ON tovar.code = characteristic.tovar_code where tovar.its_deleted=0 AND tovar.its_certificate=0 " +
-                        //"AND  (retail_price<>0 OR characteristic.retail_price_characteristic<>0) " +
-                        "AND  retail_price<>0 " +
-                        " AND tovar.code='" + barcode + "'";
-                }
-                NpgsqlDataReader reader = command.ExecuteReader();
-                //bool find = false;
-                while (reader.Read())
-                {
-                    //find = true;
-                    Int64 code = Convert.ToInt64(reader["code"].ToString());
-                    string name = reader["name"].ToString();
-                    decimal price = Convert.ToDecimal(reader["retail_price"]);
+        //        }
+        //        else
+        //        {
+        //            command.CommandText = "select tovar.code,tovar.name,tovar.retail_price,tovar.its_certificate,tovar.its_marked,tovar.cdn_check,tovar.fractional,tovar.refusal_of_marking,tovar.rr_not_control_owner " +
+        //                " FROM tovar left join characteristic  ON tovar.code = characteristic.tovar_code where tovar.its_deleted=0 AND tovar.its_certificate=0 " +
+        //                //"AND  (retail_price<>0 OR characteristic.retail_price_characteristic<>0) " +
+        //                "AND  retail_price<>0 " +
+        //                " AND tovar.code='" + barcode + "'";
+        //        }
+        //        NpgsqlDataReader reader = command.ExecuteReader();
+        //        //bool find = false;
+        //        while (reader.Read())
+        //        {
+        //            //find = true;
+        //            Int64 code = Convert.ToInt64(reader["code"].ToString());
+        //            string name = reader["name"].ToString();
+        //            decimal price = Convert.ToDecimal(reader["retail_price"]);
 
-                    ProductFlags flags = ProductFlags.None;
-                    if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
-                    if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
-                    if (Convert.ToBoolean(reader["refusal_of_marking"])) flags |= ProductFlags.RefusalMarking;
-                    if (Convert.ToBoolean(reader["rr_not_control_owner"])) flags |= ProductFlags.RrNotControlOwner;
-                    //if (Convert.ToBoolean(reader["refusal_of_marking"]))
-                    //{
-                    //    // Сбрасываем флаг Marked, если он был установлен ранее
-                    //    flags &= ~ProductFlags.Marked;
-                    //}
-                    //else if (Convert.ToBoolean(reader["its_marked"]))
-                    //{
-                    //    // Устанавливаем флаг Marked, если refusal_of_marking == false и its_marked == true
-                    //    flags |= ProductFlags.Marked;
-                    //}
+        //            ProductFlags flags = ProductFlags.None;
+        //            if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
+        //            if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
+        //            if (Convert.ToBoolean(reader["refusal_of_marking"])) flags |= ProductFlags.RefusalMarking;
+        //            if (Convert.ToBoolean(reader["rr_not_control_owner"])) flags |= ProductFlags.RrNotControlOwner;
+        //            //if (Convert.ToBoolean(reader["refusal_of_marking"]))
+        //            //{
+        //            //    // Сбрасываем флаг Marked, если он был установлен ранее
+        //            //    flags &= ~ProductFlags.Marked;
+        //            //}
+        //            //else if (Convert.ToBoolean(reader["its_marked"]))
+        //            //{
+        //            //    // Устанавливаем флаг Marked, если refusal_of_marking == false и its_marked == true
+        //            //    flags |= ProductFlags.Marked;
+        //            //}
 
 
-                    if (Convert.ToBoolean(reader["cdn_check"])) flags |= ProductFlags.CDNCheck;
-                    if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
-                    productData = new ProductData(code, name, price, flags);
-                }
-                //if (!find)
-                //{
-                //    last_tovar.Text = barcode;
-                //    Tovar_Not_Found t_n_f = new Tovar_Not_Found();
-                //    t_n_f.ShowDialog();
-                //    t_n_f.Dispose();
-                //}
-            }           
-            catch (Exception ex)
-            {
-                Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await MessageBox.Show("Произошла ошибка при получении товара по коду/штрихкоду " + ex.Message, "GetProductDataInDB",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
-                });
-            }
-            finally
-            {
-                if (conn?.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                }
-            }
+        //            if (Convert.ToBoolean(reader["cdn_check"])) flags |= ProductFlags.CDNCheck;
+        //            if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
+        //            productData = new ProductData(code, name, price, flags);
+        //        }
+        //        //if (!find)
+        //        //{
+        //        //    last_tovar.Text = barcode;
+        //        //    Tovar_Not_Found t_n_f = new Tovar_Not_Found();
+        //        //    t_n_f.ShowDialog();
+        //        //    t_n_f.Dispose();
+        //        //}
+        //    }           
+        //    catch (Exception ex)
+        //    {
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBox.Show("Произошла ошибка при получении товара по коду/штрихкоду " + ex.Message, "GetProductDataInDB",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //    }
+        //    finally
+        //    {
+        //        if (conn?.State == ConnectionState.Open)
+        //        {
+        //            conn.Close();
+        //        }
+        //    }
 
-            return productData;
-        }
+        //    return productData;
+        //}
 
 
         private async Task<bool> ValidateQrCodeAsync(string cleanedCode)

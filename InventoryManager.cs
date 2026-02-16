@@ -836,5 +836,188 @@ namespace Cash8Avalon
                 _dictionaryLock.ExitReadLock();
             }
         }
+
+        /// <summary>
+        /// Поиск товара по штрихкоду или коду с автоматическим определением источника
+        /// Для обратной совместимости возвращает ProductData (пустой товар с кодом 0, если не найден)
+        /// </summary>
+        public static async Task<ProductData> FindProductAsync(string barcode, Window ownerWindow = null)
+        {
+            try
+            {
+                // Проверка на пустой ввод
+                if (string.IsNullOrWhiteSpace(barcode))
+                {
+                    return new ProductData(0, "", 0, ProductFlags.None);
+                }
+
+                // Пробуем преобразовать в число
+                if (!long.TryParse(barcode, out long code))
+                {
+                    return new ProductData(0, "", 0, ProductFlags.None);
+                }
+
+                // Сначала ищем в кэше
+                if (TryGetItem(code, out ProductData cachedProduct))
+                {
+                    return cachedProduct;
+                }
+
+                // Если в кэше нет, ищем в БД
+                var dbProduct = await FindProductInDatabaseAsync(barcode, ownerWindow);
+
+                if (dbProduct != null && dbProduct.Code != 0)
+                {
+                    // Добавляем найденный товар в кэш для будущих запросов
+                    AddOrUpdateItem(code, dbProduct);
+
+                    // Также добавляем по штрихкоду, если он отличается от кода
+                    if (code.ToString() != barcode && long.TryParse(barcode, out long barcodeLong))
+                    {
+                        AddOrUpdateItem(barcodeLong, dbProduct);
+                    }
+
+                    return dbProduct;
+                }
+
+                // Товар не найден
+                return new ProductData(0, "", 0, ProductFlags.None);
+            }
+            catch (Exception ex)
+            {
+                // Логируем ошибку и показываем сообщение
+                await ShowSearchErrorAsync(ex, ownerWindow);
+                return new ProductData(0, "", 0, ProductFlags.None);
+            }
+        }
+
+        /// <summary>
+        /// Поиск товара напрямую в БД
+        /// </summary>
+        private static async Task<ProductData> FindProductInDatabaseAsync(string barcode, Window ownerWindow)
+        {
+            NpgsqlConnection conn = null;
+
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                await conn.OpenAsync();
+
+                string query;
+
+                if (barcode.Length > 6)
+                {
+                    // Поиск по штрихкоду
+                    query = @"
+                        SELECT tovar.code, tovar.name, tovar.retail_price, 
+                               tovar.its_certificate, tovar.its_marked, tovar.cdn_check, 
+                               tovar.fractional, tovar.refusal_of_marking, tovar.rr_not_control_owner 
+                        FROM barcode 
+                        LEFT JOIN tovar ON barcode.tovar_code = tovar.code 
+                        WHERE barcode.barcode = @barcode 
+                          AND tovar.its_deleted = 0 
+                          AND tovar.retail_price <> 0";
+                }
+                else
+                {
+                    // Поиск по коду товара
+                    query = @"
+                        SELECT tovar.code, tovar.name, tovar.retail_price, 
+                               tovar.its_certificate, tovar.its_marked, tovar.cdn_check, 
+                               tovar.fractional, tovar.refusal_of_marking, tovar.rr_not_control_owner 
+                        FROM tovar 
+                        WHERE tovar.its_deleted = 0 
+                          AND tovar.retail_price <> 0 
+                          AND tovar.code = @barcode";
+                }
+
+                using (var command = new NpgsqlCommand(query, conn))
+                {
+                    command.Parameters.AddWithValue("@barcode", Convert.ToInt64(barcode));
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return CreateProductDataFromReader(reader);
+                        }
+                    }
+                }
+
+                // Товар не найден
+                return new ProductData(0, "", 0, ProductFlags.None);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Ошибка при поиске товара в БД: {ex.Message}", ex);
+            }
+            finally
+            {
+                if (conn?.State == System.Data.ConnectionState.Open)
+                {
+                    await conn.CloseAsync();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Создание ProductData из DataReader
+        /// </summary>
+        private static ProductData CreateProductDataFromReader(NpgsqlDataReader reader)
+        {
+            long code = Convert.ToInt64(reader["code"]);
+            string name = reader["name"].ToString().Trim();
+            decimal price = Convert.ToDecimal(reader["retail_price"]);
+
+            ProductFlags flags = ProductFlags.None;
+            if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
+            if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
+            if (Convert.ToBoolean(reader["refusal_of_marking"])) flags |= ProductFlags.RefusalMarking;
+            if (Convert.ToBoolean(reader["rr_not_control_owner"])) flags |= ProductFlags.RrNotControlOwner;
+            if (Convert.ToBoolean(reader["cdn_check"])) flags |= ProductFlags.CDNCheck;
+            if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
+
+            return new ProductData(code, name, price, flags);
+        }
+
+        /// <summary>
+        /// Добавление или обновление товара в кэше
+        /// </summary>
+        private static void AddOrUpdateItem(long id, ProductData data)
+        {
+            _dictionaryLock.EnterWriteLock();
+            try
+            {
+                dictionaryProductData[id] = data;
+            }
+            finally
+            {
+                _dictionaryLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Показать ошибку поиска
+        /// </summary>
+        private static async Task ShowSearchErrorAsync(Exception ex, Window ownerWindow)
+        {
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                try
+                {
+                    var owner = ownerWindow ?? GetOwnerWindow();
+                    await MessageBox.Show(
+                        $"Ошибка при поиске товара: {ex.Message}",
+                        "Поиск товара",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        owner);
+                }
+                catch
+                {
+                    // Игнорируем ошибки при показе диалога
+                }
+            });
+        }
     }
 }
