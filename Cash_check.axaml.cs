@@ -1223,10 +1223,12 @@ namespace Cash8Avalon
                 Console.WriteLine($"Установка режима только для чтения: {readOnly}");
 
                 // Блокируем элементы
-                txtB_search_product.IsEnabled = !readOnly;
+                //txtB_search_product.IsEnabled = !readOnly;
+                InputSearchProduct.IsEnabled = !readOnly;
                 //client_barcode.IsEnabled = !readOnly;
                 //pay.IsEnabled = !readOnly && MainStaticClass.Code_right_of_user == 1;
-                check_type.IsEnabled = !readOnly;
+                //check_type.IsEnabled = !readOnly;
+                CheckType.IsEnabled = !readOnly;
                 comment.IsEnabled = !readOnly;
                 txtB_inn.IsEnabled = !readOnly;
                 txtB_name.IsEnabled = !readOnly;
@@ -1414,34 +1416,36 @@ namespace Cash8Avalon
         // В класс Cash_check добавьте этот метод
         public async Task SetFocusToSearchBox()
         {
-            // Находим TextBox для поиска товара
-            var searchBox = this.FindControl<TextBox>("txtB_search");
-
-            if (searchBox != null)
+            if (InputSearchProduct == null)
             {
-                // Для Linux нужна небольшая задержка
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    await Task.Delay(50);
-                    this.Activate();
-                    await Task.Delay(50);
-                }
-
-                // Устанавливаем фокус
-                searchBox.Focus();
-
-                // Дополнительная попытка через Dispatcher для гарантии
-                Dispatcher.UIThread.Post(() => searchBox.Focus(), DispatcherPriority.Input);
-
-                Console.WriteLine($"✓ Фокус установлен на поле поиска");
+                // Находим TextBox для поиска товара
+                InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
             }
-            else
+            if (InputSearchProduct == null)
+            { 
+                Console.WriteLine("✗ Поле поиска (txtB_search_product) не найдено");
+
+                await MessageBox.Show("✗ Поле поиска (txtB_search_product) не найдено", "Поиск поля (txtB_search_product)",
+                    MessageBoxButton.OK, MessageBoxType.Error, this);
+            }
+
+            InputSearchProduct.Focus();
+
+            // Для Linux нужна небольшая задержка
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                Console.WriteLine("✗ Поле поиска (txtB_search) не найдено");
-               
-                    await MessageBox.Show("✗ Поле поиска (txtB_search) не найдено", "Поиск поля (txtB_search)",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);               
+                await Task.Delay(50);
+                this.Activate();
+                await Task.Delay(50);
             }
+
+            // Устанавливаем фокус
+            InputSearchProduct.Focus();
+
+            // Дополнительная попытка через Dispatcher для гарантии
+            Dispatcher.UIThread.Post(() => InputSearchProduct.Focus(), DispatcherPriority.Input);
+
+            Console.WriteLine($"✓ Фокус установлен на поле поиска");
         }
 
 
@@ -1831,8 +1835,12 @@ namespace Cash8Avalon
                 }
 
                 // Блокируем ввод товаров
-                if (txtB_search_product != null)
-                    txtB_search_product.IsEnabled = false;
+                //if (txtB_search_product != null)
+                //    txtB_search_product.IsEnabled = false;
+
+
+                if (InputSearchProduct != null)
+                    InputSearchProduct.IsEnabled = false;
                 if (CheckType != null)
                     CheckType.IsEnabled = false;
                 if (NumSales != null)
@@ -2107,11 +2115,17 @@ namespace Cash8Avalon
                         AddCertificatesGridRows(_certificatesTableGrid, ref _certificatesCurrentRow, _certificatesData);
                     }
 
-                    // Блокируем ввод новых товаров - ЭТО ВАЖНО!
-                    if (txtB_search_product != null)
+                    //// Блокируем ввод новых товаров - ЭТО ВАЖНО!
+                    //if (txtB_search_product != null)
+                    //{
+                    //    txtB_search_product.IsEnabled = false;
+                    //    txtB_search_product.Text = string.Empty;
+                    //}                   
+
+                        if (InputSearchProduct != null)
                     {
-                        txtB_search_product.IsEnabled = false;
-                        txtB_search_product.Text = string.Empty;
+                        InputSearchProduct.IsEnabled = false;
+                        InputSearchProduct.Text = string.Empty;
                     }
 
                     // Блокируем кнопку повторного заполнения

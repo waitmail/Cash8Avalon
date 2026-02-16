@@ -12,7 +12,6 @@ using System.Data;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 
 namespace Cash8Avalon
@@ -71,10 +70,13 @@ namespace Cash8Avalon
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
             if (!File.Exists(configPath))
             {
-                CreateDefaultSettingsFile(configPath);
-                await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}\r\nБудет создан новый с настройками по умолчанию.", "Проверка файлов настроек ", MessageBoxButton.OK, MessageBoxType.Error);
-                //this.Close();
-                //return;
+                CreateDefaultSettingsFile(configPath);                
+                
+                    await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}\r\nБудет создан новый с настройками по умолчанию.",
+                        "Проверка файлов настроек",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
             }           
             
             Console.WriteLine($"Загружаем конфигурацию из: {configPath}");            
@@ -122,13 +124,13 @@ namespace Cash8Avalon
                     MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
                     MainStaticClass.Last_Write_Check = DateTime.Now.AddSeconds(1);
                     MainStaticClass.MainWindow = this;
-                    
+
                     string version_program = await MainStaticClass.GetAtolDriverVersion();
                     this.Title = "Касса   " + MainStaticClass.CashDeskNumber;
                     this.Title += " | " + MainStaticClass.Nick_Shop;
                     this.Title += " | " + MainStaticClass.version();
                     this.Title += " | " + LoadDataWebService.last_date_download_tovars().ToString("yyyy-MM-dd hh:mm:ss");
-                    
+
                     this.Title += " | " + version_program;
 
                     // 3. Проверка обновлений (только если не A01)
@@ -182,7 +184,7 @@ namespace Cash8Avalon
                             if (MainStaticClass.Use_Fiscall_Print)
                             {
                                 printing = new PrintingUsingLibraries();
-                                await printing.getShiftStatus();
+                                await printing.getShiftStatus(this);
                             }
 
                             // Проверка даты/времени с ФН
@@ -214,7 +216,7 @@ namespace Cash8Avalon
                             _ = loadBonusClients();
                             if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                             {
-                                await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error,this);
+                                await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error, this);
                             }
                             else
                             {
@@ -223,14 +225,14 @@ namespace Cash8Avalon
                         }
 
                         // 12. Проверка файлов и папок
-                        _ = CheckFilesAndFolders();                       
+                        _ = CheckFilesAndFolders();
 
                         Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
-                       
+
                     }
                     else
                     {
-                        await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд","Проверка наличия таблицы",this);
+                        await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд", "Проверка наличия таблицы", this);
                     }
 
                     // ТОЛЬКО ПОСЛЕ ВСЕХ ПРОВЕРОК СОЗДАЕМ ViewModel!
@@ -241,7 +243,9 @@ namespace Cash8Avalon
                 catch (Exception ex)
                 {
                     Console.WriteLine($"? Критическая ошибка: {ex.Message}");
-                    //await ShowErrorMessage($"Ошибка при запуске: {ex.Message}");
+
+                    await MessageBox.Show($"? Критическая ошибка: {ex.Message}", "Старт программы",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
                     this.Close();
                 }
             }
@@ -452,13 +456,7 @@ namespace Cash8Avalon
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 await command.ExecuteNonQueryAsync();
                 Console.WriteLine("✓ Период выгрузки обновлен в БД");
-            }
-            catch (NpgsqlException ex)
-            {
-                await MessageBox.Show($"Ошибка при проверке/установке значения периода выгрузки: {ex.Message}",
-                    "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error);
-                Console.WriteLine($"✗ Ошибка Npgsql в UpdateUnloadingPeriod: {ex.Message}");
-            }
+            }            
             catch (Exception ex)
             {
                 await MessageBox.Show($"Ошибка при проверке/установке значения периода выгрузки: {ex.Message}",

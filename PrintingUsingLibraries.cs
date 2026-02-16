@@ -155,7 +155,7 @@ namespace Cash8Avalon
         }
 
 
-        public async Task getShiftStatus(Window owner = null)
+        public async Task getShiftStatus(Window owner)
         {
             //Console.WriteLine("Перед проверкой системы налогообложения старт");
             IFptr fptr = MainStaticClass.FPTR;            
