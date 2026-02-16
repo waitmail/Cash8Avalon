@@ -51,8 +51,6 @@ namespace Cash8Avalon.ViewModels
         public ICommand OpenInternetDataLoadCommand => new RelayCommand(() => OpenInternetDataLoad());
         public ICommand OpenProgramInfoCommand => new RelayCommand(() => OpenProgramInfo());
 
-
-
         // Обработчик закрытия окна параметров БД
         private void OnSettingConnectRequestClose(object sender, EventArgs e)
         {
@@ -93,17 +91,7 @@ namespace Cash8Avalon.ViewModels
 
         private void OpenConstants()
         {
-            ShowWindow(new Constants(), "Настройки");
-            //StatusMessage = "Открытие констант...";
-            //Console.WriteLine("Открываем константы ВНУТРИ главного окна");
-
-            //var constantsControl = new Constants();
-
-            //// Подписываемся через именованный метод
-            //constantsControl.RequestClose += OnConstantsRequestClose;
-
-            //CurrentContent = constantsControl;
-            //StatusMessage = "Константы открыты";
+            ShowWindow(new Constants(), "Настройки");         
         }
 
         private void OnLoadDataRequestClose(object sender, EventArgs e)
