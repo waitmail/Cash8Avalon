@@ -14,6 +14,20 @@
 	<!-- Отключаем SourceLink и прочие автогенерации версии -->
 	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaXaml Remove="Cash8Avalon\**" />
+    <AvaloniaXaml Remove="SberDll\**" />
+    <AvaloniaXaml Remove="SberNative\**" />
+    <Compile Remove="Cash8Avalon\**" />
+    <Compile Remove="SberDll\**" />
+    <Compile Remove="SberNative\**" />
+    <EmbeddedResource Remove="Cash8Avalon\**" />
+    <EmbeddedResource Remove="SberDll\**" />
+    <EmbeddedResource Remove="SberNative\**" />
+    <None Remove="Cash8Avalon\**" />
+    <None Remove="SberDll\**" />
+    <None Remove="SberNative\**" />
+  </ItemGroup>
 		
 
   <ItemGroup>
@@ -49,7 +63,6 @@
 
 
   <ItemGroup>
-    <Folder Include="SberDll\" />
     <Folder Include="Assets\" />
   </ItemGroup>
 
