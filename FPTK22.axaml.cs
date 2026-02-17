@@ -28,6 +28,9 @@ public partial class FPTK22 : Window
     public FPTK22()
     {
         InitializeComponent();
+        // ВАЖНО: Регистрируем кодировки для Linux
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
         Loaded += OnLoaded;
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

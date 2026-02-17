@@ -59,7 +59,7 @@ namespace Cash8Avalon
         
         public Pay()
         {            
-            InitializeComponent();
+            InitializeComponent();            
             this.ShowInTaskbar = false;            
             this.Loaded += Pay_Loaded;            
             this.Opened += Pay_Opened;
@@ -116,22 +116,60 @@ namespace Cash8Avalon
             calculate();
         }
 
-        private void Pay_Opened(object? sender, EventArgs e)
+        //private void Pay_Opened(object? sender, EventArgs e)
+        //{
+        //    // При открытии окна принудительно устанавливаем фокус
+        //    Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        this.Focus();
+        //        this.Activate(); // Пробуем активировать окно
+
+        //        if (cashSumTextBox != null)
+        //        {
+        //            cashSumTextBox.Focus();
+        //        }
+
+        //        // Для Linux особенно важно
+        //        this.Topmost = true;
+        //        //this.Topmost = false;
+        //    }, DispatcherPriority.Render);           
+        //}
+
+        private async void Pay_Opened(object? sender, EventArgs e)
         {
-            // При открытии окна принудительно устанавливаем фокус
-            Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                this.Focus();
-                this.Activate(); // Пробуем активировать окно
+                this.Activate();
 
                 if (cashSumTextBox != null)
                 {
                     cashSumTextBox.Focus();
+                    await Task.Delay(100);
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var keyEvent = new KeyEventArgs
+                        {
+                            RoutedEvent = InputElement.KeyDownEvent,
+                            Key = Key.Tab,
+                            KeyModifiers = KeyModifiers.None
+                        };
+                        this.RaiseEvent(keyEvent);
+                        await Task.Delay(50);
+                    }
                 }
 
-                // Для Linux особенно важно
                 this.Topmost = true;
-                //this.Topmost = false;
+                this.Topmost = false;
+
+                //// Показываем фокус
+                //var focused = FocusManager?.GetFocusedElement();
+                //string focusInfo = focused == null
+                //    ? "Фокус отсутствует!"
+                //    : $"Фокус на: {focused.GetType().Name}\nИмя: {(focused as Control)?.Name ?? "нет"}";
+
+                //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);
+
             }, DispatcherPriority.Render);
         }
 
@@ -139,12 +177,7 @@ namespace Cash8Avalon
         {
             calculate();
         }
-
-        //private void TxtB_cash_sum_KeyDown(object? sender, KeyEventArgs e)
-        //{
-        //    //throw new NotImplementedException();
-        //}
-
+        
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
@@ -191,8 +224,9 @@ namespace Cash8Avalon
                 nonCashSumTextBox.KeyDown += NonCashSumTextBox_KeyDown;
                 nonCashSumTextBox.LostFocus += OnNonCashSumLostFocus;                
                 nonCashSumTextBox.Text = "0";
-            }          
-        }
+            }
+            
+        }        
 
         #region NonCashSum (Рубли) Handlers
 
@@ -657,7 +691,7 @@ namespace Cash8Avalon
                 {
                     inputSertificates.LoadExistingCertificates(_certificatesList);
                 }
-
+                inputSertificates.Topmost = true;
                 // Открываем как модальное окно, ожидая список сертификатов
                 await inputSertificates.ShowDialog<List<InputSertificates.CertificateItem>>(this);
 
@@ -1111,8 +1145,8 @@ namespace Cash8Avalon
                                 //if (waitNonCashPay.commandResult != null)
                                 if (commandResult.AnswerTerminal != null)
                                 {
-                                    answerTerminal = waitNonCashPay.commandResult.AnswerTerminal;
-                                    complete = waitNonCashPay.commandResult.Status;
+                                    answerTerminal = commandResult.AnswerTerminal;
+                                    complete = commandResult.Status;
                                 }
                                 else
                                 {

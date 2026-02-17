@@ -1455,13 +1455,19 @@ namespace Cash8Avalon
                 {
                     case Key.F5:
                         // Вместо перехода в поле - открываем диалог
-                        ShowQueryWindowBarcode(1, 0, 0);
+                        if ((IsNewCheck) && (CheckType.SelectedIndex == 0))
+                        {
+                            ShowQueryWindowBarcode(1, 0, 0);
+                        }
                         e.Handled = true;
                         break; 
                         
                     case Key.F6:
                         // Вместо перехода в поле - открываем диалог
-                        ShowSimpleClientDialog();
+                        if ((IsNewCheck) && (CheckType.SelectedIndex == 0))
+                        {
+                            ShowSimpleClientDialog();
+                        }
                         e.Handled = true;
                         break;
 
@@ -2428,12 +2434,9 @@ namespace Cash8Avalon
             pay_form.pay_bonus.IsVisible = false;
             pay_form.pay_bonus_many.Text = "0";
             pay_form.pay_bonus.IsEnabled = false;
-
-            //listView_sertificates.Items.Clear();
-            //pay_form.listView_sertificates.Items.Clear();
+                       
             pay_form.cc = this;
-            //DialogResult dr;
-
+            
             if (this.check_type.SelectedIndex == 0)
             {
 
@@ -2441,25 +2444,17 @@ namespace Cash8Avalon
                  *  чтобы если оплата отменится и с чеком будут дальше работать
                  *  отменить все рассчитанные акции одним махом
                  */
-                MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
-                //listview_original.Items.Clear();
-                //for (int x = 0; x < listView1.Items.Count; x++)
-                //{
-                //    ListViewItem lvi = (ListViewItem)listView1.Items[x].Clone();
-                //    lvi.SubItems[2].Tag = listView1.Items[x].SubItems[2].Tag;
-                //    listview_original.Items.Add(lvi);
-
-                //}
+                MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());                
                 BackupProductsData();
 
                 MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
-                Console.WriteLine($"✓ Попытка обработать акции: {_productsDataBackup.Count} записей");
+                //Console.WriteLine($"✓ Попытка обработать акции: {_productsDataBackup.Count} записей");
                 DataTable dataTable = await to_define_the_action_dt(true);//Обработка на дисконтные акции с использованием datatable 
-                Console.WriteLine($"✓ После обработки акция: {_productsDataBackup.Count} записей");
+                //Console.WriteLine($"✓ После обработки акция: {_productsDataBackup.Count} записей");
                 _productsData = CreateProductsFromDataTable(dataTable);
-                Console.WriteLine($"✓ Загрузка данных в коллекцию из обработки акций: {_productsDataBackup.Count} записей");
+                //Console.WriteLine($"✓ Загрузка данных в коллекцию из обработки акций: {_productsDataBackup.Count} записей");
                 await RecalculateAllProducts(true);
-                Console.WriteLine($"✓ Пересчет в чеке : {_productsDataBackup.Count} записей");
+                //Console.WriteLine($"✓ Пересчет в чеке : {_productsDataBackup.Count} записей");
                 selection_goods = false;
 
                 MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
@@ -2470,16 +2465,16 @@ namespace Cash8Avalon
                 //MessageBox.Show(calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture));
 
                 pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
-                Console.WriteLine($"✓ Перед записью документа: {_productsDataBackup.Count} записей");
+                //Console.WriteLine($"✓ Перед записью документа: {_productsDataBackup.Count} записей");
                 write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);//нужно для того чтобы в окне оплаты взять сумму из БД
-                Console.WriteLine($"✓ После записи документа: {_productsDataBackup.Count} записей");
+                //Console.WriteLine($"✓ После записи документа: {_productsDataBackup.Count} записей");
             }
             else//Это возврат
             {
                 pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
             }
 
-            pay_form.txtB_cash_sum.Focus();
+            //pay_form.txtB_cash_sum.Focus();
 
             Console.WriteLine($"✓ Перед передачей на 2 экран : {_productsDataBackup.Count} записей");
             //При переходе в окно оплаты цены должны быть отрисованы
@@ -2495,29 +2490,7 @@ namespace Cash8Avalon
             pay_form.Width = 800;  // Размеры как в XAML
             pay_form.Height = 600;
             pay_form.CanResize = false;  // Скорее всего это уже в XAML
-
-            // Устанавливаем сумму чека и другие данные
-            //payWindow.pay_sum.Text = calculation_of_the_discount_of_the_document().ToString("N2");  // Или через публичное свойство
-            //Console.WriteLine($"✓ Начинаем искать родителя для окна оплаты : {_productsDataBackup.Count} записей");
-            //// Находим активное окно
-            //Window parentWindow = null;
-
-            //// Вариант 1: Через TopLevel
-            //var topLevel = TopLevel.GetTopLevel(this);
-            //if (topLevel is Window currentWindow)
-            //{
-            //    parentWindow = currentWindow;
-            //}
-
-            //// Вариант 2: Через Application
-            //if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            //{
-            //    parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
-            //}
-
-            //// Настройка размеров окна оплаты - ВАРИАНТ 3
-            //if (parentWindow != null)
-            //{
+                        
             // Получаем размеры главного окна
             double mainWidth = this.Bounds.Width;
             double mainHeight = this.Bounds.Height;
@@ -2550,50 +2523,24 @@ namespace Cash8Avalon
             pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
             Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
-            //}
-            //else
-            //{
-            //    // Стандартные размеры если нет родительского окна
-            //    pay_form.Width = 1200;
-            //    pay_form.Height = 800;
-            //    pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            //}
-            Console.WriteLine($"✓ Перед подпиской на закрытие : {_productsDataBackup.Count} записей");
-            //EventHandler handler = null;
-            // Подписываемся на событие закрытия если нужно
-            //pay_form.Closed += async (s, e) =>
-            //{
-            //    //pay_form.Closed -= handler;
-            //    // Проверяем результат через Tag или другое свойство
-            //    bool? paymentSuccess = pay_form.Tag as bool?;
-            //    if (paymentSuccess == true)
-            //    {
-            //        // Обработка успешной оплаты
-            //        Console.WriteLine("Оплата прошла успешно");
-            //    }
-            //    else
-            //    {
-            //        //await MessageBox.Show("Это возврат из окна оплаты", "Просто сообщение", this);
-            //        this.Focus();
-            //        if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
-            //        {
-            //            InputSearchProduct.Focus();
-            //        }
-            //    }
-            //};
 
-            //pay_form.Closed += handler;
+            if (CheckType.SelectedIndex == 1)
+            {
+                //Принудительно сбрасываем фокус для линукса для возвратов!!!
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    // Очищаем фокус
+                    FocusManager?.ClearFocus();
 
-            // Показываем окно
-            //if (parentWindow != null)
-            //{
-            //    // Показываем как диалог
-            //    await pay_form.ShowDialog(parentWindow);
-            //}
-            //else
-            //{
-            //    pay_form.Show();
-            //}
+                    // Если ScrollViewer имеет фокус - убираем
+                    if (_productsScrollViewer != null)
+                    {
+                        _productsScrollViewer.Focusable = false;
+                        _productsScrollViewer.Focusable = true; // Возвращаем способность, но фокус уже сброшен
+                    }
+                }, DispatcherPriority.Render);
+            }
+            pay_form.txtB_cash_sum.Focus();
             await pay_form.ShowDialog(this);
 
             if (Convert.ToBoolean(pay_form.Tag) == true)
@@ -2617,6 +2564,11 @@ namespace Cash8Avalon
         */
         public async void cancel_action()
         {
+            this.Focus();
+            if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
+            {
+                InputSearchProduct.Focus();
+            }
 
             if (check_type.SelectedIndex != 0)
             {
@@ -3905,16 +3857,15 @@ namespace Cash8Avalon
 
                     //bool? result = await dialog.ShowModal(null);
                     bool? result = await dialog.ShowModalBlocking(this as Window);
-
+                    await ActivateWindow(this);
                     if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
                     {
                         // Проверяем, что получили валидный код
                         marking_code = dialog.EnteredBarcode ?? string.Empty;
-                        dialog = null;
+                        dialog = null;                        
 
                         if (!qr_code_lenght.Contains(marking_code.Length))
-                        {
-                            // Используем то же окно owner для MessageBox
+                        {                            
                             await MessageBox.Show(
                                 marking_code + "\r\n Ваш код маркировки имеет длину " +
                                 marking_code.Length.ToString() +
@@ -3937,13 +3888,14 @@ namespace Cash8Avalon
                             error = true;
                         }
                     }
-
+                    dialog = null;
                 }
                 
                 if (error)
                 {
                     last_tovar.Text = barcode;
-                    await ShowTovarNotFoundWindow(this);                    
+                    await ShowTovarNotFoundWindow(this);
+                    this.Focus();
                     return;
                 }
                 //если все ок тогда проверяем код маркировки в ФР, пока без пиот или сдн, позже добавлю
@@ -3960,18 +3912,14 @@ namespace Cash8Avalon
 
                 if (productData.IsCDNCheck())
                 {
+                    await ActivateWindow(this);
                     if (!await MainStaticClass.cdn_check(productData, marking_code, this))
                     {
                         await ShowTovarNotFoundWindow(this);
+                        this.Focus();
                         return;
-
                     }
-                    //else
-                    //{
-                    //    //cdn_vrifyed = true;
-                    //}
-                }
-                //}
+                }                
 
 
                 byte[] textAsBytes = Encoding.Default.GetBytes(marking_code);
@@ -3983,6 +3931,7 @@ namespace Cash8Avalon
                     error = true;
                     last_tovar.Text = barcode;
                     await ShowTovarNotFoundWindow(this);
+                    this.Focus();
                     return;
                 }
             }
@@ -3994,6 +3943,7 @@ namespace Cash8Avalon
 
                 last_tovar.Text = barcode;
                 await ShowTovarNotFoundWindow(this);
+                this.Focus();
                 return;                
             }
             
@@ -4005,6 +3955,7 @@ namespace Cash8Avalon
                 if (find_sertificate)
                 {
                     await MessageBox.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+                    this.Focus();
                     return;
                 }
             }           
@@ -4016,6 +3967,7 @@ namespace Cash8Avalon
                 if (WeightFromScales != 0)
                 {
                     await MessageBox.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error,this);
+                    this.Focus();
                     return;
                 }
             }  
@@ -4147,6 +4099,38 @@ namespace Cash8Avalon
 
             await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");//нужно для того чтобы в окне оплаты взять сумму из БД
 
+        }
+
+        private async Task ActivateWindow(Window window)
+        {
+            if (window == null) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (window.IsVisible)
+                {
+                    // Попытка активировать окно
+                    window.Activate();
+                    window.Focus();
+
+                    // Для Linux - трюк с Topmost
+                    if (OperatingSystem.IsLinux())
+                    {
+                        window.Topmost = true;
+                        window.Topmost = false;
+                    }
+                }
+            }, DispatcherPriority.Render);
+
+            // Дайте оконному менеджеру время отреагировать
+            if (OperatingSystem.IsLinux())
+            {
+                await Task.Delay(100); // 100 мс для надежности
+            }
+            else
+            {
+                await Task.Delay(10); // Для Windows достаточно
+            }
         }
 
 

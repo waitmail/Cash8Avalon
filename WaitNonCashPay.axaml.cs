@@ -61,7 +61,7 @@ namespace Cash8Avalon
         /// <param name="Data"></param>        
         public async Task<CommandResult> send_command_acquiring_terminal(string Url, string Data, CancellationToken cancellationToken)
         {
-            var result = new CommandResult();
+            CommandResult result = new CommandResult();
 
             try
             {
@@ -122,34 +122,47 @@ namespace Cash8Avalon
                     }
                 }
 
-                // Закрываем с результатом OK
-                CloseWithResult(true);
+                // ИСПРАВЛЕНИЕ 1: Вызываем событие перед закрытием окна
+                CommandCompleted?.Invoke(result.Status, result.AnswerTerminal);
+
+                // ИСПРАВЛЕНИЕ 2: Закрываем окно после вызова события
+                await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result.Status));
             }
             catch (WebException ex)
             {
                 result.Status = false;
-                // Используем MessageBox для Avalonia
+                result.AnswerTerminal.error = true;
+
+                // ИСПРАВЛЕНИЕ 3: Сначала показываем сообщение
                 await MessageBox.Show($"Ошибка при оплате по карте: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
                     MessageBoxType.Error);
 
-                result.AnswerTerminal.error = true;
-                CloseWithResult(false);
+                // ИСПРАВЛЕНИЕ 4: Потом вызываем событие
+                CommandCompleted?.Invoke(false, result.AnswerTerminal);
+
+                // ИСПРАВЛЕНИЕ 5: Потом закрываем окно
+                await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(false));
             }
             catch (Exception ex)
             {
                 result.Status = false;
+                result.AnswerTerminal.error = true;
+
                 await MessageBox.Show($"Ошибка при оплате по карте: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
                     MessageBoxType.Error);
 
-                result.AnswerTerminal.error = true;
-                CloseWithResult(false);
+                // ИСПРАВЛЕНИЕ 6: Вызываем событие
+                CommandCompleted?.Invoke(false, result.AnswerTerminal);
+
+                // ИСПРАВЛЕНИЕ 7: Закрываем окно
+                await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(false));
             }
 
-            return result;
+            return result; // Теперь это возвращается ПОСЛЕ всех операций
         }
 
         [XmlRoot(ElementName = "field")]
@@ -200,6 +213,9 @@ namespace Cash8Avalon
                         CancelButton.Content = "Закрыть";
                     });
 
+                    // ИСПРАВЛЕНИЕ 8: Вызываем событие при таймауте
+                    CommandCompleted?.Invoke(false, new Pay.AnswerTerminal { error = true });
+
                     PaymentCompleted?.Invoke(this, false);
                     CloseWithResult(false);
                 }
@@ -207,6 +223,8 @@ namespace Cash8Avalon
             catch (TaskCanceledException)
             {
                 // Отменено пользователем
+                CommandCompleted?.Invoke(false, new Pay.AnswerTerminal { error = true });
+                CloseWithResult(false);
             }
             catch (Exception ex)
             {
@@ -215,6 +233,9 @@ namespace Cash8Avalon
                     StatusLabel.Text = $"Ошибка: {ex.Message}";
                     StatusLabel.Foreground = Brushes.Red;
                 });
+
+                CommandCompleted?.Invoke(false, new Pay.AnswerTerminal { error = true });
+                CloseWithResult(false);
             }
         }
 
@@ -231,6 +252,10 @@ namespace Cash8Avalon
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             _cts?.Cancel();
+
+            // ИСПРАВЛЕНИЕ 9: Вызываем событие при отмене
+            CommandCompleted?.Invoke(false, new Pay.AnswerTerminal { error = true });
+
             CloseWithResult(false);
         }
 
@@ -245,12 +270,6 @@ namespace Cash8Avalon
 
             // Вызываем событие
             PaymentCompleted?.Invoke(this, result == true);
-
-            // Вызываем CommandCompleted если нужно
-            if (CommandCompleted != null && result.HasValue)
-            {
-                CommandCompleted(result.Value, commandResult?.AnswerTerminal);
-            }
         }
 
         // Свойства для доступа извне
@@ -282,7 +301,7 @@ namespace Cash8Avalon
             this.cc = cashCheck;
 
             // Запускаем отправку команды в фоне
-            var sendTask = send_command_acquiring_terminal(url, data, _cts.Token);
+            var sendTask = send_command_acquiring_terminal(url, data, _cts?.Token ?? CancellationToken.None);
 
             // Создаем TaskCompletionSource для ожидания завершения
             var tcs = new TaskCompletionSource<CommandResult>();
@@ -290,20 +309,12 @@ namespace Cash8Avalon
             // Подписываемся на событие завершения
             this.CommandCompleted += (success, answer) =>
             {
-                if (commandResult != null)
+                var result = new CommandResult
                 {
-                    commandResult.Status = success;
-                    commandResult.AnswerTerminal = answer;
-                    tcs.TrySetResult(commandResult);
-                }
-                else
-                {
-                    tcs.TrySetResult(new CommandResult
-                    {
-                        Status = success,
-                        AnswerTerminal = answer
-                    });
-                }
+                    Status = success,
+                    AnswerTerminal = answer ?? new Pay.AnswerTerminal()
+                };
+                tcs.TrySetResult(result);
             };
 
             // Показываем окно

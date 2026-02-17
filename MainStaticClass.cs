@@ -5328,7 +5328,7 @@ namespace Cash8Avalon
                 {
                     if (MainStaticClass.CDN_Token == "")
                     {
-                        await MessageBox.Show("В этой кассе не заполнен CDN токен, \r\n ПРОДАЖА ДАННОГО ТОВАРА НЕВОЗМОЖНА ! ", "Проверка CDN");
+                        await MessageBox.Show("В этой кассе не заполнен CDN токен, \r\n ПРОДАЖА ДАННОГО ТОВАРА НЕВОЗМОЖНА ! ", "Проверка CDN",check);
                         result = false;
                     }
                     else
