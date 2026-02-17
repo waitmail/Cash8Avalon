@@ -4,9 +4,10 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using System;
-using System.Reflection;
 using System.IO;
+using System.Reflection;
 
 namespace Cash8Avalon;
 
@@ -33,26 +34,35 @@ public partial class ProgramInfo : Window
 
             if (_LogoImage == null)
             {
-                System.Diagnostics.Debug.WriteLine("LogoImage = null");
+                //System.Diagnostics.Debug.WriteLine("LogoImage = null");
                 return;
-            }           
+            }
 
-            
 
-                // Пробуем найти файл относительно папки программы
-                string appPath = AppContext.BaseDirectory;
-                string relativePath = Path.Combine(appPath, "Assets", "logo.png");
 
-                if (File.Exists(relativePath))
-                {
-                    _LogoImage.Source = new Bitmap(relativePath);
-                    System.Diagnostics.Debug.WriteLine($"Логотип загружен из: {relativePath}");
-                }
-            
+            // Пробуем найти файл относительно папки программы
+            string appPath = AppContext.BaseDirectory;
+            string relativePath = Path.Combine(appPath, "Assets", "logo.png");
+
+            if (File.Exists(relativePath))
+            {
+                _LogoImage.Source = new Bitmap(relativePath);
+                //System.Diagnostics.Debug.WriteLine($"Логотип загружен из: {relativePath}");
+            }
+
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Ошибка загрузки логотипа: {ex.Message}");
+            //System.Diagnostics.Debug.WriteLine($"Ошибка загрузки логотипа: {ex.Message}");
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await MessageBox.Show(
+                    $"Ошибка загрузки логотипа: {ex.Message}",
+                    "Загрузка логотипа",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this);
+            });
         }
     }
 
@@ -72,7 +82,16 @@ public partial class ProgramInfo : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Ошибка установки версии: {ex.Message}");
+            //System.Diagnostics.Debug.WriteLine($"Ошибка установки версии: {ex.Message}");
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await MessageBox.Show(
+                    $"Ошибка установки версии: {ex.Message}",
+                    "Установка версии",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this);
+            });
         }
     }
 

@@ -342,9 +342,17 @@ namespace Cash8Avalon
             return '0';
         }
 
-        private void Button1_Click(object? sender, RoutedEventArgs e)
+        private async void Button1_Click(object? sender, RoutedEventArgs e)
         {
+            if (cc.check_type.SelectedIndex == 0)
+            {
+                await MessageBox.Show("Список введённых подарков будет очищен." +
+                    "При следующем переходе в окно оплаты необходимо повторить их ввод, если программа предложит это сделать",
+                    "Уведомление по акциям",
+                    this);                                                                                                                             
+            }
             ClearCertificates();
+            cc.cancel_action();
             this.Tag = false;
             this.Close();
         }

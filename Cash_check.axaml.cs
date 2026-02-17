@@ -2498,101 +2498,115 @@ namespace Cash8Avalon
 
             // Устанавливаем сумму чека и другие данные
             //payWindow.pay_sum.Text = calculation_of_the_discount_of_the_document().ToString("N2");  // Или через публичное свойство
-            Console.WriteLine($"✓ Начинаем искать родителя для окна оплаты : {_productsDataBackup.Count} записей");
-            // Находим активное окно
-            Window parentWindow = null;
+            //Console.WriteLine($"✓ Начинаем искать родителя для окна оплаты : {_productsDataBackup.Count} записей");
+            //// Находим активное окно
+            //Window parentWindow = null;
 
-            // Вариант 1: Через TopLevel
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel is Window currentWindow)
+            //// Вариант 1: Через TopLevel
+            //var topLevel = TopLevel.GetTopLevel(this);
+            //if (topLevel is Window currentWindow)
+            //{
+            //    parentWindow = currentWindow;
+            //}
+
+            //// Вариант 2: Через Application
+            //if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            //{
+            //    parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
+            //}
+
+            //// Настройка размеров окна оплаты - ВАРИАНТ 3
+            //if (parentWindow != null)
+            //{
+            // Получаем размеры главного окна
+            double mainWidth = this.Bounds.Width;
+            double mainHeight = this.Bounds.Height;
+
+            // Проверяем, есть ли у родительского окна системные декорации
+            bool parentHasDecorations = this.SystemDecorations != SystemDecorations.None;
+            bool payFormHasDecorations = pay_form.SystemDecorations != SystemDecorations.None;
+
+            // Примерная высота заголовка Windows
+            const double titleBarHeight = 35; // Среднее значение 30-40px
+
+            if (parentHasDecorations && !payFormHasDecorations)
             {
-                parentWindow = currentWindow;
-            }
+                // Главное окно имеет системный заголовок, форма оплаты - нет
+                // Форма оплаты будет ниже на высоту заголовка, поэтому нужно компенсировать
+                pay_form.Width = mainWidth;
+                pay_form.Height = mainHeight + titleBarHeight;
 
-            // Вариант 2: Через Application
-            if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
-            }
-
-            // Настройка размеров окна оплаты - ВАРИАНТ 3
-            if (parentWindow != null)
-            {
-                // Получаем размеры главного окна
-                double mainWidth = parentWindow.Bounds.Width;
-                double mainHeight = parentWindow.Bounds.Height;
-
-                // Проверяем, есть ли у родительского окна системные декорации
-                bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
-                bool payFormHasDecorations = pay_form.SystemDecorations != SystemDecorations.None;
-
-                // Примерная высота заголовка Windows
-                const double titleBarHeight = 35; // Среднее значение 30-40px
-
-                if (parentHasDecorations && !payFormHasDecorations)
-                {
-                    // Главное окно имеет системный заголовок, форма оплаты - нет
-                    // Форма оплаты будет ниже на высоту заголовка, поэтому нужно компенсировать
-                    pay_form.Width = mainWidth;
-                    pay_form.Height = mainHeight + titleBarHeight;
-
-                    Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
-                    Console.WriteLine($"Размеры: главное окно={mainHeight}px, форма оплаты={pay_form.Height}px");
-                }
-                else
-                {
-                    // Окна имеют одинаковый тип декораций
-                    pay_form.Width = mainWidth;
-                    pay_form.Height = mainHeight;
-                }
-
-                // Позиционируем по центру главного окна
-                pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-                Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
+                Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
+                Console.WriteLine($"Размеры: главное окно={mainHeight}px, форма оплаты={pay_form.Height}px");
             }
             else
             {
-                // Стандартные размеры если нет родительского окна
-                pay_form.Width = 1200;
-                pay_form.Height = 800;
-                pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                // Окна имеют одинаковый тип декораций
+                pay_form.Width = mainWidth;
+                pay_form.Height = mainHeight;
             }
+
+            // Позиционируем по центру главного окна
+            pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+            Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
+            //}
+            //else
+            //{
+            //    // Стандартные размеры если нет родительского окна
+            //    pay_form.Width = 1200;
+            //    pay_form.Height = 800;
+            //    pay_form.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            //}
             Console.WriteLine($"✓ Перед подпиской на закрытие : {_productsDataBackup.Count} записей");
             //EventHandler handler = null;
             // Подписываемся на событие закрытия если нужно
-            pay_form.Closed += (s, e) =>
-            {
-                //pay_form.Closed -= handler;
-                // Проверяем результат через Tag или другое свойство
-                bool? paymentSuccess = pay_form.Tag as bool?;
-                if (paymentSuccess == true)
-                {
-                    // Обработка успешной оплаты
-                    Console.WriteLine("Оплата прошла успешно");
-                }
-            };
+            //pay_form.Closed += async (s, e) =>
+            //{
+            //    //pay_form.Closed -= handler;
+            //    // Проверяем результат через Tag или другое свойство
+            //    bool? paymentSuccess = pay_form.Tag as bool?;
+            //    if (paymentSuccess == true)
+            //    {
+            //        // Обработка успешной оплаты
+            //        Console.WriteLine("Оплата прошла успешно");
+            //    }
+            //    else
+            //    {
+            //        //await MessageBox.Show("Это возврат из окна оплаты", "Просто сообщение", this);
+            //        this.Focus();
+            //        if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
+            //        {
+            //            InputSearchProduct.Focus();
+            //        }
+            //    }
+            //};
 
             //pay_form.Closed += handler;
 
             // Показываем окно
-            if (parentWindow != null)
-            {
-                // Показываем как диалог
-                await pay_form.ShowDialog(parentWindow);
-            }
-            else
-            {
-                pay_form.Show();
-            }
-                        
+            //if (parentWindow != null)
+            //{
+            //    // Показываем как диалог
+            //    await pay_form.ShowDialog(parentWindow);
+            //}
+            //else
+            //{
+            //    pay_form.Show();
+            //}
+            await pay_form.ShowDialog(this);
+
             if (Convert.ToBoolean(pay_form.Tag) == true)
             {
                 this.Close();
             }
             else
             {
-                this.txtB_search_product.Focus();
+                this.Focus();
+                if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
+                {
+                    InputSearchProduct.Focus();
+                }
                 pay_form = new Pay();
             }
         }
@@ -7812,8 +7826,6 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
-
                 await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message, "get_its_deleted_document",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
                 result = 1;

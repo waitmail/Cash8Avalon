@@ -933,7 +933,14 @@ namespace Cash8Avalon
 
                 using (var command = new NpgsqlCommand(query, conn))
                 {
-                    command.Parameters.AddWithValue("@barcode", Convert.ToInt64(barcode));
+                    if (barcode.Length > 6)
+                    {
+                        command.Parameters.AddWithValue("@barcode", barcode);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@barcode", Convert.ToInt64(barcode));
+                    }
 
                     using (var reader = await command.ExecuteReaderAsync())
                     {
