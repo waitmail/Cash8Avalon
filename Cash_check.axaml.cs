@@ -4302,49 +4302,90 @@ namespace Cash8Avalon
             }
         }
 
+        //private async Task AddSingleProductToGrid(ProductItem productItem)
+        //{
+        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        try
+        //        {
+        //            // Добавляем новую строку в Grid
+        //            int gridRowIndex = _productsCurrentRow;
+
+        //            // Добавляем RowDefinition
+        //            _productsTableGrid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
+
+        //            // Создаем фон строки
+        //            var rowBackground = (_productsCurrentRow % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
+
+        //            var rowBorder = new Border
+        //            {
+        //                BorderBrush = Brushes.LightGray,
+        //                BorderThickness = new Thickness(0, 0, 0, 1),
+        //                Background = rowBackground,
+        //                Tag = _productsData.IndexOf(productItem) // Сохраняем индекс данных
+        //            };
+
+        //            // Подписываемся на события
+        //            rowBorder.PointerPressed += OnProductRowPointerPressed;
+
+        //            // Устанавливаем позицию
+        //            Grid.SetColumnSpan(rowBorder, 11);
+        //            Grid.SetRow(rowBorder, gridRowIndex);
+        //            _productsTableGrid.Children.Add(rowBorder);
+
+        //            // Добавляем ячейки с данными
+        //            AddCell(_productsTableGrid, 0, gridRowIndex, productItem.Code.ToString(), HorizontalAlignment.Right);
+        //            AddCellWithWrap(_productsTableGrid, 1, gridRowIndex, productItem.Tovar, HorizontalAlignment.Left);
+        //            AddCell(_productsTableGrid, 2, gridRowIndex, productItem.Quantity.ToString(), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 3, gridRowIndex, productItem.Price.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 4, gridRowIndex, productItem.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 5, gridRowIndex, productItem.Sum.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 6, gridRowIndex, productItem.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 7, gridRowIndex, productItem.Action.ToString(), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 8, gridRowIndex, productItem.Gift.ToString(), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 9, gridRowIndex, productItem.Action2.ToString(), HorizontalAlignment.Right);
+        //            AddCell(_productsTableGrid, 10, gridRowIndex, productItem.Mark, HorizontalAlignment.Center);
+
+        //            // Увеличиваем счетчик строк
+        //            _productsCurrentRow++;
+
+        //            // Прокручиваем к добавленной строке
+        //            ScrollToProductRow(gridRowIndex);
+
+        //            // Устанавливаем фокус на ScrollViewer
+        //            Dispatcher.UIThread.InvokeAsync(() =>
+        //            {
+        //                _productsScrollViewer?.Focus();
+        //            }, DispatcherPriority.Background);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
+        //            Dispatcher.UIThread.InvokeAsync(async () =>
+        //            {
+        //                await MessageBox.Show($"Ошибка при добавлении строки в Grid: {ex.Message}", "Добавление строки в Grid",
+        //                    MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            });
+        //        }
+        //    });
+        //}
+
         private async Task AddSingleProductToGrid(ProductItem productItem)
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 try
                 {
-                    // Добавляем новую строку в Grid
                     int gridRowIndex = _productsCurrentRow;
 
                     // Добавляем RowDefinition
                     _productsTableGrid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
 
-                    // Создаем фон строки
-                    var rowBackground = (_productsCurrentRow % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
+                    // Создаем все элементы строки одной операцией
+                    var rowElements = CreateRowElements(gridRowIndex, productItem, _productsData.Count - 1);
 
-                    var rowBorder = new Border
-                    {
-                        BorderBrush = Brushes.LightGray,
-                        BorderThickness = new Thickness(0, 0, 0, 1),
-                        Background = rowBackground,
-                        Tag = _productsData.IndexOf(productItem) // Сохраняем индекс данных
-                    };
-
-                    // Подписываемся на события
-                    rowBorder.PointerPressed += OnProductRowPointerPressed;
-
-                    // Устанавливаем позицию
-                    Grid.SetColumnSpan(rowBorder, 11);
-                    Grid.SetRow(rowBorder, gridRowIndex);
-                    _productsTableGrid.Children.Add(rowBorder);
-
-                    // Добавляем ячейки с данными
-                    AddCell(_productsTableGrid, 0, gridRowIndex, productItem.Code.ToString(), HorizontalAlignment.Right);
-                    AddCellWithWrap(_productsTableGrid, 1, gridRowIndex, productItem.Tovar, HorizontalAlignment.Left);
-                    AddCell(_productsTableGrid, 2, gridRowIndex, productItem.Quantity.ToString(), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 3, gridRowIndex, productItem.Price.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 4, gridRowIndex, productItem.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 5, gridRowIndex, productItem.Sum.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 6, gridRowIndex, productItem.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 7, gridRowIndex, productItem.Action.ToString(), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 8, gridRowIndex, productItem.Gift.ToString(), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 9, gridRowIndex, productItem.Action2.ToString(), HorizontalAlignment.Right);
-                    AddCell(_productsTableGrid, 10, gridRowIndex, productItem.Mark, HorizontalAlignment.Center);
+                    // Добавляем все элементы
+                    _productsTableGrid.Children.AddRange(rowElements);
 
                     // Увеличиваем счетчик строк
                     _productsCurrentRow++;
@@ -4363,8 +4404,8 @@ namespace Cash8Avalon
                     Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
                     Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBox.Show($"Ошибка при добавлении строки в Grid: {ex.Message}", "Добавление строки в Grid",
-                            MessageBoxButton.OK, MessageBoxType.Error, this);
+                        await MessageBox.Show($"Ошибка при добавлении строки в Grid: {ex.Message}",
+                            "Добавление строки в Grid", MessageBoxButton.OK, MessageBoxType.Error, this);
                     });
                 }
             });
@@ -4866,70 +4907,183 @@ namespace Cash8Avalon
             }
         }
 
+        //private void AddProductsGridRows(Grid grid, ref int currentRow, List<ProductItem> data)
+        //{
+        //    try
+        //    {
+        //        Console.WriteLine($"Добавление данных в Grid товаров: {data.Count} записей");
+
+        //        for (int rowIndex = 0; rowIndex < data.Count; rowIndex++)
+        //        {
+        //            var product = data[rowIndex];
+        //            var gridRowIndex = currentRow;
+
+        //            // Увеличиваем высоту строки для переноса текста, но не слишком много
+        //            int rowHeight = 40;
+        //            grid.RowDefinitions.Add(new RowDefinition(rowHeight, GridUnitType.Pixel));
+
+        //            var rowBackground = (currentRow % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
+
+        //            var rowBorder = new Border
+        //            {
+        //                BorderBrush = Brushes.LightGray,
+        //                BorderThickness = new Thickness(0, 0, 0, 1),
+        //                Background = rowBackground,
+        //                Tag = rowIndex // Сохраняем индекс данных для выделения
+        //            };
+
+        //            // Подписываемся на события клика
+        //            rowBorder.PointerPressed += OnProductRowPointerPressed;
+
+        //            // ИЗМЕНЕНИЕ: Устанавливаем Span на 11 колонок вместо 10
+        //            Grid.SetColumnSpan(rowBorder, 11);
+        //            Grid.SetRow(rowBorder, gridRowIndex);
+        //            grid.Children.Add(rowBorder);
+
+        //            // Добавляем ячейки с данными
+        //            AddCell(grid, 0, gridRowIndex, product.Code.ToString(), HorizontalAlignment.Right);
+
+        //            // Колонка с наименованием товара - с переносом
+        //            AddCellWithWrap(grid, 1, gridRowIndex, product.Tovar, HorizontalAlignment.Left);
+
+        //            // Остальные колонки без переноса
+        //            AddCell(grid, 2, gridRowIndex, product.Quantity.ToString(), HorizontalAlignment.Right);
+        //            AddCell(grid, 3, gridRowIndex, product.Price.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(grid, 4, gridRowIndex, product.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(grid, 5, gridRowIndex, product.Sum.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(grid, 6, gridRowIndex, product.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right);
+        //            AddCell(grid, 7, gridRowIndex, product.Action.ToString(), HorizontalAlignment.Right);
+        //            AddCell(grid, 8, gridRowIndex, product.Gift.ToString(), HorizontalAlignment.Right);
+        //            AddCell(grid, 9, gridRowIndex, product.Action2.ToString(), HorizontalAlignment.Right);                    
+        //            AddCell(grid, 10, gridRowIndex, product.Mark, HorizontalAlignment.Center); // Пока пустая строка
+
+        //            currentRow++;
+        //        }
+
+        //        Console.WriteLine($"✓ Добавлено {data.Count} записей в Grid товаров");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}");
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}", "AddProductsGridRows",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //    }
+        //}
+
         private void AddProductsGridRows(Grid grid, ref int currentRow, List<ProductItem> data)
         {
             try
             {
-                Console.WriteLine($"Добавление данных в Grid товаров: {data.Count} записей");
+                Console.WriteLine($"Добавление данных в Grid товаров: {data.Count} записей (пакетный режим)");
+
+                // Создаем список для ВСЕХ элементов сразу
+                var allElements = new List<Control>();
 
                 for (int rowIndex = 0; rowIndex < data.Count; rowIndex++)
                 {
                     var product = data[rowIndex];
-                    var gridRowIndex = currentRow;
+                    int gridRowIndex = currentRow + rowIndex;
 
-                    // Увеличиваем высоту строки для переноса текста, но не слишком много
-                    int rowHeight = 40;
-                    grid.RowDefinitions.Add(new RowDefinition(rowHeight, GridUnitType.Pixel));
+                    // Добавляем RowDefinition
+                    grid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
 
-                    var rowBackground = (currentRow % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
-
-                    var rowBorder = new Border
-                    {
-                        BorderBrush = Brushes.LightGray,
-                        BorderThickness = new Thickness(0, 0, 0, 1),
-                        Background = rowBackground,
-                        Tag = rowIndex // Сохраняем индекс данных для выделения
-                    };
-
-                    // Подписываемся на события клика
-                    rowBorder.PointerPressed += OnProductRowPointerPressed;
-
-                    // ИЗМЕНЕНИЕ: Устанавливаем Span на 11 колонок вместо 10
-                    Grid.SetColumnSpan(rowBorder, 11);
-                    Grid.SetRow(rowBorder, gridRowIndex);
-                    grid.Children.Add(rowBorder);
-
-                    // Добавляем ячейки с данными
-                    AddCell(grid, 0, gridRowIndex, product.Code.ToString(), HorizontalAlignment.Right);
-
-                    // Колонка с наименованием товара - с переносом
-                    AddCellWithWrap(grid, 1, gridRowIndex, product.Tovar, HorizontalAlignment.Left);
-
-                    // Остальные колонки без переноса
-                    AddCell(grid, 2, gridRowIndex, product.Quantity.ToString(), HorizontalAlignment.Right);
-                    AddCell(grid, 3, gridRowIndex, product.Price.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(grid, 4, gridRowIndex, product.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(grid, 5, gridRowIndex, product.Sum.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(grid, 6, gridRowIndex, product.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right);
-                    AddCell(grid, 7, gridRowIndex, product.Action.ToString(), HorizontalAlignment.Right);
-                    AddCell(grid, 8, gridRowIndex, product.Gift.ToString(), HorizontalAlignment.Right);
-                    AddCell(grid, 9, gridRowIndex, product.Action2.ToString(), HorizontalAlignment.Right);                    
-                    AddCell(grid, 10, gridRowIndex, product.Mark, HorizontalAlignment.Center); // Пока пустая строка
-
-                    currentRow++;
+                    // СОЗДАЕМ ВСЕ ЭЛЕМЕНТЫ СТРОКИ И ДОБАВЛЯЕМ В ОБЩИЙ СПИСОК
+                    allElements.AddRange(CreateRowElements(gridRowIndex, product, rowIndex));
                 }
 
-                Console.WriteLine($"✓ Добавлено {data.Count} записей в Grid товаров");
+                // Добавляем ВСЕ элементы одной операцией
+                grid.Children.AddRange(allElements);
+
+                // Обновляем текущий счетчик строк
+                currentRow += data.Count;
+
+                Console.WriteLine($"✓ Добавлено {data.Count} записей пакетным методом");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}", "AddProductsGridRows",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}",
+                        "AddProductsGridRows", MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
+        }
+
+        // Новый метод для создания всех элементов одной строки
+        private List<Control> CreateRowElements(int gridRowIndex, ProductItem product, int dataIndex)
+        {
+            var rowElements = new List<Control>();
+
+            // 1. Строка-контейнер (Border)
+            var rowBorder = new Border
+            {
+                BorderBrush = Brushes.LightGray,
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Background = (gridRowIndex % 2 == 0) ? Brushes.White : Brushes.AliceBlue,
+                Tag = dataIndex // Индекс данных для выделения
+            };
+            rowBorder.PointerPressed += OnProductRowPointerPressed;
+            Grid.SetColumnSpan(rowBorder, 11);
+            Grid.SetRow(rowBorder, gridRowIndex);
+            rowElements.Add(rowBorder);
+
+            // 2. Ячейки с данными
+            rowElements.Add(CreateCell(0, gridRowIndex, product.Code.ToString(), HorizontalAlignment.Right));
+            rowElements.Add(CreateCellWithWrap(1, gridRowIndex, product.Tovar, HorizontalAlignment.Left));
+            rowElements.Add(CreateCell(2, gridRowIndex, product.Quantity.ToString(), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(3, gridRowIndex, product.Price.ToString("N2"), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(4, gridRowIndex, product.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(5, gridRowIndex, product.Sum.ToString("N2"), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(6, gridRowIndex, product.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(7, gridRowIndex, product.Action.ToString(), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(8, gridRowIndex, product.Gift.ToString(), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(9, gridRowIndex, product.Action2.ToString(), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(10, gridRowIndex, product.Mark, HorizontalAlignment.Center));
+
+            return rowElements;
+        }
+
+        // Вспомогательные методы создания ячеек (оставляем как есть)
+        private Control CreateCell(int column, int row, string text, HorizontalAlignment alignment)
+        {
+            var textBlock = new TextBlock
+            {
+                Text = text,
+                Margin = new Thickness(5, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = alignment,
+                TextWrapping = TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                FontSize = PRODUCT_FONT_SIZE,
+                IsHitTestVisible = false
+            };
+
+            Grid.SetColumn(textBlock, column);
+            Grid.SetRow(textBlock, row);
+            return textBlock;
+        }
+
+        private Control CreateCellWithWrap(int column, int row, string text, HorizontalAlignment alignment)
+        {
+            var textBlock = new TextBlock
+            {
+                Text = text?.Trim() ?? string.Empty,
+                Margin = new Thickness(5, 2, 5, 2),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = alignment,
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = PRODUCT_FONT_SIZE,
+                MaxHeight = 50,
+                IsHitTestVisible = false
+            };
+
+            Grid.SetColumn(textBlock, column);
+            Grid.SetRow(textBlock, row);
+            return textBlock;
         }
 
         // Универсальный метод для добавления ячейки (с гарантиями стиля)

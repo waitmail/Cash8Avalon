@@ -53,23 +53,82 @@ namespace Cash8Avalon
             MessageBox(IntPtr.Zero, message, "Cash8Avalon", 0x00000040);
         }
 
+        //private static void ShowLinuxNotification(string message)
+        //{
+        //    // Способ 1: notify-send с авто-закрытием через 20 секунд
+        //    try
+        //    {
+        //        using (Process p = new Process())
+        //        {
+        //            p.StartInfo.FileName = "notify-send";
+        //            p.StartInfo.Arguments = $"--urgency=critical --expire-time=20000 \"Cash8Avalon\" \"{message}\"";
+        //            p.StartInfo.UseShellExecute = false;
+        //            p.Start();
+        //        }
+        //        return;
+        //    }
+        //    catch { }
+
+        //    // Способ 2: zenity с таймаутом 20 секунд
+        //    try
+        //    {
+        //        using (Process p = new Process())
+        //        {
+        //            p.StartInfo.FileName = "zenity";
+        //            p.StartInfo.Arguments = $"--warning --text=\"{message}\" --title=\"Cash8Avalon\" --timeout=20";
+        //            p.StartInfo.UseShellExecute = false;
+        //            p.Start();
+        //        }
+        //        return;
+        //    }
+        //    catch { }
+
+        //    // Способ 3: yad (более новая версия zenity) с таймаутом
+        //    try
+        //    {
+        //        using (Process p = new Process())
+        //        {
+        //            p.StartInfo.FileName = "yad";
+        //            p.StartInfo.Arguments = $"--center --text=\"{message}\" --title=\"Cash8Avalon\" --timeout=20 --button=OK:0";
+        //            p.StartInfo.UseShellExecute = false;
+        //            p.Start();
+        //        }
+        //        return;
+        //    }
+        //    catch { }
+
+        //    // Способ 4: kdialog для KDE с авто-закрытием
+        //    try
+        //    {
+        //        using (Process p = new Process())
+        //        {
+        //            p.StartInfo.FileName = "kdialog";
+        //            p.StartInfo.Arguments = $"--title \"Cash8Avalon\" --passivepopup \"{message}\" 20";
+        //            p.StartInfo.UseShellExecute = false;
+        //            p.Start();
+        //        }
+        //        return;
+        //    }
+        //    catch { }
+
+        //    // Способ 5: xmessage с таймаутом
+        //    try
+        //    {
+        //        using (Process p = new Process())
+        //        {
+        //            p.StartInfo.FileName = "xmessage";
+        //            p.StartInfo.Arguments = $"-center -timeout 20 \"{message}\"";
+        //            p.StartInfo.UseShellExecute = false;
+        //            p.Start();
+        //        }
+        //        return;
+        //    }
+        //    catch { }
+        //}
+
         private static void ShowLinuxNotification(string message)
         {
-            // Способ 1: notify-send с авто-закрытием через 20 секунд
-            try
-            {
-                using (Process p = new Process())
-                {
-                    p.StartInfo.FileName = "notify-send";
-                    p.StartInfo.Arguments = $"--urgency=critical --expire-time=20000 \"Cash8Avalon\" \"{message}\"";
-                    p.StartInfo.UseShellExecute = false;
-                    p.Start();
-                }
-                return;
-            }
-            catch { }
-
-            // Способ 2: zenity с таймаутом 20 секунд
+            // zenity гарантированно закрывается по таймауту
             try
             {
                 using (Process p = new Process())
@@ -83,45 +142,16 @@ namespace Cash8Avalon
             }
             catch { }
 
-            // Способ 3: yad (более новая версия zenity) с таймаутом
+            // fallback на notify-send
             try
             {
                 using (Process p = new Process())
                 {
-                    p.StartInfo.FileName = "yad";
-                    p.StartInfo.Arguments = $"--center --text=\"{message}\" --title=\"Cash8Avalon\" --timeout=20 --button=OK:0";
+                    p.StartInfo.FileName = "notify-send";
+                    p.StartInfo.Arguments = $"--urgency=normal --expire-time=20000 \"Cash8Avalon\" \"{message}\"";
                     p.StartInfo.UseShellExecute = false;
                     p.Start();
                 }
-                return;
-            }
-            catch { }
-
-            // Способ 4: kdialog для KDE с авто-закрытием
-            try
-            {
-                using (Process p = new Process())
-                {
-                    p.StartInfo.FileName = "kdialog";
-                    p.StartInfo.Arguments = $"--title \"Cash8Avalon\" --passivepopup \"{message}\" 20";
-                    p.StartInfo.UseShellExecute = false;
-                    p.Start();
-                }
-                return;
-            }
-            catch { }
-
-            // Способ 5: xmessage с таймаутом
-            try
-            {
-                using (Process p = new Process())
-                {
-                    p.StartInfo.FileName = "xmessage";
-                    p.StartInfo.Arguments = $"-center -timeout 20 \"{message}\"";
-                    p.StartInfo.UseShellExecute = false;
-                    p.Start();
-                }
-                return;
             }
             catch { }
         }

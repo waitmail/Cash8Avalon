@@ -137,7 +137,8 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка при оплате по карте: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
-                    MessageBoxType.Error);
+                    MessageBoxType.Error,
+                    this);
 
                 // ИСПРАВЛЕНИЕ 4: Потом вызываем событие
                 CommandCompleted?.Invoke(false, result.AnswerTerminal);
@@ -153,7 +154,8 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка при оплате по карте: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
-                    MessageBoxType.Error);
+                    MessageBoxType.Error,
+                    this);
 
                 // ИСПРАВЛЕНИЕ 6: Вызываем событие
                 CommandCompleted?.Invoke(false, result.AnswerTerminal);
