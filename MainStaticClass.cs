@@ -2872,7 +2872,8 @@ namespace Cash8Avalon
 
         public static string version()
         {
-            var versionStr = GetProductVersion();
+            //var versionStr = GetProductVersion();
+            var versionStr = GetFileVersion();
 
             //// Пробуем распарсить как Unix timestamp
             //if (long.TryParse(versionStr, out long timestamp))
@@ -2883,8 +2884,42 @@ namespace Cash8Avalon
             //    return date;
             //}
 
-            return "1"+versionStr;//костыль для веб сервиса предыдущей версии
+            return versionStr;//костыль для веб сервиса предыдущей версии
         }
+                
+        private static string GetFileVersion()
+        {
+            try
+            {
+                // Получаем путь к исполняемому файлу
+                string assemblyPath = Assembly.GetEntryAssembly()?.Location
+                                      ?? Assembly.GetExecutingAssembly().Location;
+
+                Console.WriteLine($"Путь к сборке: {assemblyPath}");
+
+                if (!File.Exists(assemblyPath))
+                {
+                    Console.WriteLine("Файл не найден!");
+                    return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                }
+
+                // Получаем FileVersionInfo
+                FileVersionInfo myFileVersionInfo = FileVersionInfo.GetVersionInfo(assemblyPath);
+
+                // Возвращаем именно FileVersion (как в вашем коде)
+                string fileVersion = myFileVersionInfo.FileVersion;
+
+                Console.WriteLine($"FileVersion: {fileVersion}");
+
+                return fileVersion ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении версии: {ex.Message}");
+                return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            }
+        }
+
 
         private static string GetProductVersion()
         {

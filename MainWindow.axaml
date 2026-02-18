@@ -44,6 +44,8 @@
                           Command="{Binding OpenSettingConnectCommand}"/>
                 <MenuItem Header="Загрузка данных через интернет" 
                           Command="{Binding OpenInternetDataLoadCommand}"/>
+				<MenuItem Header="Обновление программы" 
+                          Command="{Binding OpenLoadProgramFromInternetCommand}"/>
 				<MenuItem Header="О программе" 
                           Command="{Binding OpenProgramInfoCommand}"/>
 			</MenuItem>

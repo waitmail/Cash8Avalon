@@ -162,16 +162,52 @@ namespace Cash8Avalon
                 this.Topmost = true;
                 this.Topmost = false;
 
-                //// Показываем фокус
+                ////// Показываем фокус
                 //var focused = FocusManager?.GetFocusedElement();
                 //string focusInfo = focused == null
                 //    ? "Фокус отсутствует!"
                 //    : $"Фокус на: {focused.GetType().Name}\nИмя: {(focused as Control)?.Name ?? "нет"}";
 
-                //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);
+                //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);               
 
             }, DispatcherPriority.Render);
+
+            await ActivateWindow(this);
         }
+
+        private async Task ActivateWindow(Window window)
+        {
+            if (window == null) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (window.IsVisible)
+                {
+                    // Попытка активировать окно
+                    window.Activate();
+                    window.Focus();
+
+                    // Для Linux - трюк с Topmost
+                    if (OperatingSystem.IsLinux())
+                    {
+                        window.Topmost = true;
+                        window.Topmost = false;
+                        window.Topmost = true;
+                    }
+                }
+            }, DispatcherPriority.Render);
+
+            // Дайте оконному менеджеру время отреагировать
+            if (OperatingSystem.IsLinux())
+            {
+                await Task.Delay(100); // 100 мс для надежности
+            }
+            else
+            {
+                await Task.Delay(10); // Для Windows достаточно
+            }
+        }
+
 
         private void CashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
         {
@@ -1136,7 +1172,7 @@ namespace Cash8Avalon
                                 _str_command_sale_ = _str_command_sale_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
 
                                 AnswerTerminal answerTerminal = new AnswerTerminal();
-
+                                this.Topmost = false;
                                 WaitNonCashPay waitNonCashPay = new WaitNonCashPay();
                                 waitNonCashPay.Url = url;
                                 waitNonCashPay.Data = _str_command_sale_;
@@ -1155,6 +1191,8 @@ namespace Cash8Avalon
                                     this.Focus();
                                     return;
                                 }
+
+                                await ActivateWindow(this);
 
 
                                 if (!complete)//ответ от терминала не удовлетворительный

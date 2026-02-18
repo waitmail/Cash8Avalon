@@ -36,6 +36,45 @@ namespace Cash8Avalon
             StartTimer();
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             this.ShowInTaskbar = false;
+            this.Opened += WaitNonCashPay_Opened;
+        }
+
+        private async void WaitNonCashPay_Opened(object? sender, EventArgs e)
+        {
+            await ActivateWindow(this);
+        }
+
+        private async Task ActivateWindow(Window window)
+        {
+            if (window == null) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (window.IsVisible)
+                {
+                    // Попытка активировать окно
+                    window.Activate();
+                    window.Focus();
+
+                    // Для Linux - трюк с Topmost
+                    if (OperatingSystem.IsLinux())
+                    {
+                        window.Topmost = true;
+                        window.Topmost = false;
+                        window.Topmost = true;
+                    }
+                }
+            }, DispatcherPriority.Render);
+
+            // Дайте оконному менеджеру время отреагировать
+            if (OperatingSystem.IsLinux())
+            {
+                await Task.Delay(100); // 100 мс для надежности
+            }
+            else
+            {
+                await Task.Delay(10); // Для Windows достаточно
+            }
         }
 
         public WaitNonCashPay(int timeoutSeconds) : this()
@@ -134,7 +173,7 @@ namespace Cash8Avalon
                 result.AnswerTerminal.error = true;
 
                 // ИСПРАВЛЕНИЕ 3: Сначала показываем сообщение
-                await MessageBox.Show($"Ошибка при оплате по карте: {ex.Message}",
+                await MessageBoxHelper.Show($"Ошибка при оплате по карте: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
                     MessageBoxType.Error,
@@ -151,7 +190,7 @@ namespace Cash8Avalon
                 result.Status = false;
                 result.AnswerTerminal.error = true;
 
-                await MessageBox.Show($"Ошибка при оплате по карте: {ex.Message}",
+                await MessageBoxHelper.Show($"Ошибка при оплате по карте: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
                     MessageBoxType.Error,

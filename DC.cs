@@ -327,6 +327,40 @@ namespace Cash8Avalon
             return ParseSoapResponse<byte[]>(response, "GetUpdateProgram");
         }
 
+        public string ExistsUpdateProrgamAvalon(string nick_shop, string data, string scheme)
+        {
+            string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+                <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+                    <soap:Body>
+                        <ExistsUpdateProrgamAvalon xmlns=""http://tempuri.org/"">
+                            <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
+                            <data>{SecurityHelper.EscapeXml(data)}</data>
+                            <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
+                        </ExistsUpdateProrgamAvalon>
+                    </soap:Body>
+                </soap:Envelope>";
+
+            string response = ExecuteSoapRequest(soapEnvelope, "ExistsUpdateProrgamAvalon");
+            return ParseSoapResponse<string>(response, "ExistsUpdateProrgamAvalon");
+        }
+
+        public string GetUpdateProgramAvalon(string nick_shop, string data, string scheme)
+        {
+            string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+                <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+                    <soap:Body>
+                        <GetUpdateProgramAvalon xmlns=""http://tempuri.org/"">
+                            <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
+                            <data>{SecurityHelper.EscapeXml(data)}</data>
+                            <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
+                        </GetUpdateProgramAvalon>
+                    </soap:Body>
+                </soap:Envelope>";
+
+            string response = ExecuteSoapRequest(soapEnvelope, "GetUpdateProgramAvalon");
+            return ParseSoapResponse<string>(response, "GetUpdateProgramAvalon");
+        }
+
         public byte[] GetNpgsqlNew(string nick_shop, string data, string scheme)
         {
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>

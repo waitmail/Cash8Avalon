@@ -2251,7 +2251,7 @@ namespace Cash8Avalon
             {
                 if (MainStaticClass.GetFiscalsForbidden)
                 {
-                    await MessageBox.Show("Вам запрещена печать на фискальном регистраторе", "Проверки при печати", MessageBoxButton.OK, MessageBoxType.Error,this);
+                    await MessageBoxHelper.Show("Вам запрещена печать на фискальном регистраторе", "Проверки при печати", MessageBoxButton.OK, MessageBoxType.Error,this);
                     return;
                 }
             }
@@ -2267,7 +2267,7 @@ namespace Cash8Avalon
 
                     if (productCount < 3)
                     {
-                        await MessageBox.Show("В чеке менее 3 строк, предложить покупателю доп.товар.",
+                        await MessageBoxHelper.Show("В чеке менее 3 строк, предложить покупателю доп.товар.",
                                              "В чеке менее 3 строк",
                                              MessageBoxButton.OK,
                                              MessageBoxType.Info,
@@ -2434,9 +2434,9 @@ namespace Cash8Avalon
             pay_form.pay_bonus.IsVisible = false;
             pay_form.pay_bonus_many.Text = "0";
             pay_form.pay_bonus.IsEnabled = false;
-                       
+
             pay_form.cc = this;
-            
+
             if (this.check_type.SelectedIndex == 0)
             {
 
@@ -2444,7 +2444,7 @@ namespace Cash8Avalon
                  *  чтобы если оплата отменится и с чеком будут дальше работать
                  *  отменить все рассчитанные акции одним махом
                  */
-                MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());                
+                MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
                 BackupProductsData();
 
                 MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
@@ -2490,7 +2490,7 @@ namespace Cash8Avalon
             pay_form.Width = 800;  // Размеры как в XAML
             pay_form.Height = 600;
             pay_form.CanResize = false;  // Скорее всего это уже в XAML
-                        
+
             // Получаем размеры главного окна
             double mainWidth = this.Bounds.Width;
             double mainHeight = this.Bounds.Height;
@@ -2524,23 +2524,24 @@ namespace Cash8Avalon
 
             Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
 
-            if (CheckType.SelectedIndex == 1)
+            //if (CheckType.SelectedIndex == 1)
+            //{
+            //Принудительно сбрасываем фокус для линукса для возвратов!!!
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                //Принудительно сбрасываем фокус для линукса для возвратов!!!
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    // Очищаем фокус
-                    FocusManager?.ClearFocus();
+                // Очищаем фокус
+                FocusManager?.ClearFocus();
 
-                    // Если ScrollViewer имеет фокус - убираем
-                    if (_productsScrollViewer != null)
-                    {
-                        _productsScrollViewer.Focusable = false;
-                        _productsScrollViewer.Focusable = true; // Возвращаем способность, но фокус уже сброшен
-                    }
-                }, DispatcherPriority.Render);
-            }
+                // Если ScrollViewer имеет фокус - убираем
+                if (_productsScrollViewer != null)
+                {
+                    _productsScrollViewer.Focusable = false;
+                    _productsScrollViewer.Focusable = true; // Возвращаем способность, но фокус уже сброшен
+                }
+            }, DispatcherPriority.Render);
+            //}
             pay_form.txtB_cash_sum.Focus();
+            this.Topmost = false;
             await pay_form.ShowDialog(this);
 
             if (Convert.ToBoolean(pay_form.Tag) == true)
@@ -2555,6 +2556,7 @@ namespace Cash8Avalon
                     InputSearchProduct.Focus();
                 }
                 pay_form = new Pay();
+                await ActivateWindow(this);
             }
         }
 

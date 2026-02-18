@@ -1628,6 +1628,9 @@ namespace Cash8Avalon
                 Console.WriteLine(ex.StackTrace);
                 await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
             }
+
+
+
         }
 
         private async Task<bool> AllIsFilled()

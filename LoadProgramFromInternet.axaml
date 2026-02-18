@@ -1,0 +1,104 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Cash8Avalon.LoadProgramFromInternet"
+        Title="Обновление программы"
+        Width="677" Height="161"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        CanResize="False"
+        Background="White">
+    
+    <!-- Основная рамка окна -->
+    <Border BorderBrush="#007ACC" 
+            BorderThickness="2" 
+            CornerRadius="5">
+        
+        <DockPanel Margin="0">
+            
+            <!-- Синяя шапка окна (для обрамления) -->
+            <Border DockPanel.Dock="Top" 
+                    Height="30" 
+                    Background="#007ACC" 
+                    CornerRadius="5,5,0,0">
+                <TextBlock Text="Обновление программы" 
+                           Foreground="White" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center" 
+                           HorizontalAlignment="Center"/>
+            </Border>
+            
+            <!-- Основной контент -->
+            <DockPanel Margin="10">
+                
+                <!-- Панель с кнопками внизу -->
+                <StackPanel DockPanel.Dock="Bottom" 
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Center" 
+                            Spacing="10" 
+                            Margin="0,10,0,10">
+                    
+                    <!-- Синяя кнопка Загрузить обновление -->
+                    <Button Name="BtnDownload" 
+                            Content="Загрузить обновление" 
+                            Width="536" Height="48" 
+                            FontSize="18" 
+                            FontWeight="Bold"
+                            Foreground="White"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            IsEnabled="False"
+                            CornerRadius="5">
+                        <Button.Styles>
+                            <Style Selector="Button">
+                                <Setter Property="Background" Value="#007ACC"/>
+                            </Style>
+                            <Style Selector="Button:pointerover">
+                                <Setter Property="Background" Value="#005A9E"/>
+                            </Style>
+                            <Style Selector="Button:pressed">
+                                <Setter Property="Background" Value="#004080"/>
+                            </Style>
+                            <Style Selector="Button:disabled">
+                                <Setter Property="Background" Value="#CCCCCC"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Style>
+                        </Button.Styles>
+                    </Button>
+                    
+                    <!-- Красная кнопка Закрыть -->
+                    <Button Name="BtnClose" 
+                            Content="Закрыть" 
+                            Width="113" Height="48" 
+                            FontSize="18" 
+                            FontWeight="Bold"
+                            Foreground="White"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="5">
+                        <Button.Styles>
+                            <Style Selector="Button">
+                                <Setter Property="Background" Value="#DC3545"/>
+                            </Style>
+                            <Style Selector="Button:pointerover">
+                                <Setter Property="Background" Value="#C82333"/>
+                            </Style>
+                            <Style Selector="Button:pressed">
+                                <Setter Property="Background" Value="#BD2130"/>
+                            </Style>
+                        </Button.Styles>
+                    </Button>
+                </StackPanel>
+
+                <!-- Текст сообщения -->
+                <Label Name="LabelUpdate" 
+                       Content="" 
+                       FontSize="12" 
+                       FontWeight="Bold" 
+                       HorizontalAlignment="Left" 
+                       VerticalAlignment="Center" 
+                       Margin="13,20,0,0"
+                       Foreground="#333333"/>
+            </DockPanel>
+        </DockPanel>
+    </Border>
+</Window>

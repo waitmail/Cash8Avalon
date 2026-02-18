@@ -50,6 +50,7 @@ namespace Cash8Avalon.ViewModels
         public ICommand OpenSettingConnectCommand => new RelayCommand(() => OpenSettingConnect());
         public ICommand OpenInternetDataLoadCommand => new RelayCommand(() => OpenInternetDataLoad());
         public ICommand OpenProgramInfoCommand => new RelayCommand(() => OpenProgramInfo());
+        public ICommand OpenLoadProgramFromInternetCommand => new RelayCommand(() => OpenLoadProgramFromInternet());
 
         // Обработчик закрытия окна параметров БД
         private void OnSettingConnectRequestClose(object sender, EventArgs e)
@@ -57,6 +58,12 @@ namespace Cash8Avalon.ViewModels
             Console.WriteLine("Получено событие RequestClose из SettingConnect");
             CloseCurrentContent();
         }
+
+        private void OpenLoadProgramFromInternet()
+        {
+            ShowWindow(new LoadProgramFromInternet(), "Обновление программы");
+        }
+
 
         private void OpenProgramInfo()
         {
