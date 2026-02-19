@@ -6342,6 +6342,7 @@ namespace Cash8Avalon
                         Console.WriteLine("✓ Удаление отменено пользователем");
                         return;
                     }
+                    await RestoreFocusLinux_productsScrollViewerAsync();
                 }
             }
             catch (Exception ex)
@@ -6367,7 +6368,8 @@ namespace Cash8Avalon
                 Console.WriteLine($"Акция: {product.Action}, Подарок: {product.Gift}, Акция2: {product.Action2}");
 
                 // 1. Проверяем, является ли товар сертификатом
-                if (IsCertificate(product.Code.ToString()))
+                //if (IsCertificate(product.Code.ToString()))
+                if (product.IsSertificate)
                 {
                     Console.WriteLine($"Товар {product.Code} - сертификат");
                     // Для сертификата цена со скидкой равна номиналу
@@ -6456,36 +6458,36 @@ namespace Cash8Avalon
         }
 
 
-        /// <summary>
-        /// Проверка является ли товар сертификатом
-        /// </summary>
-        private bool IsCertificate(string productCode)
-        {
-            try
-            {
-                using (var conn = MainStaticClass.NpgsqlConn())
-                {
-                    conn.Open();
-                    string query = "SELECT COUNT(*) FROM tovar WHERE code = @code AND its_certificate = '1'";
-                    using (var cmd = new NpgsqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@code", Convert.ToInt64(productCode));
-                        var result = cmd.ExecuteScalar();
-                        return Convert.ToInt32(result) > 0;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
-                });
-                return false;
-            }
-        }
+        ///// <summary>
+        ///// Проверка является ли товар сертификатом
+        ///// </summary>
+        //private bool IsCertificate(string productCode)
+        //{
+        //    try
+        //    {
+        //        using (var conn = MainStaticClass.NpgsqlConn())
+        //        {
+        //            conn.Open();
+        //            string query = "SELECT COUNT(*) FROM tovar WHERE code = @code AND its_certificate = '1'";
+        //            using (var cmd = new NpgsqlCommand(query, conn))
+        //            {
+        //                cmd.Parameters.AddWithValue("@code", Convert.ToInt64(productCode));
+        //                var result = cmd.ExecuteScalar();
+        //                return Convert.ToInt32(result) > 0;
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //        return false;
+        //    }
+        //}
 
 
 

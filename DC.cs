@@ -495,23 +495,23 @@ namespace Cash8Avalon
 
             string response = ExecuteSoapRequest(soapEnvelope, "UploadDeletedItems");
             return ParseSoapResponse<string>(response, "UploadDeletedItems");
-        }
+        }       
 
-        public byte[] GetDataForCasheV8Jason(string nick_shop, string data, string scheme)
+        public byte[] GetDataForCasheV8JasonAvalon(string nick_shop, string data, string scheme)
         {
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
                 <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
                     <soap:Body>
-                        <GetDataForCasheV8Jason xmlns=""http://tempuri.org/"">
+                        <GetDataForCasheV8JasonAvalon xmlns=""http://tempuri.org/"">
                             <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
                             <data>{SecurityHelper.EscapeXml(data)}</data>
                             <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
-                        </GetDataForCasheV8Jason>
+                        </GetDataForCasheV8JasonAvalon>
                     </soap:Body>
                 </soap:Envelope>";
 
-            string response = ExecuteSoapRequest(soapEnvelope, "GetDataForCasheV8Jason");
-            return ParseSoapResponse<byte[]>(response, "GetDataForCasheV8Jason");
+            string response = ExecuteSoapRequest(soapEnvelope, "GetDataForCasheV8JasonAvalon");
+            return ParseSoapResponse<byte[]>(response, "GetDataForCasheV8JasonAvalon");
         }
 
         public bool UploadOpeningClosingShops(string nick_shop, string data, string scheme)

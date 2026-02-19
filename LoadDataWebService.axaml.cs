@@ -2718,7 +2718,7 @@ namespace Cash8Avalon
                 using (DS ds = MainStaticClass.get_ds())
                 {
                     ds.Timeout = 60000;
-                    byte[] result_query_byte = ds.GetDataForCasheV8Jason(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
+                    byte[] result_query_byte = ds.GetDataForCasheV8JasonAvalon(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
                     result_query = DecompressString(result_query_byte);
                     decrypt_data = CryptorEngine.Decrypt(result_query, true, key);
                     loadPacketData = JsonConvert.DeserializeObject<LoadPacketData>(decrypt_data);
