@@ -12,8 +12,8 @@
         SizeToContent="WidthAndHeight"
         Padding="20">
     
-    <!-- Стили определяем как отдельный элемент Window.Styles -->
     <Window.Styles>
+        <!-- Ваши стили кнопок (без изменений) -->
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="#2196F3"/>
             <Setter Property="Foreground" Value="White"/>
@@ -23,7 +23,6 @@
             <Setter Property="CornerRadius" Value="20"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <!-- Выравнивание текста по центру -->
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Transitions">
@@ -47,11 +46,11 @@
                 VerticalAlignment="Center" 
                 Spacing="15">
         
-        <!-- SVG логотип с именем для доступа из кода -->
+        <!-- Логотип - обычный Image, Source зададим из кода -->
         <Image x:Name="LogoImage"
-                 Width="128" 
-                 Height="128" 
-                 Stretch="Uniform"/>
+               Width="128" 
+               Height="128" 
+               Stretch="Uniform"/>
         
         <!-- Название программы -->
         <TextBlock Text="Касса 8 (Авалон)"
@@ -81,7 +80,7 @@
                    Foreground="#999"
                    HorizontalAlignment="Center"/>
         
-        <!-- Кнопка OK с классом primary для применения стиля -->
+        <!-- Кнопка OK -->
         <Button Content="OK" 
                 Classes="primary"
                 Width="140"

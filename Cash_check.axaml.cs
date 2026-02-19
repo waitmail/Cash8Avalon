@@ -1688,7 +1688,7 @@ namespace Cash8Avalon
                 if (result == true && !string.IsNullOrEmpty(enteredBarcode))
                 {
                     ProcessClientDiscount(enteredBarcode);
-                }
+                }                
             }
             catch (Exception ex)
             {
@@ -1697,6 +1697,7 @@ namespace Cash8Avalon
             }
             finally
             {                
+                await MessageBoxHelper.ActivateWindow(this);
                 InputSearchProduct.Focus();
                 // Добавляем await
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -3236,6 +3237,38 @@ namespace Cash8Avalon
             return result;
         }
 
+        /// <summary>
+        /// Надёжно устанавливает фокус на поле поиска (с учётом особенностей Linux)
+        /// </summary>
+        //private async Task RestoreSearchFocusInputSearchProductAsync()
+        //{
+        //    if (InputSearchProduct == null)
+        //    {
+        //        InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
+        //        if (InputSearchProduct == null) return;
+        //    }
+
+        //    // Для Linux: активируем окно и делаем задержки
+        //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //    {
+        //        this.Activate();
+        //        await Task.Delay(30);
+        //    }
+
+        //    // Три попытки установить фокус с разными приоритетами
+        //    InputSearchProduct.Focus();
+
+        //    Dispatcher.UIThread.Post(() => InputSearchProduct.Focus(), DispatcherPriority.Input);
+
+        //    await Task.Delay(10);
+
+        //    Dispatcher.UIThread.Post(() =>
+        //    {
+        //        InputSearchProduct?.Focus();
+        //        InputSearchProduct?.CaretIndex = InputSearchProduct.Text?.Length ?? 0;
+        //    }, DispatcherPriority.Render);
+        //}
+
         public class CustomerScreen
         {
             public List<CheckPosition> ListCheckPositions { get; set; }
@@ -3803,35 +3836,7 @@ namespace Cash8Avalon
                     barcode = Convert.ToInt32(barcode.Substring(2, 6)).ToString();//Здесь переопределяем штрихкод для дальнейшего стандартного поведения 
                     ProductFromScales = true;
                 }
-            }
-            //****************************************
-
-            //ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
-
-            //if (InventoryManager.completeDictionaryProductData)
-            //{
-            //    productData = InventoryManager.GetItem(Convert.ToInt64(barcode));
-            //}
-            //else
-            //{
-            //    productData = GetProductDataInDB(barcode);
-            //}
-
-            // Правильный способ получения данных о товаре
-            //ProductData productData;
-
-            //// Пытаемся получить данные из кэша с использованием потокобезопасного метода
-            //if (InventoryManager.TryGetItem(Convert.ToInt64(barcode), out productData))
-            //{
-            //    // Данные успешно получены из кэша
-            //    // productData уже содержит валидные данные
-            //}
-            //else
-            //{
-            //    // Кэш невалиден, словарь перестраивается или товар не найден в кэше
-            //    // Получаем данные напрямую из базы данных
-            //    productData = GetProductDataInDB(barcode);
-            //}
+            }           
 
             ProductData productData = await InventoryManager.FindProductAsync(barcode, this);
 
@@ -4094,14 +4099,56 @@ namespace Cash8Avalon
             await AddSingleProductToGrid(productItem);
 
             // Обновляем общую сумму
-            UpdateTotalSum();
-
-            // Выделяем добавленную строку
-            SelectProductRow(_productsData.Count - 1);
+            UpdateTotalSum();           
 
             await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");//нужно для того чтобы в окне оплаты взять сумму из БД
 
+            // Выделяем добавленную строку
+            SelectProductRow(_productsData.Count - 1);
+            await RestoreFocusLinux_productsScrollViewerAsync();
         }
+
+        /// <summary>
+        /// Надёжно восстанавливает фокус на таблице товаров
+        /// Специально для Linux с агрессивным управлением фокусом
+        /// </summary>
+        private async Task RestoreFocusLinux_productsScrollViewerAsync()
+        {
+            // Даём время UI отрисоваться и оконному менеджеру обработать изменения
+            await Task.Delay(50);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                // Активируем окно
+                this.Activate();
+                this.Focus();
+
+                // Для Linux - трюк с Topmost
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    this.Topmost = true;
+                    this.Topmost = false;
+                }
+
+                // Устанавливаем фокус на ScrollViewer
+                _productsScrollViewer?.Focus();
+
+                // Дополнительная попытка через Dispatcher с высоким приоритетом
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _productsScrollViewer?.Focus();
+                    Console.WriteLine("[Focus] Фокус восстановлен после добавления товара");
+                }, DispatcherPriority.Input);
+            }, DispatcherPriority.Render);
+
+            // Финальная задержка для Linux WM
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                await Task.Delay(100);
+            }
+        }
+
+
 
         private async Task ActivateWindow(Window window)
         {

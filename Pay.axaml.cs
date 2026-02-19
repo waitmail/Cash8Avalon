@@ -1,4 +1,4 @@
-using Atol.Drivers10.Fptr;
+п»їusing Atol.Drivers10.Fptr;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -26,7 +26,7 @@ namespace Cash8Avalon
         private DataTable _certificatesData = null;
         private List<InputSertificates.CertificateItem> _certificatesList = new List<InputSertificates.CertificateItem>();
 
-        // События для внешней подписки
+        // РЎРѕР±С‹С‚РёСЏ РґР»СЏ РІРЅРµС€РЅРµР№ РїРѕРґРїРёСЃРєРё
         public event EventHandler ReturnToDocumentRequested;
         public event EventHandler PaymentConfirmed;
         public event EventHandler<bool> SbpPaymentChanged;
@@ -41,7 +41,7 @@ namespace Cash8Avalon
 
         private bool firs_input_non_cash = true;
         //public ListView listView_sertificates = null;
-        public bool code_it_is_confirmed = false;//При списании бонусов, присланный код подтвержден клиентом  
+        public bool code_it_is_confirmed = false;//РџСЂРё СЃРїРёСЃР°РЅРёРё Р±РѕРЅСѓСЃРѕРІ, РїСЂРёСЃР»Р°РЅРЅС‹Р№ РєРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅ РєР»РёРµРЅС‚РѕРј  
         private bool complete = false;
         //private string reference_number = "";
         private string str_command_sale = @"<?xml version=""1.0"" encoding=""UTF-8""?><request><field id = ""00"">sum</field><field id=""04"">643</field><field id = ""25"" >1</field><field id=""27"">id_terminal</field></request>";
@@ -77,12 +77,12 @@ namespace Cash8Avalon
 
             if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != ""))
             {
-                if (MainStaticClass.GetAcquiringBank == 1)//РНКБ
+                if (MainStaticClass.GetAcquiringBank == 1)//Р РќРљР‘
                 {
-                    checkBox_payment_by_sbp.Opacity = 1; // Изменить на Opacity!
+                    checkBox_payment_by_sbp.Opacity = 1; // РР·РјРµРЅРёС‚СЊ РЅР° Opacity!
                     checkBox_payment_by_sbp.IsHitTestVisible = true;
                 }
-                checkBox_do_not_send_payment_to_the_terminal.Opacity = 1; // Изменить на Opacity!
+                checkBox_do_not_send_payment_to_the_terminal.Opacity = 1; // РР·РјРµРЅРёС‚СЊ РЅР° Opacity!
                 checkBox_do_not_send_payment_to_the_terminal.IsHitTestVisible = true;
             }
 
@@ -98,14 +98,14 @@ namespace Cash8Avalon
                     {
                         new TextBlock
                         {
-                            Text = "Если оплата по терминалу для этого чека уже прошла",
+                            Text = "Р•СЃР»Рё РѕРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ РґР»СЏ СЌС‚РѕРіРѕ С‡РµРєР° СѓР¶Рµ РїСЂРѕС€Р»Р°",
                             FontWeight = FontWeight.Bold,
                             TextWrapping = TextWrapping.Wrap,
                             MaxWidth = 250
                         },
                         new TextBlock
                         {
-                            Text = "Не отправлять запрос об оплате на терминал",
+                            Text = "РќРµ РѕС‚РїСЂР°РІР»СЏС‚СЊ Р·Р°РїСЂРѕСЃ РѕР± РѕРїР»Р°С‚Рµ РЅР° С‚РµСЂРјРёРЅР°Р»",
                             TextWrapping = TextWrapping.Wrap,
                             MaxWidth = 250
                         }
@@ -118,18 +118,18 @@ namespace Cash8Avalon
 
         //private void Pay_Opened(object? sender, EventArgs e)
         //{
-        //    // При открытии окна принудительно устанавливаем фокус
+        //    // РџСЂРё РѕС‚РєСЂС‹С‚РёРё РѕРєРЅР° РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„РѕРєСѓСЃ
         //    Dispatcher.UIThread.InvokeAsync(() =>
         //    {
         //        this.Focus();
-        //        this.Activate(); // Пробуем активировать окно
+        //        this.Activate(); // РџСЂРѕР±СѓРµРј Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊ РѕРєРЅРѕ
 
         //        if (cashSumTextBox != null)
         //        {
         //            cashSumTextBox.Focus();
         //        }
 
-        //        // Для Linux особенно важно
+        //        // Р”Р»СЏ Linux РѕСЃРѕР±РµРЅРЅРѕ РІР°Р¶РЅРѕ
         //        this.Topmost = true;
         //        //this.Topmost = false;
         //    }, DispatcherPriority.Render);           
@@ -162,13 +162,13 @@ namespace Cash8Avalon
                 this.Topmost = true;
                 this.Topmost = false;
 
-                ////// Показываем фокус
+                ////// РџРѕРєР°Р·С‹РІР°РµРј С„РѕРєСѓСЃ
                 //var focused = FocusManager?.GetFocusedElement();
                 //string focusInfo = focused == null
-                //    ? "Фокус отсутствует!"
-                //    : $"Фокус на: {focused.GetType().Name}\nИмя: {(focused as Control)?.Name ?? "нет"}";
+                //    ? "Р¤РѕРєСѓСЃ РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚!"
+                //    : $"Р¤РѕРєСѓСЃ РЅР°: {focused.GetType().Name}\nРРјСЏ: {(focused as Control)?.Name ?? "РЅРµС‚"}";
 
-                //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);               
+                //await MessageBox.Show(focusInfo, "РРЅС„РѕСЂРјР°С†РёСЏ Рѕ С„РѕРєСѓСЃРµ", MessageBoxButton.OK, MessageBoxType.Info, this);               
 
             }, DispatcherPriority.Render);
 
@@ -183,11 +183,11 @@ namespace Cash8Avalon
             {
                 if (window.IsVisible)
                 {
-                    // Попытка активировать окно
+                    // РџРѕРїС‹С‚РєР° Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊ РѕРєРЅРѕ
                     window.Activate();
                     window.Focus();
 
-                    // Для Linux - трюк с Topmost
+                    // Р”Р»СЏ Linux - С‚СЂСЋРє СЃ Topmost
                     if (OperatingSystem.IsLinux())
                     {
                         window.Topmost = true;
@@ -197,14 +197,14 @@ namespace Cash8Avalon
                 }
             }, DispatcherPriority.Render);
 
-            // Дайте оконному менеджеру время отреагировать
+            // Р”Р°Р№С‚Рµ РѕРєРѕРЅРЅРѕРјСѓ РјРµРЅРµРґР¶РµСЂСѓ РІСЂРµРјСЏ РѕС‚СЂРµР°РіРёСЂРѕРІР°С‚СЊ
             if (OperatingSystem.IsLinux())
             {
-                await Task.Delay(100); // 100 мс для надежности
+                await Task.Delay(100); // 100 РјСЃ РґР»СЏ РЅР°РґРµР¶РЅРѕСЃС‚Рё
             }
             else
             {
-                await Task.Delay(10); // Для Windows достаточно
+                await Task.Delay(10); // Р”Р»СЏ Windows РґРѕСЃС‚Р°С‚РѕС‡РЅРѕ
             }
         }
 
@@ -221,11 +221,11 @@ namespace Cash8Avalon
 
         private void InitializeEventHandlers()
         {
-            // Обработчики для горячих клавиш
+            // РћР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ РіРѕСЂСЏС‡РёС… РєР»Р°РІРёС€
             this.KeyDown += Pay_KeyDown;          
             
 
-            // Связывание событий
+            // РЎРІСЏР·С‹РІР°РЅРёРµ СЃРѕР±С‹С‚РёР№
             var checkBoxPaymentBySbp = this.FindControl<CheckBox>("checkBox_payment_by_sbp");
             if (checkBoxPaymentBySbp != null)
             {
@@ -253,7 +253,7 @@ namespace Cash8Avalon
 
 
 
-            // Обработка изменения безналичной оплаты
+            // РћР±СЂР°Р±РѕС‚РєР° РёР·РјРµРЅРµРЅРёСЏ Р±РµР·РЅР°Р»РёС‡РЅРѕР№ РѕРїР»Р°С‚С‹
             var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
             if (nonCashSumTextBox != null)
             {                
@@ -264,21 +264,21 @@ namespace Cash8Avalon
             
         }        
 
-        #region NonCashSum (Рубли) Handlers
+        #region NonCashSum (Р СѓР±Р»Рё) Handlers
 
         private void OnNonCashSumLostFocus(object sender, RoutedEventArgs e)
         {
             var textBox = sender as TextBox;
             if (textBox == null) return;
 
-            // Проверяем пустую строку или только пробелы
+            // РџСЂРѕРІРµСЂСЏРµРј РїСѓСЃС‚СѓСЋ СЃС‚СЂРѕРєСѓ РёР»Рё С‚РѕР»СЊРєРѕ РїСЂРѕР±РµР»С‹
             if (string.IsNullOrWhiteSpace(textBox.Text))
             {
                 textBox.Text = "0";
             }
             else
             {
-                // Проверяем, что это число
+                // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЌС‚Рѕ С‡РёСЃР»Рѕ
                 if (!int.TryParse(textBox.Text, out _))
                 {
                     textBox.Text = "0";
@@ -295,28 +295,28 @@ namespace Cash8Avalon
 
         #endregion
 
-        #region NonCashSumKop (Копейки) Handlers
+        #region NonCashSumKop (РљРѕРїРµР№РєРё) Handlers
 
         private void OnNonCashSumKopLostFocus(object sender, RoutedEventArgs e)
         {
             var textBox = sender as TextBox;
             if (textBox == null) return;
 
-            // Проверяем пустую строку или только пробелы
+            // РџСЂРѕРІРµСЂСЏРµРј РїСѓСЃС‚СѓСЋ СЃС‚СЂРѕРєСѓ РёР»Рё С‚РѕР»СЊРєРѕ РїСЂРѕР±РµР»С‹
             if (string.IsNullOrWhiteSpace(textBox.Text))
             {
                 textBox.Text = "00";
             }
             //else
             //{
-            //    // Проверяем, что это число
+            //    // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЌС‚Рѕ С‡РёСЃР»Рѕ
             //    if (!int.TryParse(textBox.Text))
             //    {
             //        textBox.Text = "00";
             //    }
             //    //else
             //    //{
-            //    //    // Форматируем как двузначное число (00, 01, 02... 99)
+            //    //    // Р¤РѕСЂРјР°С‚РёСЂСѓРµРј РєР°Рє РґРІСѓР·РЅР°С‡РЅРѕРµ С‡РёСЃР»Рѕ (00, 01, 02... 99)
             //    //    if (kopecks < 0) kopecks = 0;
             //    //    if (kopecks > 99) kopecks = 99;
             //    //    textBox.Text = kopecks.ToString("00");
@@ -341,10 +341,10 @@ namespace Cash8Avalon
             if (e.Key == Key.Y || e.Key == Key.R ||
             e.Key == Key.F5 || e.Key == Key.F12 || e.Key == Key.F8)
             {
-                return; // Пусть обрабатывает Pay_KeyDown
+                return; // РџСѓСЃС‚СЊ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ Pay_KeyDown
             }
 
-            // Определяем тип клавиши
+            // РћРїСЂРµРґРµР»СЏРµРј С‚РёРї РєР»Р°РІРёС€Рё
             bool isNumeric = (e.Key >= Key.D0 && e.Key <= Key.D9) ||
                              (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9);
             bool isControl = e.Key == Key.Back || e.Key == Key.Delete ||
@@ -354,26 +354,26 @@ namespace Cash8Avalon
                              e.Key == Key.Escape;
             bool isSeparator = e.Key == Key.OemComma || e.Key == Key.OemPeriod;
 
-            // Блокируем все, кроме цифр и управляющих клавиш
-            // Для non_cash_sum не нужны разделители (это целые рубли)
+            // Р‘Р»РѕРєРёСЂСѓРµРј РІСЃРµ, РєСЂРѕРјРµ С†РёС„СЂ Рё СѓРїСЂР°РІР»СЏСЋС‰РёС… РєР»Р°РІРёС€
+            // Р”Р»СЏ non_cash_sum РЅРµ РЅСѓР¶РЅС‹ СЂР°Р·РґРµР»РёС‚РµР»Рё (СЌС‚Рѕ С†РµР»С‹Рµ СЂСѓР±Р»Рё)
             if (!isNumeric && !isControl && !isSeparator)
             {
                 e.Handled = true;
                 return;
             }
 
-            // Обрабатываем цифровые клавиши
+            // РћР±СЂР°Р±Р°С‚С‹РІР°РµРј С†РёС„СЂРѕРІС‹Рµ РєР»Р°РІРёС€Рё
             if (isNumeric)
             {
-                e.Handled = true; // Берем обработку на себя
+                e.Handled = true; // Р‘РµСЂРµРј РѕР±СЂР°Р±РѕС‚РєСѓ РЅР° СЃРµР±СЏ
 
                 var currentText = textBox.Text ?? "";
                 var selectionStart = textBox.CaretIndex;
 
-                // Получаем цифру из клавиши
+                // РџРѕР»СѓС‡Р°РµРј С†РёС„СЂСѓ РёР· РєР»Р°РІРёС€Рё
                 char digit = GetDigitFromKey(e.Key);
 
-                // Если текущий текст "0" или пустой
+                // Р•СЃР»Рё С‚РµРєСѓС‰РёР№ С‚РµРєСЃС‚ "0" РёР»Рё РїСѓСЃС‚РѕР№
                 if (currentText == "0" || string.IsNullOrEmpty(currentText))
                 {
                     textBox.Text = digit.ToString();
@@ -381,20 +381,20 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    // Вставляем цифру в текущую позицию
+                    // Р’СЃС‚Р°РІР»СЏРµРј С†РёС„СЂСѓ РІ С‚РµРєСѓС‰СѓСЋ РїРѕР·РёС†РёСЋ
                     textBox.Text = currentText.Insert(selectionStart, digit.ToString());
                     textBox.CaretIndex = selectionStart + 1;
                 }
             }
 
-            // Блокируем разделители для этого поля (только целые рубли)
+            // Р‘Р»РѕРєРёСЂСѓРµРј СЂР°Р·РґРµР»РёС‚РµР»Рё РґР»СЏ СЌС‚РѕРіРѕ РїРѕР»СЏ (С‚РѕР»СЊРєРѕ С†РµР»С‹Рµ СЂСѓР±Р»Рё)
             if (isSeparator)
             {
                 e.Handled = true;
                 return;
             }
 
-            // Вызываем пересчет сдачи после обработки клавиши
+            // Р’С‹Р·С‹РІР°РµРј РїРµСЂРµСЃС‡РµС‚ СЃРґР°С‡Рё РїРѕСЃР»Рµ РѕР±СЂР°Р±РѕС‚РєРё РєР»Р°РІРёС€Рё
             Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
         
         }
@@ -416,9 +416,9 @@ namespace Cash8Avalon
         {
             if (cc.check_type.SelectedIndex == 0)
             {
-                await MessageBox.Show("Список введённых подарков будет очищен." +
-                    "При следующем переходе в окно оплаты необходимо повторить их ввод, если программа предложит это сделать",
-                    "Уведомление по акциям",
+                await MessageBox.Show("РЎРїРёСЃРѕРє РІРІРµРґС‘РЅРЅС‹С… РїРѕРґР°СЂРєРѕРІ Р±СѓРґРµС‚ РѕС‡РёС‰РµРЅ." +
+                    "РџСЂРё СЃР»РµРґСѓСЋС‰РµРј РїРµСЂРµС…РѕРґРµ РІ РѕРєРЅРѕ РѕРїР»Р°С‚С‹ РЅРµРѕР±С…РѕРґРёРјРѕ РїРѕРІС‚РѕСЂРёС‚СЊ РёС… РІРІРѕРґ, РµСЃР»Рё РїСЂРѕРіСЂР°РјРјР° РїСЂРµРґР»РѕР¶РёС‚ СЌС‚Рѕ СЃРґРµР»Р°С‚СЊ",
+                    "РЈРІРµРґРѕРјР»РµРЅРёРµ РїРѕ Р°РєС†РёСЏРј",
                     this);                                                                                                                             
             }
             ClearCertificates();
@@ -474,25 +474,25 @@ namespace Cash8Avalon
         {
             if (cashSumTextBox == null) return;
 
-            // Проверяем текст ввода
+            // РџСЂРѕРІРµСЂСЏРµРј С‚РµРєСЃС‚ РІРІРѕРґР°
             if (string.IsNullOrEmpty(e.Text))
             {
                 e.Handled = true;
                 return;
             }
 
-            // Проверяем первый символ
+            // РџСЂРѕРІРµСЂСЏРµРј РїРµСЂРІС‹Р№ СЃРёРјРІРѕР»
             char inputChar = e.Text[0];
 
-            // Разрешаем только: цифры, разделитель, управляющие символы
+            // Р Р°Р·СЂРµС€Р°РµРј С‚РѕР»СЊРєРѕ: С†РёС„СЂС‹, СЂР°Р·РґРµР»РёС‚РµР»СЊ, СѓРїСЂР°РІР»СЏСЋС‰РёРµ СЃРёРјРІРѕР»С‹
             bool isDigit = char.IsDigit(inputChar);
             bool isSeparator = inputChar == ',' || inputChar == '.';
             bool isControlChar = char.IsControl(inputChar);
 
-            // ЕСЛИ НЕ цифра, НЕ разделитель, НЕ управляющий символ -> БЛОКИРУЕМ
+            // Р•РЎР›Р РќР• С†РёС„СЂР°, РќР• СЂР°Р·РґРµР»РёС‚РµР»СЊ, РќР• СѓРїСЂР°РІР»СЏСЋС‰РёР№ СЃРёРјРІРѕР» -> Р‘Р›РћРљРР РЈР•Рњ
             if (!isDigit && !isSeparator && !isControlChar)
             {
-                e.Handled = true; // БЛОКИРУЕМ ввод букв и других символов
+                e.Handled = true; // Р‘Р›РћРљРР РЈР•Рњ РІРІРѕРґ Р±СѓРєРІ Рё РґСЂСѓРіРёС… СЃРёРјРІРѕР»РѕРІ
                 return;
             }
 
@@ -531,10 +531,10 @@ namespace Cash8Avalon
                     e.Handled = true;
                 }
             }
-            // Для управляющих символов (Backspace, Delete и т.д.) разрешаем стандартную обработку
-            // Не устанавливаем e.Handled = true
+            // Р”Р»СЏ СѓРїСЂР°РІР»СЏСЋС‰РёС… СЃРёРјРІРѕР»РѕРІ (Backspace, Delete Рё С‚.Рґ.) СЂР°Р·СЂРµС€Р°РµРј СЃС‚Р°РЅРґР°СЂС‚РЅСѓСЋ РѕР±СЂР°Р±РѕС‚РєСѓ
+            // РќРµ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј e.Handled = true
 
-            // Обеспечиваем 2 цифры после запятой
+            // РћР±РµСЃРїРµС‡РёРІР°РµРј 2 С†РёС„СЂС‹ РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№
             var separatorChar = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
             if (cashSumTextBox.Text.Contains(separatorChar))
             {
@@ -547,7 +547,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Исправляем позицию курсора если он в начале
+            // РСЃРїСЂР°РІР»СЏРµРј РїРѕР·РёС†РёСЋ РєСѓСЂСЃРѕСЂР° РµСЃР»Рё РѕРЅ РІ РЅР°С‡Р°Р»Рµ
             if (cashSumTextBox.CaretIndex == 0)
             {
                 cashSumTextBox.CaretIndex = cashSumTextBox.Text.Length;
@@ -557,12 +557,12 @@ namespace Cash8Avalon
 
         private void OnCashSumKeyDown(object sender, KeyEventArgs e)
         {
-            // Обработка Backspace и Delete
+            // РћР±СЂР°Р±РѕС‚РєР° Backspace Рё Delete
             if (e.Key == Key.Back || e.Key == Key.Delete)
             {
                 _firstInput = false;
 
-                // После удаления символа обновляем форматирование
+                // РџРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ СЃРёРјРІРѕР»Р° РѕР±РЅРѕРІР»СЏРµРј С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ
                 Task.Delay(10).ContinueWith(_ =>
                 {
                     Dispatcher.UIThread.InvokeAsync(() =>
@@ -581,10 +581,10 @@ namespace Cash8Avalon
         {
             if (cashSumTextBox == null) return;
 
-            // Автоматическое форматирование при изменении текста
+            // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ РїСЂРё РёР·РјРµРЅРµРЅРёРё С‚РµРєСЃС‚Р°
             FormatCashSumText();
 
-            // Пересчет сдачи
+            // РџРµСЂРµСЃС‡РµС‚ СЃРґР°С‡Рё
             CalculateChange();
         }
 
@@ -637,16 +637,16 @@ namespace Cash8Avalon
 
             var currentText = cashSumTextBox.Text;
 
-            // Защита от вставки недопустимых символов
+            // Р—Р°С‰РёС‚Р° РѕС‚ РІСЃС‚Р°РІРєРё РЅРµРґРѕРїСѓСЃС‚РёРјС‹С… СЃРёРјРІРѕР»РѕРІ
             if (!string.IsNullOrEmpty(currentText))
             {
-                // Удаляем все нецифровые символы кроме разделителя
+                // РЈРґР°Р»СЏРµРј РІСЃРµ РЅРµС†РёС„СЂРѕРІС‹Рµ СЃРёРјРІРѕР»С‹ РєСЂРѕРјРµ СЂР°Р·РґРµР»РёС‚РµР»СЏ
                 var separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
                 var cleanedText = new string(currentText
                     .Where(c => char.IsDigit(c) || c == separator[0])
                     .ToArray());
 
-                // Убираем лишние разделители (оставляем только первый)
+                // РЈР±РёСЂР°РµРј Р»РёС€РЅРёРµ СЂР°Р·РґРµР»РёС‚РµР»Рё (РѕСЃС‚Р°РІР»СЏРµРј С‚РѕР»СЊРєРѕ РїРµСЂРІС‹Р№)
                 int separatorCount = cleanedText.Count(c => c == separator[0]);
                 if (separatorCount > 1)
                 {
@@ -663,7 +663,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Обеспечиваем 2 цифры после запятой
+            // РћР±РµСЃРїРµС‡РёРІР°РµРј 2 С†РёС„СЂС‹ РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№
             var separatorChar = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
             if (cashSumTextBox.Text.Contains(separatorChar))
             {
@@ -677,7 +677,7 @@ namespace Cash8Avalon
                 }
                 else if (text.Length - decimalIndex - 1 > 2)
                 {
-                    // Ограничиваем до 2 знаков после запятой
+                    // РћРіСЂР°РЅРёС‡РёРІР°РµРј РґРѕ 2 Р·РЅР°РєРѕРІ РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№
                     cashSumTextBox.Text = text.Substring(0, decimalIndex + 3);
                 }
             }
@@ -699,13 +699,13 @@ namespace Cash8Avalon
                     break;
                 case Key.Y:
                     e.Handled = true;
-                    // Устанавливаем наличные = сумме чека, обнуляем безнал
+                    // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РЅР°Р»РёС‡РЅС‹Рµ = СЃСѓРјРјРµ С‡РµРєР°, РѕР±РЅСѓР»СЏРµРј Р±РµР·РЅР°Р»
                     this.CashSum = this.PaySum;
                     ClearNonCash();
                     break;
                 case Key.R:
                     e.Handled = true;
-                    // Устанавливаем безнал = сумме чека, обнуляем наличные
+                    // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р±РµР·РЅР°Р» = СЃСѓРјРјРµ С‡РµРєР°, РѕР±РЅСѓР»СЏРµРј РЅР°Р»РёС‡РЅС‹Рµ
                     FillNonCashFromPaySum();
                     ClearCash();
                     break;
@@ -722,37 +722,37 @@ namespace Cash8Avalon
             {
                 var inputSertificates = new InputSertificates();
 
-                // Передаем существующие сертификаты для редактирования
+                // РџРµСЂРµРґР°РµРј СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СЃРµСЂС‚РёС„РёРєР°С‚С‹ РґР»СЏ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ
                 if (_certificatesList.Count > 0)
                 {
                     inputSertificates.LoadExistingCertificates(_certificatesList);
                 }
                 inputSertificates.Topmost = true;
-                // Открываем как модальное окно, ожидая список сертификатов
+                // РћС‚РєСЂС‹РІР°РµРј РєР°Рє РјРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ, РѕР¶РёРґР°СЏ СЃРїРёСЃРѕРє СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ
                 await inputSertificates.ShowDialog<List<InputSertificates.CertificateItem>>(this);
 
-                // Получаем результат
+                // РџРѕР»СѓС‡Р°РµРј СЂРµР·СѓР»СЊС‚Р°С‚
                 var updatedCertificates = inputSertificates.Tag as List<InputSertificates.CertificateItem>;
 
                 if (updatedCertificates != null)
                 {
-                    // Обрабатываем обновленные данные
+                    // РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РѕР±РЅРѕРІР»РµРЅРЅС‹Рµ РґР°РЅРЅС‹Рµ
                     await ProcessCertificatesData(updatedCertificates);
                 }
                 //else
                 //{
-                //    // Форма закрылась без результата (пользователь отменил или проверка не прошла)
-                //    // Можно показать сообщение или просто игнорировать
-                //    await MessageBox.Show("Изменения не сохранены",
-                //        "Информация",
+                //    // Р¤РѕСЂРјР° Р·Р°РєСЂС‹Р»Р°СЃСЊ Р±РµР· СЂРµР·СѓР»СЊС‚Р°С‚Р° (РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕС‚РјРµРЅРёР» РёР»Рё РїСЂРѕРІРµСЂРєР° РЅРµ РїСЂРѕС€Р»Р°)
+                //    // РњРѕР¶РЅРѕ РїРѕРєР°Р·Р°С‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ РёР»Рё РїСЂРѕСЃС‚Рѕ РёРіРЅРѕСЂРёСЂРѕРІР°С‚СЊ
+                //    await MessageBox.Show("РР·РјРµРЅРµРЅРёСЏ РЅРµ СЃРѕС…СЂР°РЅРµРЅС‹",
+                //        "РРЅС„РѕСЂРјР°С†РёСЏ",
                 //        MessageBoxButton.OK,
                 //        MessageBoxType.Error);
                 //}
             }
             catch (Exception ex)
             {
-                await MessageBox.Show($"Ошибка открытия формы сертификатов: {ex.Message}",
-                    "Ошибка",
+                await MessageBox.Show($"РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ С„РѕСЂРјС‹ СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ: {ex.Message}",
+                    "РћС€РёР±РєР°",
                     MessageBoxButton.OK,
                     MessageBoxType.Error,
                     this);
@@ -760,14 +760,14 @@ namespace Cash8Avalon
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 this.Focus();
-                this.Activate(); // Пробуем активировать окно
+                this.Activate(); // РџСЂРѕР±СѓРµРј Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊ РѕРєРЅРѕ
 
                 if (cashSumTextBox != null)
                 {
                     cashSumTextBox.Focus();
                 }
 
-                // Для Linux особенно важно
+                // Р”Р»СЏ Linux РѕСЃРѕР±РµРЅРЅРѕ РІР°Р¶РЅРѕ
                 this.Topmost = true;
                 //this.Topmost = false;
             }, DispatcherPriority.Render);
@@ -783,20 +783,20 @@ namespace Cash8Avalon
                 {
                     if (certificates.Count > 0)
                     {
-                        // СОХРАНЯЕМ СЕРТИФИКАТЫ
+                        // РЎРћРҐР РђРќРЇР•Рњ РЎР•Р РўРР¤РРљРђРўР«
                         _certificatesList = certificates;
 
-                        // Считаем сумму сами
+                        // РЎС‡РёС‚Р°РµРј СЃСѓРјРјСѓ СЃР°РјРё
                         decimal totalAmount = certificates.Sum(c => c.Amount);
 
-                        // Обновляем сумму в интерфейсе
+                        // РћР±РЅРѕРІР»СЏРµРј СЃСѓРјРјСѓ РІ РёРЅС‚РµСЂС„РµР№СЃРµ
                         this.CertificatesSum = totalAmount.ToString("F2");
                         CalculateChange();
 
-                        // Логирование
+                        // Р›РѕРіРёСЂРѕРІР°РЅРёРµ
                         MainStaticClass.write_event_in_log(
-                            $"Добавлено {certificates.Count} сертификатов на сумму {totalAmount:F2}",
-                            "Сертификаты",
+                            $"Р”РѕР±Р°РІР»РµРЅРѕ {certificates.Count} СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ РЅР° СЃСѓРјРјСѓ {totalAmount:F2}",
+                            "РЎРµСЂС‚РёС„РёРєР°С‚С‹",
                             cc?.numdoc.ToString() ?? "0"
                         );
                         calculate();
@@ -804,20 +804,20 @@ namespace Cash8Avalon
                     }
                     else
                     {
-                        // Пустой список - очищаем
+                        // РџСѓСЃС‚РѕР№ СЃРїРёСЃРѕРє - РѕС‡РёС‰Р°РµРј
                         ClearCertificates();
                     }
                 }
                 else
                 {
-                    // Неправильный формат данных
+                    // РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ С„РѕСЂРјР°С‚ РґР°РЅРЅС‹С…
                     ClearCertificates();
                 }
             }
             catch (Exception ex)
             {
-                await MessageBox.Show($"Ошибка обработки сертификатов: {ex.Message}",
-                    "Ошибка",
+                await MessageBox.Show($"РћС€РёР±РєР° РѕР±СЂР°Р±РѕС‚РєРё СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ: {ex.Message}",
+                    "РћС€РёР±РєР°",
                     MessageBoxButton.OK,
                     MessageBoxType.Error);
                 ClearCertificates();
@@ -832,13 +832,13 @@ namespace Cash8Avalon
             CalculateChange();
         }
 
-        // Метод для получения суммы сертификатов
+        // РњРµС‚РѕРґ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ СЃСѓРјРјС‹ СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ
         public decimal GetCertificatesTotal()
         {
             return _certificatesList.Sum(c => c.Amount);
         }
 
-        // Метод для получения количества сертификатов
+        // РњРµС‚РѕРґ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РєРѕР»РёС‡РµСЃС‚РІР° СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ
         public int GetCertificatesCount()
         {
             return _certificatesList.Count;
@@ -846,25 +846,25 @@ namespace Cash8Avalon
 
         private void FillNonCashFromPaySum()
         {
-            // Получаем сумму чека и разделяем на рубли и копейки
+            // РџРѕР»СѓС‡Р°РµРј СЃСѓРјРјСѓ С‡РµРєР° Рё СЂР°Р·РґРµР»СЏРµРј РЅР° СЂСѓР±Р»Рё Рё РєРѕРїРµР№РєРё
             if (decimal.TryParse(this.PaySum.Replace(",", "."),
                 NumberStyles.Any, CultureInfo.InvariantCulture, out decimal paySum))
             {
-                // Округляем до 2 знаков после запятой
+                // РћРєСЂСѓРіР»СЏРµРј РґРѕ 2 Р·РЅР°РєРѕРІ РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№
                 paySum = Math.Round(paySum, 2, MidpointRounding.AwayFromZero);
 
-                // Разделяем на рубли и копейки
+                // Р Р°Р·РґРµР»СЏРµРј РЅР° СЂСѓР±Р»Рё Рё РєРѕРїРµР№РєРё
                 int rubles = (int)Math.Floor(paySum);
                 int kopecks = (int)((paySum - rubles) * 100);
 
-                // Устанавливаем значения
+                // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р·РЅР°С‡РµРЅРёСЏ
                 this.NonCashSum = rubles.ToString();
                 this.NonCashSumKop = kopecks.ToString("00");
             }
             calculate();
         }
 
-        // Обнулить безналичную оплату
+        // РћР±РЅСѓР»РёС‚СЊ Р±РµР·РЅР°Р»РёС‡РЅСѓСЋ РѕРїР»Р°С‚Сѓ
         private void ClearNonCash()
         {
             this.NonCashSum = "0";
@@ -872,7 +872,7 @@ namespace Cash8Avalon
             calculate();
         }
 
-        // Обнулить наличные
+        // РћР±РЅСѓР»РёС‚СЊ РЅР°Р»РёС‡РЅС‹Рµ
         private void ClearCash()
         {
             this.CashSum = "0,00";
@@ -896,27 +896,27 @@ namespace Cash8Avalon
             if (string.IsNullOrWhiteSpace(non_cash_sum.Text))
             {
                 await MessageBox.Show(
-                    "У вас пустое поле оплата по карте. Сделайте фото и создайте заявку в ит отдел.",
-                    "Проверки при оплате картой",
+                    "РЈ РІР°СЃ РїСѓСЃС‚РѕРµ РїРѕР»Рµ РѕРїР»Р°С‚Р° РїРѕ РєР°СЂС‚Рµ. РЎРґРµР»Р°Р№С‚Рµ С„РѕС‚Рѕ Рё СЃРѕР·РґР°Р№С‚Рµ Р·Р°СЏРІРєСѓ РІ РёС‚ РѕС‚РґРµР».",
+                    "РџСЂРѕРІРµСЂРєРё РїСЂРё РѕРїР»Р°С‚Рµ РєР°СЂС‚РѕР№",
                     MessageBoxButton.OK,
                     MessageBoxType.Error);
                 return false;
             }
 
-            // Проверяем, если целая часть суммы равна 0, но копейки заполнены
+            // РџСЂРѕРІРµСЂСЏРµРј, РµСЃР»Рё С†РµР»Р°СЏ С‡Р°СЃС‚СЊ СЃСѓРјРјС‹ СЂР°РІРЅР° 0, РЅРѕ РєРѕРїРµР№РєРё Р·Р°РїРѕР»РЅРµРЅС‹
             if (non_cash_sum.Text.Trim().Length > 0)
             {
-                // Пытаемся преобразовать в число с учетом культуры
+                // РџС‹С‚Р°РµРјСЃСЏ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РІ С‡РёСЃР»Рѕ СЃ СѓС‡РµС‚РѕРј РєСѓР»СЊС‚СѓСЂС‹
                 if (int.TryParse(non_cash_sum.Text.Trim(), out int rubles) && rubles == 0)
                 {
                     if (short.TryParse(non_cash_sum_kop.Text.Trim(), out short kopecks) && kopecks > 0)
                     {
-                        // Используем ваш MessageBox для Avalonia
+                        // РСЃРїРѕР»СЊР·СѓРµРј РІР°С€ MessageBox РґР»СЏ Avalonia
                         MessageBoxResult dialogResult = await MessageBox.Show(
-                            "У вас заполнены копейки для оплаты по карте, но не заполнена целая часть суммы оплаты по карте.\n\n" +
-                            "Если вы выберете ДА, тогда копейки будут оплачены по карте.\n" +
-                            "Если вы выберете НЕТ, то копейки обнулятся и вам будет необходимо снова выбрать сумму и форму оплаты.",
-                            "Проверки при оплате картой",
+                            "РЈ РІР°СЃ Р·Р°РїРѕР»РЅРµРЅС‹ РєРѕРїРµР№РєРё РґР»СЏ РѕРїР»Р°С‚С‹ РїРѕ РєР°СЂС‚Рµ, РЅРѕ РЅРµ Р·Р°РїРѕР»РЅРµРЅР° С†РµР»Р°СЏ С‡Р°СЃС‚СЊ СЃСѓРјРјС‹ РѕРїР»Р°С‚С‹ РїРѕ РєР°СЂС‚Рµ.\n\n" +
+                            "Р•СЃР»Рё РІС‹ РІС‹Р±РµСЂРµС‚Рµ Р”Рђ, С‚РѕРіРґР° РєРѕРїРµР№РєРё Р±СѓРґСѓС‚ РѕРїР»Р°С‡РµРЅС‹ РїРѕ РєР°СЂС‚Рµ.\n" +
+                            "Р•СЃР»Рё РІС‹ РІС‹Р±РµСЂРµС‚Рµ РќР•Рў, С‚Рѕ РєРѕРїРµР№РєРё РѕР±РЅСѓР»СЏС‚СЃСЏ Рё РІР°Рј Р±СѓРґРµС‚ РЅРµРѕР±С…РѕРґРёРјРѕ СЃРЅРѕРІР° РІС‹Р±СЂР°С‚СЊ СЃСѓРјРјСѓ Рё С„РѕСЂРјСѓ РѕРїР»Р°С‚С‹.",
+                            "РџСЂРѕРІРµСЂРєРё РїСЂРё РѕРїР»Р°С‚Рµ РєР°СЂС‚РѕР№",
                             MessageBoxButton.YesNo,
                             MessageBoxType.Question);
 
@@ -967,7 +967,7 @@ namespace Cash8Avalon
                 //        button_pay.IsEnabled = true;
                 //    }, DispatcherPriority.Render);
                 //}
-                // Вычисляем условие
+                // Р’С‹С‡РёСЃР»СЏРµРј СѓСЃР»РѕРІРёРµ
                 bool shouldEnable = Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) +
                                   double.Parse(non_cash_sum.Text) +
                                   double.Parse(sertificates_sum.Text) +
@@ -975,18 +975,18 @@ namespace Cash8Avalon
                                   Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100),
                                   2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) >= 0;
 
-                // Обновляем кнопку через Dispatcher с высоким приоритетом
+                // РћР±РЅРѕРІР»СЏРµРј РєРЅРѕРїРєСѓ С‡РµСЂРµР· Dispatcher СЃ РІС‹СЃРѕРєРёРј РїСЂРёРѕСЂРёС‚РµС‚РѕРј
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     button_pay.IsEnabled = shouldEnable;
-                }, DispatcherPriority.Render); // Используем Render для немедленного обновления
+                }, DispatcherPriority.Render); // РСЃРїРѕР»СЊР·СѓРµРј Render РґР»СЏ РЅРµРјРµРґР»РµРЅРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ
                 //await Task.Delay(2000);
 
                 Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("calculate " + ex.Message,"Ошибка при подсчете",MessageBoxButton.OK,MessageBoxType.Error);
+                await MessageBox.Show("calculate " + ex.Message,"РћС€РёР±РєР° РїСЂРё РїРѕРґСЃС‡РµС‚Рµ",MessageBoxButton.OK,MessageBoxType.Error);
             }           
         }
 
@@ -1001,9 +1001,9 @@ namespace Cash8Avalon
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 this.button_pay.IsEnabled = false;
-            }, DispatcherPriority.Render); // Используем Render для немедленного обновления
+            }, DispatcherPriority.Render); // РСЃРїРѕР»СЊР·СѓРµРј Render РґР»СЏ РЅРµРјРµРґР»РµРЅРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ
 
-            //Проверить заполнены копейки или нет 
+            //РџСЂРѕРІРµСЂРёС‚СЊ Р·Р°РїРѕР»РЅРµРЅС‹ РєРѕРїРµР№РєРё РёР»Рё РЅРµС‚ 
 
             double cash_money = Math.Round(Convert.ToDouble(txtB_cash_sum.Text.Replace(".", ",")), 2);
             double non_cash_money = Math.Round(Convert.ToDouble(get_non_cash_sum()), 2);
@@ -1016,19 +1016,19 @@ namespace Cash8Avalon
 
             //if (Math.Round(Convert.ToDouble(cash_sum.Text.Replace(".", ",")),2, MidpointRounding.AwayFromZero) + Math.Round(Convert.ToDouble(get_non_cash_sum(0)),2, MidpointRounding.AwayFromZero) + Math.Round(Convert.ToDouble(sertificates_sum.Text),2, MidpointRounding.AwayFromZero) + Math.Round(Convert.ToDouble(pay_bonus_many.Text.Replace(".", ",")),2, MidpointRounding.AwayFromZero) - Math.Round(Convert.ToDouble(pay_sum.Text.Replace(".", ",")),2, MidpointRounding.AwayFromZero) < 0)
             //if ((Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2)) < 0)
-            //MessageBox.Show("Всего оплат " + all_cash_non_cash);
+            //MessageBox.Show("Р’СЃРµРіРѕ РѕРїР»Р°С‚ " + all_cash_non_cash);
             //MessageBox.Show("all_cash_non_cash - sum_on_document=" + (Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2)));
             if (Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2) < 0)
             {
-                //MessageBox.Show("Общая сумма оплат  " + (cash_money + non_cash_money + sertificate_money + bonus_money));
+                //MessageBox.Show("РћР±С‰Р°СЏ СЃСѓРјРјР° РѕРїР»Р°С‚  " + (cash_money + non_cash_money + sertificate_money + bonus_money));
                 //double minus = (cash_money + non_cash_money + sertificate_money + bonus_money) - sum_on_document;
                 //MessageBox.Show(minus.ToString());
-                await MessageBox.Show("Проверьте сумму внесенной оплаты");
-                await MessageBox.Show("Наличные" + Math.Round(Convert.ToDouble(txtB_cash_sum.Text.Replace(".", ",")), 2).ToString());
-                await MessageBox.Show("Карта " + Math.Round(Convert.ToDouble(get_non_cash_sum()), 2).ToString());
-                await MessageBox.Show("Сертификаты " + Math.Round(Convert.ToDouble(sertificates_sum.Text), 2).ToString());
-                await MessageBox.Show("Бонусы " + Math.Round(Convert.ToDouble(pay_bonus_many.Text.Replace(".", ",")), 2).ToString());
-                await MessageBox.Show("Общая сумма  " + Math.Round(Convert.ToDouble(pay_sum.Text.Replace(".", ",")), 2));
+                await MessageBox.Show("РџСЂРѕРІРµСЂСЊС‚Рµ СЃСѓРјРјСѓ РІРЅРµСЃРµРЅРЅРѕР№ РѕРїР»Р°С‚С‹");
+                await MessageBox.Show("РќР°Р»РёС‡РЅС‹Рµ" + Math.Round(Convert.ToDouble(txtB_cash_sum.Text.Replace(".", ",")), 2).ToString());
+                await MessageBox.Show("РљР°СЂС‚Р° " + Math.Round(Convert.ToDouble(get_non_cash_sum()), 2).ToString());
+                await MessageBox.Show("РЎРµСЂС‚РёС„РёРєР°С‚С‹ " + Math.Round(Convert.ToDouble(sertificates_sum.Text), 2).ToString());
+                await MessageBox.Show("Р‘РѕРЅСѓСЃС‹ " + Math.Round(Convert.ToDouble(pay_bonus_many.Text.Replace(".", ",")), 2).ToString());
+                await MessageBox.Show("РћР±С‰Р°СЏ СЃСѓРјРјР°  " + Math.Round(Convert.ToDouble(pay_sum.Text.Replace(".", ",")), 2));
 
                 return;
             }
@@ -1038,12 +1038,12 @@ namespace Cash8Avalon
             {
                 if (cc.check_type.SelectedIndex != 0)
                 {
-                    await MessageBox.Show(" Сумма возврата должна быть равно сумме оплаты ");
+                    await MessageBox.Show(" РЎСѓРјРјР° РІРѕР·РІСЂР°С‚Р° РґРѕР»Р¶РЅР° Р±С‹С‚СЊ СЂР°РІРЅРѕ СЃСѓРјРјРµ РѕРїР»Р°С‚С‹ ");
                     return;
                 }
             }
 
-            if (Convert.ToDouble(pay_bonus_many.Text) != 0)//При оплате бонусами бонусы не начисляются
+            if (Convert.ToDouble(pay_bonus_many.Text) != 0)//РџСЂРё РѕРїР»Р°С‚Рµ Р±РѕРЅСѓСЃР°РјРё Р±РѕРЅСѓСЃС‹ РЅРµ РЅР°С‡РёСЃР»СЏСЋС‚СЃСЏ
             {
                 bonus_on_document.Text = "0";
             }
@@ -1052,7 +1052,7 @@ namespace Cash8Avalon
             {
                 if (Convert.ToDouble(non_cash_sum.Text) + Convert.ToDouble(sertificates_sum.Text) + Convert.ToDouble(pay_bonus_many.Text) > Convert.ToDouble(pay_sum.Text))
                 {
-                    await MessageBox.Show("Сумма сертификатов + сумма по карте оплаты + сумма по бонусам превышает сумму чека ");
+                    await MessageBox.Show("РЎСѓРјРјР° СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ + СЃСѓРјРјР° РїРѕ РєР°СЂС‚Рµ РѕРїР»Р°С‚С‹ + СЃСѓРјРјР° РїРѕ Р±РѕРЅСѓСЃР°Рј РїСЂРµРІС‹С€Р°РµС‚ СЃСѓРјРјСѓ С‡РµРєР° ");
                     return;
                 }
             }
@@ -1060,7 +1060,7 @@ namespace Cash8Avalon
             {
                 if (Convert.ToDouble(non_cash_sum.Text) + Convert.ToDouble(sertificates_sum.Text) > Convert.ToDouble(pay_sum.Text))
                 {
-                    await MessageBox.Show(" Сумма сертификатов + сумма по карте оплаты превышает сумму чека ");
+                    await MessageBox.Show(" РЎСѓРјРјР° СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ + СЃСѓРјРјР° РїРѕ РєР°СЂС‚Рµ РѕРїР»Р°С‚С‹ РїСЂРµРІС‹С€Р°РµС‚ СЃСѓРјРјСѓ С‡РµРєР° ");
                     return;
                 }
             }
@@ -1075,41 +1075,41 @@ namespace Cash8Avalon
 
             cc.SetCertificatesFromPay(_certificatesList);
 
-            MainStaticClass.write_event_in_log("Окно оплаты перед записью и закрытием документа ", "Документ чек", cc.numdoc.ToString());
+            MainStaticClass.write_event_in_log("РћРєРЅРѕ РѕРїР»Р°С‚С‹ РїРµСЂРµРґ Р·Р°РїРёСЃСЊСЋ Рё Р·Р°РєСЂС‹С‚РёРµРј РґРѕРєСѓРјРµРЅС‚Р° ", "Р”РѕРєСѓРјРµРЅС‚ С‡РµРє", cc.numdoc.ToString());
 
-            //Необходимо проверка на сумму документа где сумма всех форм оплаты равно сумме документа
-            //Получаем общу сумму по оплате 
+            //РќРµРѕР±С…РѕРґРёРјРѕ РїСЂРѕРІРµСЂРєР° РЅР° СЃСѓРјРјСѓ РґРѕРєСѓРјРµРЅС‚Р° РіРґРµ СЃСѓРјРјР° РІСЃРµС… С„РѕСЂРј РѕРїР»Р°С‚С‹ СЂР°РІРЅРѕ СЃСѓРјРјРµ РґРѕРєСѓРјРµРЅС‚Р°
+            //РџРѕР»СѓС‡Р°РµРј РѕР±С‰Сѓ СЃСѓРјРјСѓ РїРѕ РѕРїР»Р°С‚Рµ 
             Double _cash_summ_ = Convert.ToDouble(txtB_cash_sum.Text) - Convert.ToDouble(remainder.Text);
-            //MessageBox.Show("Наличные " + _cash_summ_.ToString());
+            //MessageBox.Show("РќР°Р»РёС‡РЅС‹Рµ " + _cash_summ_.ToString());
             Double _non_cash_summ_ = Math.Round(Convert.ToDouble(get_non_cash_sum()), 2);
-            //MessageBox.Show("Безнал " + _non_cash_summ_.ToString());
+            //MessageBox.Show("Р‘РµР·РЅР°Р» " + _non_cash_summ_.ToString());
             Double _sertificates_sum_ = Convert.ToDouble(sertificates_sum.Text);
-            //MessageBox.Show("Сертификаты " + _sertificates_sum_.ToString());
+            //MessageBox.Show("РЎРµСЂС‚РёС„РёРєР°С‚С‹ " + _sertificates_sum_.ToString());
             //decimal _pay_bonus_many_ = Convert.ToDecimal((int)(Convert.ToInt32(pay_bonus_many.Text)/100));
             Double _pay_bonus_many_ = Convert.ToDouble(pay_bonus_many.Text);
-            //MessageBox.Show("Бонусы " + _pay_bonus_many_.ToString());
+            //MessageBox.Show("Р‘РѕРЅСѓСЃС‹ " + _pay_bonus_many_.ToString());
             Double sum_of_the_document = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
             //decimal sum_of_the_document = Math.Round(Convert.ToDecimal(pay_sum.Text.Replace(".", ",")), 2);
-            //MessageBox.Show("Сумма документа " + sum_of_the_document.ToString());
+            //MessageBox.Show("РЎСѓРјРјР° РґРѕРєСѓРјРµРЅС‚Р° " + sum_of_the_document.ToString());
             
             if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
             {
                 if (Math.Round(sum_of_the_document, 2) != Math.Round((_cash_summ_ + _non_cash_summ_ + _sertificates_sum_ + _pay_bonus_many_), 2))
                 {
 
-                    await MessageBox.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ");
-                    await MessageBox.Show("Сумма документа = " + sum_of_the_document.ToString() + " а сумма оплат = " + (_cash_summ_ + _non_cash_summ_ + _sertificates_sum_ + _pay_bonus_many_).ToString());
-                    await MessageBox.Show("Сумма наличные = " + _cash_summ_.ToString());
-                    await MessageBox.Show("Сумма карта оплаты = " + _non_cash_summ_.ToString());
-                    await MessageBox.Show("Сумма сертификатов = " + _sertificates_sum_.ToString());
-                    await MessageBox.Show("Сумма бонусов = " + _pay_bonus_many_.ToString());
+                    await MessageBox.Show(" РџРѕРІС‚РѕСЂРЅРѕ РІРЅРµСЃРёС‚Рµ СЃСѓРјРјС‹ РѕРїР»Р°С‚С‹, РѕР±РЅР°СЂСѓР¶РµРЅРѕ РЅРµ СЃС…РѕР¶РґРµРЅРёРµ РІ РѕРєРЅРµ РѕРїР»Р°С‚С‹ ");
+                    await MessageBox.Show("РЎСѓРјРјР° РґРѕРєСѓРјРµРЅС‚Р° = " + sum_of_the_document.ToString() + " Р° СЃСѓРјРјР° РѕРїР»Р°С‚ = " + (_cash_summ_ + _non_cash_summ_ + _sertificates_sum_ + _pay_bonus_many_).ToString());
+                    await MessageBox.Show("РЎСѓРјРјР° РЅР°Р»РёС‡РЅС‹Рµ = " + _cash_summ_.ToString());
+                    await MessageBox.Show("РЎСѓРјРјР° РєР°СЂС‚Р° РѕРїР»Р°С‚С‹ = " + _non_cash_summ_.ToString());
+                    await MessageBox.Show("РЎСѓРјРјР° СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ = " + _sertificates_sum_.ToString());
+                    await MessageBox.Show("РЎСѓРјРјР° Р±РѕРЅСѓСЃРѕРІ = " + _pay_bonus_many_.ToString());
 
                     return;
                 }
             }
             
 
-            //Если это возврат то необходимо проверить сумму по каждой форме оплаты 
+            //Р•СЃР»Рё СЌС‚Рѕ РІРѕР·РІСЂР°С‚ С‚Рѕ РЅРµРѕР±С…РѕРґРёРјРѕ РїСЂРѕРІРµСЂРёС‚СЊ СЃСѓРјРјСѓ РїРѕ РєР°Р¶РґРѕР№ С„РѕСЂРјРµ РѕРїР»Р°С‚С‹ 
             if (cc.check_type.SelectedIndex == 1)
             {
                 if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, _cash_summ_, _non_cash_summ_))
@@ -1121,8 +1121,8 @@ namespace Cash8Avalon
             await it_is_paid();
         }
 
-        /*Оплачено
-        *Это процедура записи документа в базу данных AnswerTerminal
+        /*РћРїР»Р°С‡РµРЅРѕ
+        *Р­С‚Рѕ РїСЂРѕС†РµРґСѓСЂР° Р·Р°РїРёСЃРё РґРѕРєСѓРјРµРЅС‚Р° РІ Р±Р°Р·Сѓ РґР°РЅРЅС‹С… AnswerTerminal
         */
         private async Task it_is_paid()
         {
@@ -1131,27 +1131,27 @@ namespace Cash8Avalon
             {
                 if ((Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)) < 0)
                 {
-                    await MessageBox.Show("Ошибка при определении суммы наличных");
+                    await MessageBox.Show("РћС€РёР±РєР° РїСЂРё РѕРїСЂРµРґРµР»РµРЅРёРё СЃСѓРјРјС‹ РЅР°Р»РёС‡РЅС‹С…");
                     return;
                 }
-                //Получаем копейки которые необходимо распределить
+                //РџРѕР»СѓС‡Р°РµРј РєРѕРїРµР№РєРё РєРѕС‚РѕСЂС‹Рµ РЅРµРѕР±С…РѕРґРёРјРѕ СЂР°СЃРїСЂРµРґРµР»РёС‚СЊ
                 double total = Convert.ToDouble(pay_sum.Text);
 
 
                 if (Convert.ToDecimal(pay_sum.Text) - (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text) + Convert.ToDecimal(sertificates_sum.Text) + Convert.ToDecimal(pay_bonus_many.Text) + Convert.ToDecimal(non_cash_sum.Text)) > 1)
                 {
-                    await MessageBox.Show(" Неверно внесенные суммы ","Проверка оплаты",MessageBoxButton.OK,MessageBoxType.Error);
+                    await MessageBox.Show(" РќРµРІРµСЂРЅРѕ РІРЅРµСЃРµРЅРЅС‹Рµ СЃСѓРјРјС‹ ","РџСЂРѕРІРµСЂРєР° РѕРїР»Р°С‚С‹",MessageBoxButton.OK,MessageBoxType.Error);
                     return;
                 }
 
                 if (!cc.ValidateCheckSumAtDiscount())
                 {
-                    await MessageBox.Show(" При распределении расчетов получилась нулевая/отрицательная сумма в строке, попробуйте ввести суммы оплаты еще раз",
-                        "Проверка суммы со скидкой", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBox.Show(" РџСЂРё СЂР°СЃРїСЂРµРґРµР»РµРЅРёРё СЂР°СЃС‡РµС‚РѕРІ РїРѕР»СѓС‡РёР»Р°СЃСЊ РЅСѓР»РµРІР°СЏ/РѕС‚СЂРёС†Р°С‚РµР»СЊРЅР°СЏ СЃСѓРјРјР° РІ СЃС‚СЂРѕРєРµ, РїРѕРїСЂРѕР±СѓР№С‚Рµ РІРІРµСЃС‚Рё СЃСѓРјРјС‹ РѕРїР»Р°С‚С‹ РµС‰Рµ СЂР°Р·",
+                        "РџСЂРѕРІРµСЂРєР° СЃСѓРјРјС‹ СЃРѕ СЃРєРёРґРєРѕР№", MessageBoxButton.OK, MessageBoxType.Error);
                     return;
                 }
 
-                //параметры подключение терминала заполнены и сумма по карте к оплате заполнена
+                //РїР°СЂР°РјРµС‚СЂС‹ РїРѕРґРєР»СЋС‡РµРЅРёРµ С‚РµСЂРјРёРЅР°Р»Р° Р·Р°РїРѕР»РЅРµРЅС‹ Рё СЃСѓРјРјР° РїРѕ РєР°СЂС‚Рµ Рє РѕРїР»Р°С‚Рµ Р·Р°РїРѕР»РЅРµРЅР°
                 double notCashSum = Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100;
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
@@ -1161,7 +1161,7 @@ namespace Cash8Avalon
 
                         string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
 
-                        if (MainStaticClass.GetAcquiringBank == 1) //РНКБ
+                        if (MainStaticClass.GetAcquiringBank == 1) //Р РќРљР‘
                         {
                             //if ((checkBox_payment_by_sbp.CheckState != CheckState.Checked) && (checkBox_do_not_send_payment_to_the_terminal.CheckState == CheckState.Unchecked))
                             if (checkBox_payment_by_sbp.IsChecked != true)
@@ -1186,7 +1186,7 @@ namespace Cash8Avalon
                                 //}
                                 //else
                                 //{
-                                //    await MessageBox.Show("Результат команды не получен.\r\nНеудачная попытка оплаты", "Неудачная попытка оплаты");
+                                //    await MessageBox.Show("Р РµР·СѓР»СЊС‚Р°С‚ РєРѕРјР°РЅРґС‹ РЅРµ РїРѕР»СѓС‡РµРЅ.\r\nРќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РѕРїР»Р°С‚С‹", "РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РѕРїР»Р°С‚С‹");
                                 //    calculate();
                                 //    this.Focus();
                                 //    return;
@@ -1195,24 +1195,47 @@ namespace Cash8Avalon
                                 //await ActivateWindow(this);
 
 
-                                //if (!complete)//ответ от терминала не удовлетворительный
+                                //if (!complete)//РѕС‚РІРµС‚ РѕС‚ С‚РµСЂРјРёРЅР°Р»Р° РЅРµ СѓРґРѕРІР»РµС‚РІРѕСЂРёС‚РµР»СЊРЅС‹Р№
                                 //{
                                 //    calculate();
                                 //    cc.recharge_note = "";
-                                //    await MessageBox.Show(" Неудачная попытка получения оплаты ", "Оплата по терминалу");
+                                //    await MessageBox.Show(" РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РїРѕР»СѓС‡РµРЅРёСЏ РѕРїР»Р°С‚С‹ ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                 //    return;
                                 //}
                                 //else
                                 //{
-                                //    cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 поле
-                                //    cc.id_transaction_terminal = answerTerminal.number_reference;  //14 поле                                    
+                                //    cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 РїРѕР»Рµ
+                                //    cc.id_transaction_terminal = answerTerminal.number_reference;  //14 РїРѕР»Рµ                                    
                                 //}
                                 string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
                                 string _str_command_sale_ = str_command_sale
                                     .Replace("sum", money)
                                     .Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
 
-                                // Показываем окно ожидания и получаем результат
+                                //// РџРѕРєР°Р·С‹РІР°РµРј РѕРєРЅРѕ РѕР¶РёРґР°РЅРёСЏ Рё РїРѕР»СѓС‡Р°РµРј СЂРµР·СѓР»СЊС‚Р°С‚
+                                //var terminalResult = await WaitNonCashPay.ShowAndWaitAsync(
+                                //    owner: this,
+                                //    timeoutSeconds: 80,
+                                //    url: url,
+                                //    data: _str_command_sale_
+                                //);
+
+                                //// РћР±СЂР°Р±Р°С‚С‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚
+                                //if (!terminalResult.IsSuccess)
+                                //{
+                                //    calculate();
+                                //    cc.recharge_note = "";
+
+                                //    await MessageBoxHelper.Show(
+                                //        $"РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РїРѕР»СѓС‡РµРЅРёСЏ РѕРїР»Р°С‚С‹: {terminalResult.ErrorMessage}",
+                                //        "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ",
+                                //        MessageBoxButton.OK,
+                                //        MessageBoxType.Error,
+                                //        this
+                                //    );
+                                //    return;
+                                //}
+
                                 var terminalResult = await WaitNonCashPay.ShowAndWaitAsync(
                                     owner: this,
                                     timeoutSeconds: 80,
@@ -1220,15 +1243,18 @@ namespace Cash8Avalon
                                     data: _str_command_sale_
                                 );
 
-                                // Обрабатываем результат
+                                // вњ… Р”РћРџРћР›РќРРўР•Р›Р¬РќРђРЇ Р“РђР РђРќРўРРЇ: Р¶РґС‘Рј Р·Р°РєСЂС‹С‚РёСЏ РѕРєРЅР°
+                                await Task.Delay(500); // Р”Р°С‘Рј РѕРєРЅСѓ РІСЂРµРјСЏ РЅР° Р·Р°РєСЂС‹С‚РёРµ
+
                                 if (!terminalResult.IsSuccess)
                                 {
                                     calculate();
                                     cc.recharge_note = "";
 
+                                    // вњ… РџРћРљРђР—Р«Р’РђР•Рњ РџРћР”Р“РћРўРћР’Р›Р•РќРќРћР• РџРћР›Р¬Р—РћР’РђРўР•Р›Р¬РЎРљРћР• РЎРћРћР‘Р©Р•РќРР•
                                     await MessageBoxHelper.Show(
-                                        $"Неудачная попытка получения оплаты: {terminalResult.ErrorMessage}",
-                                        "Оплата по терминалу",
+                                        terminalResult.ErrorMessage, // РЈР¶Рµ СЃРѕРґРµСЂР¶РёС‚ РїРѕРЅСЏС‚РЅС‹Р№ С‚РµРєСЃС‚
+                                        "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ",
                                         MessageBoxButton.OK,
                                         MessageBoxType.Error,
                                         this
@@ -1236,7 +1262,7 @@ namespace Cash8Avalon
                                     return;
                                 }
 
-                                // Успех - записываем данные в чек
+                                // РЈСЃРїРµС… - Р·Р°РїРёСЃС‹РІР°РµРј РґР°РЅРЅС‹Рµ РІ С‡РµРє
                                 cc.code_authorization_terminal = terminalResult.AuthorizationCode;
                                 cc.id_transaction_terminal = terminalResult.ReferenceNumber;
                                 cc.recharge_note = terminalResult.RechargeNote;
@@ -1252,7 +1278,7 @@ namespace Cash8Avalon
                                 ////MessageBox.Show(_str_command_sale_);
                                 AnswerTerminal answerTerminal = new AnswerTerminal();
                                 send_command_acquiring_terminal(url, _str_sale_sbp, ref complete, ref answerTerminal);
-                                if (!complete)//ответ от терминала не удовлетворительный, значит операция в обработке необходим дополнительный запрос
+                                if (!complete)//РѕС‚РІРµС‚ РѕС‚ С‚РµСЂРјРёРЅР°Р»Р° РЅРµ СѓРґРѕРІР»РµС‚РІРѕСЂРёС‚РµР»СЊРЅС‹Р№, Р·РЅР°С‡РёС‚ РѕРїРµСЂР°С†РёСЏ РІ РѕР±СЂР°Р±РѕС‚РєРµ РЅРµРѕР±С…РѕРґРёРј РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Р№ Р·Р°РїСЂРѕСЃ
                                 {
                                     string _str_payment_status_sale_sbp = str_payment_status_sale_sbp.Replace("sum", money);
                                     _str_payment_status_sale_sbp = _str_payment_status_sale_sbp.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
@@ -1261,67 +1287,67 @@ namespace Cash8Avalon
                                     {
                                         answerTerminal = new AnswerTerminal();
                                         send_command_acquiring_terminal(url, _str_payment_status_sale_sbp, ref complete, ref answerTerminal);
-                                        if (complete)//получен ответ об успешной оплате, прерываем цикл
+                                        if (complete)//РїРѕР»СѓС‡РµРЅ РѕС‚РІРµС‚ РѕР± СѓСЃРїРµС€РЅРѕР№ РѕРїР»Р°С‚Рµ, РїСЂРµСЂС‹РІР°РµРј С†РёРєР»
                                         {
                                             break;
                                         }
                                         else
                                         {
-                                            if (answerTerminal.сode_response_in_15_field == "R00")//Операция в обработке 
+                                            if (answerTerminal.СЃode_response_in_15_field == "R00")//РћРїРµСЂР°С†РёСЏ РІ РѕР±СЂР°Р±РѕС‚РєРµ 
                                             {
-                                                if (answerTerminal.сode_response_in_39_field == "0")
+                                                if (answerTerminal.СЃode_response_in_39_field == "0")
                                                 {
                                                     continue;
                                                 }
                                             }
 
-                                            if (answerTerminal.сode_response_in_15_field == "R10")
+                                            if (answerTerminal.СЃode_response_in_15_field == "R10")
                                             {
-                                                await MessageBox.Show(" Операция отклонена ", "Оплата по терминалу");
+                                                await MessageBox.Show(" РћРїРµСЂР°С†РёСЏ РѕС‚РєР»РѕРЅРµРЅР° ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                                 break;
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R11")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R11")
                                             {
-                                                await MessageBox.Show(" Операции по QR коду не существует. ", "Оплата по терминалу");
+                                                await MessageBox.Show(" РћРїРµСЂР°С†РёРё РїРѕ QR РєРѕРґСѓ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚. ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                                 break;
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R12")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R12")
                                             {
-                                                if (answerTerminal.сode_response_in_39_field == "0")
+                                                if (answerTerminal.СЃode_response_in_39_field == "0")
                                                 {
-                                                    await MessageBox.Show(" Не получен ответ на запрос статуса ", "Оплата по терминалу");
+                                                    await MessageBox.Show(" РќРµ РїРѕР»СѓС‡РµРЅ РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ СЃС‚Р°С‚СѓСЃР° ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                                     break;
                                                 }
-                                                else if (answerTerminal.сode_response_in_39_field == "16")
+                                                else if (answerTerminal.СЃode_response_in_39_field == "16")
                                                 {
-                                                    await MessageBox.Show(" Не получен ответ на запрос QR - кода ", "Оплата по терминалу");
+                                                    await MessageBox.Show(" РќРµ РїРѕР»СѓС‡РµРЅ РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ QR - РєРѕРґР° ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                                     break;
                                                 }
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R13")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R13")
                                             {
-                                                await MessageBox.Show(" Запрос статуса не отправлен ", "Оплата по терминалу");
+                                                await MessageBox.Show(" Р—Р°РїСЂРѕСЃ СЃС‚Р°С‚СѓСЃР° РЅРµ РѕС‚РїСЂР°РІР»РµРЅ ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                                 break;
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R14")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R14")
                                             {
-                                                await MessageBox.Show(" Операция не добавлена в базу транзакций терминала ", "Оплата по терминалу");
+                                                await MessageBox.Show(" РћРїРµСЂР°С†РёСЏ РЅРµ РґРѕР±Р°РІР»РµРЅР° РІ Р±Р°Р·Сѓ С‚СЂР°РЅР·Р°РєС†РёР№ С‚РµСЂРјРёРЅР°Р»Р° ", "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                                                 break;
                                             }
                                             if (answerTerminal.error)
                                             {
                                                 if (answerTerminal.error_code != 404)
                                                 {
-                                                    // Используем ваш MessageBox с параметрами YesNo
+                                                    // РСЃРїРѕР»СЊР·СѓРµРј РІР°С€ MessageBox СЃ РїР°СЂР°РјРµС‚СЂР°РјРё YesNo
                                                     MessageBoxResult result = await MessageBox.Show(
-                                                        "Продолжать опрос об оплате клиента по СБП",
-                                                        "Продолжать опрос об оплате клиента по СБП",
+                                                        "РџСЂРѕРґРѕР»Р¶Р°С‚СЊ РѕРїСЂРѕСЃ РѕР± РѕРїР»Р°С‚Рµ РєР»РёРµРЅС‚Р° РїРѕ РЎР‘Рџ",
+                                                        "РџСЂРѕРґРѕР»Р¶Р°С‚СЊ РѕРїСЂРѕСЃ РѕР± РѕРїР»Р°С‚Рµ РєР»РёРµРЅС‚Р° РїРѕ РЎР‘Рџ",
                                                         MessageBoxButton.YesNo,
                                                         MessageBoxType.Question);
 
                                                     if (result == MessageBoxResult.No)
                                                     {
-                                                        // Пользователь отказался от дальнейшего ожидания информации об оплате
+                                                        // РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕС‚РєР°Р·Р°Р»СЃСЏ РѕС‚ РґР°Р»СЊРЅРµР№С€РµРіРѕ РѕР¶РёРґР°РЅРёСЏ РёРЅС„РѕСЂРјР°С†РёРё РѕР± РѕРїР»Р°С‚Рµ
                                                         break;
                                                     }
                                                 }
@@ -1332,29 +1358,29 @@ namespace Cash8Avalon
                                             }
                                         }
                                     }
-                                    if (!complete)//если не удалось получить информацию об успешной оплате
+                                    if (!complete)//РµСЃР»Рё РЅРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ РѕР± СѓСЃРїРµС€РЅРѕР№ РѕРїР»Р°С‚Рµ
                                     {
                                         calculate();
                                         cc.recharge_note = "";
-                                        await MessageBox.Show(" Неудачная попытка получения оплаты ", "СБП");
+                                        await MessageBox.Show(" РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РїРѕР»СѓС‡РµРЅРёСЏ РѕРїР»Р°С‚С‹ ", "РЎР‘Рџ");
                                         return;
                                     }
                                     else
                                     {
-                                        cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 поле
-                                        cc.id_transaction_terminal = answerTerminal.number_reference;           //14 поле
+                                        cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 РїРѕР»Рµ
+                                        cc.id_transaction_terminal = answerTerminal.number_reference;           //14 РїРѕР»Рµ
                                         cc.payment_by_sbp = (checkBox_payment_by_sbp.IsChecked == true);
                                     }
                                 }
-                                else//был сразу получен успешный ответ по по оплате СБП
+                                else//Р±С‹Р» СЃСЂР°Р·Сѓ РїРѕР»СѓС‡РµРЅ СѓСЃРїРµС€РЅС‹Р№ РѕС‚РІРµС‚ РїРѕ РїРѕ РѕРїР»Р°С‚Рµ РЎР‘Рџ
                                 {
-                                    cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 поле
-                                    cc.id_transaction_terminal = answerTerminal.number_reference;           //14 поле
+                                    cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 РїРѕР»Рµ
+                                    cc.id_transaction_terminal = answerTerminal.number_reference;           //14 РїРѕР»Рµ
                                     cc.payment_by_sbp = (checkBox_payment_by_sbp.IsChecked == true);
                                 }
                             }
                         }
-                        else if (MainStaticClass.GetAcquiringBank == 2)//СБЕР
+                        else if (MainStaticClass.GetAcquiringBank == 2)//РЎР‘Р•Р 
                         {
                             //    try
                             //    {
@@ -1382,23 +1408,23 @@ namespace Cash8Avalon
                             //        }
                             //        else
                             //        {
-                            //            MessageBox.Show(" Не удалось получить слип с терминала ", "Неудачная попытка оплаты по терминалу");
+                            //            MessageBox.Show(" РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ СЃР»РёРї СЃ С‚РµСЂРјРёРЅР°Р»Р° ", "РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РѕРїР»Р°С‚С‹ РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                             //            calculate();
                             //            return;
                             //        }
                             //        //authAnswer.
-                            //        //Trace.WriteLine("Списание произвели. RRN:{authAnswer.RRN}. CardNumber:{authAnswer.CardID}");
+                            //        //Trace.WriteLine("РЎРїРёСЃР°РЅРёРµ РїСЂРѕРёР·РІРµР»Рё. RRN:{authAnswer.RRN}. CardNumber:{authAnswer.CardID}");
                             //    }
                             //    catch (Exception ex)
                             //    {
-                            //        MessageBox.Show("Произошла ошибка при попытке оплаты по терминалу \r\n" + ex.Message);
+                            //        MessageBox.Show("РџСЂРѕРёР·РѕС€Р»Р° РѕС€РёР±РєР° РїСЂРё РїРѕРїС‹С‚РєРµ РѕРїР»Р°С‚С‹ РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ \r\n" + ex.Message);
                             //        calculate();
                             //        return;
                             //    }
                             //}
                             //else
                             //{
-                            //    MessageBox.Show(" У вас в константах не выбран банк эквайринга");
+                            //    MessageBox.Show(" РЈ РІР°СЃ РІ РєРѕРЅСЃС‚Р°РЅС‚Р°С… РЅРµ РІС‹Р±СЂР°РЅ Р±Р°РЅРє СЌРєРІР°Р№СЂРёРЅРіР°");
                             //    calculate();
                             //    return;
                             //}
@@ -1407,12 +1433,12 @@ namespace Cash8Avalon
                 }
 
 
-                //Получить сумму наличных
-                //если это возврат и если сумма безнала меньше 1 тогда копейки прибавить к наличным
+                //РџРѕР»СѓС‡РёС‚СЊ СЃСѓРјРјСѓ РЅР°Р»РёС‡РЅС‹С…
+                //РµСЃР»Рё СЌС‚Рѕ РІРѕР·РІСЂР°С‚ Рё РµСЃР»Рё СЃСѓРјРјР° Р±РµР·РЅР°Р»Р° РјРµРЅСЊС€Рµ 1 С‚РѕРіРґР° РєРѕРїРµР№РєРё РїСЂРёР±Р°РІРёС‚СЊ Рє РЅР°Р»РёС‡РЅС‹Рј
                 string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
                 string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
                 cc.print_to_button = 0;
-                //cc.payment_by_sbp = (checkBox_payment_by_sbp.CheckState == CheckState.Checked ? true : false);//Перенес выше в секцию РНКБ, здесь было до появления сбера
+                //cc.payment_by_sbp = (checkBox_payment_by_sbp.CheckState == CheckState.Checked ? true : false);//РџРµСЂРµРЅРµСЃ РІС‹С€Рµ РІ СЃРµРєС†РёСЋ Р РќРљР‘, Р·РґРµСЃСЊ Р±С‹Р»Рѕ РґРѕ РїРѕСЏРІР»РµРЅРёСЏ СЃР±РµСЂР°
                 if (await cc.it_is_paid(txtB_cash_sum.Text, cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), remainder.Text.Replace(",", "."),
                 (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim()),
                 true,
@@ -1421,14 +1447,14 @@ namespace Cash8Avalon
             Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".")))
                 {
                     cc.closing = false;
-                    // Закрываем с результатом OK
+                    // Р—Р°РєСЂС‹РІР°РµРј СЃ СЂРµР·СѓР»СЊС‚Р°С‚РѕРј OK
                     //(this.Parent as Window)?.Close();
-                    // Или если это окно:
+                    // РР»Рё РµСЃР»Рё СЌС‚Рѕ РѕРєРЅРѕ:
                     this.Tag = true;
                     this.Close();
                 }
             }
-            else//ЭТО ВОЗВРАТ
+            else//Р­РўРћ Р’РћР—Р’Р РђРў
             {
 
                 string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
@@ -1442,7 +1468,7 @@ namespace Cash8Avalon
                     }
                 }
 
-                //здесь надо понимать возврат сегодняшний или более ранний
+                //Р·РґРµСЃСЊ РЅР°РґРѕ РїРѕРЅРёРјР°С‚СЊ РІРѕР·РІСЂР°С‚ СЃРµРіРѕРґРЅСЏС€РЅРёР№ РёР»Рё Р±РѕР»РµРµ СЂР°РЅРЅРёР№
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && (Convert.ToDouble(non_cash_sum.Text) > 0))
                 {
@@ -1450,11 +1476,11 @@ namespace Cash8Avalon
                     {
                         string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
 
-                        if (MainStaticClass.GetAcquiringBank == 1)//РНКБ
+                        if (MainStaticClass.GetAcquiringBank == 1)//Р РќРљР‘
                         {
                             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
                             //string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
-                            //Поскольку нет автоматической конвертации отмены в возврат, то необходимо 2 варианта печати для возвратов                     
+                            //РџРѕСЃРєРѕР»СЊРєСѓ РЅРµС‚ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕР№ РєРѕРЅРІРµСЂС‚Р°С†РёРё РѕС‚РјРµРЅС‹ РІ РІРѕР·РІСЂР°С‚, С‚Рѕ РЅРµРѕР±С…РѕРґРёРјРѕ 2 РІР°СЂРёР°РЅС‚Р° РїРµС‡Р°С‚Рё РґР»СЏ РІРѕР·РІСЂР°С‚РѕРІ                     
                             DateTime today = DateTime.Today;
                             AnswerTerminal answerTerminal = new AnswerTerminal();
                             if (checkBox_payment_by_sbp.IsChecked == true)
@@ -1473,7 +1499,7 @@ namespace Cash8Avalon
                                     _str_return_sale_ = _str_return_sale_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
                                     _str_return_sale_ = _str_return_sale_.Replace("sale_code_authorization_terminal", cc.sale_code_authorization_terminal);
                                     _str_return_sale_ = _str_return_sale_.Replace("number_reference", cc.sale_id_transaction_terminal);
-                                    if (money.Trim() != (cc.sale_non_cash_money * 100).ToString().Trim())//Это частичная отмена.
+                                    if (money.Trim() != (cc.sale_non_cash_money * 100).ToString().Trim())//Р­С‚Рѕ С‡Р°СЃС‚РёС‡РЅР°СЏ РѕС‚РјРµРЅР°.
                                     {
                                         _str_return_sale_ = _str_return_sale_.Replace("sale_non_cash_money", (cc.sale_non_cash_money * 100).ToString());
                                     }
@@ -1492,7 +1518,7 @@ namespace Cash8Avalon
                                 _str_return_sale_sbp_ = _str_return_sale_sbp_.Replace("sale_code_authorization_terminal", cc.sale_id_transaction_terminal);// cc.sale_code_authorization_terminal);
                                 _str_return_sale_sbp_ = _str_return_sale_sbp_.Replace("guid", cc.guid_sales);
                                 send_command_acquiring_terminal(url, _str_return_sale_sbp_, ref complete, ref answerTerminal);
-                                if (!complete)//ответ от терминала не удовлетворительный
+                                if (!complete)//РѕС‚РІРµС‚ РѕС‚ С‚РµСЂРјРёРЅР°Р»Р° РЅРµ СѓРґРѕРІР»РµС‚РІРѕСЂРёС‚РµР»СЊРЅС‹Р№
                                 {
                                     string _str_payment_status_return_sale_sbp_ = str_payment_status_return_sale_sbp.Replace("sum", money);
                                     _str_payment_status_return_sale_sbp_ = _str_payment_status_return_sale_sbp_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
@@ -1503,56 +1529,56 @@ namespace Cash8Avalon
                                     {
                                         answerTerminal = new AnswerTerminal();
                                         send_command_acquiring_terminal(url, _str_payment_status_return_sale_sbp_, ref complete, ref answerTerminal);
-                                        if (complete)//получен ответ об успешной оплате, прерываем цикл
+                                        if (complete)//РїРѕР»СѓС‡РµРЅ РѕС‚РІРµС‚ РѕР± СѓСЃРїРµС€РЅРѕР№ РѕРїР»Р°С‚Рµ, РїСЂРµСЂС‹РІР°РµРј С†РёРєР»
                                         {
                                             break;
                                         }
                                         else
                                         {
-                                            if (answerTerminal.сode_response_in_15_field == "R10")
+                                            if (answerTerminal.СЃode_response_in_15_field == "R10")
                                             {
-                                                await MessageBox.Show(" Операция отклонена ");
+                                                await MessageBox.Show(" РћРїРµСЂР°С†РёСЏ РѕС‚РєР»РѕРЅРµРЅР° ");
                                                 break;
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R11")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R11")
                                             {
-                                                await MessageBox.Show(" Операции по QR коду не существует. ");
+                                                await MessageBox.Show(" РћРїРµСЂР°С†РёРё РїРѕ QR РєРѕРґСѓ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚. ");
                                                 break;
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R12")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R12")
                                             {
-                                                if (answerTerminal.сode_response_in_39_field == "0")
+                                                if (answerTerminal.СЃode_response_in_39_field == "0")
                                                 {
-                                                    await MessageBox.Show(" Не получен ответ на запрос статуса ");
+                                                    await MessageBox.Show(" РќРµ РїРѕР»СѓС‡РµРЅ РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ СЃС‚Р°С‚СѓСЃР° ");
                                                     break;
                                                 }
-                                                else if (answerTerminal.сode_response_in_39_field == "16")
+                                                else if (answerTerminal.СЃode_response_in_39_field == "16")
                                                 {
-                                                    await MessageBox.Show(" Не получен ответ на запрос QR - кода ");
+                                                    await MessageBox.Show(" РќРµ РїРѕР»СѓС‡РµРЅ РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ QR - РєРѕРґР° ");
                                                     break;
                                                 }
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R13")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R13")
                                             {
-                                                await MessageBox.Show(" Запрос статуса не отправлен ");
+                                                await MessageBox.Show(" Р—Р°РїСЂРѕСЃ СЃС‚Р°С‚СѓСЃР° РЅРµ РѕС‚РїСЂР°РІР»РµРЅ ");
                                                 break;
                                             }
-                                            else if (answerTerminal.сode_response_in_15_field == "R14")
+                                            else if (answerTerminal.СЃode_response_in_15_field == "R14")
                                             {
-                                                await MessageBox.Show(" Операция не добавлена в базу транзакций терминала ");
+                                                await MessageBox.Show(" РћРїРµСЂР°С†РёСЏ РЅРµ РґРѕР±Р°РІР»РµРЅР° РІ Р±Р°Р·Сѓ С‚СЂР°РЅР·Р°РєС†РёР№ С‚РµСЂРјРёРЅР°Р»Р° ");
                                                 break;
                                             }
                                             if (answerTerminal.error)
                                             {
                                                 MessageBoxResult result = await MessageBox.Show(
-                                                    "Продолжать опрос по возврату оплаты по СБП",
-                                                    "Опрос по возврату оплаты по СБП",
+                                                    "РџСЂРѕРґРѕР»Р¶Р°С‚СЊ РѕРїСЂРѕСЃ РїРѕ РІРѕР·РІСЂР°С‚Сѓ РѕРїР»Р°С‚С‹ РїРѕ РЎР‘Рџ",
+                                                    "РћРїСЂРѕСЃ РїРѕ РІРѕР·РІСЂР°С‚Сѓ РѕРїР»Р°С‚С‹ РїРѕ РЎР‘Рџ",
                                                     MessageBoxButton.YesNo,
                                                     MessageBoxType.Question,this);
 
                                                 if (result == MessageBoxResult.No)
                                                 {
-                                                    // Пользователь отказался от дальнейшего ожидания информации об оплате
+                                                    // РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕС‚РєР°Р·Р°Р»СЃСЏ РѕС‚ РґР°Р»СЊРЅРµР№С€РµРіРѕ РѕР¶РёРґР°РЅРёСЏ РёРЅС„РѕСЂРјР°С†РёРё РѕР± РѕРїР»Р°С‚Рµ
                                                     break;
                                                 }
                                             }
@@ -1560,26 +1586,26 @@ namespace Cash8Avalon
                                     }
                                 }
                             }
-                            if (!complete)//ответ от терминала не удовлетворительный
+                            if (!complete)//РѕС‚РІРµС‚ РѕС‚ С‚РµСЂРјРёРЅР°Р»Р° РЅРµ СѓРґРѕРІР»РµС‚РІРѕСЂРёС‚РµР»СЊРЅС‹Р№
                             {
                                 calculate();
-                                await MessageBox.Show(" Неудачная попытка возврата оплаты ", "СБП");
+                                await MessageBox.Show(" РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РІРѕР·РІСЂР°С‚Р° РѕРїР»Р°С‚С‹ ", "РЎР‘Рџ");
                                 return;
                             }
                             else
                             {
-                                cc.code_authorization_terminal = answerTerminal.code_authorization;//13 поле
-                                cc.id_transaction_terminal = answerTerminal.number_reference;  //14 поле 
+                                cc.code_authorization_terminal = answerTerminal.code_authorization;//13 РїРѕР»Рµ
+                                cc.id_transaction_terminal = answerTerminal.number_reference;  //14 РїРѕР»Рµ 
                                 cc.payment_by_sbp = (checkBox_payment_by_sbp.IsChecked == true);
                             }
                         }
-                        else if (MainStaticClass.GetAcquiringBank == 2)//СБЕР
+                        else if (MainStaticClass.GetAcquiringBank == 2)//РЎР‘Р•Р 
                         {
                             //    try
                             //    {
                             //        //AuthAnswer13 authAnswer = CommandWrapper.Authorization(Convert.ToInt32(money));
                             //        //cc.id_transaction_terminal = authAnswer.RRN;
-                            //        //Trace.WriteLine("Списание произвели. RRN:{authAnswer.RRN}. CardNumber:{authAnswer.CardID}");
+                            //        //Trace.WriteLine("РЎРїРёСЃР°РЅРёРµ РїСЂРѕРёР·РІРµР»Рё. RRN:{authAnswer.RRN}. CardNumber:{authAnswer.CardID}");
                             //        CommandWrapper.return_slip = "";
                             //        AuthAnswer13 authAnswer = CommandWrapper.ReturnAmountToCard(Convert.ToInt32(money), cc.sale_id_transaction_terminal);
                             //        cc.id_transaction_terminal = authAnswer.RRN;
@@ -1605,7 +1631,7 @@ namespace Cash8Avalon
                             //        }
                             //        else
                             //        {
-                            //            MessageBox.Show(" Не удалось получить слип с терминала ", "Неудачная возврата средств по терминалу");
+                            //            MessageBox.Show(" РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ СЃР»РёРї СЃ С‚РµСЂРјРёРЅР°Р»Р° ", "РќРµСѓРґР°С‡РЅР°СЏ РІРѕР·РІСЂР°С‚Р° СЃСЂРµРґСЃС‚РІ РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                             //            calculate();
                             //            return;
                             //        }
@@ -1613,14 +1639,14 @@ namespace Cash8Avalon
                             //    }
                             //    catch (Exception ex)
                             //    {
-                            //        MessageBox.Show("Произошла ошибка при попытке возврата средств по терминалу \r\n" + ex.Message);
+                            //        MessageBox.Show("РџСЂРѕРёР·РѕС€Р»Р° РѕС€РёР±РєР° РїСЂРё РїРѕРїС‹С‚РєРµ РІРѕР·РІСЂР°С‚Р° СЃСЂРµРґСЃС‚РІ РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ \r\n" + ex.Message);
                             //        calculate();
                             //        return;
                             //    }
                             //}
                             //else
                             //{
-                            //    MessageBox.Show(" У вас в константах не выбран банк эквайринга");
+                            //    MessageBox.Show(" РЈ РІР°СЃ РІ РєРѕРЅСЃС‚Р°РЅС‚Р°С… РЅРµ РІС‹Р±СЂР°РЅ Р±Р°РЅРє СЌРєРІР°Р№СЂРёРЅРіР°");
                             //    calculate();
                             //    return;
                             //}
@@ -1640,8 +1666,8 @@ namespace Cash8Avalon
         {
             public string code_authorization { get; set; }
             public string number_reference { get; set; }
-            public string сode_response_in_15_field { get; set; }
-            public string сode_response_in_39_field { get; set; }
+            public string СЃode_response_in_15_field { get; set; }
+            public string СЃode_response_in_39_field { get; set; }
             public bool error { get; set; }
             public int error_code { get; set; }
 
@@ -1674,8 +1700,8 @@ namespace Cash8Avalon
 
 
         /// <summary>
-        /// Отправляет команду в эквайринг
-        /// терминал и возвращает результат
+        /// РћС‚РїСЂР°РІР»СЏРµС‚ РєРѕРјР°РЅРґСѓ РІ СЌРєРІР°Р№СЂРёРЅРі
+        /// С‚РµСЂРјРёРЅР°Р» Рё РІРѕР·РІСЂР°С‰Р°РµС‚ СЂРµР·СѓР»СЊС‚Р°С‚
         /// </summary>
         /// <param name="Url"></param>
         /// <param name="Data"></param>
@@ -1712,7 +1738,7 @@ namespace Cash8Avalon
                         {
                             if (field.Id == "39")
                             {
-                                answerTerminal.сode_response_in_39_field = field.Text;
+                                answerTerminal.СЃode_response_in_39_field = field.Text;
                                 if (field.Text.Trim() == "1")
                                 {
                                     status = true;
@@ -1732,19 +1758,19 @@ namespace Cash8Avalon
                             }
                             else if (field.Id == "15")
                             {
-                                answerTerminal.сode_response_in_15_field = field.Text.Trim();
+                                answerTerminal.СЃode_response_in_15_field = field.Text.Trim();
                             }
                             else if (field.Id == "90")
                             {
                                 cc.recharge_note = field.Text.Trim();
-                                int num_pos = cc.recharge_note.IndexOf("(КАССИР)");
+                                int num_pos = cc.recharge_note.IndexOf("(РљРђРЎРЎРР )");
                                 if (num_pos > 0)
                                 {
                                     cc.recharge_note = cc.recharge_note.Substring(0, num_pos + 8);
-                                    //if ((answerTerminal.code_authorization == "sbpnspk")&&(answerTerminal.number_reference==""))//Оплата по сбп и не вернулся номер транзакции
+                                    //if ((answerTerminal.code_authorization == "sbpnspk")&&(answerTerminal.number_reference==""))//РћРїР»Р°С‚Р° РїРѕ СЃР±Рї Рё РЅРµ РІРµСЂРЅСѓР»СЃСЏ РЅРѕРјРµСЂ С‚СЂР°РЅР·Р°РєС†РёРё
                                     //{
                                     //    int num_pos1 = cc.recharge_note.IndexOf("TRN:");
-                                    //    int num_pos2 = cc.recharge_note.IndexOf("Статус:");
+                                    //    int num_pos2 = cc.recharge_note.IndexOf("РЎС‚Р°С‚СѓСЃ:");
                                     //    answerTerminal.number_reference = cc.recharge_note.Substring(num_pos1 + 4, num_pos2 - (num_pos1 + 4)).Replace("\r\n", "").Trim();
                                     //}
                                 }
@@ -1764,7 +1790,7 @@ namespace Cash8Avalon
             catch (WebException ex)
             {
                 status = false;
-                MessageBox.Show(" Ошибка при оплате по карте  " + ex.Message, "Оплата по терминалу");//Код ошибки  "+ ((System.Net.Sockets.SocketException)ex.InnerException).ErrorCode
+                MessageBox.Show(" РћС€РёР±РєР° РїСЂРё РѕРїР»Р°С‚Рµ РїРѕ РєР°СЂС‚Рµ  " + ex.Message, "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");//РљРѕРґ РѕС€РёР±РєРё  "+ ((System.Net.Sockets.SocketException)ex.InnerException).ErrorCode
                 answerTerminal.error = true;
                 if (ex.Message.IndexOf("404") != -1)
                 {
@@ -1774,7 +1800,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 status = false;
-                MessageBox.Show(" Ошибка при оплате по карте  " + ex.Message, "Оплата по терминалу");
+                MessageBox.Show(" РћС€РёР±РєР° РїСЂРё РѕРїР»Р°С‚Рµ РїРѕ РєР°СЂС‚Рµ  " + ex.Message, "РћРїР»Р°С‚Р° РїРѕ С‚РµСЂРјРёРЅР°Р»Сѓ");
                 answerTerminal.error = true;
             }
         }
@@ -1799,7 +1825,7 @@ namespace Cash8Avalon
 
                 if (checkBox.IsChecked == true)
                 {
-                    // Логика для включенного СБП
+                    // Р›РѕРіРёРєР° РґР»СЏ РІРєР»СЋС‡РµРЅРЅРѕРіРѕ РЎР‘Рџ
                     if (nonCashSumTextBox != null)
                     {
                         nonCashSumTextBox.Text = "0";
@@ -1813,7 +1839,7 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    // Логика для выключенного СБП
+                    // Р›РѕРіРёРєР° РґР»СЏ РІС‹РєР»СЋС‡РµРЅРЅРѕРіРѕ РЎР‘Рџ
                     if (nonCashSumTextBox != null)
                     {
                         nonCashSumTextBox.IsEnabled = true;
@@ -1838,7 +1864,7 @@ namespace Cash8Avalon
             {
                 try
                 {
-                    // Функция для безопасного парсинга
+                    // Р¤СѓРЅРєС†РёСЏ РґР»СЏ Р±РµР·РѕРїР°СЃРЅРѕРіРѕ РїР°СЂСЃРёРЅРіР°
                     decimal ParseDecimal(string text)
                     {
                         if (string.IsNullOrWhiteSpace(text)) return 0m;
@@ -1852,7 +1878,7 @@ namespace Cash8Avalon
                         return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture);
                     }
 
-                    // Парсим все суммы
+                    // РџР°СЂСЃРёРј РІСЃРµ СЃСѓРјРјС‹
                     decimal paySum = ParseDecimal(paySumTextBox.Text);
                     decimal cashSum = ParseDecimal(cashSumTextBox.Text);
 
@@ -1861,7 +1887,7 @@ namespace Cash8Avalon
                     {
                         nonCashSum = ParseDecimal(nonCashSumTextBox.Text);
 
-                        // Добавляем копейки
+                        // Р”РѕР±Р°РІР»СЏРµРј РєРѕРїРµР№РєРё
                         if (nonCashSumKopTextBox != null)
                         {
                             int kop = ParseInt(nonCashSumKopTextBox.Text);
@@ -1881,14 +1907,14 @@ namespace Cash8Avalon
                         bonusSum = ParseDecimal(bonusManyTextBox.Text);
                     }
 
-                    // ИТОГО оплачено
+                    // РРўРћР“Рћ РѕРїР»Р°С‡РµРЅРѕ
                     decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
 
-                    // Рассчитываем сдачу
+                    // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј СЃРґР°С‡Сѓ
                     decimal remainder = Math.Max(0, totalPaid - paySum);
                     remainderTextBox.Text = remainder.ToString("F2");
 
-                    // Обновляем кнопку оплаты
+                    // РћР±РЅРѕРІР»СЏРµРј РєРЅРѕРїРєСѓ РѕРїР»Р°С‚С‹
                     var buttonPay = this.FindControl<Button>("button_pay");
                     if (buttonPay != null)
                     {
@@ -1897,7 +1923,7 @@ namespace Cash8Avalon
                 }
                 catch (Exception)
                 {
-                    // При ошибке парсинга устанавливаем сдачу 0
+                    // РџСЂРё РѕС€РёР±РєРµ РїР°СЂСЃРёРЅРіР° СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃРґР°С‡Сѓ 0
                     remainderTextBox.Text = "0,00";
                     var buttonPay = this.FindControl<Button>("button_pay");
                     if (buttonPay != null)
@@ -1908,7 +1934,7 @@ namespace Cash8Avalon
             }
         }
 
-        // Методы для доступа к элементам извне
+        // РњРµС‚РѕРґС‹ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє СЌР»РµРјРµРЅС‚Р°Рј РёР·РІРЅРµ
         public string PaySum
         {
             get => this.FindControl<TextBox>("pay_sum")?.Text ?? string.Empty;

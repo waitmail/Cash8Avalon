@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -66,6 +67,38 @@ namespace Cash8Avalon
 
         protected override async void OnOpened(EventArgs e)
         {
+
+
+            // Даём время оконному менеджеру инициализировать окно
+            await Task.Delay(50);
+
+            // ✅ Принудительно разворачиваем на весь экран
+            if (OperatingSystem.IsLinux())
+            {
+                // Способ 1: Через WindowState (может не работать на Wayland)
+                this.WindowState = WindowState.Maximized;
+
+                // Способ 2: Явное задание размеров экрана (более надёжно)
+                var screen = Screens.Primary ?? Screens.All.FirstOrDefault();
+                if (screen != null)
+                {
+                    this.Width = screen.WorkingArea.Width;
+                    this.Height = screen.WorkingArea.Height;
+                    this.Position = new PixelPoint(0, 0);
+                }
+
+                // Способ 3: Трюк с Topmost для "возврата" фокуса окну
+                this.Topmost = true;
+                this.Topmost = false;
+            }
+            else
+            {
+                // Windows/macOS — стандартное поведение
+                this.WindowState = WindowState.Maximized;
+            }
+
+
+
             // 2. Проверка файла конфигурации
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
             if (!File.Exists(configPath))
