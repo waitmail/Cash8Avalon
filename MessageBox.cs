@@ -1083,7 +1083,7 @@ public static class MessageBox
 // ВСПОМОГАТЕЛЬНЫЙ КЛАСС ДЛЯ ВЫЗОВА MESSAGEBOX С АКТИВАЦИЕЙ
 public static class MessageBoxHelper
 {
-    private static async Task ActivateWindow(Window window)
+    public static async Task ActivateWindow(Window window)
     {
         if (window == null) return;
 

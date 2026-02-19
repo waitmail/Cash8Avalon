@@ -2872,8 +2872,8 @@ namespace Cash8Avalon
 
         public static string version()
         {
-            //var versionStr = GetProductVersion();
-            var versionStr = GetFileVersion();
+            var versionStr = GetProductVersion();
+            //var versionStr = GetFileVersion();
 
             //// Пробуем распарсить как Unix timestamp
             //if (long.TryParse(versionStr, out long timestamp))
@@ -3726,7 +3726,7 @@ namespace Cash8Avalon
             bool result = true;
 
             DS ds = MainStaticClass.get_ds();
-            ds.Timeout = 3000;
+            ds.Timeout = 5000;
             try
             {
                 result = ds.ServiceIsWorker();

@@ -1166,47 +1166,80 @@ namespace Cash8Avalon
                             //if ((checkBox_payment_by_sbp.CheckState != CheckState.Checked) && (checkBox_do_not_send_payment_to_the_terminal.CheckState == CheckState.Unchecked))
                             if (checkBox_payment_by_sbp.IsChecked != true)
                             {
+                                //string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
+                                ////string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
+                                //string _str_command_sale_ = str_command_sale.Replace("sum", money);
+                                //_str_command_sale_ = _str_command_sale_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
+
+                                //AnswerTerminal answerTerminal = new AnswerTerminal();
+                                //this.Topmost = false;
+                                //WaitNonCashPay waitNonCashPay = new WaitNonCashPay();
+                                //waitNonCashPay.Url = url;
+                                //waitNonCashPay.Data = _str_command_sale_;
+                                //waitNonCashPay.cc = this.cc;
+                                //var commandResult = await waitNonCashPay.SendCommandWithTimeout(url, _str_command_sale_, this.cc);
+                                ////if (waitNonCashPay.commandResult != null)
+                                //if (commandResult.AnswerTerminal != null)
+                                //{
+                                //    answerTerminal = commandResult.AnswerTerminal;
+                                //    complete = commandResult.Status;
+                                //}
+                                //else
+                                //{
+                                //    await MessageBox.Show("Результат команды не получен.\r\nНеудачная попытка оплаты", "Неудачная попытка оплаты");
+                                //    calculate();
+                                //    this.Focus();
+                                //    return;
+                                //}
+
+                                //await ActivateWindow(this);
+
+
+                                //if (!complete)//ответ от терминала не удовлетворительный
+                                //{
+                                //    calculate();
+                                //    cc.recharge_note = "";
+                                //    await MessageBox.Show(" Неудачная попытка получения оплаты ", "Оплата по терминалу");
+                                //    return;
+                                //}
+                                //else
+                                //{
+                                //    cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 поле
+                                //    cc.id_transaction_terminal = answerTerminal.number_reference;  //14 поле                                    
+                                //}
                                 string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
-                                //string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
-                                string _str_command_sale_ = str_command_sale.Replace("sum", money);
-                                _str_command_sale_ = _str_command_sale_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
+                                string _str_command_sale_ = str_command_sale
+                                    .Replace("sum", money)
+                                    .Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
 
-                                AnswerTerminal answerTerminal = new AnswerTerminal();
-                                this.Topmost = false;
-                                WaitNonCashPay waitNonCashPay = new WaitNonCashPay();
-                                waitNonCashPay.Url = url;
-                                waitNonCashPay.Data = _str_command_sale_;
-                                waitNonCashPay.cc = this.cc;
-                                var commandResult = await waitNonCashPay.SendCommandWithTimeout(url, _str_command_sale_, this.cc);
-                                //if (waitNonCashPay.commandResult != null)
-                                if (commandResult.AnswerTerminal != null)
-                                {
-                                    answerTerminal = commandResult.AnswerTerminal;
-                                    complete = commandResult.Status;
-                                }
-                                else
-                                {
-                                    await MessageBox.Show("Результат команды не получен.\r\nНеудачная попытка оплаты", "Неудачная попытка оплаты");
-                                    calculate();
-                                    this.Focus();
-                                    return;
-                                }
+                                // Показываем окно ожидания и получаем результат
+                                var terminalResult = await WaitNonCashPay.ShowAndWaitAsync(
+                                    owner: this,
+                                    timeoutSeconds: 80,
+                                    url: url,
+                                    data: _str_command_sale_
+                                );
 
-                                await ActivateWindow(this);
-
-
-                                if (!complete)//ответ от терминала не удовлетворительный
+                                // Обрабатываем результат
+                                if (!terminalResult.IsSuccess)
                                 {
                                     calculate();
                                     cc.recharge_note = "";
-                                    await MessageBox.Show(" Неудачная попытка получения оплаты ", "Оплата по терминалу");
+
+                                    await MessageBoxHelper.Show(
+                                        $"Неудачная попытка получения оплаты: {terminalResult.ErrorMessage}",
+                                        "Оплата по терминалу",
+                                        MessageBoxButton.OK,
+                                        MessageBoxType.Error,
+                                        this
+                                    );
                                     return;
                                 }
-                                else
-                                {
-                                    cc.code_authorization_terminal = answerTerminal.code_authorization;     //13 поле
-                                    cc.id_transaction_terminal = answerTerminal.number_reference;  //14 поле                                    
-                                }
+
+                                // Успех - записываем данные в чек
+                                cc.code_authorization_terminal = terminalResult.AuthorizationCode;
+                                cc.id_transaction_terminal = terminalResult.ReferenceNumber;
+                                cc.recharge_note = terminalResult.RechargeNote;
                             }
                             else
                             {
