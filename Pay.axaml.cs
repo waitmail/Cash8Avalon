@@ -137,76 +137,136 @@ namespace Cash8Avalon
 
         private async void Pay_Opened(object? sender, EventArgs e)
         {
+            //await Dispatcher.UIThread.InvokeAsync(async () =>
+            //{
+            //    this.Activate();
+
+            //    if (cashSumTextBox != null)
+            //    {
+            //        cashSumTextBox.Focus();
+            //        await Task.Delay(100);
+
+            //        for (int i = 0; i < 3; i++)
+            //        {
+            //            var keyEvent = new KeyEventArgs
+            //            {
+            //                RoutedEvent = InputElement.KeyDownEvent,
+            //                Key = Key.Tab,
+            //                KeyModifiers = KeyModifiers.None
+            //            };
+            //            this.RaiseEvent(keyEvent);
+            //            await Task.Delay(50);
+            //        }
+            //    }
+
+            //    this.Topmost = true;
+            //    this.Topmost = false;
+            //    this.Topmost = true;
+
+            //    ////// Показываем фокус
+            //    //var focused = FocusManager?.GetFocusedElement();
+            //    //string focusInfo = focused == null
+            //    //    ? "Фокус отсутствует!"
+            //    //    : $"Фокус на: {focused.GetType().Name}\nИмя: {(focused as Control)?.Name ?? "нет"}";
+
+            //    //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);               
+
+            //}, DispatcherPriority.Render);
+            //await Dispatcher.UIThread.InvokeAsync(() =>
+            //{
+            //    if (cashSumTextBox != null)
+            //    {
+            //        // Для Linux - специальная обработка
+            //        if (OperatingSystem.IsLinux())
+            //        {
+            //            // Сначала активируем окно
+            //            this.Activate();
+            //            this.Topmost = true;
+            //            this.Topmost = false;
+
+            //            // Небольшая задержка для оконного менеджера
+            //            Task.Delay(50).ContinueWith(_ =>
+            //            {
+            //                Dispatcher.UIThread.InvokeAsync(() =>
+            //                {
+            //                    cashSumTextBox.Focus();
+            //                    cashSumTextBox.SelectAll();
+            //                });
+            //            });
+            //        }
+            //        else
+            //        {
+            //            cashSumTextBox.Focus();
+            //            cashSumTextBox.SelectAll();
+            //        }
+            //    }
+            //}, DispatcherPriority.Render);
+
+            //await ActivateWindow(this);
+            //await MessageBoxHelper.ActivateWindow(this);
+            await Task.Delay(50); // Даём время оконному менеджеру
+
             await Dispatcher.UIThread.InvokeAsync(async () =>
             {
+                // 1. Активируем окно
                 this.Activate();
+                this.Focus();
 
+                // 2. Трюк с Topmost для Linux
+                this.Topmost = false;
+                this.Topmost = true;
+
+                // 3. Небольшая задержка
+                await Task.Delay(100);
+
+                // 4. Устанавливаем фокус на TextBox
                 if (cashSumTextBox != null)
                 {
                     cashSumTextBox.Focus();
-                    await Task.Delay(100);
+                    //cashSumTextBox.SelectAll();
 
-                    for (int i = 0; i < 3; i++)
-                    {
-                        var keyEvent = new KeyEventArgs
-                        {
-                            RoutedEvent = InputElement.KeyDownEvent,
-                            Key = Key.Tab,
-                            KeyModifiers = KeyModifiers.None
-                        };
-                        this.RaiseEvent(keyEvent);
-                        await Task.Delay(50);
-                    }
+                    // Принудительно сигнализируем о фокусе
+                    //KeyboardDevice?.SetFocusedElement(this, cashSumTextBox, NavigationMethod.Unspecified);
                 }
 
-                this.Topmost = true;
-                this.Topmost = false;
-
-                ////// Показываем фокус
-                //var focused = FocusManager?.GetFocusedElement();
-                //string focusInfo = focused == null
-                //    ? "Фокус отсутствует!"
-                //    : $"Фокус на: {focused.GetType().Name}\nИмя: {(focused as Control)?.Name ?? "нет"}";
-
-                //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);               
+                // 5. Ещё раз активируем
+                this.Activate();
 
             }, DispatcherPriority.Render);
-
-            await ActivateWindow(this);
         }
 
-        private async Task ActivateWindow(Window window)
-        {
-            if (window == null) return;
+        //private async Task ActivateWindow(Window window)
+        //{
+        //    if (window == null) return;
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (window.IsVisible)
-                {
-                    // Попытка активировать окно
-                    window.Activate();
-                    window.Focus();
+        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        if (window.IsVisible)
+        //        {
+        //            // Попытка активировать окно
+        //            window.Activate();
+        //            window.Focus();
 
-                    // Для Linux - трюк с Topmost
-                    if (OperatingSystem.IsLinux())
-                    {
-                        window.Topmost = true;
-                        window.Topmost = false;
-                        window.Topmost = true;
-                    }
-                }
-            }, DispatcherPriority.Render);
+        //            // Для Linux - трюк с Topmost
+        //            if (OperatingSystem.IsLinux())
+        //            {
+        //                window.Topmost = true;
+        //                window.Topmost = false;
+        //                window.Topmost = true;
+        //            }
+        //        }
+        //    }, DispatcherPriority.Render);
 
-            // Дайте оконному менеджеру время отреагировать
-            if (OperatingSystem.IsLinux())
-            {
-                await Task.Delay(100); // 100 мс для надежности
-            }
-            else
-            {
-                await Task.Delay(10); // Для Windows достаточно
-            }
-        }
+        //    // Дайте оконному менеджеру время отреагировать
+        //    if (OperatingSystem.IsLinux())
+        //    {
+        //        await Task.Delay(100); // 100 мс для надежности
+        //    }
+        //    else
+        //    {
+        //        await Task.Delay(10); // Для Windows достаточно
+        //    }
+        //}
 
 
         private void CashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
@@ -2065,7 +2125,7 @@ namespace Cash8Avalon
             var checkBoxSbp = this.FindControl<CheckBox>("checkBox_payment_by_sbp");
             var checkBoxTerminal = this.FindControl<CheckBox>("checkBox_do_not_send_payment_to_the_terminal");
 
-            if (checkBoxSbp != null) checkBoxSbp.IsVisible = show;
+            if (checkBoxSbp != null) checkBoxSbp.IsVisible = false;// show;
             if (checkBoxTerminal != null) checkBoxTerminal.IsVisible = show;
         }
     }

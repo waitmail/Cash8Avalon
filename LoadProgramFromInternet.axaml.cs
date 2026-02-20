@@ -682,6 +682,7 @@ namespace Cash8Avalon
                 if (string.IsNullOrEmpty(encrypted_response))
                 {
                     await ShowMessage("Пустой ответ от сервера");
+                    BtnDownload.IsVisible = false;
                     return;
                 }
 
@@ -694,6 +695,7 @@ namespace Cash8Avalon
                 if (parts.Length < 2)
                 {
                     await ShowMessage("Ошибка формата ответа от сервера");
+                    BtnDownload.IsVisible = false;
                     return;
                 }
 
@@ -707,12 +709,14 @@ namespace Cash8Avalon
                     !long.TryParse(server_version, out var server_ver))
                 {
                     await ShowMessage("Неверный формат версии");
+                    BtnDownload.IsVisible = false;
                     return;
                 }
 
                 if (server_ver <= local_ver)
                 {
                     await ShowMessage("Версия с сервера меньше или равна текущей. Обновление не требуется.");
+                    BtnDownload.IsVisible = false;
                     return;
                 }
 
@@ -739,7 +743,7 @@ namespace Cash8Avalon
                     return;
                 }
 
-                await ShowMessage("Обновление успешно загружено в папку Update. Программа будет перезапущена.");
+                await ShowMessage("Обновление успешно загружено в папку Update. Программа будет закрыта.");
 
                 // Закрываем окно с результатом
                 CloseWithResult(true);

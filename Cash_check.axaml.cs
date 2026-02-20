@@ -2541,9 +2541,29 @@ namespace Cash8Avalon
                 }
             }, DispatcherPriority.Render);
             //}
-            pay_form.txtB_cash_sum.Focus();
-            this.Topmost = false;
-            await pay_form.ShowDialog(this);
+            //pay_form.txtB_cash_sum.Focus();
+            //this.Topmost = false;
+
+            pay_form.Topmost = true;
+
+            // ===== КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ДЛЯ LINUX =====
+
+            // 1. Сначала убираем фокус с родительского окна
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                FocusManager?.ClearFocus();
+
+                // Делаем родительское окно неактивным для клавиатуры
+                this.IsHitTestVisible = false;
+
+                if (_productsScrollViewer != null)
+                {
+                    _productsScrollViewer.Focusable = false;
+                }
+            }, DispatcherPriority.Render);
+
+            // 2. Показываем диалог
+            await pay_form.ShowDialog(this);            
 
             if (Convert.ToBoolean(pay_form.Tag) == true)
             {
