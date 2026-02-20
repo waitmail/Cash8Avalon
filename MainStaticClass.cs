@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Documents;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -26,6 +27,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using static Cash8Avalon.LoadDataWebService;
 using AtolConstants = Atol.Drivers10.Fptr.Constants;
 
 
@@ -5466,6 +5468,143 @@ namespace Cash8Avalon
         //    //t.Join();
         //}
 
+       
 
     }
+    public static class ModalWindowHelper
+    {
+        #region По типу (создание нового окна)
+
+        public static async Task ShowModalWindow<T>(
+            Window owner,
+            params Control[] focusableElementsToDisable) where T : Window, new()
+        {
+            await ShowModalWindowInternal(owner, new T(), null, focusableElementsToDisable);
+        }
+
+        public static async Task ShowModalWindow<T>(
+            Window owner,
+            Action<T> configure,
+            params Control[] focusableElementsToDisable) where T : Window, new()
+        {
+            var modalWindow = new T { Topmost = true };
+            configure?.Invoke(modalWindow);
+            await ShowModalWindowInternal(owner, modalWindow, null, focusableElementsToDisable);
+        }
+
+        public static async Task ShowModalWindow<T>(
+            Window owner,
+            Control elementToFocusAfterClose,
+            params Control[] focusableElementsToDisable) where T : Window, new()
+        {
+            await ShowModalWindowInternal(owner, new T(), elementToFocusAfterClose, focusableElementsToDisable);
+        }
+
+        #endregion
+
+        #region По экземпляру (уже созданное окно)
+
+        public static async Task ShowModalWindow(
+            Window owner,
+            Window modalWindow,
+            params Control[] focusableElementsToDisable)
+        {
+            await ShowModalWindowInternal(owner, modalWindow, null, focusableElementsToDisable);
+        }
+
+        public static async Task ShowModalWindow(
+            Window owner,
+            Window modalWindow,
+            Control elementToFocusAfterClose,
+            params Control[] focusableElementsToDisable)
+        {
+            await ShowModalWindowInternal(owner, modalWindow, elementToFocusAfterClose, focusableElementsToDisable);
+        }
+
+        #endregion
+
+        #region Внутренняя реализация
+
+        private static async Task ShowModalWindowInternal(
+            Window owner,
+            Window modalWindow,
+            Control elementToFocusAfterClose,
+            Control[] focusableElementsToDisable)
+        {
+            // 1. Полное снятие фокуса с родителя
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                owner.FocusManager?.ClearFocus();
+                owner.IsHitTestVisible = false;
+
+                foreach (var element in focusableElementsToDisable)
+                {
+                    if (element != null)
+                        element.Focusable = false;
+                }
+            }, DispatcherPriority.Render);
+
+            // 2. Снимаем Topmost с родителя
+            owner.Topmost = false;
+            await Task.Delay(20);
+
+            // 3. Показать модальное окно
+            modalWindow.Topmost = true;
+            await modalWindow.ShowDialog(owner);
+
+            // 4. Восстановить родителя
+            owner.IsHitTestVisible = true;
+
+            foreach (var element in focusableElementsToDisable)
+            {
+                if (element != null)
+                    element.Focusable = true;
+            }
+
+            owner.Activate();
+            owner.Focus();
+
+            // 5. Фокус на конкретный элемент
+            if (elementToFocusAfterClose != null)
+            {
+                elementToFocusAfterClose.Focus();
+            }
+        }
+        #endregion
+    }
+    
+
+
+    //        // Простой вызов (как было):
+    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(this, _productsScrollViewer);
+
+    //        // С настройкой окна:
+    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(this,
+    //            window => 
+    //    {
+    //            window.LabelText = "Товар не найден";
+    //            window.TextBoxText = barcode;
+    //        },
+    //    _productsScrollViewer);
+
+    //// С возвратом фокуса на конкретный элемент:
+    //await ModalWindowHelper.ShowModalWindow<TovarNotFound>(this,
+    //    InputSearchProduct,  // Фокус сюда после закрытия
+    //    _productsScrollViewer);
+
+    //        // С несколькими элементами для отключения:
+    //        await ModalWindowHelper.ShowModalWindow<Pay>(this,
+    //            InputSearchProduct,
+    //            _productsScrollViewer,
+    //            _anotherControl);
+
+    // В обычном классе:
+    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(ownerWindow);
+
+    //        // С параметрами:
+    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(ownerWindow, window =>
+    //{
+    //            window.LabelText = "Товар не найден";
+    //        });
 }
+

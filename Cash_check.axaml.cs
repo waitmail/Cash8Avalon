@@ -241,7 +241,7 @@ namespace Cash8Avalon
                 Console.WriteLine(ex.StackTrace);
                 Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBox.Show(ex.Message, "ОШИБКА в конструкторе:",
+                        await MessageBoxHelper.Show(ex.Message, "ОШИБКА в конструкторе:",
                             MessageBoxButton.OK, MessageBoxType.Error, this);
                     });
             }
@@ -358,7 +358,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"⚠ Ошибка расчета ширины текста: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show(ex.Message, "Ошибка расчета ширины текста",
+                    await MessageBoxHelper.Show(ex.Message, "Ошибка расчета ширины текста",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
                 return text.Length * 7; // Фолбэк: 7px на символ
@@ -429,7 +429,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка автонастройки колонки {columnIndex}: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка автонастройки колонки {columnIndex}: {ex.Message}", "Автонастройка колонки",
+                    await MessageBoxHelper.Show($"✗ Ошибка автонастройки колонки {columnIndex}: {ex.Message}", "Автонастройка колонки",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -455,7 +455,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка установки ширины колонки: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка установки ширины колонки: {ex.Message}", "Установки ширины колонки",
+                    await MessageBoxHelper.Show($"✗ Ошибка установки ширины колонки: {ex.Message}", "Установки ширины колонки",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -484,7 +484,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка сброса ширины колонок: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка сброса ширины колонок: {ex.Message}", "Сброс ширины колонок",
+                    await MessageBoxHelper.Show($"✗ Ошибка сброса ширины колонок: {ex.Message}", "Сброс ширины колонок",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -629,7 +629,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка настройки контекстного меню: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка настройки контекстного меню: {ex.Message}", "Настройка контекстного меню",
+                    await MessageBoxHelper.Show($"✗ Ошибка настройки контекстного меню: {ex.Message}", "Настройка контекстного меню",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -764,7 +764,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка показа диалога ширины колонки: {ex.Message}");
 
-                await MessageBox.Show($"✗ Ошибка показа диалога ширины колонки: {ex.Message}", "Показ диалога ширины колонки",
+                await MessageBoxHelper.Show($"✗ Ошибка показа диалога ширины колонки: {ex.Message}", "Показ диалога ширины колонки",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
@@ -897,7 +897,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка показа диалога настроек колонок: {ex.Message}");
-                await MessageBox.Show($"✗ Ошибка показа диалога настроек колонок: {ex.Message}", "Показ диалога настроек колонок",
+                await MessageBoxHelper.Show($"✗ Ошибка показа диалога настроек колонок: {ex.Message}", "Показ диалога настроек колонок",
                 MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
@@ -1021,7 +1021,7 @@ namespace Cash8Avalon
                 numdoc = await get_new_number_document();
                 if (numdoc == 0)
                 {
-                    await MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
+                    await MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
                     MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
                     this.Close();
                 }
@@ -1082,7 +1082,7 @@ namespace Cash8Avalon
                     fptr.queryData();
                     if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
                     {
-                        await MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
+                        await MessageBoxHelper.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
                     }
                 }
             }
@@ -1148,7 +1148,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при обновлении видимости строки платежей: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при обновлении видимости строки платежей: {ex.Message}", "Обновление видимости строки платежей",
+                    await MessageBoxHelper.Show($"✗ Ошибка при обновлении видимости строки платежей: {ex.Message}", "Обновление видимости строки платежей",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1203,7 +1203,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при обновлении заголовка: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при обновлении заголовка: {ex.Message}", "Обновление заголовка окна",
+                    await MessageBoxHelper.Show($"✗ Ошибка при обновлении заголовка: {ex.Message}", "Обновление заголовка окна",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
                 this.Title = "Чек";
@@ -1262,7 +1262,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при установке режима только для чтения: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при установке режима только для чтения: {ex.Message}", "Установка режима только для чтения",
+                    await MessageBoxHelper.Show($"✗ Ошибка при установке режима только для чтения: {ex.Message}", "Установка режима только для чтения",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1285,7 +1285,7 @@ namespace Cash8Avalon
             {
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при удалении водяного знака: {ex.Message}", "Удаление водяного знака",
+                    await MessageBoxHelper.Show($"✗ Ошибка при удалении водяного знака: {ex.Message}", "Удаление водяного знака",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1349,7 +1349,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при добавлении водяного знака: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при добавлении водяного знака: {ex.Message}", "Добавление водяного знака",
+                    await MessageBoxHelper.Show($"✗ Ошибка при добавлении водяного знака: {ex.Message}", "Добавление водяного знака",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1381,7 +1381,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при удалении водяного знака: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при удалении водяного знака: {ex.Message}", "Удаление водяного знака",
+                    await MessageBoxHelper.Show($"✗ Ошибка при удалении водяного знака: {ex.Message}", "Удаление водяного знака",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1420,7 +1420,7 @@ namespace Cash8Avalon
             { 
                 Console.WriteLine("✗ Поле поиска (txtB_search_product) не найдено");
 
-                await MessageBox.Show("✗ Поле поиска (txtB_search_product) не найдено", "Поиск поля (txtB_search_product)",
+                await MessageBoxHelper.Show("✗ Поле поиска (txtB_search_product) не найдено", "Поиск поля (txtB_search_product)",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
             }
 
@@ -1501,7 +1501,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}", "OnGlobalKeyDownForForm",
+                    await MessageBoxHelper.Show($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}", "OnGlobalKeyDownForForm",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1511,7 +1511,7 @@ namespace Cash8Avalon
         {
             if (_productsData.Count == 0)
             {
-                await MessageBox.Show("Нет строк", "Проверка при удалении", this);
+                await MessageBoxHelper.Show("Нет строк", "Проверка при удалении", this);
                 return;
             }
 
@@ -1528,7 +1528,7 @@ namespace Cash8Avalon
 
                 if (!enable_delete)
                 {
-                    await MessageBox.Show("Вам запрещено удалять документы",
+                    await MessageBoxHelper.Show("Вам запрещено удалять документы",
                                          "Права доступа",
                                          MessageBoxButton.OK,
                                          MessageBoxType.Warning, this);
@@ -1578,7 +1578,7 @@ namespace Cash8Avalon
                 {
                     if (!(await CheckAction(enteredBarcode)))
                     {
-                        await MessageBox.Show("Акция с таким штрихкодом не найдена", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Warning, this);
+                        await MessageBoxHelper.Show("Акция с таким штрихкодом не найдена", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Warning, this);
                     }
                     else
                     {
@@ -1602,7 +1602,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка: {ex.Message}");
-                await MessageBox.Show($"Ошибка: {ex.Message}", "Поиск клиента", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBoxHelper.Show($"Ошибка: {ex.Message}", "Поиск клиента", MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
             {
@@ -1645,7 +1645,7 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при работе с базой данных " + ex.Message, "CheckAction", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBoxHelper.Show("Ошибка при работе с базой данных " + ex.Message, "CheckAction", MessageBoxButton.OK, MessageBoxType.Error, this);
             }
 
             finally
@@ -1693,7 +1693,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка: {ex.Message}");
-                await MessageBox.Show($"Ошибка: {ex.Message}","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show($"Ошибка: {ex.Message}","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {                
@@ -1766,7 +1766,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"Ошибка при проверке контролов: {ex.Message}", "Проверка контролов",
+                    await MessageBoxHelper.Show($"Ошибка при проверке контролов: {ex.Message}", "Проверка контролов",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -1788,7 +1788,7 @@ namespace Cash8Avalon
                 // Проверяем, что номер чека введен
                 if (string.IsNullOrWhiteSpace(NumSales?.Text))
                 {
-                    await MessageBox.Show("Введите номер чека продажи",
+                    await MessageBoxHelper.Show("Введите номер чека продажи",
                         "Информация",
                         MessageBoxButton.OK,
                         MessageBoxType.Warning,
@@ -1799,7 +1799,7 @@ namespace Cash8Avalon
                 // Проверяем, что это чек возврата
                 if (CheckType.SelectedIndex != 1)
                 {
-                    await MessageBox.Show("Данная функция доступна только для чеков возврата",
+                    await MessageBoxHelper.Show("Данная функция доступна только для чеков возврата",
                         "Информация",
                         MessageBoxButton.OK,
                         MessageBoxType.Warning,
@@ -1810,7 +1810,7 @@ namespace Cash8Avalon
                 // Подтверждение перезаполнения
                 if (_productsData.Count > 0)
                 {
-                    var result = await MessageBox.Show(
+                    var result = await MessageBoxHelper.Show(
                         "Перезаполнить товары в чеке?",
                         "Подтверждение",
                         MessageBoxButton.YesNo,
@@ -1863,7 +1863,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка в FillOnSalesAsync: {ex.Message}");
-                await MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}",
+                await MessageBoxHelper.Show($"Ошибка при загрузке данных: {ex.Message}",
                     "Ошибка",
                     MessageBoxButton.OK,
                     MessageBoxType.Error,
@@ -1908,7 +1908,7 @@ namespace Cash8Avalon
                         }
                         else
                         {
-                            await MessageBox.Show($"Чек продажи №{documentNumber} не найден за последние 14 дней",
+                            await MessageBoxHelper.Show($"Чек продажи №{documentNumber} не найден за последние 14 дней",
                                 "Информация",
                                 MessageBoxButton.OK,
                                 MessageBoxType.Warning,
@@ -2090,7 +2090,7 @@ namespace Cash8Avalon
 
                         if (!hasItems)
                         {
-                            await MessageBox.Show($"В чеке продажи №{documentNumber} нет доступных для возврата товаров",
+                            await MessageBoxHelper.Show($"В чеке продажи №{documentNumber} нет доступных для возврата товаров",
                                 "Информация",
                                 MessageBoxButton.OK,
                                 MessageBoxType.Info,
@@ -2148,7 +2148,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка БД: {ex.Message}");
-                await MessageBox.Show($"Ошибка базы данных: {ex.Message}",
+                await MessageBoxHelper.Show($"Ошибка базы данных: {ex.Message}",
                     "Ошибка",
                     MessageBoxButton.OK,
                     MessageBoxType.Error,
@@ -2283,14 +2283,14 @@ namespace Cash8Avalon
             // Дополнительные проверки из вашего оригинального кода
             if (_productsData.Count == 0)
             {
-                await MessageBox.Show("Нет строк", "Проверки перед записью документа",MessageBoxButton.OK,MessageBoxType.Warning,this);
+                await MessageBoxHelper.Show("Нет строк", "Проверки перед записью документа",MessageBoxButton.OK,MessageBoxType.Warning,this);
                 return;
             }
 
 
             if (await GetItsDeletedDocument() == 1)
             {
-                await MessageBox.Show("Удаленный чек не может быть распечатан", "Проверка при печати", MessageBoxButton.OK, MessageBoxType.Error,this);
+                await MessageBoxHelper.Show("Удаленный чек не может быть распечатан", "Проверка при печати", MessageBoxButton.OK, MessageBoxType.Error,this);
                 return;
             }
 
@@ -2310,7 +2310,7 @@ namespace Cash8Avalon
 
             if (onlyInnFilled || onlyNameFilled)
             {
-                await MessageBox.Show("Если заполнен ИНН, то должно быть заполнено и наименование, и наоборот",
+                await MessageBoxHelper.Show("Если заполнен ИНН, то должно быть заполнено и наименование, и наоборот",
                                      "Проверка при печати",
                                      MessageBoxButton.OK,
                                      MessageBoxType.Error,
@@ -2462,8 +2462,8 @@ namespace Cash8Avalon
                 //recalculate_all();
                 // КОНЕЦ ПРОВЕРОЧНЫЙ ПЕРЕСЧЕТ ПО АКЦИЯМ               
 
-                //MessageBox.Show(calculation_of_the_sum_of_the_document().ToString());
-                //MessageBox.Show(calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture));
+                //MessageBoxHelper.Show(calculation_of_the_sum_of_the_document().ToString());
+                //MessageBoxHelper.Show(calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture));
 
                 pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
                 //Console.WriteLine($"✓ Перед записью документа: {_productsDataBackup.Count} записей");
@@ -2523,47 +2523,50 @@ namespace Cash8Avalon
             // Позиционируем по центру главного окна
             pay_form.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-            Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
+            //Console.WriteLine($"Размеры формы оплаты: {pay_form.Width}x{pay_form.Height}");
 
             //if (CheckType.SelectedIndex == 1)
             //{
             //Принудительно сбрасываем фокус для линукса для возвратов!!!
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                // Очищаем фокус
-                FocusManager?.ClearFocus();
+            //await Dispatcher.UIThread.InvokeAsync(() =>
+            //{
+            //    // Очищаем фокус
+            //    FocusManager?.ClearFocus();
 
-                // Если ScrollViewer имеет фокус - убираем
-                if (_productsScrollViewer != null)
-                {
-                    _productsScrollViewer.Focusable = false;
-                    _productsScrollViewer.Focusable = true; // Возвращаем способность, но фокус уже сброшен
-                }
-            }, DispatcherPriority.Render);
+            //    // Если ScrollViewer имеет фокус - убираем
+            //    if (_productsScrollViewer != null)
+            //    {
+            //        _productsScrollViewer.Focusable = false;
+            //        _productsScrollViewer.Focusable = true; // Возвращаем способность, но фокус уже сброшен
+            //    }
+            //}, DispatcherPriority.Render);
             //}
             //pay_form.txtB_cash_sum.Focus();
             //this.Topmost = false;
 
-            pay_form.Topmost = true;
+            //pay_form.Topmost = true;
 
             // ===== КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ДЛЯ LINUX =====
 
-            // 1. Сначала убираем фокус с родительского окна
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                FocusManager?.ClearFocus();
+            //// 1. Сначала убираем фокус с родительского окна
+            //await Dispatcher.UIThread.InvokeAsync(() =>
+            //{
+            //    FocusManager?.ClearFocus();
 
-                // Делаем родительское окно неактивным для клавиатуры
-                this.IsHitTestVisible = false;
+            //    // Делаем родительское окно неактивным для клавиатуры
+            //    this.IsHitTestVisible = false;
 
-                if (_productsScrollViewer != null)
-                {
-                    _productsScrollViewer.Focusable = false;
-                }
-            }, DispatcherPriority.Render);
+            //    if (_productsScrollViewer != null)
+            //    {
+            //        _productsScrollViewer.Focusable = false;
+            //    }
+            //}, DispatcherPriority.Render);
 
-            // 2. Показываем диалог
-            await pay_form.ShowDialog(this);            
+            //// 2. Показываем диалог
+            //await pay_form.ShowDialog(this);
+            // //// С возвратом фокуса на конкретный элемент:
+
+            await ModalWindowHelper.ShowModalWindow(this, pay_form, _productsScrollViewer);
 
             if (Convert.ToBoolean(pay_form.Tag) == true)
             {
@@ -2662,7 +2665,7 @@ namespace Cash8Avalon
             {                
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show(ex.Message, "Чтение 2 суммы ",
+                    await MessageBoxHelper.Show(ex.Message, "Чтение 2 суммы ",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -2689,7 +2692,7 @@ namespace Cash8Avalon
         {
             if (_productsData.Count == 0)
             {
-                await MessageBox.Show(" Нет строк ", " Проверки перед записью документа ");
+                await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ");
                 return;
             }
 
@@ -2913,7 +2916,7 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты: " + ex.Message,
+                await MessageBoxHelper.Show("Произошли ошибки при получении сумм по типам оплаты: " + ex.Message,
                                     "Ошибка",
                                     MessageBoxButton.OK,
                                     MessageBoxType.Error,
@@ -3239,7 +3242,7 @@ namespace Cash8Avalon
                 {
                     tran.Rollback();
                 }
-                await MessageBox.Show("Ошибка при записи документа " + ex.Message, "Запись документа", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBoxHelper.Show("Ошибка при записи документа " + ex.Message, "Запись документа", MessageBoxButton.OK, MessageBoxType.Error, this);
                 result = false;
             }
             finally
@@ -3365,7 +3368,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message, "SendDataToCustomerScreen ",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show("SendDataToCustomerScreen " + ex.Message, "SendDataToCustomerScreen ",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
         }
 
@@ -3459,7 +3462,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("SendDataToCustomerScreen " + ex.Message, "SendUDPMessage",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show("SendDataToCustomerScreen " + ex.Message, "SendUDPMessage",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
@@ -3553,7 +3556,7 @@ namespace Cash8Avalon
 
                         if (reader["its_work"].ToString() != "1")
                         {
-                            //await MessageBox.Show(" Эта карточка клиента заблокирована !!!","Проверка ввода клиента",MessageBoxButton.OK,MessageBoxType.Error);
+                            //await MessageBoxHelper.Show(" Эта карточка клиента заблокирована !!!","Проверка ввода клиента",MessageBoxButton.OK,MessageBoxType.Error);
                             break;
                         }
 
@@ -3579,7 +3582,7 @@ namespace Cash8Avalon
                     {
                         Console.WriteLine("this.Client.Tag == null " + barcode);
                         MainStaticClass.write_event_in_log(" Клиент не найден ", "Документ чек", numdoc.ToString());
-                        await MessageBox.Show("Клиент не найден","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Info,this);
+                        await MessageBoxHelper.Show("Клиент не найден","Поиск клиента",MessageBoxButton.OK,MessageBoxType.Info,this);
                         this.InputSearchProduct.Focus();
                         return;
                     }
@@ -3605,7 +3608,7 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    await MessageBox.Show("Введено неверное количество символов");
+                    await MessageBoxHelper.Show("Введено неверное количество символов");
                 }
                 SendDataToCustomerScreen(1, 0, 1);
                 MainStaticClass.write_event_in_log(" Выход из процедуры поиска клиента " + barcode, " Документ ", numdoc.ToString());
@@ -3614,7 +3617,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("ProcessClientDiscount ОШИБКА !!!" + ex.Message + " " + ex.StackTrace.ToString());
                 
-                    await MessageBox.Show("ProcessClientDiscount ОШИБКА !!!" + ex.Message + " " + ex.StackTrace.ToString(),
+                    await MessageBoxHelper.Show("ProcessClientDiscount ОШИБКА !!!" + ex.Message + " " + ex.StackTrace.ToString(),
                         "ProcessClientDiscount",
                         MessageBoxButton.OK, MessageBoxType.Error, this);                
             }
@@ -3657,7 +3660,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при пересчете всех товаров: {ex.Message}");
                 
-                    await MessageBox.Show($"✗ Ошибка при пересчете всех товаров: {ex.Message}",
+                    await MessageBoxHelper.Show($"✗ Ошибка при пересчете всех товаров: {ex.Message}",
                         "Пересчет всех товаров",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
             }
@@ -3721,7 +3724,7 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show(" Ошибки при записи номера телефона " + ex.Message, "Запись номера телефона",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show(" Ошибки при записи номера телефона " + ex.Message, "Запись номера телефона",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
@@ -3750,7 +3753,7 @@ namespace Cash8Avalon
 
             if (CheckType.SelectedIndex == 1)
             {
-                await MessageBox.Show("В чек возврата нельзя добавлять новые товары.\nВы можете только изменить количество уже добавленных товаров.",
+                await MessageBoxHelper.Show("В чек возврата нельзя добавлять новые товары.\nВы можете только изменить количество уже добавленных товаров.",
                     "Информация",
                     MessageBoxButton.OK,
                     MessageBoxType.Warning,
@@ -3801,17 +3804,69 @@ namespace Cash8Avalon
             }
         }
 
+        //private async Task ShowTovarNotFoundWindow(Window owner)
+        //{
+        //    var t_n_f = new TovarNotFound();
+        //    await t_n_f.ShowDialog(owner);
+
+        //    // Добавляем await
+        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        this.InputSearchProduct.Focus();
+        //    }, DispatcherPriority.Render);
+        //}
+
         private async Task ShowTovarNotFoundWindow(Window owner)
         {
-            var t_n_f = new TovarNotFound();
-            await t_n_f.ShowDialog(owner);
+            await ModalWindowHelper.ShowModalWindow<TovarNotFound>(owner);
+            //// 1. Сначала убираем фокус с родительского окна
+            //await Dispatcher.UIThread.InvokeAsync(() =>
+            //{
+            //    FocusManager?.ClearFocus();
 
-            // Добавляем await
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                this.InputSearchProduct.Focus();
-            }, DispatcherPriority.Render);
+            //    // Делаем родительское окно неактивным для клавиатуры
+            //    this.IsHitTestVisible = false;
+
+            //    if (_productsScrollViewer != null)
+            //    {
+            //        _productsScrollViewer.Focusable = false;
+            //    }
+            //}, DispatcherPriority.Render);
+
+            //// ===== ПОДГОТОВКА РОДИТЕЛЯ =====
+            //await Dispatcher.UIThread.InvokeAsync(() =>
+            //{
+            //    // Снимаем Topmost с родителя
+            //    owner.Topmost = false;
+            //}, DispatcherPriority.Render);
+
+            //// Небольшая задержка для Linux
+            //await Task.Delay(20);
+
+            //// ===== СОЗДАЁМ И НАСТРАИВАЕМ ДОЧЕРНЕЕ ОКНО =====
+            //var t_n_f = new TovarNotFound();
+
+            //// ВАЖНО: Topmost ДО ShowDialog
+            //t_n_f.Topmost = true;
+
+            //// ===== ПОКАЗЫВАЕМ =====
+            //await t_n_f.ShowDialog(owner);
+
+            //// ===== ВОССТАНАВЛИВАЕМ РОДИТЕЛЯ =====
+            //await Dispatcher.UIThread.InvokeAsync(async () =>
+            //{
+            //    owner.Activate();
+            //    owner.Focus();
+
+            //    if (this.InputSearchProduct != null)
+            //    {
+            //        this.InputSearchProduct.Focus();
+            //    }
+            //}, DispatcherPriority.Render);
         }
+
+        
+
 
         public async void find_barcode_or_code_in_tovar_new(string barcode, string marking_code)
         {
@@ -3827,13 +3882,13 @@ namespace Cash8Avalon
             {
                 if (barcode.Trim().Length > 6)
                 {
-                    await MessageBox.Show("Поиск товара прерван ! Длина кода превышает 6 символов ", "Поиск товара",MessageBoxButton.OK,MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show("Поиск товара прерван ! Длина кода превышает 6 символов ", "Поиск товара",MessageBoxButton.OK,MessageBoxType.Error, this);
                     return;
                 }
             }
             else if (this.check_type.SelectedIndex < 0)
             {
-                await MessageBox.Show(" Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново.", "Проверки при получении типа чека.",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show(" Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново.", "Проверки при получении типа чека.",MessageBoxButton.OK,MessageBoxType.Error,this);
                 MainStaticClass.WriteRecordErrorLog("Произошла ошибка при получении типа чека", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново");
                 var window = this.FindAncestorOfType<Window>();
                 if (window != null)
@@ -3893,7 +3948,7 @@ namespace Cash8Avalon
 
                         if (!qr_code_lenght.Contains(marking_code.Length))
                         {                            
-                            await MessageBox.Show(
+                            await MessageBoxHelper.Show(
                                 marking_code + "\r\n Ваш код маркировки имеет длину " +
                                 marking_code.Length.ToString() +
                                 " символов при этом он не входит в допустимый диапазон.",
@@ -3932,7 +3987,7 @@ namespace Cash8Avalon
                     bool markingExists = CheckMarkingExists(marking_code);
                     if (markingExists)
                     {
-                        await MessageBox.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error, this);
                         return;
                     }
                 }               
@@ -3966,7 +4021,7 @@ namespace Cash8Avalon
             if (this._productsTableGrid.RowDefinitions.Count - 1 > 70)//Превышен предел строк
             {
 
-                await MessageBox.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error, this);
+                await MessageBoxHelper.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error, this);
 
                 last_tovar.Text = barcode;
                 await ShowTovarNotFoundWindow(this);
@@ -3981,7 +4036,7 @@ namespace Cash8Avalon
 
                 if (find_sertificate)
                 {
-                    await MessageBox.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
                     this.Focus();
                     return;
                 }
@@ -3993,7 +4048,7 @@ namespace Cash8Avalon
             {
                 if (WeightFromScales != 0)
                 {
-                    await MessageBox.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error,this);
+                    await MessageBoxHelper.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error,this);
                     this.Focus();
                     return;
                 }
@@ -4012,13 +4067,13 @@ namespace Cash8Avalon
                 string nick_shop = MainStaticClass.Nick_Shop.Trim();
                 if (nick_shop.Trim().Length == 0)
                 {
-                    await MessageBox.Show(" Не удалось получить название магазина ");
+                    await MessageBoxHelper.Show(" Не удалось получить название магазина ");
                     return;
                 }
                 string code_shop = MainStaticClass.Code_Shop.Trim();
                 if (code_shop.Trim().Length == 0)
                 {
-                    await MessageBox.Show(" Не удалось получить код магазина ");
+                    await MessageBoxHelper.Show(" Не удалось получить код магазина ");
                     return;
                 }
                 string count_day = CryptorEngine.get_count_day();
@@ -4033,13 +4088,13 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    await MessageBox.Show(ex.Message+"\r\n"+" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show(ex.Message+"\r\n"+" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
                     MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
                     return;
                 }
                 if (status == "-1")
                 {
-                    await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами","Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами","Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
                     MainStaticClass.WriteRecordErrorLog("Произошли ошибки на сервере при работе с сертификатами", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
                     return;
                 }
@@ -4048,7 +4103,7 @@ namespace Cash8Avalon
                     string decrypt_data = CryptorEngine.Decrypt(status, true, key);
                     if (decrypt_data == "1")
                     {
-                        await MessageBox.Show("Сертификат уже активирован","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show("Сертификат уже активирован","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
                         return;
                     }
                 }
@@ -4284,7 +4339,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при проверке маркировки: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"Ошибка при проверке маркировки: {ex.Message}", "Проверка маркировки",
+                    await MessageBoxHelper.Show($"Ошибка при проверке маркировки: {ex.Message}", "Проверка маркировки",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
 
@@ -4326,7 +4381,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
+                    await MessageBoxHelper.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
                 return false;
@@ -4365,7 +4420,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при прокрутке: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"Ошибка при прокрутке: {ex.Message}", "Прокрутка",
+                    await MessageBoxHelper.Show($"Ошибка при прокрутке: {ex.Message}", "Прокрутка",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -4432,7 +4487,7 @@ namespace Cash8Avalon
         //            Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
         //            Dispatcher.UIThread.InvokeAsync(async () =>
         //            {
-        //                await MessageBox.Show($"Ошибка при добавлении строки в Grid: {ex.Message}", "Добавление строки в Grid",
+        //                await MessageBoxHelper.Show($"Ошибка при добавлении строки в Grid: {ex.Message}", "Добавление строки в Grid",
         //                    MessageBoxButton.OK, MessageBoxType.Error, this);
         //            });
         //        }
@@ -4473,7 +4528,7 @@ namespace Cash8Avalon
                     Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
                     Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBox.Show($"Ошибка при добавлении строки в Grid: {ex.Message}",
+                        await MessageBoxHelper.Show($"Ошибка при добавлении строки в Grid: {ex.Message}",
                             "Добавление строки в Grid", MessageBoxButton.OK, MessageBoxType.Error, this);
                     });
                 }
@@ -4516,7 +4571,7 @@ namespace Cash8Avalon
                 NpgsqlDataReader reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    await MessageBox.Show(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error, this);
                     MainStaticClass.write_event_in_log(" Вы пытаетесь продать сертификат который был сегодня получен в качестве оплаты на этой кассе. ", "Документ", numdoc.ToString());
                     result = false;
                 }
@@ -4525,7 +4580,7 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error,this);
+                await MessageBoxHelper.Show("Ошибка при проверке сертификата" + ex.Message, " Проверка сертификатов ", MessageBoxButton.OK, MessageBoxType.Error,this);
                 result = false;
             }
             finally
@@ -4612,7 +4667,7 @@ namespace Cash8Avalon
         //    {
         //        Dispatcher.UIThread.InvokeAsync(async () =>
         //        {
-        //            await MessageBox.Show("Произошла ошибка при получении товара по коду/штрихкоду " + ex.Message, "GetProductDataInDB",
+        //            await MessageBoxHelper.Show("Произошла ошибка при получении товара по коду/штрихкоду " + ex.Message, "GetProductDataInDB",
         //                MessageBoxButton.OK, MessageBoxType.Error, this);
         //        });
         //    }
@@ -4634,14 +4689,14 @@ namespace Cash8Avalon
             if (cleanedCode.Length >= 4 &&
                 cleanedCode.Substring(0, 4).IndexOf("HTTP", StringComparison.OrdinalIgnoreCase) != -1)
             {
-                await MessageBox.Show("Содержит HTTP", "Ошибка");
+                await MessageBoxHelper.Show("Содержит HTTP", "Ошибка");
                 return false;
             }
 
             // Проверка длины очищенной строки
             if (!qr_code_lenght.Contains(cleanedCode.Length))
             {
-                await MessageBox.Show($"Длина {cleanedCode.Length} недопустима", "Ошибка");
+                await MessageBoxHelper.Show($"Длина {cleanedCode.Length} недопустима", "Ошибка");
                 return false;
             }
 
@@ -4681,7 +4736,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при очистке QR-кода: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"Ошибка при очистке QR-кода: {ex.Message}", "CleanQrCodeString",
+                    await MessageBoxHelper.Show($"Ошибка при очистке QR-кода: {ex.Message}", "CleanQrCodeString",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
                 return input; // Возвращаем оригинал при ошибке
@@ -4729,7 +4784,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка в CheckType_SelectionChanged: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка в CheckType_SelectionChanged: {ex.Message}",
+                    await MessageBoxHelper.Show($"✗ Ошибка в CheckType_SelectionChanged: {ex.Message}",
                         "CheckType_SelectionChanged",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
@@ -4755,7 +4810,7 @@ namespace Cash8Avalon
                         Console.WriteLine($"✗ Ошибка при загрузке данных чека: {ex.Message}");
                         Dispatcher.UIThread.InvokeAsync(async () =>
                         {
-                            await MessageBox.Show($"✗ Ошибка при загрузке данных чека: {ex.Message}", "OpenCheck",
+                            await MessageBoxHelper.Show($"✗ Ошибка при загрузке данных чека: {ex.Message}", "OpenCheck",
                                 MessageBoxButton.OK, MessageBoxType.Error, this);
                         });
                     }
@@ -4782,7 +4837,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при создании Grid: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при создании Grid: {ex.Message}", "CreateAllGridsProgrammatically",
+                    await MessageBoxHelper.Show($"✗ Ошибка при создании Grid: {ex.Message}", "CreateAllGridsProgrammatically",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -4862,7 +4917,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при создании Grid товаров: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при создании Grid товаров: {ex.Message}", "CreateProductsGrid",
+                    await MessageBoxHelper.Show($"✗ Ошибка при создании Grid товаров: {ex.Message}", "CreateProductsGrid",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -4924,7 +4979,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при создании Grid сертификатов: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при создании Grid сертификатов: {ex.Message}", "CreateCertificatesGrid",
+                    await MessageBoxHelper.Show($"✗ Ошибка при создании Grid сертификатов: {ex.Message}", "CreateCertificatesGrid",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -4970,7 +5025,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при создании заголовков: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при создании заголовков: {ex.Message}", "CreateHeaderRow",
+                    await MessageBoxHelper.Show($"✗ Ошибка при создании заголовков: {ex.Message}", "CreateHeaderRow",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5036,7 +5091,7 @@ namespace Cash8Avalon
         //        Console.WriteLine($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}");
         //        Dispatcher.UIThread.InvokeAsync(async () =>
         //        {
-        //            await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}", "AddProductsGridRows",
+        //            await MessageBoxHelper.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}", "AddProductsGridRows",
         //                MessageBoxButton.OK, MessageBoxType.Error, this);
         //        });
         //    }
@@ -5076,7 +5131,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}",
+                    await MessageBoxHelper.Show($"✗ Ошибка при добавлении данных в Grid товаров: {ex.Message}",
                         "AddProductsGridRows", MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5244,7 +5299,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при добавлении данных в Grid сертификатов: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при добавлении данных в Grid сертификатов: {ex.Message}", "AddCertificatesGridRows",
+                    await MessageBoxHelper.Show($"✗ Ошибка при добавлении данных в Grid сертификатов: {ex.Message}", "AddCertificatesGridRows",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5345,7 +5400,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при выделении строки товаров: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при выделении строки товаров: {ex.Message}", "SelectProductRow",
+                    await MessageBoxHelper.Show($"✗ Ошибка при выделении строки товаров: {ex.Message}", "SelectProductRow",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5398,7 +5453,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при прокрутке: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при прокрутке: {ex.Message}", "ScrollToSelectedRow",
+                    await MessageBoxHelper.Show($"✗ Ошибка при прокрутке: {ex.Message}", "ScrollToSelectedRow",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5429,7 +5484,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при снятии выделения товаров: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при снятии выделения товаров: {ex.Message}", "ClearProductSelection",
+                    await MessageBoxHelper.Show($"✗ Ошибка при снятии выделения товаров: {ex.Message}", "ClearProductSelection",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5454,7 +5509,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка в обработчике клика строки товаров: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка в обработчике клика строки товаров: {ex.Message}", "OnProductRowPointerPressed",
+                    await MessageBoxHelper.Show($"✗ Ошибка в обработчике клика строки товаров: {ex.Message}", "OnProductRowPointerPressed",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5631,7 +5686,7 @@ namespace Cash8Avalon
                         }
                         else if (CheckType.SelectedIndex != 0)
                         {
-                            await MessageBox.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);    
+                            await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);    
                         }
                         e.Handled = true;
                     }
@@ -5670,7 +5725,7 @@ namespace Cash8Avalon
 
             if (string.IsNullOrWhiteSpace(txtB_inn?.Text))
             {
-                await MessageBox.Show("Для получения наименования покупателя необходимо заполнить его ИНН");
+                await MessageBoxHelper.Show("Для получения наименования покупателя необходимо заполнить его ИНН");
                 return;
             }
             try
@@ -5701,7 +5756,7 @@ namespace Cash8Avalon
                     Out += str;
                     count = sr.Read(read, 0, 512);
                 }
-                //MessageBox.Show(Out);
+                //MessageBoxHelper.Show(Out);
                 Answer suggestion = JsonConvert.DeserializeObject<Answer>(Out);
                 if (suggestion.suggestions.Count > 0)
                 {
@@ -5709,14 +5764,14 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    await MessageBox.Show("По данному ИНН ничего не найдено");
+                    await MessageBoxHelper.Show("По данному ИНН ничего не найдено");
                 }
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("При поиске по ИНН произошли ошибки " + ex.Message);
+                await MessageBoxHelper.Show("При поиске по ИНН произошли ошибки " + ex.Message);
 
-                await MessageBox.Show("При поиске по ИНН произошли ошибки " + ex.Message, "btn_get_name_Click",
+                await MessageBoxHelper.Show("При поиске по ИНН произошли ошибки " + ex.Message, "btn_get_name_Click",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }      
@@ -5798,7 +5853,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при увеличении количества: {ex.Message}");
 
-                await MessageBox.Show($"✗ Ошибка при увеличении количества: {ex.Message}", "IncreaseProductQuantity",
+                await MessageBoxHelper.Show($"✗ Ошибка при увеличении количества: {ex.Message}", "IncreaseProductQuantity",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
@@ -5858,7 +5913,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}", "ShowQuantityLimitWarning",
+                    await MessageBoxHelper.Show($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}", "ShowQuantityLimitWarning",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5905,7 +5960,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"⚠ Ошибка в ShowTooltip: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"⚠ Ошибка в ShowTooltip: {ex.Message}", "ShowTooltip",
+                    await MessageBoxHelper.Show($"⚠ Ошибка в ShowTooltip: {ex.Message}", "ShowTooltip",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -5978,7 +6033,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}", "CanIncreaseQuantity",
+                    await MessageBoxHelper.Show($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}", "CanIncreaseQuantity",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
                 // В случае ошибки разрешаем увеличение, чтобы не блокировать пользователя
@@ -6017,7 +6072,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"⚠ Ошибка в эффекте: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"⚠ Ошибка в эффекте: {ex.Message}", "ShowQuantityEffect",
+                    await MessageBoxHelper.Show($"⚠ Ошибка в эффекте: {ex.Message}", "ShowQuantityEffect",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -6078,7 +6133,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"⚠ Ошибка при мигании бордера ячейки: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"⚠ Ошибка при мигании бордера ячейки: {ex.Message}", "FlashCellBorder",
+                    await MessageBoxHelper.Show($"⚠ Ошибка при мигании бордера ячейки: {ex.Message}", "FlashCellBorder",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -6109,7 +6164,7 @@ namespace Cash8Avalon
 
                             if (!enable_delete)
                             {
-                                await MessageBox.Show("Вам запрещено уменьшать количество",
+                                await MessageBoxHelper.Show("Вам запрещено уменьшать количество",
                                                      "Права доступа",
                                                      MessageBoxButton.OK,
                                                      MessageBoxType.Warning, this);
@@ -6194,7 +6249,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при уменьшении количества: {ex.Message}");
                 
-                    await MessageBox.Show($"✗ Ошибка при уменьшении количества: {ex.Message}", "DecreaseProductQuantity",
+                    await MessageBoxHelper.Show($"✗ Ошибка при уменьшении количества: {ex.Message}", "DecreaseProductQuantity",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }     
@@ -6218,7 +6273,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при удалении товара: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при удалении товара: {ex.Message}", "DeleteSelectedProduct",
+                    await MessageBoxHelper.Show($"✗ Ошибка при удалении товара: {ex.Message}", "DeleteSelectedProduct",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -6231,7 +6286,7 @@ namespace Cash8Avalon
                 // 1. Проверяем права пользователя (аналог WinForms кода)
                 if (!IsNewCheck)
                 {
-                    await MessageBox.Show("Нельзя удалять строки в уже созданном чеке",
+                    await MessageBoxHelper.Show("Нельзя удалять строки в уже созданном чеке",
                                          "Удаление",
                                          MessageBoxButton.OK,
                                          MessageBoxType.Warning, this);
@@ -6241,7 +6296,7 @@ namespace Cash8Avalon
                 // 2. Проверяем количество строк (как в WinForms)
                 if (_productsData.Count == 1)
                 {
-                    await MessageBox.Show("Единственную строку удалить нельзя, можно только удалить документ целиком",
+                    await MessageBoxHelper.Show("Единственную строку удалить нельзя, можно только удалить документ целиком",
                                          "Удаление",
                                          MessageBoxButton.OK,
                                          MessageBoxType.Warning, this);
@@ -6297,7 +6352,7 @@ namespace Cash8Avalon
 
                         if (!enable_delete)
                         {
-                            await MessageBox.Show("Вам запрещено удалять строки",
+                            await MessageBoxHelper.Show("Вам запрещено удалять строки",
                                                  "Права доступа",
                                                  MessageBoxButton.OK,
                                                  MessageBoxType.Warning, this);
@@ -6368,7 +6423,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при удалении товара: {ex.Message}");
-                await MessageBox.Show($"Ошибка при удалении товара: {ex.Message}",
+                await MessageBoxHelper.Show($"Ошибка при удалении товара: {ex.Message}",
                                      "Ошибка",
                                      MessageBoxButton.OK,
                                      MessageBoxType.Error,
@@ -6467,7 +6522,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
+                    await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
                 // В случае ошибки устанавливаем безопасные значения
@@ -6502,7 +6557,7 @@ namespace Cash8Avalon
         //        Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
         //        Dispatcher.UIThread.InvokeAsync(async () =>
         //        {
-        //            await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
+        //            await MessageBoxHelper.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
         //                MessageBoxButton.OK, MessageBoxType.Error, this);
         //        });
         //        return false;
@@ -6564,7 +6619,7 @@ namespace Cash8Avalon
                 Console.WriteLine(ex.StackTrace);
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при обновлении строки в Grid: {ex.Message}", "Обновление строки в Grid",
+                    await MessageBoxHelper.Show($"✗ Ошибка при обновлении строки в Grid: {ex.Message}", "Обновление строки в Grid",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -6641,7 +6696,7 @@ namespace Cash8Avalon
                 Console.WriteLine(ex.StackTrace);
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при обновлении Grid: {ex.Message}", "Обновление Grid",
+                    await MessageBoxHelper.Show($"✗ Ошибка при обновлении Grid: {ex.Message}", "Обновление Grid",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -6934,7 +6989,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при позиционировании диалога: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"Ошибка при позиционировании диалога: {ex.Message}", "Позиционировании диалог",
+                    await MessageBoxHelper.Show($"Ошибка при позиционировании диалога: {ex.Message}", "Позиционировании диалог",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -7003,7 +7058,7 @@ namespace Cash8Avalon
                             Console.WriteLine($"✗ Ошибка при загрузке данных из БД: {ex.Message}");
                             Dispatcher.UIThread.InvokeAsync(async () =>
                             {
-                                await MessageBox.Show($"✗ Ошибка при загрузке данных из БД: {ex.Message}", "InitializeFormData",
+                                await MessageBoxHelper.Show($"✗ Ошибка при загрузке данных из БД: {ex.Message}", "InitializeFormData",
                                     MessageBoxButton.OK, MessageBoxType.Error, this);
                             });
                         }
@@ -7018,7 +7073,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при инициализации данных формы: {ex.Message}");
 
-                await MessageBox.Show($"✗ Ошибка при инициализации данных формы: {ex.Message}", "Инициализация данных формы",
+                await MessageBoxHelper.Show($"✗ Ошибка при инициализации данных формы: {ex.Message}", "Инициализация данных формы",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
             }
         }
@@ -7053,7 +7108,7 @@ namespace Cash8Avalon
         {
             if (MainStaticClass.SystemTaxation == 0)
             {
-                await MessageBox.Show("В константах не определена система налогообложения, печать чеков невозможна");
+                await MessageBoxHelper.Show("В константах не определена система налогообложения, печать чеков невозможна");
                 return;
             }
 
@@ -7135,9 +7190,9 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
+                await MessageBoxHelper.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
                 
-                    await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message, "get_cash_on_type_payment",
+                    await MessageBoxHelper.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message, "get_cash_on_type_payment",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
@@ -7196,7 +7251,7 @@ namespace Cash8Avalon
                 {
                     trans.Rollback();
                 }
-                await MessageBox.Show("Ошибка при установке флага распечатан " + ex.Message, "Установка флага распечатан",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show("Ошибка при установке флага распечатан " + ex.Message, "Установка флага распечатан",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
@@ -7242,7 +7297,7 @@ namespace Cash8Avalon
             }           
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при получении флага распечатан " + ex.Message, "Получение флага распечатан",MessageBoxButton.OK,MessageBoxType.Error,this);
+                await MessageBoxHelper.Show("Ошибка при получении флага распечатан " + ex.Message, "Получение флага распечатан",MessageBoxButton.OK,MessageBoxType.Error,this);
             }
             finally
             {
@@ -7287,9 +7342,9 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message);
+                await MessageBoxHelper.Show("Ошибка при получении флага распечатан по патенту " + ex.Message);
                 
-                    await MessageBox.Show("Ошибка при получении флага распечатан по патенту " + ex.Message, "ItcPrintedP",
+                    await MessageBoxHelper.Show("Ошибка при получении флага распечатан по патенту " + ex.Message, "ItcPrintedP",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
@@ -7320,9 +7375,9 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message);
+                await MessageBoxHelper.Show("Ошибки при получении признака удаленности документа " + ex.Message);
 
-                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message, "GetItsDeletedDocument",
+                await MessageBoxHelper.Show("Ошибки при получении признака удаленности документа " + ex.Message, "GetItsDeletedDocument",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
                 result = 1;
             }
@@ -7356,7 +7411,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при обновлении общей суммы: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Ошибка при обновлении общей суммы: {ex.Message}", "UpdateTotalSum",
+                    await MessageBoxHelper.Show($"✗ Ошибка при обновлении общей суммы: {ex.Message}", "UpdateTotalSum",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -7572,7 +7627,7 @@ namespace Cash8Avalon
                 Console.WriteLine(ex.StackTrace);
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show($"✗ Общая ошибка в ToOpenTheWrittenDownDocument: {ex.Message}", "ToOpenTheWrittenDownDocument",
+                    await MessageBoxHelper.Show($"✗ Общая ошибка в ToOpenTheWrittenDownDocument: {ex.Message}", "ToOpenTheWrittenDownDocument",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
@@ -7645,7 +7700,7 @@ namespace Cash8Avalon
                 MainStaticClass.write_event_in_log(" ОШИБКА получения номера документа",
                     ex.GetType().Name, ex.Message);
                 Console.WriteLine($"✗ {ex.Message}");               
-                    await MessageBox.Show(ex.Message, "Ошибка при получении номера",
+                    await MessageBoxHelper.Show(ex.Message, "Ошибка при получении номера",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
             }
 
@@ -7673,7 +7728,7 @@ namespace Cash8Avalon
                 {
                     if (client.Tag.ToString().Trim() != "")//Выбрана дисконтная карта, тип документа изенен быть не может
                     {
-                        await MessageBox.Show(" Выбрана дисконтная карта, тип документа изменен быть не может ","Проверки ввода",MessageBoxButton.OK,MessageBoxType.Error,this);
+                        await MessageBoxHelper.Show(" Выбрана дисконтная карта, тип документа изменен быть не может ","Проверки ввода",MessageBoxButton.OK,MessageBoxType.Error,this);
                         this.check_type.SelectedIndex = 0;
                         return;
                     }
@@ -7691,7 +7746,7 @@ namespace Cash8Avalon
                 {
                     if (_productsData.Count > 0)
                     {
-                        await MessageBox.Show("Тип чека необходимо выбирать перед добавлением строк");
+                        await MessageBoxHelper.Show("Тип чека необходимо выбирать перед добавлением строк");
                         return;
                     }
                     BtnFillOnSales.IsVisible = true;
@@ -7770,7 +7825,7 @@ namespace Cash8Avalon
             //    numdoc = get_new_number_document();
             //    if (numdoc == 0)
             //    {
-            //        MessageBox.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
+            //        MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
             //        MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
             //        this.Close();
             //    }
@@ -7871,7 +7926,7 @@ namespace Cash8Avalon
             //        fptr.queryData();
             //        if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
             //        {
-            //            MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
+            //            MessageBoxHelper.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
             //        }
             //    }
             //}
@@ -8006,7 +8061,7 @@ namespace Cash8Avalon
             }            
             catch (Exception ex)
             {
-                await MessageBox.Show(" insert_incident_record " + ex.Message, "InsertIncidentRecordAsync",
+                await MessageBoxHelper.Show(" insert_incident_record " + ex.Message, "InsertIncidentRecordAsync",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
@@ -8035,7 +8090,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("Ошибки при получении признака удаленности документа " + ex.Message, "get_its_deleted_document",
+                await MessageBoxHelper.Show("Ошибки при получении признака удаленности документа " + ex.Message, "get_its_deleted_document",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
                 result = 1;
             }
