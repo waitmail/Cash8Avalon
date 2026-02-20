@@ -9,10 +9,12 @@ using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -204,35 +206,37 @@ namespace Cash8Avalon
 
             //await ActivateWindow(this);
             //await MessageBoxHelper.ActivateWindow(this);
-            await Task.Delay(50); // Даём время оконному менеджеру
+            //await Task.Delay(50); // Даём время оконному менеджеру
 
-            await Dispatcher.UIThread.InvokeAsync(async () =>
-            {
-                // 1. Активируем окно
-                this.Activate();
-                this.Focus();
+            //await Dispatcher.UIThread.InvokeAsync(async () =>
+            //{
+            //    // 1. Активируем окно
+            //    this.Activate();
+            //    this.Focus();
 
-                // 2. Трюк с Topmost для Linux
-                this.Topmost = false;
-                this.Topmost = true;
+            //    // 2. Трюк с Topmost для Linux
+            //    this.Topmost = false;
+            //    this.Topmost = true;
 
-                // 3. Небольшая задержка
-                await Task.Delay(100);
+            //    // 3. Небольшая задержка
+            //    await Task.Delay(100);
 
-                // 4. Устанавливаем фокус на TextBox
-                if (cashSumTextBox != null)
-                {
-                    cashSumTextBox.Focus();
-                    //cashSumTextBox.SelectAll();
+            //    // 4. Устанавливаем фокус на TextBox
+            //    if (cashSumTextBox != null)
+            //    {
+            //        cashSumTextBox.Focus();
+            //        //cashSumTextBox.SelectAll();
 
-                    // Принудительно сигнализируем о фокусе
-                    //KeyboardDevice?.SetFocusedElement(this, cashSumTextBox, NavigationMethod.Unspecified);
-                }
+            //        // Принудительно сигнализируем о фокусе
+            //        //KeyboardDevice?.SetFocusedElement(this, cashSumTextBox, NavigationMethod.Unspecified);
+            //    }
 
-                // 5. Ещё раз активируем
-                this.Activate();
+            //    // 5. Ещё раз активируем
+            //    this.Activate();
 
-            }, DispatcherPriority.Render);
+            //}, DispatcherPriority.Render);
+            this.Topmost = false;
+            
         }
 
         //private async Task ActivateWindow(Window window)
@@ -746,7 +750,7 @@ namespace Cash8Avalon
         #endregion
 
         private async void Pay_KeyDown(object sender, KeyEventArgs e)
-        {
+        {            
             switch (e.Key)
             {
                 case Key.F5:
@@ -760,14 +764,17 @@ namespace Cash8Avalon
                 case Key.Y:
                     e.Handled = true;
                     // Устанавливаем наличные = сумме чека, обнуляем безнал
-                    this.CashSum = this.PaySum;
-                    ClearNonCash();
+                    this.CashSum = this.PaySum;                    
+                    ClearNonCash();                    
+                    cashSumTextBox?.Focus();  // ✅ Уже есть поле класса
                     break;
                 case Key.R:
                     e.Handled = true;
                     // Устанавливаем безнал = сумме чека, обнуляем наличные
                     FillNonCashFromPaySum();
                     ClearCash();
+                    var nonCashTextBox = this.FindControl<TextBox>("non_cash_sum");
+                    nonCashTextBox?.Focus();
                     break;
                 case Key.F8:
                     e.Handled = true;
@@ -1337,7 +1344,7 @@ namespace Cash8Avalon
                                 _str_sale_sbp = _str_sale_sbp.Replace("guid", cc.guid);
                                 ////MessageBox.Show(_str_command_sale_);
                                 AnswerTerminal answerTerminal = new AnswerTerminal();
-                                send_command_acquiring_terminal(url, _str_sale_sbp, ref complete, ref answerTerminal);
+                                complete = await SendCommandAcquiringTerminalAsync(url, _str_sale_sbp,answerTerminal);
                                 if (!complete)//ответ от терминала не удовлетворительный, значит операция в обработке необходим дополнительный запрос
                                 {
                                     string _str_payment_status_sale_sbp = str_payment_status_sale_sbp.Replace("sum", money);
@@ -1346,7 +1353,7 @@ namespace Cash8Avalon
                                     while (1 == 1)
                                     {
                                         answerTerminal = new AnswerTerminal();
-                                        send_command_acquiring_terminal(url, _str_payment_status_sale_sbp, ref complete, ref answerTerminal);
+                                        complete = await SendCommandAcquiringTerminalAsync(url, _str_payment_status_sale_sbp,answerTerminal);
                                         if (complete)//получен ответ об успешной оплате, прерываем цикл
                                         {
                                             break;
@@ -1532,26 +1539,29 @@ namespace Cash8Avalon
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && (Convert.ToDouble(non_cash_sum.Text) > 0))
                 {
-                    if (checkBox_do_not_send_payment_to_the_terminal.IsChecked == true)
+                    if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
                     {
                         string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
 
                         if (MainStaticClass.GetAcquiringBank == 1)//РНКБ
                         {
+                            //await MessageBoxHelper.Show("Вызов возврата рнкб");
                             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
                             //string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
                             //Поскольку нет автоматической конвертации отмены в возврат, то необходимо 2 варианта печати для возвратов                     
                             DateTime today = DateTime.Today;
                             AnswerTerminal answerTerminal = new AnswerTerminal();
-                            if (checkBox_payment_by_sbp.IsChecked == true)
+                            if (checkBox_payment_by_sbp.IsChecked != true)
                             {
+                                //await MessageBoxHelper.Show("Вызов возврата рнкб не сбп");
                                 if (cc.sale_date.CompareTo(today) < 0)
                                 {
                                     string _str_return_sale_ = str_return_sale.Replace("sum", money);
                                     _str_return_sale_ = _str_return_sale_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
                                     _str_return_sale_ = _str_return_sale_.Replace("sale_code_authorization_terminal", cc.sale_code_authorization_terminal);
                                     _str_return_sale_ = _str_return_sale_.Replace("number_reference", cc.sale_id_transaction_terminal);
-                                    send_command_acquiring_terminal(url, _str_return_sale_, ref complete, ref answerTerminal);
+                                    //await MessageBoxHelper.Show("Вызов возврата рнкб давний");
+                                    complete = await SendCommandAcquiringTerminalAsync(url, _str_return_sale_,answerTerminal);
                                 }
                                 else
                                 {
@@ -1568,16 +1578,18 @@ namespace Cash8Avalon
                                         _str_return_sale_ = _str_return_sale_.Replace(@"<field id=""01"">sale_non_cash_money</field>", "");
                                     }
 
-                                    send_command_acquiring_terminal(url, _str_return_sale_, ref complete, ref answerTerminal);
+                                    complete = await SendCommandAcquiringTerminalAsync(url, _str_return_sale_, answerTerminal);
+                                    //await MessageBoxHelper.Show("Вызов возврата рнкб сегодняшний");
                                 }
                             }
                             else
                             {
+                                await MessageBoxHelper.Show("Вызов возврата рнкб что то там по сбп");
                                 string _str_return_sale_sbp_ = str_return_sale_sbp.Replace("sum", money);
                                 _str_return_sale_sbp_ = _str_return_sale_sbp_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
                                 _str_return_sale_sbp_ = _str_return_sale_sbp_.Replace("sale_code_authorization_terminal", cc.sale_id_transaction_terminal);// cc.sale_code_authorization_terminal);
                                 _str_return_sale_sbp_ = _str_return_sale_sbp_.Replace("guid", cc.guid_sales);
-                                send_command_acquiring_terminal(url, _str_return_sale_sbp_, ref complete, ref answerTerminal);
+                                complete = await SendCommandAcquiringTerminalAsync(url, _str_return_sale_sbp_,answerTerminal);
                                 if (!complete)//ответ от терминала не удовлетворительный
                                 {
                                     string _str_payment_status_return_sale_sbp_ = str_payment_status_return_sale_sbp.Replace("sum", money);
@@ -1588,7 +1600,7 @@ namespace Cash8Avalon
                                     while (1 == 1)
                                     {
                                         answerTerminal = new AnswerTerminal();
-                                        send_command_acquiring_terminal(url, _str_payment_status_return_sale_sbp_, ref complete, ref answerTerminal);
+                                        complete = await SendCommandAcquiringTerminalAsync(url, _str_payment_status_return_sale_sbp_, answerTerminal);
                                         if (complete)//получен ответ об успешной оплате, прерываем цикл
                                         {
                                             break;
@@ -1759,109 +1771,143 @@ namespace Cash8Avalon
         }
 
 
-        /// <summary>
-        /// Отправляет команду в эквайринг
-        /// терминал и возвращает результат
-        /// </summary>
-        /// <param name="Url"></param>
-        /// <param name="Data"></param>
-        /// <param name="status"></param>
-        public void send_command_acquiring_terminal(string Url, string Data, ref bool status, ref AnswerTerminal answerTerminal)
+        // Статический HttpClient (вне метода, в классе)
+        private static readonly HttpClient _httpClient = new HttpClient
         {
-            //string Out = String.Empty;
+            Timeout = TimeSpan.FromSeconds(80)
+        };
+
+        /// <summary>
+        /// Отправляет команду в эквайринг-терминал и возвращает результат
+        /// </summary>
+        public async Task<bool> SendCommandAcquiringTerminalAsync(
+            string Url,
+            string Data,
+            AnswerTerminal answerTerminal)
+        {
+            bool success = false;
+            bool hasCode39 = false;
 
             try
             {
-                System.Net.WebRequest req = WebRequest.Create(Url);
-                req.Method = "POST";
-                req.Timeout = 80000;
-                //req.Timeout = 0;
-                req.ContentType = "text/xml;charset = windows-1251";
-                //req.ContentType = "text/xml;charset = UTF-8";                
-                byte[] sentData = Encoding.GetEncoding("Windows-1251").GetBytes(Data);
-                //byte[] sentData = Encoding.UTF8.GetBytes(Data);
-                req.ContentLength = sentData.Length;
-                System.IO.Stream sendStream = req.GetRequestStream();
-                sendStream.Write(sentData, 0, sentData.Length);
-                sendStream.Close();
-                HttpWebResponse myHttpWebResponse = (HttpWebResponse)req.GetResponse();
-                if (myHttpWebResponse.StatusCode == HttpStatusCode.OK)
-                {
-                    var streamReader = new StreamReader(myHttpWebResponse.GetResponseStream(), Encoding.GetEncoding("Windows-1251"));
-                    var responseContent = streamReader.ReadToEnd();
+                var content = new StringContent(Data, Encoding.GetEncoding("Windows-1251"), "text/xml");
+                var response = await _httpClient.PostAsync(Url, content);
 
-                    XmlSerializer serializer = new XmlSerializer(typeof(Response));
-                    using (StringReader reader = new StringReader(responseContent))
+                if (response.IsSuccessStatusCode)  // ✅ Или response.StatusCode == HttpStatusCode.OK
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                    var serializer = new XmlSerializer(typeof(Response));
+                    using var reader = new StringReader(responseContent);
+                    var parsed = (Response)serializer.Deserialize(reader);
+
+                    if (parsed?.Field != null)
                     {
-                        var test = (Response)serializer.Deserialize(reader);
-                        foreach (Field field in test.Field)
+                        foreach (Field field in parsed.Field)
                         {
-                            if (field.Id == "39")
+                            switch (field.Id)
                             {
-                                answerTerminal.сode_response_in_39_field = field.Text;
-                                if (field.Text.Trim() == "1")
-                                {
-                                    status = true;
-                                }
-                                else
-                                {
-                                    status = false;
-                                }
-                            }
-                            else if (field.Id == "13")
-                            {
-                                answerTerminal.code_authorization = field.Text.Trim();
-                            }
-                            else if (field.Id == "14")
-                            {
-                                answerTerminal.number_reference = field.Text.Trim();
-                            }
-                            else if (field.Id == "15")
-                            {
-                                answerTerminal.сode_response_in_15_field = field.Text.Trim();
-                            }
-                            else if (field.Id == "90")
-                            {
-                                cc.recharge_note = field.Text.Trim();
-                                int num_pos = cc.recharge_note.IndexOf("(КАССИР)");
-                                if (num_pos > 0)
-                                {
-                                    cc.recharge_note = cc.recharge_note.Substring(0, num_pos + 8);
-                                    //if ((answerTerminal.code_authorization == "sbpnspk")&&(answerTerminal.number_reference==""))//Оплата по сбп и не вернулся номер транзакции
-                                    //{
-                                    //    int num_pos1 = cc.recharge_note.IndexOf("TRN:");
-                                    //    int num_pos2 = cc.recharge_note.IndexOf("Статус:");
-                                    //    answerTerminal.number_reference = cc.recharge_note.Substring(num_pos1 + 4, num_pos2 - (num_pos1 + 4)).Replace("\r\n", "").Trim();
-                                    //}
-                                }
+                                case "39":
+                                    answerTerminal.сode_response_in_39_field = field.Text;
+                                    success = field.Text.Trim() == "1";
+                                    hasCode39 = true;
+                                    break;
+
+                                case "13":
+                                    answerTerminal.code_authorization = field.Text.Trim();
+                                    break;
+
+                                case "14":
+                                    answerTerminal.number_reference = field.Text.Trim();
+                                    break;
+
+                                case "15":
+                                    answerTerminal.сode_response_in_15_field = field.Text.Trim();
+                                    break;
+
+                                case "90":
+                                    if (cc != null)
+                                    {
+                                        cc.recharge_note = field.Text.Trim();
+                                        int num_pos = cc.recharge_note.IndexOf("(КАССИР)");
+                                        if (num_pos > 0)
+                                        {
+                                            cc.recharge_note = cc.recharge_note.Substring(0, num_pos + 8);
+                                        }
+                                    }
+                                    break;
                             }
                         }
                     }
+
+                    if (!hasCode39)
+                    {
+                        Debug.WriteLine("[Terminal] Field 39 not found");
+                        answerTerminal.error = true;
+                        return false;
+                    }
+
+                    return success;
                 }
                 else
                 {
-                    status = false;
-                }
+                    await MessageBoxHelper.Show(
+                        $"Ошибка терминала: HTTP {(int)response.StatusCode}",
+                        "Оплата по терминалу",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this
+                    );
 
-                req = null;
-                sendStream = null;
-                myHttpWebResponse.Close();// = null;
+                    answerTerminal.error = true;
+                    return false;
+                }
             }
-            catch (WebException ex)
+            catch (TaskCanceledException)  // ✅ Таймаут (HttpClient)
             {
-                status = false;
-                MessageBox.Show(" Ошибка при оплате по карте  " + ex.Message, "Оплата по терминалу");//Код ошибки  "+ ((System.Net.Sockets.SocketException)ex.InnerException).ErrorCode
+                await MessageBoxHelper.Show(
+                    "Превышено время ожидания ответа от терминала",
+                    "Оплата по терминалу",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this
+                );
+
                 answerTerminal.error = true;
-                if (ex.Message.IndexOf("404") != -1)
+                return false;
+            }
+            catch (HttpRequestException ex)  // ✅ HTTP ошибки (HttpClient)
+            {
+                await MessageBoxHelper.Show(
+                    $"Ошибка подключения: {ex.Message}",
+                    "Оплата по терминалу",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this
+                );
+
+                answerTerminal.error = true;
+
+                // Проверяем статус код если есть
+                if (ex.StatusCode == HttpStatusCode.NotFound)
                 {
                     answerTerminal.error_code = 404;
                 }
+
+                return false;
             }
             catch (Exception ex)
             {
-                status = false;
-                MessageBox.Show(" Ошибка при оплате по карте  " + ex.Message, "Оплата по терминалу");
+                await MessageBoxHelper.Show(
+                    $"Ошибка: {ex.Message}",
+                    "Оплата по терминалу",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this
+                );
+
                 answerTerminal.error = true;
+                return false;
             }
         }
 
@@ -2018,6 +2064,7 @@ namespace Cash8Avalon
                 if (textBox != null)
                 {
                     textBox.Text = value;
+                    //textBox.Focus();
                     CalculateChange();
                 }
             }
@@ -2032,6 +2079,7 @@ namespace Cash8Avalon
                 if (textBox != null)
                 {
                     textBox.Text = value;
+                    //textBox.Focus();
                     CalculateChange();
                 }
             }

@@ -2574,13 +2574,13 @@ namespace Cash8Avalon
             }
             else
             {
-                this.Focus();
-                if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
-                {
-                    InputSearchProduct.Focus();
-                }
+                //this.Focus();
+                //if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
+                //{
+                //    InputSearchProduct.Focus();
+                //}
                 pay_form = new Pay();
-                await ActivateWindow(this);
+                //await ActivateWindow(this);
             }
         }
 
