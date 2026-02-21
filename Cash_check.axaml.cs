@@ -4388,6 +4388,44 @@ namespace Cash8Avalon
             }
         }
 
+        //private void ScrollToProductRow(int gridRowIndex)
+        //{
+        //    try
+        //    {
+        //        if (_productsScrollViewer == null)
+        //            return;
+
+        //        // Проверяем, это последняя строка?
+        //        bool isLastRow = (gridRowIndex == _productsCurrentRow - 1);
+
+        //        if (isLastRow)
+        //        {
+        //            // Для последней строки - прокрутка до конца
+        //            double maxScroll = _productsScrollViewer.Extent.Height - _productsScrollViewer.Viewport.Height;
+        //            if (maxScroll > 0)
+        //            {
+        //                _productsScrollViewer.Offset = new Vector(0, maxScroll);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // Для остальных строк - обычный расчет
+        //            double rowHeight = 40;
+        //            double targetPosition = (gridRowIndex - 1) * rowHeight;
+        //            _productsScrollViewer.Offset = new Vector(0, targetPosition);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Ошибка при прокрутке: {ex.Message}");
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBoxHelper.Show($"Ошибка при прокрутке: {ex.Message}", "Прокрутка",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //    }
+        //}
+
         private void ScrollToProductRow(int gridRowIndex)
         {
             try
@@ -4395,104 +4433,35 @@ namespace Cash8Avalon
                 if (_productsScrollViewer == null)
                     return;
 
-                // Проверяем, это последняя строка?
-                bool isLastRow = (gridRowIndex == _productsCurrentRow - 1);
+                const double rowHeight = 40;
 
-                if (isLastRow)
-                {
-                    // Для последней строки - прокрутка до конца
-                    double maxScroll = _productsScrollViewer.Extent.Height - _productsScrollViewer.Viewport.Height;
-                    if (maxScroll > 0)
-                    {
-                        _productsScrollViewer.Offset = new Vector(0, maxScroll);
-                    }
-                }
-                else
-                {
-                    // Для остальных строк - обычный расчет
-                    double rowHeight = 40;
-                    double targetPosition = (gridRowIndex - 1) * rowHeight;
-                    _productsScrollViewer.Offset = new Vector(0, targetPosition);
-                }
+                // Рассчитываем целевую позицию: индекс * высоту строки
+                // Для строки 0 = 0px, для строки 1 = 40px и т.д.
+                double targetPosition = gridRowIndex * rowHeight;
+
+                // Получаем текущую максимальную прокрутку
+                double maxScroll = _productsScrollViewer.Extent.Height - _productsScrollViewer.Viewport.Height;
+
+                // Защита от отрицательных значений и выхода за границы
+                if (targetPosition < 0)
+                    targetPosition = 0;
+
+                if (targetPosition > maxScroll)
+                    targetPosition = maxScroll;
+
+                _productsScrollViewer.Offset = new Vector(0, targetPosition);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при прокрутке: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
+
+                _ = Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBoxHelper.Show($"Ошибка при прокрутке: {ex.Message}", "Прокрутка",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show($"Ошибка при прокрутке: {ex.Message}",
+                        "Прокрутка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
         }
-
-        //private async Task AddSingleProductToGrid(ProductItem productItem)
-        //{
-        //    await Dispatcher.UIThread.InvokeAsync(() =>
-        //    {
-        //        try
-        //        {
-        //            // Добавляем новую строку в Grid
-        //            int gridRowIndex = _productsCurrentRow;
-
-        //            // Добавляем RowDefinition
-        //            _productsTableGrid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
-
-        //            // Создаем фон строки
-        //            var rowBackground = (_productsCurrentRow % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
-
-        //            var rowBorder = new Border
-        //            {
-        //                BorderBrush = Brushes.LightGray,
-        //                BorderThickness = new Thickness(0, 0, 0, 1),
-        //                Background = rowBackground,
-        //                Tag = _productsData.IndexOf(productItem) // Сохраняем индекс данных
-        //            };
-
-        //            // Подписываемся на события
-        //            rowBorder.PointerPressed += OnProductRowPointerPressed;
-
-        //            // Устанавливаем позицию
-        //            Grid.SetColumnSpan(rowBorder, 11);
-        //            Grid.SetRow(rowBorder, gridRowIndex);
-        //            _productsTableGrid.Children.Add(rowBorder);
-
-        //            // Добавляем ячейки с данными
-        //            AddCell(_productsTableGrid, 0, gridRowIndex, productItem.Code.ToString(), HorizontalAlignment.Right);
-        //            AddCellWithWrap(_productsTableGrid, 1, gridRowIndex, productItem.Tovar, HorizontalAlignment.Left);
-        //            AddCell(_productsTableGrid, 2, gridRowIndex, productItem.Quantity.ToString(), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 3, gridRowIndex, productItem.Price.ToString("N2"), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 4, gridRowIndex, productItem.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 5, gridRowIndex, productItem.Sum.ToString("N2"), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 6, gridRowIndex, productItem.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 7, gridRowIndex, productItem.Action.ToString(), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 8, gridRowIndex, productItem.Gift.ToString(), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 9, gridRowIndex, productItem.Action2.ToString(), HorizontalAlignment.Right);
-        //            AddCell(_productsTableGrid, 10, gridRowIndex, productItem.Mark, HorizontalAlignment.Center);
-
-        //            // Увеличиваем счетчик строк
-        //            _productsCurrentRow++;
-
-        //            // Прокручиваем к добавленной строке
-        //            ScrollToProductRow(gridRowIndex);
-
-        //            // Устанавливаем фокус на ScrollViewer
-        //            Dispatcher.UIThread.InvokeAsync(() =>
-        //            {
-        //                _productsScrollViewer?.Focus();
-        //            }, DispatcherPriority.Background);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
-        //            Dispatcher.UIThread.InvokeAsync(async () =>
-        //            {
-        //                await MessageBoxHelper.Show($"Ошибка при добавлении строки в Grid: {ex.Message}", "Добавление строки в Grid",
-        //                    MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            });
-        //        }
-        //    });
-        //}
 
         private async Task AddSingleProductToGrid(ProductItem productItem)
         {
@@ -4502,38 +4471,110 @@ namespace Cash8Avalon
                 {
                     int gridRowIndex = _productsCurrentRow;
 
-                    // Добавляем RowDefinition
                     _productsTableGrid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
-
-                    // Создаем все элементы строки одной операцией
                     var rowElements = CreateRowElements(gridRowIndex, productItem, _productsData.Count - 1);
-
-                    // Добавляем все элементы
                     _productsTableGrid.Children.AddRange(rowElements);
-
-                    // Увеличиваем счетчик строк
                     _productsCurrentRow++;
 
-                    // Прокручиваем к добавленной строке
-                    ScrollToProductRow(gridRowIndex);
+                    UpdateTotalSum();
 
-                    // Устанавливаем фокус на ScrollViewer
-                    Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        _productsScrollViewer?.Focus();
-                    }, DispatcherPriority.Background);
+                    _ = ScheduleScrollAndFocusAsync(gridRowIndex);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ошибка при добавлении строки в Grid: {ex.Message}");
-                    Dispatcher.UIThread.InvokeAsync(async () =>
+                    Console.WriteLine($"Ошибка при добавлении строки: {ex.Message}");
+
+                    _ = Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBoxHelper.Show($"Ошибка при добавлении строки в Grid: {ex.Message}",
-                            "Добавление строки в Grid", MessageBoxButton.OK, MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show($"Ошибка: {ex.Message}", "Ошибка",
+                            MessageBoxButton.OK, MessageBoxType.Error, this);
                     });
                 }
-            });
+            }, DispatcherPriority.Background);
         }
+
+        // Вспомогательный метод для прокрутки и фокуса
+        private async Task ScheduleScrollAndFocusAsync(int gridRowIndex)
+        {
+            try
+            {
+                // Даем время на Layout Pass (10-50ms достаточно)
+                await Task.Delay(10);
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ScrollToProductRow(gridRowIndex);
+                    _productsScrollViewer?.Focus();
+                }, DispatcherPriority.Render);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при прокрутке/фокусе: {ex.Message}");
+            }
+        }
+
+        //// Замените ваш AddSingleProductToGrid на этот:
+        //private async Task AddSingleProductToGrid(ProductItem productItem)
+        //{
+        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        int gridRowIndex = _productsCurrentRow;
+        //        _productsTableGrid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
+
+        //        var elements = new List<Control>();
+        //        var bg = (gridRowIndex % 2 == 0) ? Brushes.White : Brushes.AliceBlue;
+
+        //        // Border
+        //        var border = new Border
+        //        {
+        //            Background = bg,
+        //            BorderBrush = Brushes.LightGray,
+        //            BorderThickness = new Thickness(0, 0, 0, 1),
+        //            Tag = _productsData.Count - 1
+        //        };
+        //        border.PointerPressed += OnProductRowPointerPressed;
+        //        Grid.SetRow(border, gridRowIndex);
+        //        Grid.SetColumnSpan(border, 11);
+        //        elements.Add(border);
+
+        //        // Ячейки (код, наименование, кол-во, цены, суммы)
+        //        var cols = new[] {
+        //    (0, productItem.Code.ToString(), HorizontalAlignment.Right, false),
+        //    (1, productItem.Tovar, HorizontalAlignment.Left, true),
+        //    (2, productItem.Quantity.ToString(), HorizontalAlignment.Right, false),
+        //    (3, productItem.Price.ToString("N2"), HorizontalAlignment.Right, false),
+        //    (4, productItem.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right, false),
+        //    (5, productItem.Sum.ToString("N2"), HorizontalAlignment.Right, false),
+        //    (6, productItem.SumAtDiscount.ToString("N2"), HorizontalAlignment.Right, false),
+        //    (7, productItem.Action.ToString(), HorizontalAlignment.Right, false),
+        //    (8, productItem.Gift.ToString(), HorizontalAlignment.Right, false),
+        //    (9, productItem.Action2.ToString(), HorizontalAlignment.Right, false),
+        //    (10, productItem.Mark, HorizontalAlignment.Center, false)
+        //};
+
+        //        foreach (var (col, text, align, wrap) in cols)
+        //        {
+        //            var tb = new TextBlock
+        //            {
+        //                Text = text,
+        //                FontSize = PRODUCT_FONT_SIZE,
+        //                Margin = new Thickness(5, 0),
+        //                IsHitTestVisible = false,
+        //                VerticalAlignment = VerticalAlignment.Center,
+        //                HorizontalAlignment = align
+        //            };
+        //            if (wrap) { tb.TextWrapping = TextWrapping.Wrap; tb.MaxHeight = 50; }
+        //            Grid.SetRow(tb, gridRowIndex);
+        //            Grid.SetColumn(tb, col);
+        //            elements.Add(tb);
+        //        }
+
+        //        _productsTableGrid.Children.AddRange(elements);
+        //        _productsCurrentRow++;
+        //        ScrollToProductRow(gridRowIndex);
+
+        //    }, DispatcherPriority.Background);
+        //}
 
 
 
