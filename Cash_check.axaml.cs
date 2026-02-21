@@ -2,7 +2,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -18,6 +20,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -4141,7 +4144,7 @@ namespace Cash8Avalon
 
                 return;
             }
-            
+
             var productItem = new ProductItem
             {
                 Code = (int)productData.Code,
@@ -4162,10 +4165,27 @@ namespace Cash8Avalon
                 IsMarked = productData.IsMarked()
             };
 
+            //Здесь показ веса весового товара в диалоге
+            if (productItem.IsFractional)
+            {
+                //double? result = await ShowQuantityDialog(productItem.Tovar, Convert.ToDouble(productItem.Quantity), productItem.IsFractional);
+                double? result = await ShowQuantityDialog(productItem.Tovar, 0.001, productItem.IsFractional,0);
+                if (result != null)
+                {
+                    productItem.Quantity = Convert.ToDecimal(result);
+                }
+                else
+                {
+                    await ShowTovarNotFoundWindow(this);
+                    return;
+                }
+            }
+
             // Пересчитываем суммы
             RecalculateProductSums(productItem);
             
-            last_tovar.Text = productData.GetName();
+            last_tovar.Text = productData.GetName();           
+
 
             // Добавляем в коллекцию данных
             _productsData.Add(productItem);
@@ -5693,12 +5713,12 @@ namespace Cash8Avalon
                 // ДОБАВЬТЕ ЭТИ КЛАВИШИ:
                 case Key.Add:
                 case Key.OemPlus:
-                    if(IsNewCheck)
-                    if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
-                    {
-                        IncreaseProductQuantity(_selectedProductRowIndex);
-                        e.Handled = true;
-                    }
+                    if (IsNewCheck)
+                        if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
+                        {
+                            IncreaseProductQuantity(_selectedProductRowIndex);
+                            e.Handled = true;
+                        }
                     break;
 
                 case Key.Subtract:
@@ -5719,18 +5739,87 @@ namespace Cash8Avalon
                     break;
 
                 case Key.Enter:
+                //if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
+                //{
+                //    if (CheckType.SelectedIndex == 0)
+                //    {
+                //        ShowQuantityEditDialog(_selectedProductRowIndex);
+                //    }
+                //    else if (CheckType.SelectedIndex != 0)
+                //    {
+                //        await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);    
+                //    }
+                //    e.Handled = true;
+                //}                                
                     if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
                     {
-                        if (CheckType.SelectedIndex == 0)
+                        if (CheckType.SelectedIndex == 0) // Продажа
                         {
-                            ShowQuantityEditDialog(_selectedProductRowIndex);
+                            var product = _productsData[_selectedProductRowIndex];
+
+                            // 1. Показываем диалог ввода количества
+                            double? result = await ShowQuantityDialog(product.Tovar, Convert.ToDouble(product.Quantity), product.IsFractional, _selectedProductRowIndex);
+
+                            if (result.HasValue)
+                            {
+                                double newQuantity = result.Value;
+                                double oldQuantity = Convert.ToDouble(product.Quantity);
+
+                                // 2. Проверяем: ввели ли число МЕНЬШЕ текущего?
+                                if (newQuantity < oldQuantity)
+                                {
+
+                                    if (product.IsFractional)
+                                    {
+                                        await MessageBox.Show("В весовом товаре нельзя уменьшать количество", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Error, this);
+                                        return;
+                                    }                                    
+
+                                    // Показываем диалог причины
+                                    var reasonsDialog = new ReasonsDeletionCheck();
+                                    reasonsDialog.Title = "Уменьшение количества";
+
+                                    // Задержка для Linux (как в вашем коде)
+                                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                                    {
+                                        await Task.Delay(50);
+                                    }
+
+                                    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                                    // Если отменили или причину не выбрали
+                                    if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                                    {
+                                        Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                                        return; // Прерываем выполнение, данные не обновляем
+                                    }
+
+                                    // Записываем инцидент (сколько убрали)
+                                    double delta = oldQuantity - newQuantity;
+
+                                    await InsertIncidentRecordAsync(
+                                        product.Code.ToString(),
+                                        delta.ToString("F2"), // Логируем разницу (сколько убрали), а не новое количество
+                                        "1",
+                                        reasonsDialog.Reason
+                                    );
+                                }
+
+                                // 3. Если все ок (или количество увеличилось) — применяем изменения
+                                product.Quantity = Convert.ToDecimal(newQuantity);
+                                RecalculateProductSums(product);
+                                UpdateProductRowInGrid(_selectedProductRowIndex);
+                                UpdateTotalSum();
+
+                                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                            }
                         }
                         else if (CheckType.SelectedIndex != 0)
                         {
-                            await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);    
+                            await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);
                         }
                         e.Handled = true;
-                    }
+                    }                    
                     break;
 
                 case Key.Home:
@@ -6743,94 +6832,361 @@ namespace Cash8Avalon
             }
         }
 
-        // Метод для показа диалога редактирования количества (по нажатию Enter)
-        // Альтернативный метод для показа диалога редактирования количества
-        private async void ShowQuantityEditDialog(int dataIndex)
+        //// Метод для показа диалога редактирования количества (по нажатию Enter)
+        //// Альтернативный метод для показа диалога редактирования количества
+        //private async void ShowQuantityEditDialog(int dataIndex)
+        //{
+        //    if (dataIndex >= 0 && dataIndex < _productsData.Count)
+        //    {
+        //        var product = _productsData[dataIndex];
+
+        //        // Создаем окно с увеличенными размерами
+        //        var dialog = new Window
+        //        {
+        //            Title = "Изменение количества",
+        //            Width = 400,
+        //            Height = 280,
+        //            WindowStartupLocation = WindowStartupLocation.Manual,
+        //            CanResize = false,
+        //            ShowInTaskbar = false,
+        //            SystemDecorations = SystemDecorations.BorderOnly
+        //        };
+
+        //        // Внешний Border с выраженной рамкой
+        //        var outerBorder = new Border
+        //        {
+        //            BorderBrush = Brushes.DarkSlateGray,
+        //            BorderThickness = new Thickness(3),
+        //            Background = Brushes.WhiteSmoke,
+        //            Child = new Border
+        //            {
+        //                BorderBrush = Brushes.LightGray,
+        //                BorderThickness = new Thickness(1),
+        //                Background = Brushes.White,
+        //                Padding = new Thickness(20, 15, 20, 15), // УМЕНЬШИЛИ ОТСТУП СНИЗУ С 20 ДО 15
+        //                Child = CreateDialogContent(product, dataIndex, dialog)
+        //            }
+        //        };
+
+        //        dialog.Content = outerBorder;
+
+        //        // Позиционируем окно
+        //        dialog.Loaded += (s, e) =>
+        //        {
+        //            PositionDialogCorrectly(dialog);
+        //        };
+
+        //        // Автовыделение текста при загрузке окна
+        //        dialog.Opened += (s, e) =>
+        //        {
+        //            Dispatcher.UIThread.InvokeAsync(() =>
+        //            {
+        //                // Находим TextBox в содержимом
+        //                if (outerBorder.Child is Border innerBorder &&
+        //                    innerBorder.Child is StackPanel stackPanel)
+        //                {
+        //                    foreach (var child in stackPanel.Children)
+        //                    {
+        //                        if (child is Border textBoxBorder &&
+        //                            textBoxBorder.Child is TextBox textBox)
+        //                        {
+        //                            textBox.Focus();
+        //                            textBox.SelectAll();
+        //                            break;
+        //                        }
+        //                    }
+        //                }
+        //            }, DispatcherPriority.Background);
+        //        };
+
+        //        // Показываем окно
+        //        // Показываем окно
+        //        var parentWindow = this is Window window ? window : this.FindAncestorOfType<Window>();
+        //        await dialog.ShowDialog(parentWindow);
+        //    }
+        //}
+
+        ///// <summary>
+        ///// Создает содержимое диалога
+        ///// </summary>
+        //private StackPanel CreateDialogContent(ProductItem product, int dataIndex, Window dialog)
+        //{
+        //    var stackPanel = new StackPanel
+        //    {
+        //        Spacing = 20 // УМЕНЬШИЛИ С 25 ДО 20
+        //    };
+
+        //    // Информация о товаре
+        //    var productTextBlock = new TextBlock
+        //    {
+        //        Text = $"Товар: {product.Tovar}",
+        //        TextWrapping = TextWrapping.Wrap,
+        //        MaxWidth = 340,
+        //        MaxHeight = 40,
+        //        TextTrimming = TextTrimming.CharacterEllipsis,
+        //        FontWeight = FontWeight.SemiBold,
+        //        FontSize = 13,
+        //        Margin = new Thickness(0, 0, 0, 5),
+        //        HorizontalAlignment = HorizontalAlignment.Center
+        //    };
+
+        //    stackPanel.Children.Add(productTextBlock);
+
+        //    // TextBox с БОЛЬШИМ ШРИФТОМ
+        //    var textBox = new TextBox
+        //    {
+        //        Text = product.Quantity.ToString(),
+        //        HorizontalAlignment = HorizontalAlignment.Center,
+        //        Width = 160,
+        //        MaxLength = 5,
+        //        FontSize = 22,
+        //        FontWeight = FontWeight.Bold,
+        //        Name = "quantityTextBox",
+        //        TextAlignment = TextAlignment.Center,
+        //        CaretBrush = Brushes.Blue,
+        //        SelectionBrush = Brushes.LightBlue,
+        //        Foreground = Brushes.Black
+        //    };
+
+        //    var textBoxBorder = new Border
+        //    {
+        //        BorderBrush = Brushes.SteelBlue,
+        //        BorderThickness = new Thickness(3),
+        //        CornerRadius = new CornerRadius(8),
+        //        Padding = new Thickness(18, 15, 18, 15),
+        //        HorizontalAlignment = HorizontalAlignment.Center,
+        //        Background = Brushes.AliceBlue,
+        //        Width = 200,
+        //        Height = 75,
+        //        Margin = new Thickness(0, 10, 0, 15), // УМЕНЬШИЛИ ОТСТУП СНИЗУ С 20 ДО 15
+        //        Child = textBox
+        //    };
+
+        //    stackPanel.Children.Add(textBoxBorder);
+
+        //    // КОНТЕЙНЕР ДЛЯ КНОПОК - ПОДНИМАЕМ ВЫШЕ
+        //    var buttonContainer = new Border
+        //    {
+        //        Height = 55, // НЕМНОГО УМЕНЬШИЛИ ВЫСОТУ
+        //        VerticalAlignment = VerticalAlignment.Bottom,
+        //        Margin = new Thickness(0, 10, 0, 0), // УМЕНЬШИЛИ ОТСТУП СВЕРХУ С 25 ДО 10
+        //        Child = CreateButtonPanel(product, textBox, dataIndex, dialog)
+        //    };
+
+        //    stackPanel.Children.Add(buttonContainer);
+
+        //    return stackPanel;
+        //}
+
+        /// <summary>
+        /// Универсальный диалог ввода в старом стиле.
+        /// </summary>
+        // Добавили параметр int rowIndex
+        private async Task<double?> ShowQuantityDialog(string productName, double currentQuantity, bool isFractional, int rowIndex)
         {
-            if (dataIndex >= 0 && dataIndex < _productsData.Count)
+            int decimals = isFractional ? 3 : 0;
+            string title = isFractional ? "Введите вес (кг)" : "Введите количество";
+            string format = isFractional ? "0.000" : "0";
+            string watermark = isFractional ? "0.000" : "1";
+            decimal increment = isFractional ? 0.001m : 1m;
+
+            // ✅ Устанавливаем минимум 0.001 для весового, чтобы начальное значение было валидным
+            decimal minimum = isFractional ? 0.001m : 0m;
+
+            var dialog = new Window
             {
-                var product = _productsData[dataIndex];
+                Title = title,
+                Width = 400,
+                Height = 280,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                CanResize = false,
+                ShowInTaskbar = false,
+                SystemDecorations = SystemDecorations.BorderOnly
+            };
 
-                // Создаем окно с увеличенными размерами
-                var dialog = new Window
-                {
-                    Title = "Изменение количества",
-                    Width = 400,
-                    Height = 280,
-                    WindowStartupLocation = WindowStartupLocation.Manual,
-                    CanResize = false,
-                    ShowInTaskbar = false,
-                    SystemDecorations = SystemDecorations.BorderOnly
-                };
+            // Передаем currentQuantity. Если это новый товар (0), NumericUpDown сам установит 0.001 из-за Minimum
+            var content = CreateDialogContentStyled(
+                productName,
+                Convert.ToDecimal(currentQuantity),
+                dialog,
+                decimals,
+                format,
+                watermark,
+                increment,
+                minimum
+            );
 
-                // Внешний Border с выраженной рамкой
-                var outerBorder = new Border
+            var outerBorder = new Border
+            {
+                BorderBrush = Brushes.DarkSlateGray,
+                BorderThickness = new Thickness(3),
+                Background = Brushes.WhiteSmoke,
+                Child = new Border
                 {
-                    BorderBrush = Brushes.DarkSlateGray,
-                    BorderThickness = new Thickness(3),
-                    Background = Brushes.WhiteSmoke,
-                    Child = new Border
+                    BorderBrush = Brushes.LightGray,
+                    BorderThickness = new Thickness(1),
+                    Background = Brushes.White,
+                    Padding = new Thickness(20, 15, 20, 15),
+                    Child = content
+                }
+            };
+
+            dialog.Content = outerBorder;
+            dialog.Loaded += (s, e) => PositionDialogByRow(dialog, rowIndex);
+
+            // Фокус и выделение
+            dialog.Opened += (s, e) =>
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (outerBorder.Child is Border innerBorder && innerBorder.Child is StackPanel stackPanel)
                     {
-                        BorderBrush = Brushes.LightGray,
-                        BorderThickness = new Thickness(1),
-                        Background = Brushes.White,
-                        Padding = new Thickness(20, 15, 20, 15), // УМЕНЬШИЛИ ОТСТУП СНИЗУ С 20 ДО 15
-                        Child = CreateDialogContent(product, dataIndex, dialog)
-                    }
-                };
-
-                dialog.Content = outerBorder;
-
-                // Позиционируем окно
-                dialog.Loaded += (s, e) =>
-                {
-                    PositionDialogCorrectly(dialog);
-                };
-
-                // Автовыделение текста при загрузке окна
-                dialog.Opened += (s, e) =>
-                {
-                    Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        // Находим TextBox в содержимом
-                        if (outerBorder.Child is Border innerBorder &&
-                            innerBorder.Child is StackPanel stackPanel)
+                        foreach (var child in stackPanel.Children)
                         {
-                            foreach (var child in stackPanel.Children)
+                            if (child is Border inputBorder && inputBorder.Child is NumericUpDown numericUpDown)
                             {
-                                if (child is Border textBoxBorder &&
-                                    textBoxBorder.Child is TextBox textBox)
+                                numericUpDown.Focus();
+                                var textBox = numericUpDown.GetTemplateChildren()
+                                    .OfType<TextBox>()
+                                    .FirstOrDefault(t => t.Name == "PART_TextBox");
+
+                                if (textBox != null)
                                 {
-                                    textBox.Focus();
                                     textBox.SelectAll();
-                                    break;
                                 }
+                                break;
                             }
                         }
-                    }, DispatcherPriority.Background);
-                };
+                    }
+                }, DispatcherPriority.Background);
+            };
 
-                // Показываем окно
-                // Показываем окно
-                var parentWindow = this is Window window ? window : this.FindAncestorOfType<Window>();
-                await dialog.ShowDialog(parentWindow);
+            var parentWindow = this is Window window ? window : this.FindAncestorOfType<Window>();
+            return await dialog.ShowDialog<double?>(parentWindow);
+        }
+
+        private void PositionDialogByRow(Window dialog, int rowIndex)
+        {
+            try
+            {
+                var grid = _productsTableGrid;
+                if (grid == null) return;
+
+                // 1. Вычисляем X координату (правый край колонки "Количество")
+                var gridTopLeft = grid.PointToScreen(new Point(0, 0));
+
+                // Индекс колонки "Количество" (0=Код, 1=Товар, 2=Цена... проверьте ваш порядок)
+                // Судя по CreateProductsGrid, Кол-во - это индекс 2.
+                int quantityColumnIndex = 2;
+
+                double totalWidth = 0;
+                if (grid.ColumnDefinitions.Count > quantityColumnIndex)
+                {
+                    for (int i = 0; i <= quantityColumnIndex; i++)
+                    {
+                        totalWidth += grid.ColumnDefinitions[i].ActualWidth;
+                    }
+                }
+
+                // X позиция диалога: левый край = левый край грида + ширина колонок
+                double newX = gridTopLeft.X + totalWidth;
+
+                // 2. Вычисляем Y координату (центр редактируемой строки)
+                // В вашем Grid строка 0 - это заголовки. Данные начинаются с 1.
+                // rowIndex - это индекс в списке данных (_productsData).
+                // Значит, строка в Grid имеет индекс rowIndex + 1.
+                int gridRowIndex = rowIndex + 1;
+
+                double rowCenterY = 0;
+                bool rowFound = false;
+
+                // Проверяем, что такая строка есть в гриде
+                if (grid.RowDefinitions.Count > gridRowIndex)
+                {
+                    // Считаем позицию верха нужной строки (сумма высот всех предыдущих строк)
+                    double rowTopY = 0;
+                    for (int i = 0; i < gridRowIndex; i++)
+                    {
+                        rowTopY += grid.RowDefinitions[i].ActualHeight;
+                    }
+
+                    // Высота текущей строки
+                    double rowHeight = grid.RowDefinitions[gridRowIndex].ActualHeight;
+
+                    // Центр строки
+                    rowCenterY = rowTopY + (rowHeight / 2);
+                    rowFound = true;
+                }
+
+                // Если строка найдена (не вышла за пределы Grid)
+                if (rowFound)
+                {
+                    // 3. Преобразуем координаты в экранные
+                    // PointToScreen автоматически учитывает прокрутку (ScrollViewer)
+                    var rowCenterScreenPoint = grid.PointToScreen(new Point(0, rowCenterY));
+
+                    // 4. Рассчитываем положение окна диалога
+                    // Нам нужно, чтобы поле ввода в диалоге было напротив центра строки.
+                    // Смещение от верха окна диалога до центра поля ввода.
+                    // Расчет: Padding(20+15) + TextBlock(~25) + Spacing(20) + Border Margin Top(10) + Border Height/2(37.5) ≈ 107.5
+                    double inputControlOffset = 115;
+
+                    double newY = rowCenterScreenPoint.Y - inputControlOffset;
+
+                    // 5. Проверка границ экрана
+                    var screen = TopLevel.GetTopLevel(this)?.Screens.ScreenFromVisual(this);
+                    if (screen != null)
+                    {
+                        var bounds = screen.Bounds;
+
+                        // Если диалог уходит вправо
+                        if (newX + dialog.Width > bounds.X + bounds.Width)
+                            newX = (bounds.X + bounds.Width) - dialog.Width - 10;
+
+                        // Если уходит вверх
+                        if (newY < bounds.Y)
+                            newY = bounds.Y + 5;
+
+                        // Если уходит вниз
+                        if (newY + dialog.Height > bounds.Y + bounds.Height)
+                            newY = (bounds.Y + bounds.Height) - dialog.Height - 5;
+                    }
+
+                    dialog.Position = new PixelPoint((int)newX, (int)newY);
+                }
+                else
+                {
+                    // Если строка не найдена (например, удалена или индекс неверен), центрируем по владельцу
+                    dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                }
+            }
+            catch (Exception)
+            {
+                // На случай ошибки просто центрируем
+                dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             }
         }
 
-        /// <summary>
-        /// Создает содержимое диалога
-        /// </summary>
-        private StackPanel CreateDialogContent(ProductItem product, int dataIndex, Window dialog)
-        {
-            var stackPanel = new StackPanel
-            {
-                Spacing = 20 // УМЕНЬШИЛИ С 25 ДО 20
-            };
 
-            // Информация о товаре
+        /// <summary>
+        /// Создание UI в старом стиле с валидацией
+        /// </summary>
+        private Control CreateDialogContentStyled(
+    string productName,
+    decimal currentVal,
+    Window dialog,
+    int decimalPlaces,
+    string formatString,
+    string watermark,
+    decimal increment,
+    decimal minimum)
+        {
+            var stackPanel = new StackPanel { Spacing = 20 };
+
+            // Заголовок
             var productTextBlock = new TextBlock
             {
-                Text = $"Товар: {product.Tovar}",
+                Text = $"Товар: {productName}",
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 340,
                 MaxHeight = 40,
@@ -6840,26 +7196,28 @@ namespace Cash8Avalon
                 Margin = new Thickness(0, 0, 0, 5),
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-
             stackPanel.Children.Add(productTextBlock);
 
-            // TextBox с БОЛЬШИМ ШРИФТОМ
-            var textBox = new TextBox
+            // Поле ввода
+            var numericUpDown = new NumericUpDown
             {
-                Text = product.Quantity.ToString(),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Width = 160,
-                MaxLength = 5,
+                Value = currentVal,
+                Minimum = minimum,
+                Maximum = 999999,
+                Increment = increment,
+                FormatString = formatString,
+                Watermark = watermark,
                 FontSize = 22,
                 FontWeight = FontWeight.Bold,
-                Name = "quantityTextBox",
-                TextAlignment = TextAlignment.Center,
-                CaretBrush = Brushes.Blue,
-                SelectionBrush = Brushes.LightBlue,
-                Foreground = Brushes.Black
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Width = 160,
+                Background = Brushes.AliceBlue,
+                BorderThickness = new Thickness(0),
+                TextAlignment = TextAlignment.Center
             };
 
-            var textBoxBorder = new Border
+            // Обертка
+            var inputBorder = new Border
             {
                 BorderBrush = Brushes.SteelBlue,
                 BorderThickness = new Thickness(3),
@@ -6869,24 +7227,285 @@ namespace Cash8Avalon
                 Background = Brushes.AliceBlue,
                 Width = 200,
                 Height = 75,
-                Margin = new Thickness(0, 10, 0, 15), // УМЕНЬШИЛИ ОТСТУП СНИЗУ С 20 ДО 15
-                Child = textBox
+                Margin = new Thickness(0, 10, 0, 15),
+                Child = numericUpDown
             };
+            stackPanel.Children.Add(inputBorder);
 
-            stackPanel.Children.Add(textBoxBorder);
-
-            // КОНТЕЙНЕР ДЛЯ КНОПОК - ПОДНИМАЕМ ВЫШЕ
+            // Панель кнопок
             var buttonContainer = new Border
             {
-                Height = 55, // НЕМНОГО УМЕНЬШИЛИ ВЫСОТУ
+                Height = 55,
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(0, 10, 0, 0), // УМЕНЬШИЛИ ОТСТУП СВЕРХУ С 25 ДО 10
-                Child = CreateButtonPanel(product, textBox, dataIndex, dialog)
+                Margin = new Thickness(0, 10, 0, 0),
+                Child = CreateButtonPanelStyled(numericUpDown, inputBorder, dialog)
             };
-
             stackPanel.Children.Add(buttonContainer);
 
             return stackPanel;
+        }
+
+        private StackPanel CreateButtonPanelStyled(NumericUpDown numericUpDown, Border inputBorder, Window dialog)
+        {
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Spacing = 25
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 105,
+                Height = 40,
+                IsDefault = true,
+                Background = Brushes.LightGreen,
+                BorderBrush = Brushes.Green,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(15, 8),
+                FontWeight = FontWeight.Bold,
+                FontSize = 14,
+                CornerRadius = new CornerRadius(5)
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Отмена",
+                Width = 105,
+                Height = 40,
+                IsCancel = true,
+                Background = Brushes.LightCoral,
+                BorderBrush = Brushes.DarkRed,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(15, 8),
+                FontWeight = FontWeight.Bold,
+                FontSize = 14,
+                CornerRadius = new CornerRadius(5)
+            };
+
+            // Находим внутренний TextBox для отслеживания ввода текста
+            TextBox innerTextBox = null;
+            numericUpDown.TemplateApplied += (s, e) =>
+            {
+                innerTextBox = numericUpDown.GetTemplateChildren()
+                    .OfType<TextBox>()
+                    .FirstOrDefault(t => t.Name == "PART_TextBox");
+
+                if (innerTextBox != null)
+                {
+                    // ✅ Отслеживаем ввод текста напрямую (для мгновенной реакции)
+                    innerTextBox.TextChanged += (ts, te) =>
+                    {
+                        ValidateInputAndUpdateUI(innerTextBox.Text, numericUpDown, inputBorder, okButton);
+                    };
+                }
+            };
+
+            // ✅ Стандартная валидация при изменении Value (через стрелки)
+            numericUpDown.ValueChanged += (s, e) =>
+            {
+                var val = numericUpDown.Value ?? 0;
+                okButton.IsEnabled = val > 0;
+                if (val > 0)
+                {
+                    inputBorder.BorderBrush = Brushes.SteelBlue;
+                    inputBorder.Background = Brushes.AliceBlue;
+                }
+            };
+
+            // Логика кнопок
+            okButton.Click += (s, e) =>
+            {
+                decimal val = numericUpDown.Value ?? 0;
+                if (val > 0) dialog.Close(Convert.ToDouble(val));
+                else StartErrorAnimation(inputBorder); // Запуск мигания
+            };
+
+            cancelButton.Click += (s, e) => dialog.Close(null);
+
+            // Обработка клавиш (Enter и F12)
+            numericUpDown.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter || e.Key == Key.F12)
+                {
+                    // Принудительно обновляем Value из текста перед проверкой
+                    if (innerTextBox != null)
+                    {
+                        ValidateInputAndUpdateUI(innerTextBox.Text, numericUpDown, inputBorder, okButton);
+                    }
+
+                    if (okButton.IsEnabled)
+                    {
+                        okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    }
+                    else
+                    {
+                        StartErrorAnimation(inputBorder);
+                    }
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    dialog.Close(null);
+                    e.Handled = true;
+                }
+            };
+
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            return buttonPanel;
+        }
+
+        // ✅ Метод валидации текста
+        private void ValidateInputAndUpdateUI(string text, NumericUpDown numericUpDown, Border inputBorder, Button okButton)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                okButton.IsEnabled = false;
+                return;
+            }
+
+            // Пытаемся распарсить то, что ввел пользователь
+            if (decimal.TryParse(text.Replace(".", ","), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedValue) ||
+                decimal.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out parsedValue))
+            {
+                bool isValid = parsedValue > 0;
+                okButton.IsEnabled = isValid;
+
+                if (isValid)
+                {
+                    inputBorder.BorderBrush = Brushes.SteelBlue;
+                    inputBorder.Background = Brushes.AliceBlue;
+                    // Синхронизируем Value (опционально, для стрелок)
+                    if (numericUpDown.Value != parsedValue) numericUpDown.Value = parsedValue;
+                }
+                else
+                {
+                    inputBorder.BorderBrush = Brushes.Red;
+                }
+            }
+            else
+            {
+                okButton.IsEnabled = false;
+            }
+        }
+
+        // ✅ Метод мигания (Красный -> Желтый -> Красный)
+        private void StartErrorAnimation(Border border)
+        {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            int tick = 0;
+
+            timer.Tick += (s, e) =>
+            {
+                if (tick % 2 == 0)
+                {
+                    border.BorderBrush = Brushes.Red;
+                    border.Background = new SolidColorBrush(Color.FromArgb(50, 255, 0, 0)); // Светло-красный фон
+                }
+                else
+                {
+                    border.BorderBrush = Brushes.Gold; // Желтый
+                    border.Background = new SolidColorBrush(Color.FromArgb(50, 255, 215, 0)); // Светло-желтый фон
+                }
+
+                tick++;
+                if (tick >= 6) // 3 цикла мигания
+                {
+                    timer.Stop();
+                    border.BorderBrush = Brushes.Red; // Оставляем красным в конце
+                    border.Background = Brushes.AliceBlue;
+                }
+            };
+
+            timer.Start();
+        }
+
+        /// <summary>
+        /// Создание кнопок в старом стиле (Зеленая ОК, Красная Отмена)
+        /// </summary>
+        private StackPanel CreateButtonPanelStyled(NumericUpDown numericUpDown, Window dialog)
+        {
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Spacing = 25
+            };
+
+            // Кнопка OK
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 105,
+                Height = 40,
+                IsDefault = true,
+                Background = Brushes.LightGreen,
+                BorderBrush = Brushes.Green,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(15, 8),
+                FontWeight = FontWeight.Bold,
+                FontSize = 14,
+                CornerRadius = new CornerRadius(5)
+            };
+
+            // Кнопка Отмена
+            var cancelButton = new Button
+            {
+                Content = "Отмена",
+                Width = 105,
+                Height = 40,
+                IsCancel = true,
+                Background = Brushes.LightCoral,
+                BorderBrush = Brushes.DarkRed,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(15, 8),
+                FontWeight = FontWeight.Bold,
+                FontSize = 14,
+                CornerRadius = new CornerRadius(5)
+            };
+
+            // Логика кнопок
+            okButton.Click += (s, e) =>
+            {
+                // Вместо ApplyQuantityChanges — просто возвращаем значение
+                decimal val = numericUpDown.Value ?? 0;
+                if (val > 0)
+                {
+                    dialog.Close(Convert.ToDouble(val));
+                }
+                else
+                {
+                    // Можно добавить сообщение "Введите значение"
+                    numericUpDown.Focus();
+                }
+            };
+
+            cancelButton.Click += (s, e) => dialog.Close(null); // Возвращаем null при отмене
+
+            // Обработка клавиш (как в старом коде)
+            numericUpDown.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter)
+                {
+                    okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    dialog.Close(null);
+                    e.Handled = true;
+                }
+            };
+
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            return buttonPanel;
         }
 
         /// <summary>
