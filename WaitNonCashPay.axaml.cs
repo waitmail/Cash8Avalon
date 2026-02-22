@@ -856,7 +856,7 @@ namespace Cash8Avalon
                 if (StatusLabel != null)
                 {
                     double percent = ((double)_secondsRemaining / _totalSeconds) * 100;
-                    StatusLabel.Text = $"Ожидание ответа от терминала... {percent:F0}%";
+                    StatusLabel.Text = $"Оплата еще не подтверждена ... {percent:F0}%";
                 }
             });
         }
