@@ -7625,6 +7625,24 @@ namespace Cash8Avalon
                         e.Handled = true;
                         return;
                     }
+                    // Если в строке только "0" и курсор в конце - ЗАПРЕЩАЕМ добавление нулей
+                    else if (currentText == "0" && caretIndex == 1)
+                    {
+                        Console.WriteLine($"  Блокируем добавление нуля после нуля");
+                        SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                        StartErrorAnimation(inputBorder, numericUpDown);
+                        e.Handled = true;
+                        return;
+                    }
+                    // Если в строке только "0" и курсор в других позициях - тоже запрещаем
+                    else if (currentText == "0")
+                    {
+                        Console.WriteLine($"  Блокируем любые операции с нулем");
+                        SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                        StartErrorAnimation(inputBorder, numericUpDown);
+                        e.Handled = true;
+                        return;
+                    }
                     // Ноль после других цифр - разрешен
                     else if (caretIndex > 0)
                     {
@@ -8454,7 +8472,7 @@ namespace Cash8Avalon
                         {
                             Code = Convert.ToInt32(reader["tovar_code"]),
                             Tovar = reader["tovar_name"].ToString().Trim(),
-                            Quantity = Convert.ToInt32(reader["quantity"]),
+                            Quantity = Convert.ToDecimal(reader["quantity"]),
                             Price = Convert.ToDecimal(reader["price"]),
                             PriceAtDiscount = priceAtDiscount, // Используем уже полученное значение
                             Sum = Convert.ToDecimal(reader["sum"]),
