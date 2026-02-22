@@ -6989,8 +6989,6 @@ namespace Cash8Avalon
             string format = isFractional ? "0.000" : "0";
             string watermark = isFractional ? "0.000" : "1";
             decimal increment = isFractional ? 0.001m : 1m;
-
-            // ✅ Устанавливаем минимум 0.001 для весового, чтобы начальное значение было валидным
             decimal minimum = isFractional ? 0.001m : 0m;
 
             var dialog = new Window
@@ -7004,7 +7002,6 @@ namespace Cash8Avalon
                 SystemDecorations = SystemDecorations.BorderOnly
             };
 
-            // Передаем currentQuantity. Если это новый товар (0), NumericUpDown сам установит 0.001 из-за Minimum
             var content = CreateDialogContentStyled(
                 productName,
                 Convert.ToDecimal(currentQuantity),
@@ -7013,7 +7010,8 @@ namespace Cash8Avalon
                 format,
                 watermark,
                 increment,
-                minimum
+                minimum,
+                isFractional
             );
 
             var outerBorder = new Border
@@ -7034,7 +7032,6 @@ namespace Cash8Avalon
             dialog.Content = outerBorder;
             dialog.Loaded += (s, e) => PositionDialogByRow(dialog, rowIndex);
 
-            // Фокус и выделение
             dialog.Opened += (s, e) =>
             {
                 Dispatcher.UIThread.InvokeAsync(() =>
@@ -7049,7 +7046,6 @@ namespace Cash8Avalon
                                 var textBox = numericUpDown.GetTemplateChildren()
                                     .OfType<TextBox>()
                                     .FirstOrDefault(t => t.Name == "PART_TextBox");
-
                                 if (textBox != null)
                                 {
                                     textBox.SelectAll();
@@ -7179,7 +7175,8 @@ namespace Cash8Avalon
     string formatString,
     string watermark,
     decimal increment,
-    decimal minimum)
+    decimal minimum,
+    bool isFractional)
         {
             var stackPanel = new StackPanel { Spacing = 20 };
 
@@ -7198,7 +7195,7 @@ namespace Cash8Avalon
             };
             stackPanel.Children.Add(productTextBlock);
 
-            // Поле ввода
+            // Поле ввода NumericUpDown
             var numericUpDown = new NumericUpDown
             {
                 Value = currentVal,
@@ -7216,7 +7213,7 @@ namespace Cash8Avalon
                 TextAlignment = TextAlignment.Center
             };
 
-            // Обертка
+            // Обёртка
             var inputBorder = new Border
             {
                 BorderBrush = Brushes.SteelBlue,
@@ -7238,15 +7235,66 @@ namespace Cash8Avalon
                 Height = 55,
                 VerticalAlignment = VerticalAlignment.Bottom,
                 Margin = new Thickness(0, 10, 0, 0),
-                Child = CreateButtonPanelStyled(numericUpDown, inputBorder, dialog)
+                Child = CreateButtonPanelStyled(numericUpDown, inputBorder, dialog, isFractional)
             };
             stackPanel.Children.Add(buttonContainer);
 
             return stackPanel;
         }
 
-        private StackPanel CreateButtonPanelStyled(NumericUpDown numericUpDown, Border inputBorder, Window dialog)
+        private void RestrictInput(string text, TextBox textBox, bool isFractional)
         {
+            if (string.IsNullOrEmpty(text)) return;
+
+            // Заменяем запятую на точку для единообразия
+            string processed = text.Replace(',', '.');
+
+            if (isFractional)
+            {
+                // Для весового: только цифры и одна точка, не более 3 знаков после точки
+                if (processed.Count(c => c == '.') > 1)
+                {
+                    int firstDotIndex = processed.IndexOf('.');
+                    processed = processed.Substring(0, firstDotIndex + 1) +
+                               new string(processed.Skip(firstDotIndex + 1).Where(c => c != '.').ToArray());
+                }
+
+                // Ограничиваем количество знаков после запятой
+                int dotIndex = processed.IndexOf('.');
+                if (dotIndex >= 0 && processed.Length - dotIndex - 1 > 3)
+                {
+                    processed = processed.Substring(0, dotIndex + 4);
+                }
+            }
+            else
+            {
+                // Для штучного: только целые числа (никаких точек!)
+                processed = new string(processed.Where(c => char.IsDigit(c)).ToArray());
+            }
+
+            // Обновляем текст, если он изменился
+            if (processed != textBox.Text.Replace(',', '.'))
+            {
+                textBox.Text = processed;
+                textBox.CaretIndex = processed.Length;
+            }
+        }
+
+
+        // Добавьте эти поля в класс Cash_check (в начало класса)
+        private TextBox? _currentInnerTextBox;
+        private bool _isProcessingTextChange = false;
+        private decimal _currentMinValue;
+        private bool _currentIsFractional;
+
+        private StackPanel CreateButtonPanelStyled(
+            NumericUpDown numericUpDown,
+            Border inputBorder,
+            Window dialog,
+            bool isFractional)
+        {
+            Console.WriteLine($"=== CreateButtonPanelStyled: isFractional={isFractional} ===");
+
             var buttonPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -7285,73 +7333,20 @@ namespace Cash8Avalon
                 CornerRadius = new CornerRadius(5)
             };
 
-            // Находим внутренний TextBox для отслеживания ввода текста
-            TextBox innerTextBox = null;
-            numericUpDown.TemplateApplied += (s, e) =>
-            {
-                innerTextBox = numericUpDown.GetTemplateChildren()
-                    .OfType<TextBox>()
-                    .FirstOrDefault(t => t.Name == "PART_TextBox");
+            _currentMinValue = numericUpDown.Minimum;
+            _currentIsFractional = isFractional;
 
-                if (innerTextBox != null)
-                {
-                    // ✅ Отслеживаем ввод текста напрямую (для мгновенной реакции)
-                    innerTextBox.TextChanged += (ts, te) =>
-                    {
-                        ValidateInputAndUpdateUI(innerTextBox.Text, numericUpDown, inputBorder, okButton);
-                    };
-                }
-            };
+            okButton.IsEnabled = (numericUpDown.Value ?? 0) >= _currentMinValue;
 
-            // ✅ Стандартная валидация при изменении Value (через стрелки)
-            numericUpDown.ValueChanged += (s, e) =>
-            {
-                var val = numericUpDown.Value ?? 0;
-                okButton.IsEnabled = val > 0;
-                if (val > 0)
-                {
-                    inputBorder.BorderBrush = Brushes.SteelBlue;
-                    inputBorder.Background = Brushes.AliceBlue;
-                }
-            };
+            //numericUpDown.TemplateApplied += OnNumericUpDownTemplateApplied;
 
-            // Логика кнопок
-            okButton.Click += (s, e) =>
-            {
-                decimal val = numericUpDown.Value ?? 0;
-                if (val > 0) dialog.Close(Convert.ToDouble(val));
-                else StartErrorAnimation(inputBorder); // Запуск мигания
-            };
+            //numericUpDown.ValueChanged += (s, e) => OnNumericUpDownValueChanged(s, e, inputBorder, okButton);
+
+            okButton.Click += (s, e) => OnOkButtonClick(s, e, numericUpDown, inputBorder, dialog);
 
             cancelButton.Click += (s, e) => dialog.Close(null);
 
-            // Обработка клавиш (Enter и F12)
-            numericUpDown.KeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Enter || e.Key == Key.F12)
-                {
-                    // Принудительно обновляем Value из текста перед проверкой
-                    if (innerTextBox != null)
-                    {
-                        ValidateInputAndUpdateUI(innerTextBox.Text, numericUpDown, inputBorder, okButton);
-                    }
-
-                    if (okButton.IsEnabled)
-                    {
-                        okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                    }
-                    else
-                    {
-                        StartErrorAnimation(inputBorder);
-                    }
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.Escape)
-                {
-                    dialog.Close(null);
-                    e.Handled = true;
-                }
-            };
+            numericUpDown.KeyDown += (s, e) => OnNumericUpDownKeyDown(s, e, numericUpDown, inputBorder, okButton, dialog);
 
             buttonPanel.Children.Add(okButton);
             buttonPanel.Children.Add(cancelButton);
@@ -7359,7 +7354,656 @@ namespace Cash8Avalon
             return buttonPanel;
         }
 
-        // ✅ Метод валидации текста
+        //private void OnNumericUpDownTemplateApplied(object? sender, TemplateAppliedEventArgs e)
+        //{
+        //    Console.WriteLine("=== OnNumericUpDownTemplateApplied ===");
+
+        //    var numericUpDown = sender as NumericUpDown;
+        //    if (numericUpDown == null) return;
+
+        //    _currentInnerTextBox = numericUpDown.GetTemplateChildren()
+        //        .OfType<TextBox>()
+        //        .FirstOrDefault(t => t.Name == "PART_TextBox");
+
+        //    if (_currentInnerTextBox != null)
+        //    {
+        //        Console.WriteLine("✓ Найден внутренний TextBox");
+
+        //        // Подписываемся на события
+        //        _currentInnerTextBox.TextChanged += OnInnerTextBoxTextChanged;
+        //        _currentInnerTextBox.LostFocus += OnInnerTextBoxLostFocus;
+
+        //        // Для отладки - логируем начальное состояние
+        //        Console.WriteLine($"  Initial text: '{_currentInnerTextBox.Text}'");
+        //        Console.WriteLine($"  IsFractional: {_currentIsFractional}");
+        //        Console.WriteLine($"  MinValue: {_currentMinValue}");
+        //    }
+        //    else
+        //    {
+        //        Console.WriteLine("✗ Внутренний TextBox НЕ НАЙДЕН!");
+        //    }
+        //}
+
+        //private void OnInnerTextBoxTextChanged(object? sender, TextChangedEventArgs e)
+        //{
+        //    if (_isProcessingTextChange)
+        //    {
+        //        Console.WriteLine("TextChanged: Пропускаем (рекурсия)");
+        //        return;
+        //    }
+
+        //    _isProcessingTextChange = true;
+
+        //    try
+        //    {
+        //        var textBox = sender as TextBox;
+        //        if (textBox == null) return;
+
+        //        string originalText = textBox.Text ?? "";
+        //        Console.WriteLine($"=== TextChanged ===");
+        //        Console.WriteLine($"  Original text: '{originalText}'");
+        //        Console.WriteLine($"  IsFractional: {_currentIsFractional}");
+        //        Console.WriteLine($"  Caret position: {textBox.CaretIndex}");
+
+        //        string cleanedText = "";
+
+        //        if (!_currentIsFractional)
+        //        {
+        //            // Для штучного товара - только цифры
+        //            Console.WriteLine("  Processing: целочисленный товар");
+        //            cleanedText = new string(originalText.Where(c =>
+        //            {
+        //                bool isDigit = char.IsDigit(c);
+        //                Console.WriteLine($"    Symbol '{c}' is digit: {isDigit}");
+        //                return isDigit;
+        //            }).ToArray());
+
+        //            // Удаляем ведущие нули
+        //            if (cleanedText.Length > 1)
+        //            {
+        //                string trimmed = cleanedText.TrimStart('0');
+        //                cleanedText = string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
+        //                Console.WriteLine($"  After trim leading zeros: '{cleanedText}'");
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // Для весового товара
+        //            Console.WriteLine("  Processing: весовой товар");
+
+        //            // Заменяем запятую на точку
+        //            string text = originalText.Replace(',', '.');
+        //            Console.WriteLine($"  After comma replace: '{text}'");
+
+        //            StringBuilder sb = new StringBuilder();
+        //            bool dotFound = false;
+        //            int digitsAfterDot = 0;
+
+        //            foreach (char c in text)
+        //            {
+        //                Console.WriteLine($"  Processing char: '{c}'");
+
+        //                if (char.IsDigit(c))
+        //                {
+        //                    sb.Append(c);
+        //                    if (dotFound)
+        //                    {
+        //                        digitsAfterDot++;
+        //                        Console.WriteLine($"    Digit after dot: {digitsAfterDot}");
+        //                    }
+        //                }
+        //                else if (c == '.' && !dotFound)
+        //                {
+        //                    // Разрешаем точку только если уже есть цифры
+        //                    if (sb.Length > 0)
+        //                    {
+        //                        sb.Append(c);
+        //                        dotFound = true;
+        //                        Console.WriteLine($"    Adding dot");
+        //                    }
+        //                    else
+        //                    {
+        //                        Console.WriteLine($"    Ignoring dot at start");
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    Console.WriteLine($"    Ignoring invalid char");
+        //                }
+
+        //                // Ограничиваем 3 знаками после запятой
+        //                if (digitsAfterDot >= 3)
+        //                {
+        //                    Console.WriteLine($"    Reached max 3 digits after dot, stopping");
+        //                    break;
+        //                }
+        //            }
+
+        //            cleanedText = sb.ToString();
+        //            Console.WriteLine($"  Cleaned text: '{cleanedText}'");
+        //        }
+
+        //        // Обновляем текст, если он изменился
+        //        if (cleanedText != originalText)
+        //        {
+        //            Console.WriteLine($"  Text changed: '{originalText}' -> '{cleanedText}'");
+        //            int caretPos = textBox.CaretIndex;
+        //            textBox.Text = cleanedText;
+        //            textBox.CaretIndex = Math.Min(caretPos, cleanedText.Length);
+        //            Console.WriteLine($"  New caret position: {textBox.CaretIndex}");
+        //        }
+        //        else
+        //        {
+        //            Console.WriteLine($"  Text unchanged");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"  ERROR in TextChanged: {ex.Message}");
+        //    }
+        //    finally
+        //    {
+        //        _isProcessingTextChange = false;
+        //    }
+        //}
+
+        //private void OnInnerTextBoxLostFocus(object? sender, RoutedEventArgs e)
+        //{
+        //    Console.WriteLine("=== OnInnerTextBoxLostFocus ===");
+
+        //    var textBox = sender as TextBox;
+        //    if (textBox == null) return;
+
+        //    string text = textBox.Text ?? "";
+        //    Console.WriteLine($"  Text: '{text}'");
+        //    Console.WriteLine($"  IsFractional: {_currentIsFractional}");
+
+        //    if (decimal.TryParse(text.Replace(',', '.'),
+        //        NumberStyles.Any, CultureInfo.InvariantCulture, out decimal val))
+        //    {
+        //        Console.WriteLine($"  Parsed value: {val}");
+
+        //        var numericUpDown = textBox.TemplatedParent as NumericUpDown;
+        //        if (numericUpDown != null)
+        //        {
+        //            if (!_currentIsFractional)
+        //            {
+        //                long intVal = (long)Math.Truncate(val);
+        //                numericUpDown.Value = intVal;
+        //                textBox.Text = intVal.ToString();
+        //                Console.WriteLine($"  Set integer value: {intVal}");
+        //            }
+        //            else
+        //            {
+        //                decimal rounded = Math.Round(val, 3, MidpointRounding.AwayFromZero);
+        //                numericUpDown.Value = rounded;
+        //                textBox.Text = rounded.ToString("0.000");
+        //                Console.WriteLine($"  Set fractional value: {rounded:F3}");
+        //            }
+        //            textBox.CaretIndex = textBox.Text.Length;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        Console.WriteLine($"  Failed to parse value, resetting to min: {_currentMinValue}");
+        //        var numericUpDown = textBox.TemplatedParent as NumericUpDown;
+        //        if (numericUpDown != null)
+        //        {
+        //            numericUpDown.Value = _currentMinValue;
+        //            textBox.Text = _currentMinValue.ToString(_currentIsFractional ? "0.000" : "0");
+        //        }
+        //    }
+        //}
+
+        //private void OnNumericUpDownValueChanged(object? sender, NumericUpDownValueChangedEventArgs e, Border inputBorder, Button okButton)
+        //{
+        //    var numericUpDown = sender as NumericUpDown;
+        //    if (numericUpDown == null) return;
+
+        //    decimal val = numericUpDown.Value ?? 0;
+        //    Console.WriteLine($"=== ValueChanged: {val} (min={_currentMinValue}) ===");
+
+        //    okButton.IsEnabled = val >= _currentMinValue;
+
+        //    if (val >= _currentMinValue)
+        //    {
+        //        inputBorder.BorderBrush = Brushes.SteelBlue;
+        //        ToolTip.SetTip(numericUpDown, null);
+        //        Console.WriteLine("  Valid value, border blue");
+        //    }
+        //    else
+        //    {
+        //        inputBorder.BorderBrush = Brushes.Red;
+        //        ToolTip.SetTip(numericUpDown, $"Введите значение >= {_currentMinValue}");
+        //        Console.WriteLine("  Invalid value, border red");
+        //    }
+        //}
+
+        private void OnOkButtonClick(object? sender, RoutedEventArgs e, NumericUpDown numericUpDown, Border inputBorder, Window dialog)
+        {
+            Console.WriteLine("=== OkButton Click ===");
+
+            decimal val = numericUpDown.Value ?? 0;
+            Console.WriteLine($"  Value: {val}, Min: {_currentMinValue}");
+
+            if (val >= _currentMinValue)
+            {
+                Console.WriteLine($"  Closing dialog with value: {Convert.ToDouble(val)}");
+                dialog.Close(Convert.ToDouble(val));
+            }
+            else
+            {
+                Console.WriteLine("  Invalid value, showing error animation");
+                inputBorder.BorderBrush = Brushes.Red;
+                ToolTip.SetTip(numericUpDown, $"Введите значение >= {_currentMinValue}");
+                StartErrorAnimation(inputBorder);
+                numericUpDown.Focus();
+            }
+        }
+
+        private void OnNumericUpDownKeyDown(object? sender, KeyEventArgs e, NumericUpDown numericUpDown, Border inputBorder, Button okButton, Window dialog)
+        {
+            Console.WriteLine($"=== KeyDown: {e.Key}, KeyModifiers: {e.KeyModifiers} ===");
+
+            // Получаем текущий текст из NumericUpDown
+            string currentText = numericUpDown.Text ?? "";
+            int caretIndex = -1;
+            int selectionStart = -1;
+            int selectionEnd = -1;
+
+            // Ищем внутренний TextBox прямо сейчас
+            var innerTextBox = numericUpDown.GetTemplateChildren()
+                .OfType<TextBox>()
+                .FirstOrDefault(t => t.Name == "PART_TextBox");
+
+            if (innerTextBox != null)
+            {
+                caretIndex = innerTextBox.CaretIndex;
+                selectionStart = innerTextBox.SelectionStart;
+                selectionEnd = selectionStart + innerTextBox.SelectionEnd;
+                Console.WriteLine($"  TextBox найден, Caret: {caretIndex}, Selection: {selectionStart}-{selectionEnd}");
+                Console.WriteLine($"  TextBox.Text: '{innerTextBox.Text}'");
+            }
+            else
+            {
+                Console.WriteLine($"  TextBox НЕ НАЙДЕН!");
+
+                // Альтернативный способ - поиск по визуальному дереву
+                innerTextBox = numericUpDown.GetVisualDescendants()
+                    .OfType<TextBox>()
+                    .FirstOrDefault();
+
+                if (innerTextBox != null)
+                {
+                    caretIndex = innerTextBox.CaretIndex;
+                    selectionStart = innerTextBox.SelectionStart;
+                    selectionEnd = selectionStart + innerTextBox.SelectionEnd;
+                    Console.WriteLine($"  TextBox найден через VisualDescendants, Caret: {caretIndex}");
+                }
+            }
+
+            Console.WriteLine($"  Current text: '{currentText}', IsFractional: {_currentIsFractional}");
+
+            // Проверяем, выделен ли весь текст
+            bool isAllTextSelected = selectionStart == 0 && selectionEnd == currentText.Length;
+            Console.WriteLine($"  Весь текст выделен: {isAllTextSelected}");
+
+            if (e.Key == Key.F12)
+            {
+                Console.WriteLine("  F12 pressed");
+
+                // Проверяем, что это весовой товар
+                if (_currentIsFractional)
+                {
+                    Console.WriteLine("  Fractional item - F12 allowed");
+                    if (okButton.IsEnabled)
+                    {
+                        Console.WriteLine("  OK button enabled, raising click");
+                        okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    }
+                    else
+                    {
+                        Console.WriteLine("  OK button disabled, showing error");
+                        StartErrorAnimation(inputBorder);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  Non-fractional item - F12 ignored");
+                    // Для невесового товара F12 не должен ничего делать
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Enter)
+            {
+                if (_currentIsFractional)
+                {
+                    // Для весового товара Enter не должен подтверждать
+                    Console.WriteLine("  Enter ignored for fractional item");
+                    e.Handled = true; // блокируем стандартное поведение
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("  Enter pressed for non-fractional");
+                    if (okButton.IsEnabled)
+                    {
+                        Console.WriteLine("  OK button enabled, raising click");
+                        okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    }
+                    else
+                    {
+                        Console.WriteLine("  OK button disabled, showing error");
+                        StartErrorAnimation(inputBorder);
+                    }
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                Console.WriteLine("  Escape pressed, closing dialog");
+                dialog.Close(null);
+                e.Handled = true;
+                return;
+            }
+
+            // Для штучного товара
+            if (!_currentIsFractional)
+            {
+                // Разрешаем навигационные и управляющие клавиши
+                if (e.Key == Key.Back || e.Key == Key.Delete ||
+                    e.Key == Key.Left || e.Key == Key.Right ||
+                    e.Key == Key.Home || e.Key == Key.End ||
+                    e.Key == Key.Tab)
+                {
+                    Console.WriteLine($"  Разрешаем управляющую клавишу: {e.Key}");
+                    return;
+                }
+
+                // Проверяем все возможные клавиши для точки/запятой
+                bool isDotOrComma =
+                    e.Key == Key.OemPeriod ||      // Точка на основной клавиатуре (англ)
+                    e.Key == Key.OemComma ||       // Запятая на основной клавиатуре (рус) 
+                    e.Key == Key.Decimal ||        // Точка на цифровой клавиатуре
+                    e.Key == Key.OemQuestion;      // Точка в русской раскладке (Shift + ?)
+
+                if (isDotOrComma)
+                {
+                    Console.WriteLine($"  Блокируем ввод точки/запятой для штучного товара");
+                    e.Handled = true;
+                    return;
+                }
+
+                // Проверяем, что вводятся только цифры
+                bool isDigit = (e.Key >= Key.D0 && e.Key <= Key.D9) ||
+                              (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9);
+
+                if (isDigit)
+                {
+                    // Определяем, какая цифра вводится
+                    int digit;
+                    if (e.Key >= Key.D0 && e.Key <= Key.D9)
+                        digit = e.Key - Key.D0;
+                    else
+                        digit = e.Key - Key.NumPad0;
+
+                    Console.WriteLine($"  Вводится цифра: {digit}, позиция курсора: {caretIndex}");
+
+                    // Если весь текст выделен
+                    if (isAllTextSelected && currentText.Length > 0)
+                    {
+                        // Пытаемся распарсить текущее значение
+                        if (decimal.TryParse(currentText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal currentValue))
+                        {
+                            Console.WriteLine($"  Текущее значение: {currentValue}");
+
+                            // Если текущее значение больше 0 и вводится 0 - блокируем
+                            if (currentValue > 0 && digit == 0)
+                            {
+                                Console.WriteLine($"  Блокируем замену {currentValue} на 0");
+                                e.Handled = true;
+                                return;
+                            }
+                            // Для ненулевых цифр - разрешаем (включая замену на ту же цифру)
+                            else if (digit > 0)
+                            {
+                                Console.WriteLine($"  Разрешаем замену {currentValue} на {digit}");
+                                // Не блокируем, пропускаем дальше
+                            }
+                        }
+                    }
+
+                    // Блокируем ведущие нули
+                    if (digit == 0)
+                    {
+                        // Если строка пустая - ноль разрешен
+                        if (string.IsNullOrEmpty(currentText))
+                        {
+                            Console.WriteLine($"  Ноль в пустую строку разрешен");
+                        }
+                        // Если в начале строки и есть только ноль
+                        else if (currentText == "0" && caretIndex <= 1)
+                        {
+                            Console.WriteLine($"  Замена единственного нуля на ноль - разрешено");
+                        }
+                        // Если вводим ноль в начало существующего числа
+                        else if (caretIndex == 0)
+                        {
+                            Console.WriteLine($"  Блокируем ввод нуля в начало числа");
+                            e.Handled = true;
+                            return;
+                        }
+                        // Если вводим ноль после других цифр - разрешено
+                        else
+                        {
+                            Console.WriteLine($"  Ноль после других цифр разрешен");
+                        }
+                    }
+                    else // Вводится ненулевая цифра
+                    {
+                        // Если весь текст выделен - уже обработали выше, просто пропускаем
+                        if (isAllTextSelected)
+                        {
+                            // Уже разрешили, ничего не делаем
+                        }
+                        // Если строка пустая или равна "0", и вводим в начало - разрешено
+                        else if ((string.IsNullOrEmpty(currentText) || currentText == "0") && caretIndex <= 1)
+                        {
+                            Console.WriteLine($"  Замена нуля на {digit} - разрешено");
+                        }
+                        // Если вводим в начало существующего числа (не пустого и не "0")
+                        else if (caretIndex == 0 && !string.IsNullOrEmpty(currentText) && currentText != "0")
+                        {
+                            Console.WriteLine($"  Блокируем ввод цифры {digit} в начало числа");
+                            e.Handled = true;
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    // Все остальные символы блокируем
+                    Console.WriteLine($"  Блокируем нецифровой символ для штучного товара: {e.Key}");
+                    e.Handled = true;
+                    return;
+                }
+            }
+            else // Для весового товара
+            {
+                // Разрешаем навигационные и управляющие клавиши
+                if (e.Key == Key.Back || e.Key == Key.Delete ||
+                    e.Key == Key.Left || e.Key == Key.Right ||
+                    e.Key == Key.Home || e.Key == Key.End ||
+                    e.Key == Key.Tab)
+                {
+                    Console.WriteLine($"  Разрешаем управляющую клавишу: {e.Key}");
+                    return;
+                }
+
+                // Проверяем точку
+                bool isDot =
+                    e.Key == Key.OemPeriod ||       // Точка на основной клавиатуре (англ)
+                    e.Key == Key.Decimal ||         // Точка на цифровой клавиатуре
+                    e.Key == Key.OemQuestion;       // Точка в русской раскладке
+
+                if (isDot)
+                {
+                    // Проверяем, есть ли уже точка
+                    if (currentText.Contains(".") || currentText.Contains(","))
+                    {
+                        Console.WriteLine($"  Блокируем вторую точку");
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Проверяем, что строка не пустая (нельзя точку в начале)
+                    if (string.IsNullOrEmpty(currentText))
+                    {
+                        Console.WriteLine($"  Блокируем точку в начале");
+                        e.Handled = true;
+                        return;
+                    }
+
+                    Console.WriteLine($"  Точка разрешена");
+                }
+
+                // Для запятой - разрешаем, она преобразуется в точку позже
+                else if (e.Key == Key.OemComma)
+                {
+                    Console.WriteLine($"  Запятая разрешена, будет преобразована в точку");
+                }
+
+                // Проверяем цифры
+                else if ((e.Key >= Key.D0 && e.Key <= Key.D9) ||
+                         (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9))
+                {
+                    // Определяем, какая цифра вводится
+                    int digit;
+                    if (e.Key >= Key.D0 && e.Key <= Key.D9)
+                        digit = e.Key - Key.D0;
+                    else
+                        digit = e.Key - Key.NumPad0;
+
+                    Console.WriteLine($"  Вводится цифра: {digit}, позиция курсора: {caretIndex}");
+
+                    // Если весь текст выделен
+                    if (isAllTextSelected && currentText.Length > 0)
+                    {
+                        // Для весового товара разрешаем замену на любую цифру (включая ноль)
+                        Console.WriteLine($"  Весь текст выделен, разрешаем замену на {digit}");
+                        // Не блокируем
+                    }
+                    // Проверяем количество знаков после запятой
+                    else if (currentText.Contains(".") || currentText.Contains(","))
+                    {
+                        string text = currentText.Replace(',', '.');
+                        int dotIndex = text.IndexOf('.');
+
+                        // Если курсор после точки
+                        if (dotIndex >= 0 && caretIndex > dotIndex)
+                        {
+                            // Проверяем, не превышаем ли лимит в 3 знака
+                            int digitsAfterDot = text.Length - dotIndex - 1;
+
+                            // Если курсор стоит на существующей цифре после точки - разрешаем замену
+                            if (caretIndex <= dotIndex + digitsAfterDot)
+                            {
+                                Console.WriteLine($"  Замена цифры после точки разрешена");
+                                // Не блокируем
+                            }
+                            // Если курсор в конце и уже 3 знака - блокируем новые цифры
+                            else if (digitsAfterDot >= 3)
+                            {
+                                Console.WriteLine($"  Блокируем ввод - уже 3 знака после запятой");
+                                e.Handled = true;
+                                return;
+                            }
+                            // Иначе разрешаем добавление новой цифры
+                            else
+                            {
+                                Console.WriteLine($"  Добавление новой цифры после точки разрешено");
+                            }
+                        }
+                        // Если курсор до точки - всегда разрешаем (замена или добавление)
+                        else
+                        {
+                            Console.WriteLine($"  Цифра до точки разрешена");
+                        }
+                    }
+                    // Если нет точки - всегда разрешаем
+                    else
+                    {
+                        Console.WriteLine($"  Цифра разрешена (нет точки)");
+                    }
+                }
+
+                // Все остальные символы блокируем
+                else
+                {
+                    Console.WriteLine($"  Блокируем недопустимый символ для весового товара: {e.Key}");
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Обрабатывает ввод символа и блокирует недопустимые
+        /// </summary>
+        private bool ValidateCharInput(char inputChar, bool isFractional, string currentText, int caretIndex)
+        {
+            // Разрешаем управляющие символы (Backspace, Delete, стрелки)
+            if (char.IsControl(inputChar))
+                return true;
+
+            // Разрешаем только цифры
+            if (!char.IsDigit(inputChar) && inputChar != '.' && inputChar != ',')
+                return false;
+
+            // Если ввели разделитель (точку или запятую)
+            if (inputChar == '.' || inputChar == ',')
+            {
+                if (isFractional)
+                {
+                    // Для весового: разрешаем только одну точку
+                    return !currentText.Contains('.') && !currentText.Contains(',');
+                }
+                else
+                {
+                    // Для целого: запрещаем разделители
+                    return false;
+                }
+            }
+
+            // Если ввели цифру
+            if (char.IsDigit(inputChar))
+            {
+                if (isFractional)
+                {
+                    // Проверяем количество знаков после запятой
+                    if (currentText.Contains('.') || currentText.Contains(','))
+                    {
+                        int dotIndex = currentText.IndexOfAny(new[] { '.', ',' });
+                        int decimalsAfter = currentText.Length - dotIndex - 1;
+
+                        // Если уже 3 знака после запятой — блокируем ввод
+                        if (decimalsAfter >= 3)
+                            return false;
+                    }
+                }
+                // Для целых чисел — всегда разрешаем цифры
+                return true;
+            }
+
+            return false;
+        }
+
+
+        // Обновленный метод валидации
         private void ValidateInputAndUpdateUI(string text, NumericUpDown numericUpDown, Border inputBorder, Button okButton)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -7368,18 +8012,16 @@ namespace Cash8Avalon
                 return;
             }
 
-            // Пытаемся распарсить то, что ввел пользователь
-            if (decimal.TryParse(text.Replace(".", ","), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedValue) ||
-                decimal.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out parsedValue))
+            if (decimal.TryParse(text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedValue))
             {
-                bool isValid = parsedValue > 0;
+                decimal min = numericUpDown.Minimum;
+                bool isValid = parsedValue >= min;
                 okButton.IsEnabled = isValid;
 
                 if (isValid)
                 {
                     inputBorder.BorderBrush = Brushes.SteelBlue;
                     inputBorder.Background = Brushes.AliceBlue;
-                    // Синхронизируем Value (опционально, для стрелок)
                     if (numericUpDown.Value != parsedValue) numericUpDown.Value = parsedValue;
                 }
                 else
@@ -7393,7 +8035,7 @@ namespace Cash8Avalon
             }
         }
 
-        // ✅ Метод мигания (Красный -> Желтый -> Красный)
+        // Метод мигания (остается без изменений)
         private void StartErrorAnimation(Border border)
         {
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -7404,19 +8046,19 @@ namespace Cash8Avalon
                 if (tick % 2 == 0)
                 {
                     border.BorderBrush = Brushes.Red;
-                    border.Background = new SolidColorBrush(Color.FromArgb(50, 255, 0, 0)); // Светло-красный фон
+                    border.Background = new SolidColorBrush(Color.FromArgb(50, 255, 0, 0));
                 }
                 else
                 {
-                    border.BorderBrush = Brushes.Gold; // Желтый
-                    border.Background = new SolidColorBrush(Color.FromArgb(50, 255, 215, 0)); // Светло-желтый фон
+                    border.BorderBrush = Brushes.Gold;
+                    border.Background = new SolidColorBrush(Color.FromArgb(50, 255, 215, 0));
                 }
 
                 tick++;
-                if (tick >= 6) // 3 цикла мигания
+                if (tick >= 6)
                 {
                     timer.Stop();
-                    border.BorderBrush = Brushes.Red; // Оставляем красным в конце
+                    border.BorderBrush = Brushes.Red;
                     border.Background = Brushes.AliceBlue;
                 }
             };
@@ -7424,173 +8066,7 @@ namespace Cash8Avalon
             timer.Start();
         }
 
-        /// <summary>
-        /// Создание кнопок в старом стиле (Зеленая ОК, Красная Отмена)
-        /// </summary>
-        private StackPanel CreateButtonPanelStyled(NumericUpDown numericUpDown, Window dialog)
-        {
-            var buttonPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Spacing = 25
-            };
 
-            // Кнопка OK
-            var okButton = new Button
-            {
-                Content = "OK",
-                Width = 105,
-                Height = 40,
-                IsDefault = true,
-                Background = Brushes.LightGreen,
-                BorderBrush = Brushes.Green,
-                BorderThickness = new Thickness(2),
-                Padding = new Thickness(15, 8),
-                FontWeight = FontWeight.Bold,
-                FontSize = 14,
-                CornerRadius = new CornerRadius(5)
-            };
-
-            // Кнопка Отмена
-            var cancelButton = new Button
-            {
-                Content = "Отмена",
-                Width = 105,
-                Height = 40,
-                IsCancel = true,
-                Background = Brushes.LightCoral,
-                BorderBrush = Brushes.DarkRed,
-                BorderThickness = new Thickness(2),
-                Padding = new Thickness(15, 8),
-                FontWeight = FontWeight.Bold,
-                FontSize = 14,
-                CornerRadius = new CornerRadius(5)
-            };
-
-            // Логика кнопок
-            okButton.Click += (s, e) =>
-            {
-                // Вместо ApplyQuantityChanges — просто возвращаем значение
-                decimal val = numericUpDown.Value ?? 0;
-                if (val > 0)
-                {
-                    dialog.Close(Convert.ToDouble(val));
-                }
-                else
-                {
-                    // Можно добавить сообщение "Введите значение"
-                    numericUpDown.Focus();
-                }
-            };
-
-            cancelButton.Click += (s, e) => dialog.Close(null); // Возвращаем null при отмене
-
-            // Обработка клавиш (как в старом коде)
-            numericUpDown.KeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Enter)
-                {
-                    okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.Escape)
-                {
-                    dialog.Close(null);
-                    e.Handled = true;
-                }
-            };
-
-            buttonPanel.Children.Add(okButton);
-            buttonPanel.Children.Add(cancelButton);
-
-            return buttonPanel;
-        }
-
-        /// <summary>
-        /// Создает панель с кнопками
-        /// </summary>
-        private StackPanel CreateButtonPanel(ProductItem product, TextBox textBox, int dataIndex, Window dialog)
-        {
-            var buttonPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Spacing = 25 // УМЕНЬШИЛИ С 30 ДО 25
-            };
-
-            var okButton = new Button
-            {
-                Content = "OK",
-                Width = 105, // НЕМНОГО УМЕНЬШИЛИ
-                Height = 40, // НЕМНОГО УМЕНЬШИЛИ
-                IsDefault = true,
-                Background = Brushes.LightGreen,
-                BorderBrush = Brushes.Green,
-                BorderThickness = new Thickness(2),
-                Padding = new Thickness(15, 8), // УМЕНЬШИЛИ ОТСТУПЫ
-                FontWeight = FontWeight.Bold,
-                FontSize = 14,
-                CornerRadius = new CornerRadius(5),
-                Margin = new Thickness(0, 0, 0, 0)
-            };
-
-            var cancelButton = new Button
-            {
-                Content = "Отмена",
-                Width = 105,
-                Height = 40,
-                IsCancel = true,
-                Background = Brushes.LightCoral,
-                BorderBrush = Brushes.DarkRed,
-                BorderThickness = new Thickness(2),
-                Padding = new Thickness(15, 8),
-                FontWeight = FontWeight.Bold,
-                FontSize = 14,
-                CornerRadius = new CornerRadius(5),
-                Margin = new Thickness(0, 0, 0, 0)
-            };
-
-            // Обработчики событий
-            okButton.Click += (s, e) =>
-            {
-                ApplyQuantityChanges(product, textBox.Text, dataIndex);
-                dialog.Close();
-            };
-
-            cancelButton.Click += (s, e) => dialog.Close();
-
-            // Обработка клавиш
-            textBox.KeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Enter)
-                {
-                    okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.Escape)
-                {
-                    dialog.Close();
-                    e.Handled = true;
-                }
-            };
-
-            // Выделяем текст при получении фокуса
-            textBox.GotFocus += (s, e) =>
-            {
-                Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    textBox.SelectAll();
-                }, DispatcherPriority.Background);
-            };
-
-            buttonPanel.Children.Add(okButton);
-            buttonPanel.Children.Add(cancelButton);
-
-            return buttonPanel;
-        }
 
         /// <summary>
         /// Применяет изменения количества
