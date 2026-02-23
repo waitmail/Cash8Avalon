@@ -7200,7 +7200,7 @@ namespace Cash8Avalon
             {
                 Value = currentVal,
                 Minimum = minimum,
-                Maximum = 999999,
+                Maximum = 9999,
                 Increment = increment,
                 FormatString = formatString,
                 Watermark = watermark,
@@ -7801,40 +7801,38 @@ namespace Cash8Avalon
                         {
                             // 🔹 Дробная часть
                             int digitsAfterDot = normalizedText.Length - dotIndex - 1;
-                            int positionAfterDot = caretIndex - dotIndex - 1;
 
-                            // Если курсор на существующей цифре - разрешаем замену
-                            if (positionAfterDot < digitsAfterDot)
+                            // Если курсор после точки
+                            if (caretIndex > dotIndex)
                             {
-                                Console.WriteLine($"  Замена цифры после точки разрешена");
-                                return;
-                            }
+                                // Проверяем, есть ли выделение (замена) или нет (вставка/добавление)
+                                bool isReplacing = (selectionStart != selectionEnd);
 
-                            // Если курсор в конце - добавляем новую цифру
-                            if (caretIndex >= normalizedText.Length)
-                            {
                                 if (digitsAfterDot >= 3)
                                 {
-                                    Console.WriteLine($"  Блокируем добавление - уже 3 знака после запятой");
-                                    ShowErrorToolTip(numericUpDown, "Максимум 3 знака после запятой");
-                                    StartErrorAnimation(inputBorder, numericUpDown);
-                                    e.Handled = true;
-                                    return;
+                                    // Уже 3 знака после запятой
+                                    if (isReplacing)
+                                    {
+                                        // Разрешаем замену существующих цифр
+                                        Console.WriteLine($"  Замена цифры после точки разрешена");
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        // Вставка или добавление новой цифры — запрещено
+                                        Console.WriteLine($"  Блокируем ввод - уже 3 знака после запятой");
+                                        ShowErrorToolTip(numericUpDown, "Максимум 3 знака после запятой");
+                                        StartErrorAnimation(inputBorder, numericUpDown);
+                                        e.Handled = true;
+                                        return;
+                                    }
                                 }
-                                Console.WriteLine($"  Добавление цифры {digit} после точки разрешено");
-                            }
-                            // Если курсор между цифрами - вставка
-                            else
-                            {
-                                if (digitsAfterDot >= 3)
+                                else
                                 {
-                                    Console.WriteLine($"  Блокируем вставку - уже 3 знака после запятой");
-                                    ShowErrorToolTip(numericUpDown, "Максимум 3 знака после запятой");
-                                    StartErrorAnimation(inputBorder, numericUpDown);
-                                    e.Handled = true;
+                                    // Ещё есть место для новых цифр
+                                    Console.WriteLine($"  Цифра после точки разрешена");
                                     return;
                                 }
-                                Console.WriteLine($"  Вставка цифры {digit} между цифрами после точки разрешена");
                             }
                         }
                     }
@@ -7862,52 +7860,7 @@ namespace Cash8Avalon
             // В конце метода обновляем цвет рамки
             UpdateBorderColor(numericUpDown, inputBorder);
         }
-
-
-        // ✅ Вспомогательный метод для установки подсказки
-        //private void SetToolTip(NumericUpDown numericUpDown, string message)
-        //{
-        //    // Создаем стилизованный контент для подсказки
-        //    var toolTipContent = new Border
-        //    {
-        //        Background = new SolidColorBrush(Color.FromRgb(50, 50, 50)),
-        //        BorderBrush = Brushes.Orange,
-        //        BorderThickness = new Thickness(2),
-        //        CornerRadius = new CornerRadius(5),
-        //        Padding = new Thickness(12, 8),
-        //        Child = new TextBlock
-        //        {
-        //            Text = message,
-        //            Foreground = Brushes.White,
-        //            FontSize = 22, // Увеличенный шрифт
-        //            FontWeight = FontWeight.Bold,
-        //            TextWrapping = TextWrapping.Wrap,
-        //            MaxWidth = 300
-        //        }
-        //    };
-
-        //    // Устанавливаем кастомный ToolTip
-        //    ToolTip.SetTip(numericUpDown, toolTipContent);
-        //    ToolTip.SetShowDelay(numericUpDown, 0);
-        //    ToolTip.SetPlacement(numericUpDown, Avalonia.Controls.PlacementMode.Top);
-        //    ToolTip.SetVerticalOffset(numericUpDown, -15);
-        //    ToolTip.SetHorizontalOffset(numericUpDown, 0);
-
-        //    // Принудительно показываем
-        //    ToolTip.SetIsOpen(numericUpDown, true);
-
-        //    // Автоматически скрываем через 2.5 секунды
-        //    Task.Delay(2500).ContinueWith(_ =>
-        //    {
-        //        Dispatcher.UIThread.InvokeAsync(() =>
-        //        {
-        //            ToolTip.SetIsOpen(numericUpDown, false);
-        //            ToolTip.SetTip(numericUpDown, null);
-        //        });
-        //    });
-        //}
-
-        private void ShowErrorToolTip(Control control, string message)
+                private void ShowErrorToolTip(Control control, string message)
         {
             var toolTipContent = new Border
             {
