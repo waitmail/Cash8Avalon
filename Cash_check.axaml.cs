@@ -7301,7 +7301,7 @@ namespace Cash8Avalon
 
             _currentMinValue = numericUpDown.Minimum;
             _currentIsFractional = isFractional;
-
+                        
             okButton.IsEnabled = (numericUpDown.Value ?? 0) >= _currentMinValue;
 
             //numericUpDown.TemplateApplied += OnNumericUpDownTemplateApplied;
@@ -7364,7 +7364,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("  Поле пустое, показываем ошибку");
                 StartErrorAnimation(inputBorder, numericUpDown);
-                SetToolTip(numericUpDown, "Введите количество");
+               ShowErrorToolTip(numericUpDown, "Введите количество");
                 numericUpDown.Focus();
                 return;
             }
@@ -7377,7 +7377,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("  Value is zero or negative, showing error");
                 StartErrorAnimation(inputBorder, numericUpDown);
-                SetToolTip(numericUpDown, "Значение должно быть больше 0");
+                ShowErrorToolTip(numericUpDown, "Значение должно быть больше 0");
                 numericUpDown.Focus();
                 return;
             }
@@ -7391,7 +7391,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("  Invalid value, showing error animation");
                 StartErrorAnimation(inputBorder, numericUpDown);
-                SetToolTip(numericUpDown, $"Введите значение >= {_currentMinValue}");
+                ShowErrorToolTip(numericUpDown, $"Введите значение >= {_currentMinValue}");
                 numericUpDown.Focus();
             }
         }
@@ -7457,7 +7457,7 @@ namespace Cash8Avalon
                     {
                         Console.WriteLine("  Поле пустое, показываем ошибку");
                         StartErrorAnimation(inputBorder, numericUpDown);
-                        SetToolTip(numericUpDown, "Введите вес");
+                        ShowErrorToolTip(numericUpDown, "Введите вес");
                         e.Handled = true;
                         return;
                     }
@@ -7469,7 +7469,7 @@ namespace Cash8Avalon
                         {
                             Console.WriteLine("  Value is zero or negative, showing error");
                             StartErrorAnimation(inputBorder, numericUpDown);
-                            SetToolTip(numericUpDown, "Вес должен быть больше 0");
+                            ShowErrorToolTip(numericUpDown, "Вес должен быть больше 0");
                             e.Handled = true;
                             return;
                         }
@@ -7490,7 +7490,7 @@ namespace Cash8Avalon
                 {
                     Console.WriteLine("  Non-fractional item - F12 ignored");
                     StartErrorAnimation(inputBorder, numericUpDown);
-                    SetToolTip(numericUpDown, "Для штучного товара используйте Enter");
+                    ShowInfoToolTip(numericUpDown, "Для штучного товара используйте Enter");
                 }
                 e.Handled = true;
                 return;
@@ -7499,54 +7499,51 @@ namespace Cash8Avalon
             // === Обработка Enter ===
             if (e.Key == Key.Enter)
             {
-                if (_currentIsFractional)
-                {
-                    Console.WriteLine("  Enter ignored for fractional item");
-                    StartErrorAnimation(inputBorder, numericUpDown);
-                    SetToolTip(numericUpDown, "Для весового товара используйте F12");
-                    e.Handled = true;
-                    return;
-                }
-                else
-                {
-                    Console.WriteLine("  Enter pressed for non-fractional");
+                Console.WriteLine($"=== ENTER PRESSED - IsFractional: {_currentIsFractional} ===");
+                Console.WriteLine($"  CurrentText: '{currentText}'");
 
-                    // Проверка на пустое поле
-                    if (string.IsNullOrWhiteSpace(currentText))
+                e.Handled = true;
+
+                string normalizedText = currentText.Replace(',', '.');
+
+                if (decimal.TryParse(normalizedText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedValue))
+                {
+                    Console.WriteLine($"  Parsed value: {parsedValue}");
+
+                    if (parsedValue <= 0)
                     {
-                        Console.WriteLine("  Поле пустое, показываем ошибку");
+                        Console.WriteLine("  Value <= 0 - showing error");
                         StartErrorAnimation(inputBorder, numericUpDown);
-                        SetToolTip(numericUpDown, "Введите количество");
-                        e.Handled = true;
+                        ShowErrorToolTip(numericUpDown, _currentIsFractional ? "Вес должен быть больше 0" : "Количество должно быть больше 0");
                         return;
                     }
 
-                    // Проверка на ноль
-                    if (decimal.TryParse(currentText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedValue))
+                    if (_currentIsFractional && parsedValue < 0.001m)
                     {
-                        if (parsedValue <= 0)
-                        {
-                            Console.WriteLine("  Value is zero or negative, showing error");
-                            StartErrorAnimation(inputBorder, numericUpDown);
-                            SetToolTip(numericUpDown, "Количество должно быть больше 0");
-                            e.Handled = true;
-                            return;
-                        }
+                        Console.WriteLine("  Value < 0.001 - showing error");
+                        StartErrorAnimation(inputBorder, numericUpDown);
+                        ShowErrorToolTip(numericUpDown, "Вес должен быть не менее 0.001");
+                        return;
                     }
 
-                    if (okButton.IsEnabled)
+                    if (_currentIsFractional)
                     {
-                        Console.WriteLine("  OK button enabled, raising click");
-                        okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        ShowInfoToolTip(numericUpDown, "Для весового товара используйте F12");
+                        StartErrorAnimation(inputBorder, numericUpDown);
                     }
                     else
                     {
-                        Console.WriteLine("  OK button disabled, showing error");
-                        StartErrorAnimation(inputBorder, numericUpDown);
+                        okButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     }
-                    e.Handled = true;
-                    return;
                 }
+                else
+                {
+                    Console.WriteLine("  Failed to parse - showing error");
+                    StartErrorAnimation(inputBorder, numericUpDown);
+                    ShowErrorToolTip(numericUpDown, "Некорректное число");
+                }
+
+                return;
             }
 
             // === Обработка Escape ===
@@ -7600,7 +7597,7 @@ namespace Cash8Avalon
                         if (currentValue > 0 && digit == 0)
                         {
                             Console.WriteLine($"  Блокируем замену {currentValue} на 0");
-                            SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                            ShowErrorToolTip(numericUpDown, "Количество должно быть больше 0");
                             StartErrorAnimation(inputBorder, numericUpDown);
                             e.Handled = true;
                             return;
@@ -7620,7 +7617,7 @@ namespace Cash8Avalon
                     if (string.IsNullOrEmpty(currentText) || caretIndex == 0)
                     {
                         Console.WriteLine($"  Блокируем лидирующий ноль для штучного товара");
-                        SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                        ShowErrorToolTip(numericUpDown, "Количество должно быть больше 0");
                         StartErrorAnimation(inputBorder, numericUpDown);
                         e.Handled = true;
                         return;
@@ -7629,7 +7626,7 @@ namespace Cash8Avalon
                     else if (currentText == "0" && caretIndex == 1)
                     {
                         Console.WriteLine($"  Блокируем добавление нуля после нуля");
-                        SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                        ShowErrorToolTip(numericUpDown, "Количество должно быть больше 0");
                         StartErrorAnimation(inputBorder, numericUpDown);
                         e.Handled = true;
                         return;
@@ -7638,7 +7635,7 @@ namespace Cash8Avalon
                     else if (currentText == "0")
                     {
                         Console.WriteLine($"  Блокируем любые операции с нулем");
-                        SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                        ShowErrorToolTip(numericUpDown, "Количество должно быть больше 0");
                         StartErrorAnimation(inputBorder, numericUpDown);
                         e.Handled = true;
                         return;
@@ -7673,7 +7670,7 @@ namespace Cash8Avalon
                     else if (currentText == "0" && caretIndex == 1)
                     {
                         Console.WriteLine($"  Блокируем добавление цифры после лидирующего нуля");
-                        SetToolTip(numericUpDown, "Количество должно быть больше 0");
+                        ShowErrorToolTip(numericUpDown, "Количество должно быть больше 0");
                         StartErrorAnimation(inputBorder, numericUpDown);
                         e.Handled = true;
                         return;
@@ -7682,7 +7679,6 @@ namespace Cash8Avalon
                     else if (caretIndex == 0)
                     {
                         Console.WriteLine($"  Разрешаем вставку цифры {digit} в начало числа");
-                        // Не блокируем - позволим вставить цифру в начало
                     }
                     // 5. Курсор НЕ в начале (ввод после других цифр) - разрешаем
                     else if (caretIndex > 0)
@@ -7714,9 +7710,8 @@ namespace Cash8Avalon
                     }
                     if (string.IsNullOrEmpty(currentText))
                     {
-                        // Для весового товара точка в начале не разрешена (должен быть 0.)
                         Console.WriteLine($"  Блокируем точку в начале");
-                        SetToolTip(numericUpDown, "Введите 0 перед точкой");
+                        ShowErrorToolTip(numericUpDown, "Введите 0 перед точкой");
                         StartErrorAnimation(inputBorder, numericUpDown);
                         e.Handled = true;
                         return;
@@ -7731,6 +7726,7 @@ namespace Cash8Avalon
                     return;
                 }
 
+                // Обработка цифр для весового товара
                 if ((e.Key >= Key.D0 && e.Key <= Key.D9) || (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9))
                 {
                     int digit = (e.Key >= Key.D0 && e.Key <= Key.D9) ? e.Key - Key.D0 : e.Key - Key.NumPad0;
@@ -7745,37 +7741,115 @@ namespace Cash8Avalon
                     string normalizedText = currentText.Replace(',', '.');
                     int dotIndex = normalizedText.IndexOf('.');
 
-                    if (dotIndex >= 0 && caretIndex > dotIndex)
+                    if (dotIndex >= 0)
                     {
-                        int digitsAfterDot = normalizedText.Length - dotIndex - 1;
+                        string integerPart = normalizedText.Substring(0, dotIndex);
 
-                        // Блокируем добавление 4-го знака в конец
-                        if (digitsAfterDot >= 3 && caretIndex >= normalizedText.Length)
+                        if (caretIndex <= dotIndex)
                         {
-                            Console.WriteLine($"  Блокируем ввод - уже 3 знака после запятой");
-                            SetToolTip(numericUpDown, "Максимум 3 знака после запятой");
+                            // 🔹 ЦЕЛАЯ ЧАСТЬ
+
+                            // СЛУЧАЙ: Курсор в начале целой части (перед первым символом)
+                            if (caretIndex == 0)
+                            {
+                                if (digit == 0)
+                                {
+                                    // Нельзя вставить ноль в начало
+                                    Console.WriteLine($"  Блокируем ввод нуля в начало целой части");
+                                    ShowInfoToolTip(numericUpDown, "Нельзя вставить ноль перед числом");
+                                    StartErrorAnimation(inputBorder, numericUpDown);
+                                    e.Handled = true;
+                                    return;
+                                }
+                                else
+                                {
+                                    // Можно вставить значащую цифру в начало
+                                    Console.WriteLine($"  Вставка значащей цифры {digit} в начало целой части разрешена");
+                                    return;
+                                }
+                            }
+
+                            // СЛУЧАЙ: Курсор внутри целой части (не в начале и не в конце)
+                            if (caretIndex > 0 && caretIndex < dotIndex)
+                            {
+                                Console.WriteLine($"  Вставка цифры {digit} в середину целой части разрешена");
+                                return;
+                            }
+
+                            // СЛУЧАЙ: Курсор в конце целой части (перед точкой)
+                            if (caretIndex == dotIndex)
+                            {
+                                if (integerPart == "0")
+                                {
+                                    // Если целая часть "0" и курсор перед точкой (0|,1)
+                                    // Любая вставка создаст "0X," — запрещено!
+                                    Console.WriteLine($"  Блокируем вставку между 0 и точкой");
+                                    ShowInfoToolTip(numericUpDown, "Выделите ноль для замены");
+                                    StartErrorAnimation(inputBorder, numericUpDown);
+                                    e.Handled = true;
+                                    return;
+                                }
+                                else
+                                {
+                                    // Если целая часть не "0", можно добавлять цифры перед точкой
+                                    Console.WriteLine($"  Добавление цифры {digit} перед точкой разрешено");
+                                    return;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // 🔹 Дробная часть
+                            int digitsAfterDot = normalizedText.Length - dotIndex - 1;
+                            int positionAfterDot = caretIndex - dotIndex - 1;
+
+                            // Если курсор на существующей цифре - разрешаем замену
+                            if (positionAfterDot < digitsAfterDot)
+                            {
+                                Console.WriteLine($"  Замена цифры после точки разрешена");
+                                return;
+                            }
+
+                            // Если курсор в конце - добавляем новую цифру
+                            if (caretIndex >= normalizedText.Length)
+                            {
+                                if (digitsAfterDot >= 3)
+                                {
+                                    Console.WriteLine($"  Блокируем добавление - уже 3 знака после запятой");
+                                    ShowErrorToolTip(numericUpDown, "Максимум 3 знака после запятой");
+                                    StartErrorAnimation(inputBorder, numericUpDown);
+                                    e.Handled = true;
+                                    return;
+                                }
+                                Console.WriteLine($"  Добавление цифры {digit} после точки разрешено");
+                            }
+                            // Если курсор между цифрами - вставка
+                            else
+                            {
+                                if (digitsAfterDot >= 3)
+                                {
+                                    Console.WriteLine($"  Блокируем вставку - уже 3 знака после запятой");
+                                    ShowErrorToolTip(numericUpDown, "Максимум 3 знака после запятой");
+                                    StartErrorAnimation(inputBorder, numericUpDown);
+                                    e.Handled = true;
+                                    return;
+                                }
+                                Console.WriteLine($"  Вставка цифры {digit} между цифрами после точки разрешена");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 🔹 Нет точки
+                        if (digit == 0 && caretIndex == 0 && !string.IsNullOrEmpty(currentText) && currentText != "0")
+                        {
+                            Console.WriteLine($"  Блокируем ввод нуля в начало числа");
+                            ShowErrorToolTip(numericUpDown, "Число не может начинаться с 0");
                             StartErrorAnimation(inputBorder, numericUpDown);
                             e.Handled = true;
                             return;
                         }
-                        Console.WriteLine($"  Цифра после точки разрешена");
-                    }
-                    // Для весового товара разрешаем один ноль перед точкой
-                    else if (digit == 0 && string.IsNullOrEmpty(currentText))
-                    {
-                        Console.WriteLine($"  Ноль перед точкой разрешен для весового товара");
-                    }
-                    else if (digit == 0 && currentText == "0" && caretIndex == 1)
-                    {
-                        Console.WriteLine($"  Блокируем второй ноль перед точкой");
-                        SetToolTip(numericUpDown, "Только один ноль перед точкой");
-                        StartErrorAnimation(inputBorder, numericUpDown);
-                        e.Handled = true;
-                        return;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  Цифра до точки или без точки разрешена");
+                        Console.WriteLine($"  Ввод цифры {digit} без точки разрешен");
                     }
                     return;
                 }
@@ -7791,44 +7865,116 @@ namespace Cash8Avalon
 
 
         // ✅ Вспомогательный метод для установки подсказки
-        private void SetToolTip(NumericUpDown numericUpDown, string message)
+        //private void SetToolTip(NumericUpDown numericUpDown, string message)
+        //{
+        //    // Создаем стилизованный контент для подсказки
+        //    var toolTipContent = new Border
+        //    {
+        //        Background = new SolidColorBrush(Color.FromRgb(50, 50, 50)),
+        //        BorderBrush = Brushes.Orange,
+        //        BorderThickness = new Thickness(2),
+        //        CornerRadius = new CornerRadius(5),
+        //        Padding = new Thickness(12, 8),
+        //        Child = new TextBlock
+        //        {
+        //            Text = message,
+        //            Foreground = Brushes.White,
+        //            FontSize = 22, // Увеличенный шрифт
+        //            FontWeight = FontWeight.Bold,
+        //            TextWrapping = TextWrapping.Wrap,
+        //            MaxWidth = 300
+        //        }
+        //    };
+
+        //    // Устанавливаем кастомный ToolTip
+        //    ToolTip.SetTip(numericUpDown, toolTipContent);
+        //    ToolTip.SetShowDelay(numericUpDown, 0);
+        //    ToolTip.SetPlacement(numericUpDown, Avalonia.Controls.PlacementMode.Top);
+        //    ToolTip.SetVerticalOffset(numericUpDown, -15);
+        //    ToolTip.SetHorizontalOffset(numericUpDown, 0);
+
+        //    // Принудительно показываем
+        //    ToolTip.SetIsOpen(numericUpDown, true);
+
+        //    // Автоматически скрываем через 2.5 секунды
+        //    Task.Delay(2500).ContinueWith(_ =>
+        //    {
+        //        Dispatcher.UIThread.InvokeAsync(() =>
+        //        {
+        //            ToolTip.SetIsOpen(numericUpDown, false);
+        //            ToolTip.SetTip(numericUpDown, null);
+        //        });
+        //    });
+        //}
+
+        private void ShowErrorToolTip(Control control, string message)
         {
-            // Создаем стилизованный контент для подсказки
             var toolTipContent = new Border
             {
                 Background = new SolidColorBrush(Color.FromRgb(50, 50, 50)),
-                BorderBrush = Brushes.Orange,
+                BorderBrush = Brushes.Red,  // Красная рамка для ошибок
                 BorderThickness = new Thickness(2),
                 CornerRadius = new CornerRadius(5),
                 Padding = new Thickness(12, 8),
                 Child = new TextBlock
                 {
-                    Text = message,
+                    Text = $"⚠ {message}",
                     Foreground = Brushes.White,
-                    FontSize = 22, // Увеличенный шрифт
+                    FontSize = 16,
                     FontWeight = FontWeight.Bold,
                     TextWrapping = TextWrapping.Wrap,
                     MaxWidth = 300
                 }
             };
 
-            // Устанавливаем кастомный ToolTip
-            ToolTip.SetTip(numericUpDown, toolTipContent);
-            ToolTip.SetShowDelay(numericUpDown, 0);
-            ToolTip.SetPlacement(numericUpDown, Avalonia.Controls.PlacementMode.Top);
-            ToolTip.SetVerticalOffset(numericUpDown, -15);
-            ToolTip.SetHorizontalOffset(numericUpDown, 0);
+            ToolTip.SetTip(control, toolTipContent);
+            ToolTip.SetShowDelay(control, 0);
+            ToolTip.SetPlacement(control, Avalonia.Controls.PlacementMode.Top);
+            ToolTip.SetVerticalOffset(control, -15);
+            ToolTip.SetIsOpen(control, true);
 
-            // Принудительно показываем
-            ToolTip.SetIsOpen(numericUpDown, true);
-
-            // Автоматически скрываем через 2.5 секунды
             Task.Delay(2500).ContinueWith(_ =>
             {
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    ToolTip.SetIsOpen(numericUpDown, false);
-                    ToolTip.SetTip(numericUpDown, null);
+                    ToolTip.SetIsOpen(control, false);
+                    ToolTip.SetTip(control, null);
+                });
+            });
+        }
+
+        private void ShowInfoToolTip(Control control, string message)
+        {
+            var toolTipContent = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(50, 50, 50)),
+                BorderBrush = Brushes.DodgerBlue,  // Синяя рамка для информации
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(12, 8),
+                Child = new TextBlock
+                {
+                    Text = $"ℹ {message}",
+                    Foreground = Brushes.White,
+                    FontSize = 16,
+                    FontWeight = FontWeight.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 300
+                }
+            };
+
+            ToolTip.SetTip(control, toolTipContent);
+            ToolTip.SetShowDelay(control, 0);
+            ToolTip.SetPlacement(control, Avalonia.Controls.PlacementMode.Top);
+            ToolTip.SetVerticalOffset(control, -15);
+            ToolTip.SetIsOpen(control, true);
+
+            Task.Delay(2500).ContinueWith(_ =>
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ToolTip.SetIsOpen(control, false);
+                    ToolTip.SetTip(control, null);
                 });
             });
         }
