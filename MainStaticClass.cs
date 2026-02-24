@@ -5390,65 +5390,51 @@ namespace Cash8Avalon
         public static bool CheckNewVersionProgramm()
         {
             bool result = false;
-            //if (!MainStaticClass.service_is_worker())
-            //{
-            //    return result;
-            //}
 
-            //Cash8.DS.DS ds = MainStaticClass.get_ds();
-            //ds.Timeout = 1000;
+            if (!MainStaticClass.service_is_worker())
+                return false;
 
-            ////Получить параметра для запроса на сервер 
-            //string nick_shop = MainStaticClass.Nick_Shop.Trim();
-            //if (nick_shop.Trim().Length == 0)
-            //{
-            //    return result;
-            //}
+            var ds = MainStaticClass.get_ds();
+            ds.Timeout = 100000;
 
-            //string code_shop = MainStaticClass.Code_Shop.Trim();
-            //if (code_shop.Trim().Length == 0)
-            //{
-            //    return result;
-            //}
+            string nick_shop = MainStaticClass.Nick_Shop.Trim();
+            string code_shop = MainStaticClass.Code_Shop.Trim();
 
-            //string count_day = CryptorEngine.get_count_day();
-            //string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
-            //string data = code_shop.Trim() + "|" + MainStaticClass.version() + "|" + code_shop.Trim();
-            //string result_web_query = "";
+            if (string.IsNullOrEmpty(nick_shop) || string.IsNullOrEmpty(code_shop))
+                return false;
 
-            //try
-            //{
-            //    result_web_query = ds.ExistsUpdateProrgam(nick_shop, CryptorEngine.Encrypt(data, true, key), MainStaticClass.GetWorkSchema.ToString());
-            //}
-            //catch (Exception ex)
-            //{
-            //    //MessageBox.Show("Ошибка при получении версии программы на сервере " + ex.Message);
-            //    return result;
-            //}
+            string count_day = CryptorEngine.get_count_day();
+            string key = nick_shop + count_day + code_shop;
+            string local_version = MainStaticClass.version();
+            string data = code_shop + "|" + local_version + "|" + code_shop;
 
-            //if (result_web_query != "")
-            //{
-            //    result_web_query = CryptorEngine.Decrypt(result_web_query, true, key);
+            try
+            {
+                string encrypted_data = CryptorEngine.Encrypt(data, true, key);
 
-            //    if (MainStaticClass.version() == result_web_query)
-            //    {
-            //        //label_update.Text = " У вас установлена самая последняя версия программы ";
-            //        return result;
-            //    }
-            //    else
-            //    {
-            //        //это старое решение по контролю версий
-            //        string version = result_web_query;
-            //        //это новое решение по контролю версий
-            //        //здесь наверное надо установить проверку на больше меньше по версиям 
-            //        Int64 local_version = Convert.ToInt64(MainStaticClass.version().Replace(".", ""));
-            //        Int64 remote_version = Convert.ToInt64(result_web_query.Replace(".", ""));
-            //        if (remote_version > local_version)
-            //        {
-            //            result = true;
-            //        }
-            //    }
-            //}
+                // ✅ Прямой синхронный вызов веб-сервиса (без async/await)
+                string encrypted_response = ds.ExistsUpdateProrgamAvalon(
+                    nick_shop,
+                    encrypted_data,
+                    MainStaticClass.GetWorkSchema.ToString());
+
+                if (string.IsNullOrEmpty(encrypted_response))
+                    return result;
+
+                string server_version = CryptorEngine.Decrypt(encrypted_response, true, key);
+
+                if (long.TryParse(local_version, out var local_ver) &&
+                    long.TryParse(server_version, out var server_ver))
+                {
+                    result = server_ver > local_ver;
+                }
+            }
+            catch
+            {
+                // Логируем ошибку при необходимости
+                // Console.WriteLine($"[Update] Check error: {ex.Message}");
+            }
+
             return result;
         }
 
@@ -5468,7 +5454,7 @@ namespace Cash8Avalon
         //    //t.Join();
         //}
 
-       
+
 
     }
     public static class ModalWindowHelper

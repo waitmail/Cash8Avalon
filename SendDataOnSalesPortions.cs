@@ -207,15 +207,7 @@ namespace Cash8Avalon
                 }
                 conn.Close();
                 reader.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                if (show_messages)
-                {
-                    MessageBox.Show(" getdata_h " + ex.Message);
-                }
-                were_mistakes = true;
-            }
+            }            
             catch (Exception ex)
             {
                 if (show_messages)
@@ -287,15 +279,7 @@ namespace Cash8Avalon
                 }
                 conn.Close();
                 reader.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                if (show_messages)
-                {
-                    MessageBox.Show(" getdata_t " + ex.Message);
-                }
-                were_mistakes = true;
-            }
+            }            
             catch (Exception ex)
             {
                 if (show_messages)
@@ -602,16 +586,10 @@ namespace Cash8Avalon
                 }
                 reader.Close();
                 conn.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                MessageBox.Show(" get_not_sent_sertificates " + ex.Message);
-                result = "-1";
-
-            }
+            }            
             catch (Exception ex)
             {
-                MessageBox.Show(" get_not_sent_sertificates " + ex.Message);
+                //MessageBox.Show(" get_not_sent_sertificates " + ex.Message);
                 result = "-1";
             }
             finally
@@ -774,7 +752,7 @@ namespace Cash8Avalon
             }
 
             DS ds = MainStaticClass.get_ds();
-            ds.Timeout = 180000;
+            ds.Timeout = 30000;
 
             //Получить параметра для запроса на сервер 
             nick_shop = MainStaticClass.Nick_Shop.Trim();
@@ -832,7 +810,7 @@ namespace Cash8Avalon
             string data_crypt = CryptorEngine.Encrypt(data, true, key);
             try
             {
-                result_web_quey = ds.UploadDataOnSalesPortionJson(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString());
+                result_web_quey = ds.UploadDataOnSalesPortionJasonAvalon(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString());
             }
             catch (Exception ex)
             {

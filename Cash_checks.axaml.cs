@@ -1443,6 +1443,67 @@ namespace Cash8Avalon
             _scrollViewer?.Focus();
         }
 
+        /// <summary>
+        /// Открытие формы ФП/ТК22 по F10
+        /// </summary>
+        private async void OpenFPTK22Form()
+        {
+            try
+            {
+                Console.WriteLine("F10 нажат - открытие формы FPTK22");
+
+                // Создаем окно ФП
+                var fptkWindow = new FPTK22();
+
+                // Находим родительское окно для правильного позиционирования
+                Window parentWindow = null;
+
+                // Вариант 1: Через TopLevel
+                var topLevel = TopLevel.GetTopLevel(this);
+                if (topLevel is Window currentWindow)
+                {
+                    parentWindow = currentWindow;
+                }
+
+                // Вариант 2: Через Application
+                if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
+                }
+
+                // Настройка размеров и поведения окна
+                fptkWindow.Title = "ФП / ТК-22";
+                fptkWindow.CanResize = true;
+                fptkWindow.CanMaximize = true;
+                fptkWindow.CanMinimize = true;
+                fptkWindow.Width = 900;
+                fptkWindow.Height = 700;
+                fptkWindow.MinWidth = 600;
+                fptkWindow.MinHeight = 500;
+
+                // Позиционирование
+                if (parentWindow != null)
+                {
+                    fptkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                    // Показываем как модальное окно (блокирует основную форму)
+                    await fptkWindow.ShowDialog(parentWindow);
+                }
+                else
+                {
+                    fptkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    fptkWindow.Show();
+                }
+
+                Console.WriteLine("✓ Форма FPTK22 открыта");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при открытии FPTK22: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+                await MessageBox.Show($"Ошибка при открытии формы ФП: {ex.Message}");
+            }
+        }
+
         private async void ProcessInsertKey()
         {
             Console.WriteLine("Insert нажат - создание нового чека");
@@ -1677,10 +1738,19 @@ namespace Cash8Avalon
                 return;
             }
 
+            // 🔹 НОВОЕ: Обработка F10 - открытие формы ФП/ТК22
+            if (e.Key == Key.F10)
+            {
+                OpenFPTK22Form();
+                e.Handled = true;
+                return;
+            }
+
             // Проверяем, есть ли фокус в таблице
             bool isTableFocused = _scrollViewer?.IsFocused == true ||
                                  _tableGrid?.IsFocused == true ||
                                  IsChildFocused(_scrollViewer);
+           
 
             if (!isTableFocused) return;
 
@@ -1799,22 +1869,49 @@ namespace Cash8Avalon
                             conn.Open();
                             Console.WriteLine("✓ Соединение с БД установлено");
 
+                            //    string myQuery = @"
+                            //SELECT checks_header.its_deleted,
+                            //       checks_header.date_time_write,
+                            //       clients.name,
+                            //       checks_header.cash,
+                            //       checks_header.remainder,
+                            //       checks_header.comment,
+                            //       checks_header.its_print,
+                            //       checks_header.check_type,
+                            //       checks_header.document_number,
+                            //       checks_header.its_print_p  
+                            //FROM checks_header 
+                            ////LEFT JOIN clients ON checks_header.client = clients.code 
+                            //LEFT JOIN clients ON checks_header.client = clients.code 
+                            //AND clients.code IS NOT NULL 
+                            //AND clients.code <> ''
+                            //WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
+                            //  AND its_deleted < 2 
+                            //ORDER BY checks_header.date_time_write";
+
                             string myQuery = @"
-                        SELECT checks_header.its_deleted,
-                               checks_header.date_time_write,
-                               clients.name,
-                               checks_header.cash,
-                               checks_header.remainder,
-                               checks_header.comment,
-                               checks_header.its_print,
-                               checks_header.check_type,
-                               checks_header.document_number,
-                               checks_header.its_print_p  
-                        FROM checks_header 
-                        LEFT JOIN clients ON checks_header.client = clients.code 
-                        WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
-                          AND its_deleted < 2 
-                        ORDER BY checks_header.date_time_write";
+                                SELECT checks_header.its_deleted,
+                                       checks_header.date_time_write,
+                                       CASE 
+                                           WHEN checks_header.client IS NULL 
+                                                OR TRIM(checks_header.client) = '' 
+                                           THEN NULL 
+                                           ELSE clients.name 
+                                       END as client_name,
+                                       checks_header.cash,
+                                       checks_header.remainder,
+                                       checks_header.comment,
+                                       checks_header.its_print,
+                                       checks_header.check_type,
+                                       checks_header.document_number,
+                                       checks_header.its_print_p  
+                                FROM checks_header 
+                                LEFT JOIN clients ON checks_header.client = clients.code 
+                                                 AND clients.code IS NOT NULL 
+                                                 AND TRIM(clients.code) <> ''
+                                WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
+                                  AND its_deleted < 2 
+                                ORDER BY checks_header.date_time_write";
 
                             if (showLast3)
                             {
@@ -1827,94 +1924,94 @@ namespace Cash8Avalon
                             {
                                 command.Parameters.AddWithValue("@startDate", selectedDate);
                                 command.Parameters.AddWithValue("@endDate", selectedDate.AddDays(1));
-
+                                                                
                                 using (var reader = command.ExecuteReader())
                                 {
-                                    int count = 0;
+                                    // 📋 Получаем ординалы один раз перед циклом - это эффективнее
+                                    var ordinals = new
+                                    {
+                                        ItsDeleted = reader.GetOrdinal("its_deleted"),
+                                        DateTimeWrite = reader.GetOrdinal("date_time_write"),
+                                        ClientName = reader.GetOrdinal("client_name"), // ваш новый алиас
+                                        Cash = reader.GetOrdinal("cash"),
+                                        Remainder = reader.GetOrdinal("remainder"),
+                                        Comment = reader.GetOrdinal("comment"),
+                                        ItsPrint = reader.GetOrdinal("its_print"),
+                                        CheckType = reader.GetOrdinal("check_type"),
+                                        DocumentNumber = reader.GetOrdinal("document_number"),
+                                        ItsPrintP = reader.GetOrdinal("its_print_p")
+                                    };
 
+                                    int count = 0;
                                     while (reader.Read())
                                     {
                                         count++;
                                         Console.WriteLine($"Чтение строки {count}...");
 
-                                        // Создаем CheckItem
                                         var checkItem = new CheckItem();
 
                                         // 0. its_deleted - numeric/decimal
-                                        checkItem.ItsDeleted = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0));
+                                        checkItem.ItsDeleted = reader.IsDBNull(ordinals.ItsDeleted)
+                                            ? 0
+                                            : Convert.ToDecimal(reader.GetValue(ordinals.ItsDeleted));
 
                                         // 1. date_time_write - timestamp
-                                        checkItem.DateTimeWrite = reader.IsDBNull(1) ? DateTime.MinValue : reader.GetDateTime(1);
+                                        checkItem.DateTimeWrite = reader.IsDBNull(ordinals.DateTimeWrite)
+                                            ? DateTime.MinValue
+                                            : reader.GetDateTime(ordinals.DateTimeWrite);
 
-                                        // 2. clients.name - text/varchar (может быть NULL)
-                                        checkItem.ClientName = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                                        // 2. client_name - text/varchar (может быть NULL)
+                                        checkItem.ClientName = reader.IsDBNull(ordinals.ClientName)
+                                            ? ""
+                                            : reader.GetString(ordinals.ClientName);
 
                                         // 3. cash - numeric/decimal
-                                        checkItem.Cash = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3));
+                                        checkItem.Cash = reader.IsDBNull(ordinals.Cash)
+                                            ? 0
+                                            : Convert.ToDecimal(reader.GetValue(ordinals.Cash));
 
                                         // 4. remainder - numeric/decimal
-                                        checkItem.Remainder = reader.IsDBNull(4) ? 0 : Convert.ToDecimal(reader.GetValue(4));
+                                        checkItem.Remainder = reader.IsDBNull(ordinals.Remainder)
+                                            ? 0
+                                            : Convert.ToDecimal(reader.GetValue(ordinals.Remainder));
 
                                         // 5. comment - text/varchar
-                                        checkItem.Comment = reader.IsDBNull(5) ? "" : reader.GetString(5);
+                                        checkItem.Comment = reader.IsDBNull(ordinals.Comment)
+                                            ? ""
+                                            : reader.GetString(ordinals.Comment);
 
                                         // 6. its_print - boolean
-                                        checkItem.ItsPrint = reader.IsDBNull(6) ? false : Convert.ToBoolean(reader.GetValue(6));
+                                        checkItem.ItsPrint = reader.IsDBNull(ordinals.ItsPrint)
+                                            ? false
+                                            : Convert.ToBoolean(reader.GetValue(ordinals.ItsPrint));
 
                                         // 7. check_type - smallint (0,1,2)
-                                        if (!reader.IsDBNull(7))
+                                        if (!reader.IsDBNull(ordinals.CheckType))
                                         {
-                                            object checkTypeObj = reader.GetValue(7);
-                                            if (checkTypeObj is short shortValue)
+                                            object checkTypeObj = reader.GetValue(ordinals.CheckType);
+                                            checkItem.CheckType = checkTypeObj switch
                                             {
-                                                checkItem.CheckType = shortValue switch
-                                                {
-                                                    0 => "Продажа",
-                                                    1 => "Возврат",
-                                                    2 => "Коррекция",
-                                                    _ => $"Неизвестно ({shortValue})"
-                                                };
-                                            }
-                                            else if (checkTypeObj is int intValue)
-                                            {
-                                                checkItem.CheckType = intValue switch
-                                                {
-                                                    0 => "Продажа",
-                                                    1 => "Возврат",
-                                                    2 => "Коррекция",
-                                                    _ => $"Неизвестно ({intValue})"
-                                                };
-                                            }
-                                            else
-                                            {
-                                                checkItem.CheckType = "Неизвестно";
-                                            }
+                                                short s => s switch { 0 => "Продажа", 1 => "Возврат", 2 => "Коррекция", _ => $"Неизвестно ({s})" },
+                                                int i => i switch { 0 => "Продажа", 1 => "Возврат", 2 => "Коррекция", _ => $"Неизвестно ({i})" },
+                                                _ => "Неизвестно"
+                                            };
                                         }
                                         else
                                         {
                                             checkItem.CheckType = "Неизвестно";
                                         }
 
-                                        // 8. document_number - bigint (int64)
-                                        if (!reader.IsDBNull(8))
+                                        // 8. document_number - bigint/numeric/varchar
+                                        if (!reader.IsDBNull(ordinals.DocumentNumber))
                                         {
-                                            object docNumObj = reader.GetValue(8);
-                                            if (docNumObj is long longValue)
+                                            checkItem.DocumentNumber = reader.GetValue(ordinals.DocumentNumber) switch
                                             {
-                                                checkItem.DocumentNumber = longValue.ToString();
-                                            }
-                                            else if (docNumObj is int intValue)
-                                            {
-                                                checkItem.DocumentNumber = intValue.ToString();
-                                            }
-                                            else if (docNumObj is decimal decimalValue)
-                                            {
-                                                checkItem.DocumentNumber = decimalValue.ToString("F0");
-                                            }
-                                            else
-                                            {
-                                                checkItem.DocumentNumber = docNumObj.ToString();
-                                            }
+                                                long l => l.ToString(),
+                                                int i => i.ToString(),
+                                                decimal d => d.ToString("F0"),
+                                                object o => o.ToString(),
+                                                _ => ""
+                                            };
                                         }
                                         else
                                         {
@@ -1922,7 +2019,9 @@ namespace Cash8Avalon
                                         }
 
                                         // 9. its_print_p - boolean
-                                        checkItem.ItsPrintP = reader.IsDBNull(9) ? false : Convert.ToBoolean(reader.GetValue(9));
+                                        checkItem.ItsPrintP = reader.IsDBNull(ordinals.ItsPrintP)
+                                            ? false
+                                            : Convert.ToBoolean(reader.GetValue(ordinals.ItsPrintP));
 
                                         items.Add(checkItem);
                                         Console.WriteLine($"  - Чек #{checkItem.DocumentNumber}: {checkItem.ClientName}, сумма: {checkItem.Cash}");

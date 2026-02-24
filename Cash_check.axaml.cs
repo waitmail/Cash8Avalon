@@ -1688,6 +1688,9 @@ namespace Cash8Avalon
 
                 bool? result = await dialog.ShowModalBlocking(this);
                 string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
+
+                //await ModalWindowHelper.ShowModalWindow(this, dialog, InputSearchProduct);
+
                 if (result == true && !string.IsNullOrEmpty(enteredBarcode))
                 {
                     ProcessClientDiscount(enteredBarcode);

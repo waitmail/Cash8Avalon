@@ -1,8 +1,10 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Cash8Avalon.ViewModels;
 using Newtonsoft.Json;
 using Npgsql;
@@ -34,6 +36,66 @@ namespace Cash8Avalon
             //#endif
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
+            // Добавляем обработчик закрытия окна
+            this.Closing += MainWindow_Closing;
+        }
+
+        private async void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
+        {
+            e.Cancel = true;
+            _unloadingTimer?.Stop();
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await PerformUnloadAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Логируем + показываем пользователю при закрытии
+                MainStaticClass.WriteRecordErrorLog("Таймаут выгрузки при закрытии",
+                    "MainWindow_Closing", 0, MainStaticClass.CashDeskNumber, "CancellationToken");
+                Console.WriteLine("⚠ Закрытие: таймаут выгрузки");
+
+                await MessageBox.Show(
+                    "Время ожидания истекло. Данные могут быть сохранены не полностью.",
+                    "Предупреждение",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Warning,
+                    this);
+            }
+            catch (Exception ex)
+            {
+                // Логируем + показываем пользователю при закрытии
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                    "Ошибка выгрузки при закрытии приложения");
+                Console.WriteLine($"✗ Закрытие: ошибка выгрузки: {ex.Message}");
+
+                if (this.IsVisible && this.IsActive)
+                {
+                    var result = await MessageBox.Show(
+                        $"Не удалось сохранить данные: {ex.Message}\n\nЗакрыть приложение?",
+                        "Ошибка",
+                        MessageBoxButton.YesNo,
+                        MessageBoxType.Error,
+                        this);
+
+                    if (result == MessageBoxResult.No)
+                    {
+                        return; // Не закрываем окно, пользователь отменил
+                    }
+                }
+            }
+            finally
+            {
+                // Закрываем окно строго на UI-потоке
+                //await Dispatcher.UIThread.InvokeAsync(Close);
+
+                // 🔥 Ключевой момент: отписываемся ПЕРЕД закрытием
+                this.Closing -= MainWindow_Closing;
+
+                await Dispatcher.UIThread.InvokeAsync(Close);
+            }
         }
 
         private void InitializeUnloadingTimer()
@@ -64,10 +126,32 @@ namespace Cash8Avalon
             MainStaticClass.EncryptData(filePath, defaultSettings);
         }
 
+        private async Task ShowUpdateWindowModalAsync()
+        {
+            try
+            {
+                var updateWindow = new LoadProgramFromInternet
+                {
+                    show_phone = true,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                // Безопасный показ модального окна
+                if (this.IsVisible)
+                    await updateWindow.ShowDialog(this);
+                else
+                    updateWindow.Show(); // Фоллбэк, если окно ещё не готово
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при показе окна обновления: {ex.Message}");
+                // Можно показать MessageBox пользователю при необходимости
+            }
+        }
+
 
         protected override async void OnOpened(EventArgs e)
         {
-
 
             // Даём время оконному менеджеру инициализировать окно
             await Task.Delay(50);
@@ -97,7 +181,23 @@ namespace Cash8Avalon
                 this.WindowState = WindowState.Maximized;
             }
 
+            //LoadProgramFromInternet lpfi = new LoadProgramFromInternet();
+            //lpfi.show_phone = true;
+            //bool hasUpdate = await lpfi.check_new_version_programm().new_version_of_the_program;
+            ////bool new_version_of_the_program_exist = lpfi.new_version_of_the_program;
+            //if (lpfi.new_version_of_the_program)
+            //{
+            //    LoadProgramFromInternet loadProgramFromInternet = new LoadProgramFromInternet();
+            //}           
 
+            // Быстрая проверка в фоне
+            bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+
+            if (hasUpdate)
+            {
+                // Показываем модальное окно обновления
+                await ShowUpdateWindowModalAsync();
+            }
 
             // 2. Проверка файла конфигурации
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
@@ -505,46 +605,171 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Обработчик события таймера выгрузки
-        /// </summary>
+        ///// <summary>
+        ///// Обработчик события таймера выгрузки
+        ///// </summary>
+        //private async void UnloadingTimer_Tick(object? sender, EventArgs e)
+        //{
+        //    try
+        //    {
+        //         Console.WriteLine($"=== Запуск выгрузки данных ({DateTime.Now:HH:mm:ss}) ===");
+
+        //        // Отправка статуса онлайн
+        //        await Task.Run(() => MainStaticClass.SendOnlineStatus());
+
+        //        // Проверяем, нужно ли отправлять данные о продажах
+        //        if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
+        //        {
+        //            MainStaticClass.SendOnlineStatus();
+        //            if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
+        //            {
+        //                SendDataOnSalesPortions sdsp = new SendDataOnSalesPortions();
+        //                sdsp.send_sales_data_Click(null, null);                        
+        //                UploadDeletedItems();                        
+        //                send_cdn_logs();                        
+        //                UploadErrorsLog();
+        //                sent_open_close_shop();
+        //            }
+
+        //            //// Обновляем время последней успешной отправки
+        //            //MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
+        //            Console.WriteLine("✓ Выгрузка данных завершена успешно");
+        //        }
+        //        else
+        //        {
+        //            Console.WriteLine("⚠ Нет новых данных для выгрузки");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка в обработчике таймера выгрузки: {ex.Message}");
+        //        await MessageBox.Show($"Ошибка при выгрузке данных: {ex.Message}",
+        //            "Ошибка выгрузки", MessageBoxButton.OK, MessageBoxType.Error);
+        //    }
+        //}
+
+
+        // 🔹 Обработчик для таймера (вызывается каждые N минут)
+        // Fire-and-forget: если ошибка — логируем, но не блокируем UI
+        // 🔹 Обработчик таймера — просто запускает фоновую задачу
         private async void UnloadingTimer_Tick(object? sender, EventArgs e)
+        {
+            // Fire-and-forget: ошибки только в лог, UI не блокируем
+            _ = Task.Run(() => PerformUnloadAsync(CancellationToken.None))
+                .ContinueWith(t =>
+                {
+                    if (t.Exception != null)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(
+                            t.Exception, 0, MainStaticClass.CashDeskNumber, "Ошибка периодической выгрузки");
+                        Console.WriteLine($"✗ Ошибка в таймере: {t.Exception.Message}");
+                    }
+                }, TaskScheduler.Default);
+        }
+
+        // 🔹 Сама выгрузка — полностью фоновая, без RunOnUiThread
+        private async Task PerformUnloadAsync(CancellationToken ct)
         {
             try
             {
-                 Console.WriteLine($"=== Запуск выгрузки данных ({DateTime.Now:HH:mm:ss}) ===");
+                Console.WriteLine($"=== Запуск выгрузки данных ({DateTime.Now:HH:mm:ss}) ===");
 
                 // Отправка статуса онлайн
-                await Task.Run(() => MainStaticClass.SendOnlineStatus());
+                await Task.Run(() => MainStaticClass.SendOnlineStatus(), ct);
+                ct.ThrowIfCancellationRequested();
 
-                // Проверяем, нужно ли отправлять данные о продажах
                 if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
                 {
-                    MainStaticClass.SendOnlineStatus();
-                    if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
+                    // 👇 Каждый этап: try-catch + логирование, без MessageBox
+                    try
                     {
-                        SendDataOnSalesPortions sdsp = new SendDataOnSalesPortions();
-                        sdsp.send_sales_data_Click(null, null);                        
-                        UploadDeletedItems();                        
-                        send_cdn_logs();                        
-                        UploadErrorsLog();
-                        sent_open_close_shop();
+                        ct.ThrowIfCancellationRequested();
+                        var sdsp = new SendDataOnSalesPortions();
+                        sdsp.send_sales_data_Click(null, null);
+                        Console.WriteLine("✓ Данные о продажах отправлены");
+                    }
+                    catch (Exception ex)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                            "Ошибка отправки продаж (таймер/закрытие)");
+                        Console.WriteLine($"✗ Продажи: {ex.Message}");
                     }
 
-                    //// Обновляем время последней успешной отправки
-                    //MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
-                    Console.WriteLine("✓ Выгрузка данных завершена успешно");
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        UploadDeletedItems();
+                        Console.WriteLine("✓ Удаленные элементы отправлены");
+                    }
+                    catch (Exception ex)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                            "Ошибка отправки удаленных элементов");
+                        Console.WriteLine($"✗ Удаленные: {ex.Message}");
+                    }
+
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        send_cdn_logs();
+                        Console.WriteLine("✓ CDN логи отправлены");
+                    }
+                    catch (Exception ex)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                            "Ошибка отправки CDN логов");
+                        Console.WriteLine($"✗ CDN: {ex.Message}");
+                    }
+
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        UploadErrorsLog();
+                        Console.WriteLine("✓ Логи ошибок отправлены");
+                    }
+                    catch (Exception ex)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                            "Ошибка отправки логов ошибок");
+                        Console.WriteLine($"✗ Логи: {ex.Message}");
+                    }
+
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        sent_open_close_shop();
+                        Console.WriteLine("✓ Данные о сменах отправлены");
+                    }
+                    catch (Exception ex)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                            "Ошибка отправки данных о сменах");
+                        Console.WriteLine($"✗ Смены: {ex.Message}");
+                    }
+
+                    // Обновляем время только после попытки отправки всех данных
+                    MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
+                    Console.WriteLine("✓ Выгрузка завершена");
                 }
                 else
                 {
                     Console.WriteLine("⚠ Нет новых данных для выгрузки");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Выгрузка прервана по таймауту");
+                MainStaticClass.WriteRecordErrorLog("Выгрузка прервана по таймауту",
+                    "PerformUnloadAsync", 0, MainStaticClass.CashDeskNumber, "CancellationToken");
+                throw;
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Ошибка в обработчике таймера выгрузки: {ex.Message}");
-                await MessageBox.Show($"Ошибка при выгрузке данных: {ex.Message}",
-                    "Ошибка выгрузки", MessageBoxButton.OK, MessageBoxType.Error);
+                // Фолбэк-логирование для непредвиденных ошибок
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+                    "Непредвиденная ошибка в PerformUnloadAsync");
+                Console.WriteLine($"✗ Критическая ошибка: {ex}");
+                throw;
             }
         }
 

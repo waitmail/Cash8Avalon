@@ -7,75 +7,87 @@
         SizeToContent="Manual"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
-        ShowInTaskbar="False">
-    
-    <StackPanel Margin="20" HorizontalAlignment="Center">
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        Background="Transparent">
+
+    <!-- Внешний Border с тенью -->
+    <Border Margin="10"
+            Background="White"
+            CornerRadius="8"
+            BoxShadow="5 5 15 rgba(0,0,0,0.3)">
         
-        <!-- Заголовок -->
-        <TextBlock x:Name="MessageLabel"
-                  Text="Ожидание ответа от терминала"
-                  FontSize="22"
-                  FontWeight="Bold"
-                  TextAlignment="Center"
-                  HorizontalAlignment="Center"
-                  TextWrapping="Wrap"
-                  Margin="0,0,0,20"/>
-        
-        <!-- Статус оплаты -->
-        <TextBlock x:Name="StatusLabel"
-                  Text="Оплата не подтверждена!"
-                  FontSize="22"
-                  Foreground="Red"
-                  TextAlignment="Center"
-                  HorizontalAlignment="Center"
-                  FontWeight="Medium"
-                  Margin="0,0,0,20"/>
-        
-        <!-- Прогресс-бар с таймером -->
-        <Grid Width="500" Height="40" Margin="0,0,0,20">
-            <ProgressBar x:Name="ProgressBarNonCashPay"
-                        Minimum="0"
-                        Maximum="80"
-                        Value="80"
-                        Height="30"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Center"/>
+        <!-- Внешняя толстая рамка (синяя) -->
+        <Border BorderBrush="#007ACC"
+                BorderThickness="5"
+                CornerRadius="8"
+                Background="Transparent">
             
-            <!-- Таймер поверх прогресс-бара -->
-            <TextBlock x:Name="LabelTimer"
-                      Text="80"
-                      FontSize="16"
-                      FontWeight="Bold"
-                      Foreground="White"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"/>
-        </Grid>
-        
-        <!-- Текст с оставшимся временем -->
-        <TextBlock Text="Осталось времени:"
-                  FontSize="22"
-                  HorizontalAlignment="Center"
-                  Margin="0,0,0,20"/>
-        
-        <!-- Кнопка отмены с красным фоном и округлыми углами -->
-        <Button x:Name="CancelButton"
-               Content="Отменить"
-               Width="150"
-               Height="45"
-               HorizontalAlignment="Center"
-               Margin="0,10,0,0"
-               Click="CancelButton_Click"
-               FontSize="22"
-               Foreground="White"
-               Background="Red"
-               HorizontalContentAlignment="Center"
-               VerticalContentAlignment="Center">
-            <Button.Styles>
-                <Style Selector="Button">
-                    <Setter Property="CornerRadius" Value="10"/>
-                </Style>
-            </Button.Styles>
-        </Button>
-               
-    </StackPanel>
+            <!-- Внутренняя тонкая рамка для акцента (светло-серая) -->
+            <Border BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Margin="3"
+                    Background="Transparent">
+                
+                <!-- Основное содержимое -->
+                <StackPanel Margin="20" HorizontalAlignment="Center">
+                    
+                    <!-- Заголовок -->
+                    <TextBlock x:Name="MessageLabel"
+                              Text="Ожидание ответа от терминала"
+                              FontSize="22"
+                              FontWeight="Bold"
+                              TextAlignment="Center"
+                              HorizontalAlignment="Center"
+                              TextWrapping="Wrap"
+                              Margin="0,0,0,20"/>
+                    
+                    <!-- Статус оплаты -->
+                    <TextBlock x:Name="StatusLabel"
+                              Text="Оплата не подтверждена!"
+                              FontSize="22"
+                              Foreground="Red"
+                              TextAlignment="Center"
+                              HorizontalAlignment="Center"
+                              FontWeight="Medium"
+                              Margin="0,0,0,20"/>
+                    
+                    <!-- Прогресс-бар с таймером -->
+                    <Grid Width="500" Height="40" Margin="0,0,0,20">
+                        <ProgressBar x:Name="ProgressBarNonCashPay"
+                                    Minimum="0"
+                                    Maximum="80"
+                                    Value="80"
+                                    Height="30"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"/>
+                        
+                        <TextBlock x:Name="LabelTimer"
+                                  Text="80"
+                                  FontSize="22"
+                                  FontWeight="Bold"
+                                  Foreground="White"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                    </Grid>           
+                    
+                    <!-- Кнопка отмены -->
+                    <Button x:Name="CancelButton"
+                           Content="Отменить"
+                           Width="150"
+                           Height="45"
+                           HorizontalAlignment="Center"
+                           Margin="0,10,0,0"
+                           Click="CancelButton_Click"
+                           FontSize="22"
+                           Foreground="White"
+                           Background="Red"
+                           HorizontalContentAlignment="Center"
+                           VerticalContentAlignment="Center"
+                           CornerRadius="10"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Border>
 </Window>

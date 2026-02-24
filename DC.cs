@@ -633,21 +633,21 @@ namespace Cash8Avalon
             return ParseSoapResponse<bool>(response, "UploadDataOnSalesPortionJson");
         }
 
-        public bool UploadDataOnSalesPortionJason(string nick_shop, string data, string scheme)
+        public bool UploadDataOnSalesPortionJasonAvalon(string nick_shop, string data, string scheme)
         {
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
                 <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
                     <soap:Body>
-                        <UploadDataOnSalesPortionJason xmlns=""http://tempuri.org/"">
+                        <UploadDataOnSalesPortionJasonAvalon xmlns=""http://tempuri.org/"">
                             <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
                             <data>{SecurityHelper.EscapeXml(data)}</data>
                             <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
-                        </UploadDataOnSalesPortionJason>
+                        </UploadDataOnSalesPortionJasonAvalon>
                     </soap:Body>
                 </soap:Envelope>";
 
-            string response = ExecuteSoapRequest(soapEnvelope, "UploadDataOnSalesPortionJason");
-            return ParseSoapResponse<bool>(response, "UploadDataOnSalesPortionJason");
+            string response = ExecuteSoapRequest(soapEnvelope, "UploadDataOnSalesPortionJasonAvalon");
+            return ParseSoapResponse<bool>(response, "UploadDataOnSalesPortionJasonAvalon");
         }
 
         public void Dispose()

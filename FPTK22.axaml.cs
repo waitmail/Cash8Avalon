@@ -49,6 +49,7 @@ public partial class FPTK22 : Window
         btn_date_mark_Click(null, null);
         load_status_open_shop();
         load_status_close_shop();
+        get_summ_in_cashe_Click(null, null);
     }
 
     private void get_fiscall_info()

@@ -851,7 +851,7 @@ namespace Cash8Avalon
                     ProgressBarNonCashPay.Value = _secondsRemaining;
 
                 if (LabelTimer != null)
-                    LabelTimer.Text = _secondsRemaining.ToString();
+                    LabelTimer.Text = "Осталось "+_secondsRemaining.ToString() + " сек.";
 
                 if (StatusLabel != null)
                 {
