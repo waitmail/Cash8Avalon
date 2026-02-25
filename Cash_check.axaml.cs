@@ -2471,14 +2471,14 @@ namespace Cash8Avalon
                 //MessageBoxHelper.Show(calculation_of_the_sum_of_the_document().ToString());
                 //MessageBoxHelper.Show(calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture));
 
-                pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
+                pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
                 //Console.WriteLine($"✓ Перед записью документа: {_productsDataBackup.Count} записей");
                 write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);//нужно для того чтобы в окне оплаты взять сумму из БД
                 //Console.WriteLine($"✓ После записи документа: {_productsDataBackup.Count} записей");
             }
             else//Это возврат
             {
-                pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F", System.Globalization.CultureInfo.CurrentCulture);
+                pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
             }
 
             //pay_form.txtB_cash_sum.Focus();
@@ -3996,18 +3996,30 @@ namespace Cash8Avalon
                         await MessageBoxHelper.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error, this);
                         return;
                     }
-                }               
+                }
 
                 if (productData.IsCDNCheck())
                 {
-                    await ActivateWindow(this);
-                    if (!await MainStaticClass.cdn_check(productData, marking_code, this))
-                    {
-                        await ShowTovarNotFoundWindow(this);
-                        this.Focus();
-                        return;
+                    if (MainStaticClass.IncludedPiot)
+                    {                       
+                        if (!await MainStaticClass.piot_cdn_check(productData, marking_code, this))
+                        {
+                            await ShowTovarNotFoundWindow(this);
+                            this.Focus();
+                            return;
+                        }
                     }
-                }                
+                    else
+                    {
+                        await ActivateWindow(this);
+                        if (!await MainStaticClass.cdn_check(productData, marking_code, this))
+                        {
+                            await ShowTovarNotFoundWindow(this);
+                            this.Focus();
+                            return;
+                        }
+                    }
+                }
 
 
                 byte[] textAsBytes = Encoding.Default.GetBytes(marking_code);

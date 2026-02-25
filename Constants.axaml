@@ -118,17 +118,9 @@
                         <TextBox Grid.Column="3"
                                  x:Name="cash_desk_number"
                                  MaxLength="1"
-                                 Margin="5"
+                                 Margin="15"
                                  Width="40"
-                                 FontFamily="Segoe UI" />
-                        
-                        <!-- Включить ПИот -->
-                        <CheckBox Grid.Column="4"
-                                  x:Name="checkBox_includePIot"
-                                  Content="Включить ПИот"
-                                  Margin="15,0,15,0"
-                                  VerticalAlignment="Center"
-                                  FontFamily="Segoe UI" />
+                                 FontFamily="Segoe UI" />                       
                         
                         <!-- Версия ФН -->
                         <TextBlock Grid.Column="5"
@@ -491,7 +483,7 @@
                         
                         <!-- Чекбокс Включить ПИот -->
                         <CheckBox Grid.Column="0"
-                                  x:Name="checkBox_includePIot_bottom"
+                                  x:Name="checkBox_includePIot"
                                   Content="Включить ПИот"
                                   VerticalAlignment="Center"
                                   Margin="5,0,15,0"

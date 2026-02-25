@@ -375,6 +375,7 @@ using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -591,43 +592,116 @@ namespace Cash8Avalon
 
         #endregion
 
-        #region HTTP запрос с понятными ошибками
+        //#region HTTP запрос с понятными ошибками
 
+        //private async Task<TerminalResult> SendRequestInternal(CancellationToken cancellationToken)
+        //{
+        //    using var client = new HttpClient();
+        //    client.Timeout = TimeSpan.FromSeconds(_totalSeconds);
+
+        //    var content = new StringContent(Data, Encoding.GetEncoding("Windows-1251"), "text/xml");
+
+        //    try
+        //    {
+        //        var response = await client.PostAsync(Url, content, cancellationToken);
+        //        var responseContent = await response.Content.ReadAsStringAsync();
+
+        //        if (!response.IsSuccessStatusCode)
+        //        {
+        //            return TerminalResult.CreateError(GetHttpErrorMessage(response.StatusCode, response.ReasonPhrase));
+        //        }
+
+        //        return ParseResponse(responseContent);
+        //    }
+        //    catch (HttpRequestException ex)
+        //    {
+        //        return TerminalResult.CreateError(GetNetworkErrorMessage(ex));
+        //    }
+        //    catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        //    {
+        //        throw; // Пробрасываем для корректной обработки
+        //    }
+        //    catch (TaskCanceledException)
+        //    {
+        //        return TerminalResult.CreateError(
+        //            "Запрос к терминалу превысил время ожидания.\n\nВозможные причины:\n• Терминал завис или перезагружается\n• Проблемы с сетевым подключением\n• Терминал занят другой операцией");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return TerminalResult.CreateError(GetUserFriendlyMessage(ex, "Неожиданная ошибка"));
+        //    }
+        //}
+
+        #region HTTP запрос с понятными ошибками (LEGACY - HttpWebRequest)
         private async Task<TerminalResult> SendRequestInternal(CancellationToken cancellationToken)
         {
-            using var client = new HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(_totalSeconds);
-
-            var content = new StringContent(Data, Encoding.GetEncoding("Windows-1251"), "text/xml");
-
             try
             {
-                var response = await client.PostAsync(Url, content, cancellationToken);
-                var responseContent = await response.Content.ReadAsStringAsync();
+                var request = (HttpWebRequest)WebRequest.Create(Url);
+                request.Method = "POST";
+                request.ContentType = "text/xml; charset=windows-1251";
+                request.KeepAlive = false;
+                request.ProtocolVersion = HttpVersion.Version10;
+                request.Timeout = _totalSeconds * 1000;
+                request.ReadWriteTimeout = _totalSeconds * 1000;
 
-                if (!response.IsSuccessStatusCode)
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                byte[] byteArray = Encoding.GetEncoding("Windows-1251").GetBytes(Data);
+                request.ContentLength = byteArray.Length;
+
+                using (var dataStream = await request.GetRequestStreamAsync())
                 {
-                    return TerminalResult.CreateError(GetHttpErrorMessage(response.StatusCode, response.ReasonPhrase));
+                    await dataStream.WriteAsync(byteArray, 0, byteArray.Length, cancellationToken);
                 }
 
-                return ParseResponse(responseContent);
+                using (var response = (HttpWebResponse)await request.GetResponseAsync())
+                using (var responseStream = response.GetResponseStream())
+                using (var reader = new StreamReader(responseStream, Encoding.GetEncoding("Windows-1251")))
+                {
+                    var responseContent = await reader.ReadToEndAsync();
+                    return ParseResponse(responseContent);
+                }
             }
-            catch (HttpRequestException ex)
-            {
-                return TerminalResult.CreateError(GetNetworkErrorMessage(ex));
-            }
-            catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
-            {
-                throw; // Пробрасываем для корректной обработки
-            }
-            catch (TaskCanceledException)
+            catch (WebException ex) when (ex.Status == WebExceptionStatus.ConnectFailure)
             {
                 return TerminalResult.CreateError(
-                    "Запрос к терминалу превысил время ожидания.\n\nВозможные причины:\n• Терминал завис или перезагружается\n• Проблемы с сетевым подключением\n• Терминал занят другой операцией");
+                    "Не удалось подключиться к терминалу.\n\n" +
+                    "Проверьте:\n" +
+                    "• Терминал включен и работает\n" +
+                    "• IP-адрес терминала указан верно\n" +
+                    "• Сетевой кабель подключен\n" +
+                    $"Детали: {ex.Message}");
+            }
+            catch (WebException ex) when (ex.Status == WebExceptionStatus.Timeout)
+            {
+                return TerminalResult.CreateError(
+                    "Запрос к терминалу превысил время ожидания.\n\n" +
+                    "Возможные причины:\n" +
+                    "• Терминал завис или перезагружается\n" +
+                    "• Проблемы с сетевым подключением\n" +
+                    "• Терминал занят другой операцией");
+            }
+            catch (WebException ex)
+            {
+                // Универсальная обработка остальных WebException
+                string detail = ex.Response is HttpWebResponse httpResp
+                    ? $"\nСтатус: {(int)httpResp.StatusCode} {httpResp.StatusDescription}"
+                    : "";
+
+                return TerminalResult.CreateError(
+                    $"Ошибка связи с терминалом.{detail}\n\n" +
+                    $"Детали: {ex.Message}\n\n" +
+                    "Проверьте сетевое подключение и состояние терминала.");
+            }
+            catch (OperationCanceledException)
+            {
+                throw; // Пробрасываем для корректной обработки отмены
             }
             catch (Exception ex)
             {
-                return TerminalResult.CreateError(GetUserFriendlyMessage(ex, "Неожиданная ошибка"));
+                return TerminalResult.CreateError(
+                    $"Неожиданная ошибка: {ex.Message}\n\n" +
+                    "Если ошибка повторяется — обратитесь в техническую поддержку.");
             }
         }
 

@@ -364,13 +364,13 @@ namespace Cash8Avalon
                 {
                     new ColumnDefinition(0.8, GridUnitType.Star),   // Статус
                     new ColumnDefinition(0.8, GridUnitType.Star),   // Дата
-                    new ColumnDefinition(2.2, GridUnitType.Star),   // Клиент
+                    new ColumnDefinition(2.0, GridUnitType.Star),   // Клиент
                     new ColumnDefinition(0.8, GridUnitType.Star),   // Сумма
                     new ColumnDefinition(0.8, GridUnitType.Star),   // Сдача
-                    new ColumnDefinition(2.2, GridUnitType.Star),   // Комментарий
+                    new ColumnDefinition(2.0, GridUnitType.Star),   // Комментарий
                     new ColumnDefinition(0.7, GridUnitType.Star),   // Тип
                     new ColumnDefinition(0.8, GridUnitType.Star),   // Номер
-                    new ColumnDefinition(0.6, GridUnitType.Star),   // Напечатан
+                    new ColumnDefinition(0.5, GridUnitType.Star),   // Напечатан
                     new ColumnDefinition(0.5, GridUnitType.Star)    // ПечатьП
                 };
 
@@ -575,7 +575,7 @@ namespace Cash8Avalon
                 IBrush rowBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
                 FontWeight fontWeight = FontWeight.Normal;
                 FontStyle fontStyle = FontStyle.Normal;
-                double fontSize = 12;
+                double fontSize = 18;
                 IBrush foreground = Brushes.Black;
                 TextDecorationCollection textDecorations = null;
 

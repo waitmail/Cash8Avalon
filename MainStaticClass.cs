@@ -145,6 +145,7 @@ namespace Cash8Avalon
         private static string ip_addr_lm_ch_z = "0";
         private static string kitchen_print = "0";
         private static int included_piot = -1;
+        private static string piot_url = "0";
 
         //private static Dictionary<int, Cash8.ProductData> dictionaryProductData = new Dictionary<int, Cash8.ProductData>();
 
@@ -160,34 +161,68 @@ namespace Cash8Avalon
             return digits;
         }
 
-        //public static Cash8.PIOT.PIOTInfo PiotInfo { get; set; }
+        public async static Task<bool> piot_cdn_check(ProductData productData, string mark_str, Cash_check check)
+        {
+            bool result = true;
+            string mark_str_cdn = "";
 
+            if (productData.IsCDNCheck())
+            {
+                if (MainStaticClass.CashDeskNumber != 9)// && MainStaticClass.EnableCdnMarkers == 1
+                {
+                    if (MainStaticClass.CDN_Token == "")
+                    {
+                        await MessageBox.Show("В этой кассе не заполнен CDN токен, \r\n ПРОДАЖА ДАННОГО ТОВАРА НЕВОЗМОЖНА ! ", "Проверка CDN");
+                        result = false;
+                    }
+                    else
+                    {
+                        //CDN cdn = new CDN();
+                        Piot piot = new Piot();
+                        List<string> codes = new List<string>();
+                        mark_str_cdn = mark_str.Replace("\u001d", @"\u001d");
+                        codes.Add(mark_str_cdn);
+                        mark_str_cdn = mark_str_cdn.Replace("'", "\'");                        
+                        Dictionary<string, string> d_tovar = new Dictionary<string, string>();                        
+                        d_tovar[productData.Name] = productData.Code.ToString();                        
+                        result = await piot.cdn_check_marker_code(codes, mark_str, check.numdoc, check.request, mark_str_cdn, d_tovar, check, productData);
+                    }
 
-        //public static Dictionary DictionaryProductData
-        //{
-        //    get
-        //    {
+                }
+            }
 
-        //    }
+            return result;
+        }
 
-        //}
+        public static Piot.PiotInfo PiotInfo { get; set; }
 
         private static readonly Lazy<bool> _includedPiotLazy = new Lazy<bool>(() =>
         {
             try
             {
-                using (var conn = MainStaticClass.NpgsqlConn())
-                {
-                    conn.Open();
-                    string query = "SELECT include_piot FROM constants LIMIT 1";
-                    using (var command = new NpgsqlCommand(query, conn))
-                    {
-                        var result = command.ExecuteScalar();
-                        return result != null && result != DBNull.Value
-                            ? Convert.ToBoolean(result)
-                            : false;
-                    }
-                }
+                //using (var conn = MainStaticClass.NpgsqlConn())
+                //{
+                //    conn.Open();
+                //    string query = "SELECT include_piot FROM constants LIMIT 1";
+                //    using (var command = new NpgsqlCommand(query, conn))
+                //    {
+                //        var result = command.ExecuteScalar();
+                //        return result != null && result != DBNull.Value
+                //            ? Convert.ToBoolean(result)
+                //            : false;
+                //    }
+                //}
+                //if (MainStaticClass.Nick_Shop == "A01")
+                //{
+                //    return true;
+                //}
+                //else
+                //{
+                //    return false;
+                //}
+
+                return MainStaticClass.Nick_Shop == "A01";
+
             }
             catch (Exception ex)
             {
@@ -195,6 +230,82 @@ namespace Cash8Avalon
                 return false; // значение по умолчанию
             }
         });
+
+        //public static string IncludedPiot => _includedPiotLazy.Value ? "1" : "0";
+        public static bool IncludedPiot => _includedPiotLazy.Value;
+
+        /// <summary>
+        /// Возвращает piot_url        
+        /// </summary>
+        public static string GetPiotUrl
+        {
+            get
+            {
+                if (piot_url == "0")
+                {
+                    NpgsqlConnection conn = null;
+                    NpgsqlCommand command = null;
+                    conn = MainStaticClass.NpgsqlConn();
+                    try
+                    {
+                        conn.Open();
+                        string query = "SELECT piot_url FROM constants";
+                        command = new NpgsqlCommand(query, conn);
+                        piot_url = command.ExecuteScalar().ToString();
+                    }
+                    catch (NpgsqlException ex)
+                    {
+                        MessageBox.Show("Ошибка при чтении piot_url" + ex.ToString());
+                        piot_url = "0";
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Ошибка при чтении piot_url" + ex.ToString());
+                        piot_url = "0";
+                    }
+                    finally
+                    {
+                        if (conn.State == ConnectionState.Open)
+                        {
+                            conn.Close();
+                        }
+                    }
+                }
+
+                return piot_url;
+            }
+        }
+
+        //public static Dictionary DictionaryProductData
+        //{
+        //    get
+        //    {
+        //    }
+        //}
+
+        //private static readonly Lazy<bool> _includedPiotLazy = new Lazy<bool>(() =>
+        //{
+        //    try
+        //    {
+        //        using (var conn = MainStaticClass.NpgsqlConn())
+        //        {
+        //            conn.Open();
+        //            string query = "SELECT include_piot FROM constants LIMIT 1";
+        //            using (var command = new NpgsqlCommand(query, conn))
+        //            {
+        //                var result = command.ExecuteScalar();
+        //                return result != null && result != DBNull.Value
+        //                    ? Convert.ToBoolean(result)
+        //                    : false;
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Ошибка при чтении include_piot: {ex.Message}");
+        //        return false; // значение по умолчанию
+        //    }
+        //});
 
         public static Window? MainWindow { get; set; }
 
@@ -5438,6 +5549,208 @@ namespace Cash8Avalon
             return result;
         }
 
+        // Основной публичный метод для проверки доступности ПИОТ
+        public async static Task<bool> CheckPiotAvailable(Window owner)
+        {
+            try
+            {
+                IFptr fptr = MainStaticClass.FPTR;
+
+                // 1. Инициализация и проверка подключения к ФР
+                if (!await InitializeFiscalRegistrar(fptr,owner))
+                {
+                    return false;
+                }
+
+                // 2. Получение данных из ФР
+                FiscalRegistrarData frData = await GetFiscalRegistrarData(fptr, owner);
+                if (frData == null)
+                {
+                    return false;
+                }
+
+                // 3. Получение данных из ПИОТ
+                PIOTData piotData = await GetPIOTData(owner);
+                if (piotData == null)
+                {
+                    return false;
+                }
+
+                // 4. Сравнение данных
+                bool complete = await CompareData(frData, piotData, owner);
+
+                // 5. Вывод результата проверки (оставляем для обратной совместимости)
+                await ShowVerificationResult(complete, owner);
+
+                return complete;
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxHelper.Show($"Произошла непредвиденная ошибка: {ex.Message}\r\nПроверка прервана!", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error);
+                return false;
+            }
+        }
+
+
+        // Метод для использования при старте приложения
+        public async static Task<bool> InitializeAndCheckPiot(Window owner)
+        {
+            return await CheckPiotAvailable(owner);
+        }
+
+        // 1. Зона ответственности: Инициализация и проверка подключения к ФР
+        private async static Task<bool> InitializeFiscalRegistrar(IFptr fptr,Window owner)
+        {
+            if (!fptr.isOpened())
+            {
+                fptr.open();
+            }
+
+            if (fptr.errorCode() != 0)
+            {
+                await MessageBoxHelper.Show($"При открытии соединения с ФР произошла ошибка {fptr.errorDescription()}\r\nПроверка прервана!", "Проверка ПИот",MessageBoxButton.OK, MessageBoxType.Error, owner);
+                return false;
+            }
+
+            return true;
+        }
+
+        // 2. Зона ответственности: Получение данных из ФР
+        private async static Task<FiscalRegistrarData> GetFiscalRegistrarData(IFptr fptr,Window owner)
+        {
+            var frData = new FiscalRegistrarData();
+
+            // Получение серийного номер ККТ - запрос статуса
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_STATUS);
+            if (!await ExecuteFiscalQuery(fptr, false, owner))
+            {
+                return null;
+            }
+            frData.SerialNumber = fptr.getParamString(AtolConstants.LIBFPTR_PARAM_SERIAL_NUMBER);
+
+            // Получение серийного номер ФН - запрос реквизитов ОФД
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_CACHE_REQUISITES);
+            if (!await ExecuteFiscalQuery(fptr, false, owner))
+            {
+                return null;
+            }
+            frData.SerialNumberFN = fptr.getParamString(AtolConstants.LIBFPTR_PARAM_FN_SERIAL_NUMBER);
+
+            // Получение ИНН организации - запрос регистрационной информации ФН
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_FN_DATA_TYPE, AtolConstants.LIBFPTR_FNDT_REG_INFO);
+            if (!await ExecuteFiscalQuery(fptr, true, owner))
+            {
+                return null;
+            }
+            frData.OrganizationVATIN = fptr.getParamString(1018);
+
+            return frData;
+        }
+
+        private async static Task<bool> ExecuteFiscalQuery(IFptr fptr, bool isFnQuery,Window owner)
+        {
+            if (isFnQuery)
+            {
+                fptr.fnQueryData();
+            }
+            else
+            {
+                fptr.queryData();
+            }
+
+            if (fptr.errorCode() != 0)
+            {
+                await MessageBoxHelper.Show($"При запросе данных из ФР произошла ошибка {fptr.errorDescription()}\r\nПроверка прервана!", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
+                return false;
+            }
+
+            return true;
+        }
+
+        // 3. Зона ответственности: Получение данных из ПИОТ
+        private async static Task<PIOTData> GetPIOTData(Window owner)
+        {
+            try
+            {
+                Piot piot = new Piot();
+                Piot.PiotInfo piotInfo = piot.GetPiotInfo();
+
+                return new PIOTData
+                {
+                    KktSerial = piotInfo.kktSerial,
+                    KktInn = piotInfo.kktInn,
+                    FnSerial = piotInfo.fnSerial
+                };
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxHelper.Show($"При получении данных из ПИОТ произошла ошибка: {ex.Message}\r\nПроверка прервана!", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
+                return null;
+            }
+        }
+
+        // 4. Зона ответственности: Сравнение данных
+        private async static Task<bool> CompareData(FiscalRegistrarData frData, PIOTData piotData,Window owner)
+        {
+            bool complete = true;
+
+            // Сравнение серийных номеров ККТ
+            if (!string.Equals(frData.SerialNumber, piotData.KktSerial, StringComparison.OrdinalIgnoreCase))
+            {
+                await ShowComparisonError("Серийный номер ККТ", frData.SerialNumber, piotData.KktSerial, owner);
+                complete = false;
+            }
+
+            // Сравнение ИНН
+            if (!string.Equals(frData.OrganizationVATIN, piotData.KktInn, StringComparison.OrdinalIgnoreCase))
+            {
+                await ShowComparisonError("ИНН", frData.OrganizationVATIN, piotData.KktInn, owner);
+                complete = false;
+            }
+
+            // Сравнение серийных номеров ФН
+            if (!string.Equals(frData.SerialNumberFN, piotData.FnSerial, StringComparison.OrdinalIgnoreCase))
+            {
+                await ShowComparisonError("Серийный номер ФН", frData.SerialNumberFN, piotData.FnSerial, owner);
+                complete = false;
+            }
+
+            return complete;
+        }
+
+        private async static Task ShowComparisonError(string fieldName, string frValue, string piotValue,Window owner)
+        {
+            await MessageBoxHelper.Show($"{fieldName} в ККТ = {frValue ?? "не указан"}, а в ПИОТ зарегистрирован {fieldName.ToLower()} = {piotValue ?? "не указан"}", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
+        }
+
+        // 5. Зона ответственности: Вывод результата проверки
+        private async static Task ShowVerificationResult(bool isComplete,Window owner)
+        {
+            if (!isComplete)
+            {
+                await MessageBoxHelper.Show("При проверке соединения с ПИОТ и сопоставлении данных между ПИОТ и ФР произошли ошибки", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
+            }
+            else
+            {
+                await MessageBoxHelper.Show("Проверка соединения с ПИОТ и сопоставление данных между ПИОТ и ФР прошла успешно", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Info, owner);
+            }
+        }
+
+        // Вспомогательные классы для передачи данных между методами
+        private class FiscalRegistrarData
+        {
+            public string SerialNumber { get; set; }
+            public string SerialNumberFN { get; set; }
+            public string OrganizationVATIN { get; set; }
+        }
+
+        private class PIOTData
+        {
+            public string KktSerial { get; set; }
+            public string KktInn { get; set; }
+            public string FnSerial { get; set; }
+        }
+
         //public static void fiscall_print()
         //{
         //    Mini_FP_6 mini = new Mini_FP_6();            
@@ -5559,6 +5872,7 @@ namespace Cash8Avalon
         #endregion
     }
     
+
 
 
     //        // Простой вызов (как было):

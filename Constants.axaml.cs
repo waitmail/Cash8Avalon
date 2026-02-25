@@ -19,9 +19,14 @@ namespace Cash8Avalon
     {
         private int m_cash_desk_number = 0;
 
+        private Button btnCheckPiot = null;
+
         public Constants()
         {
             InitializeComponent();
+            
+            btnCheckPiot = this.FindControl<Button>("btn_check_piot");
+            btnCheckPiot.Click += BtnCheckPiot_Click;
 
             // Устанавливаем шрифт для всего окна
             this.FontFamily = new FontFamily("Segoe UI");
@@ -46,6 +51,14 @@ namespace Cash8Avalon
                     this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                     this.Owner = desktop.MainWindow;
                 }
+            }
+        }
+
+        private async void BtnCheckPiot_Click(object? sender, RoutedEventArgs e)
+        {
+            if (await MainStaticClass.CheckPiotAvailable(this))
+            {
+                await MessageBoxHelper.Show("Пиот доступен, все настройки верны.","Проверка доступности ПИот");
             }
         }
 
@@ -212,7 +225,7 @@ namespace Cash8Avalon
                         get_weight_automatically, scale_serial_port,
                         variant_connect_fn, fn_ipaddr, acquiring_bank, 
                         constant_conversion_to_kilograms, nds_ip, ip_adress_local_ch_z,
-                        include_piot FROM constants LIMIT 1";
+                        include_piot,piot_url FROM constants LIMIT 1";
 
                 using (var command = new NpgsqlCommand(query, conn))
                 using (var reader = command.ExecuteReader())
@@ -237,7 +250,11 @@ namespace Cash8Avalon
                         var comboBoxScalePort = this.FindControl<ComboBox>("comboBox_scale_port");
                         var comboBoxAcquiringBank = this.FindControl<ComboBox>("comboBox_acquiring_bank");
                         var txtIpAddrLmChZ = this.FindControl<TextBox>("txtB_ip_addr_lm_ch_z");
+                                                
+                        var txtPiotUrl = this.FindControl<TextBox>("txtB_piot_url");
+
                         var comboBoxNdsIp = this.FindControl<ComboBox>("comboBox_nds_ip");
+
 
                         if (nickShop != null) nickShop.Text = reader["nick_shop"].ToString();
                         if (cashDeskNumber != null) cashDeskNumber.Text = reader["cash_desk_number"].ToString();
@@ -320,6 +337,9 @@ namespace Cash8Avalon
                             if (ndsIndex >= 0 && ndsIndex < comboBoxNdsIp.Items.Count)
                                 comboBoxNdsIp.SelectedIndex = ndsIndex;
                         }
+
+
+                        txtPiotUrl.Text = reader["piot_url"].ToString();
                     }
                 }
             }
@@ -498,6 +518,10 @@ namespace Cash8Avalon
             var txtIpAddressAcquiringTerminal = this.FindControl<TextBox>("txtB_ip_address_acquiring_terminal");
             var txtConstantConversion = this.FindControl<TextBox>("txtB_constant_conversion_to_kilograms");
 
+            var txtPiotUrl = this.FindControl<TextBox>("txtB_piot_url");
+
+
+
             if (cashDeskNumber == null || nickShop == null || unloadingPeriod == null ||
                 comboBoxSystemTaxation == null || txtB_version_fn == null)
             {
@@ -557,6 +581,7 @@ namespace Cash8Avalon
             string printing_using_libraries = (checkBoxPrinting?.IsChecked == true) ? "true" : "false";
             string get_weight_automatically = (checkBoxWeight?.IsChecked == true) ? "true" : "false";
             string include_piot = (checkBoxPIot?.IsChecked == true) ? "true" : "false";
+            string piot_url     = txtPiotUrl.Text.Trim();
 
             string fn_serial_port = comboBoxFnPort?.SelectedIndex >= 0 ? comboBoxFnPort.SelectedItem?.ToString() ?? "" : "";
             string scale_serial_port = comboBoxScalePort?.SelectedIndex >= 0 ? comboBoxScalePort.SelectedItem?.ToString() ?? "" : "";
@@ -597,7 +622,8 @@ namespace Cash8Avalon
                     "constant_conversion_to_kilograms=" + constantConversion + "," +
                     "nds_ip=" + nds_ip + "," +
                     "ip_adress_local_ch_z='" + ipAddrLmChZ + "'," +
-                    "include_piot=" + include_piot;
+                    "include_piot=" + include_piot + "," +
+                    "piot_url='" + txtPiotUrl.Text.Trim() + "'";
 
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 int resul_update = command.ExecuteNonQuery();
@@ -622,7 +648,8 @@ namespace Cash8Avalon
                         "constant_conversion_to_kilograms," +
                         "nds_ip," +
                         "ip_adress_local_ch_z," +
-                        "include_piot) VALUES(" +
+                        "include_piot," +
+                        "piot_url) VALUES(" +
                         cashDeskNumber.Text + ",'" +
                         nickShop.Text + "'," +
                         periodText + ",'" +
@@ -641,7 +668,8 @@ namespace Cash8Avalon
                         constantConversion + "," +
                         nds_ip + ",'" +
                         ipAddrLmChZ + "'," +
-                        include_piot + ")";
+                        include_piot + ",'"+
+                        piot_url+"')";
 
                     command = new NpgsqlCommand(query, conn);
                     command.ExecuteNonQuery();

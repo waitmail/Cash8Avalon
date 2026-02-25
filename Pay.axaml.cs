@@ -1014,7 +1014,7 @@ namespace Cash8Avalon
                 (double.Parse(txtB_cash_sum.Text) +
                 double.Parse(pay_bonus_many.Text) +
                 get_non_cash_sum() +
-                double.Parse(sertificates_sum.Text) - double.Parse(pay_sum.Text)), 2).ToString("F", System.Globalization.CultureInfo.CurrentCulture);
+                double.Parse(sertificates_sum.Text) - double.Parse(pay_sum.Text)), 2).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
 
                 //if (Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) + double.Parse(non_cash_sum.Text) +
                 //double.Parse(sertificates_sum.Text) + double.Parse(pay_bonus_many.Text) +
@@ -1188,6 +1188,26 @@ namespace Cash8Avalon
             await it_is_paid();
         }
 
+        /// <summary>
+        /// Конвертирует рубли и копейки в целое число копеек (строка для XML)
+        /// Пример: "10" + "05" → "1005" (10.05 руб = 1005 коп)
+        /// </summary>
+        private string CalculateMoneyInKopecks(string rublesText, string kopecksText)
+        {
+            // 🔥 Парсим рубли
+            if (!long.TryParse(rublesText?.Trim(), out long rubles) || rubles < 0)
+                rubles = 0;
+
+            // 🔥 Парсим копейки (только цифры, 0-99)
+            string kopRaw = kopecksText?.Trim() ?? "";
+            if (!int.TryParse(new string(kopRaw.Where(char.IsDigit).Take(2).ToArray()), out int kopecks))
+                kopecks = 0;
+            kopecks = Math.Max(0, Math.Min(99, kopecks));
+
+            // 🔥 Итог: целое число копеек (без десятичной точки!)
+            return (rubles * 100 + kopecks).ToString();
+        }
+
         /*Оплачено
         *Это процедура записи документа в базу данных AnswerTerminal
         */
@@ -1220,13 +1240,15 @@ namespace Cash8Avalon
 
                 //параметры подключение терминала заполнены и сумма по карте к оплате заполнена
                 double notCashSum = Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100;
+                //double notCashSum = Convert.ToDouble(CalculateMoneyInKopecks(this.non_cash_sum.Text.Trim(), non_cash_sum_kop.Text.Trim()));
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
                 {
                     if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
                     {
 
-                        string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
+                        //string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
+                        string money = CalculateMoneyInKopecks(this.non_cash_sum.Text.Trim(), non_cash_sum_kop.Text.Trim());
 
                         if (MainStaticClass.GetAcquiringBank == 1) //РНКБ
                         {

@@ -190,14 +190,7 @@ namespace Cash8Avalon
             //    LoadProgramFromInternet loadProgramFromInternet = new LoadProgramFromInternet();
             //}           
 
-            // Быстрая проверка в фоне
-            bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
-
-            if (hasUpdate)
-            {
-                // Показываем модальное окно обновления
-                await ShowUpdateWindowModalAsync();
-            }
+           
 
             // 2. Проверка файла конфигурации
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
@@ -214,7 +207,16 @@ namespace Cash8Avalon
             
             Console.WriteLine($"Загружаем конфигурацию из: {configPath}");            
             MainStaticClass.loadConfig(configPath);
-            Console.WriteLine($"? Конфиг загружен: {configPath}");            
+            Console.WriteLine($"? Конфиг загружен: {configPath}");
+
+            // Быстрая проверка в фоне
+            bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+
+            if (hasUpdate)
+            {
+                // Показываем модальное окно обновления
+                await ShowUpdateWindowModalAsync();
+            }
 
             base.OnOpened(e);
             UpdateMenuVisibility(0);

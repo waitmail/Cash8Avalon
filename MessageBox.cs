@@ -1632,17 +1632,26 @@ public static class MessageBox
         };
     }
 
-    private static string GetIconEmoji(MessageBoxType type)
+    //private static string GetIconEmoji(MessageBoxType type)
+    //{
+    //    return type switch
+    //    {
+    //        MessageBoxType.Info => "ℹ️",
+    //        MessageBoxType.Warning => "⚠️",
+    //        MessageBoxType.Error => "❌",
+    //        MessageBoxType.Question => "❓",
+    //        _ => "💬"
+    //    };
+    //}
+
+    private static string GetIconEmoji(MessageBoxType type) => type switch
     {
-        return type switch
-        {
-            MessageBoxType.Info => "ℹ️",
-            MessageBoxType.Warning => "⚠️",
-            MessageBoxType.Error => "❌",
-            MessageBoxType.Question => "❓",
-            _ => "💬"
-        };
-    }
+        MessageBoxType.Info => "\u2139",  // ℹ
+        MessageBoxType.Warning => "\u26A0",  // ⚠
+        MessageBoxType.Error => "\u274C",  // ❌
+        MessageBoxType.Question => "\u2753",  // ❓
+        _ => "\u2022"   // • (BMP-символ вместо 💬)
+    };   
 }
 
 // ========== УПРОЩЁННЫЙ HELPER ==========
