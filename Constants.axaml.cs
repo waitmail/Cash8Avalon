@@ -56,10 +56,12 @@ namespace Cash8Avalon
 
         private async void BtnCheckPiot_Click(object? sender, RoutedEventArgs e)
         {
-            if (await MainStaticClass.CheckPiotAvailable(this))
-            {
-                await MessageBoxHelper.Show("Пиот доступен, все настройки верны.","Проверка доступности ПИот");
-            }
+            //if (await MainStaticClass.CheckPiotAvailable(this))
+            //{
+            //    await MessageBoxHelper.Show("Пиот доступен, все настройки верны.","Проверка доступности ПИот");
+            //}
+
+            await MainStaticClass.CheckPiotAvailable(this);            
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
