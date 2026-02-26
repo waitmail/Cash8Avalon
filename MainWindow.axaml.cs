@@ -207,22 +207,22 @@ namespace Cash8Avalon
             
             Console.WriteLine($"Загружаем конфигурацию из: {configPath}");            
             MainStaticClass.loadConfig(configPath);
-            Console.WriteLine($"? Конфиг загружен: {configPath}");
-
-            // Быстрая проверка в фоне
-            bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
-
-            if (hasUpdate)
-            {
-                // Показываем модальное окно обновления
-                await ShowUpdateWindowModalAsync();
-            }
+            Console.WriteLine($"? Конфиг загружен: {configPath}");            
 
             base.OnOpened(e);
             UpdateMenuVisibility(0);
             GetUsers();
             // Ждем пока окно появится на экране
-            await Task.Delay(50);            
+            await Task.Delay(50);
+
+            // Быстрая проверка в фоне
+            //bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+
+            //if (hasUpdate)
+            //{
+            //    // Показываем модальное окно обновления
+            //    await ShowUpdateWindowModalAsync();
+            //}
 
             // Создаем окно авторизации
             var loginWindow = new Interface_switching();
@@ -240,6 +240,8 @@ namespace Cash8Avalon
                 loginSuccess = false;
                 loginWindow.Close();
             };
+
+
             //loginWindow.input_barcode.Focus();
             // Показываем как модальное окно
             await loginWindow.ShowDialog(this);
@@ -374,6 +376,8 @@ namespace Cash8Avalon
                     //this.DataContext = new MainViewModel();
                     _viewModel.OpenCashChecks();
 
+                   
+
                 }
                 catch (Exception ex)
                 {
@@ -383,12 +387,21 @@ namespace Cash8Avalon
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                     this.Close();
                 }
+
+                //bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+
+                //if (hasUpdate)
+                //{
+                //    // Показываем модальное окно обновления
+                //    await ShowUpdateWindowModalAsync();
+                //}
             }
             else
             {
                 // Закрываем главное окно при отмене
                 this.Close();
             }
+           
         }
 
         public class Users

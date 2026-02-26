@@ -4010,14 +4010,15 @@ namespace Cash8Avalon
                         }
                     }
                     else
-                    {
-                        await ActivateWindow(this);
+                    {                        
                         if (!await MainStaticClass.cdn_check(productData, marking_code, this))
                         {
                             await ShowTovarNotFoundWindow(this);
                             this.Focus();
+                            await ActivateWindow(this);
                             return;
                         }
+                        await ActivateWindow(this);
                     }
                 }
 

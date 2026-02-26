@@ -705,16 +705,24 @@ namespace Cash8Avalon
         /// Добавление ячейки со стилями
         /// </summary>
         private void AddStyledCell(int column, int row, string text,
-                                  HorizontalAlignment alignment,
-                                  double fontSize, FontWeight fontWeight, FontStyle fontStyle,
-                                  IBrush foreground, TextDecorationCollection textDecorations)
+    HorizontalAlignment textAlignment,  // переименовали для ясности
+    double fontSize, FontWeight fontWeight, FontStyle fontStyle,
+    IBrush foreground, TextDecorationCollection textDecorations)
         {
             var textBlock = new TextBlock
             {
                 Text = text,
                 Margin = new Thickness(5, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = alignment,
+
+                // ✅ Ячейка растягивается на всю ширину колонки
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+
+                // ✅ А текст внутри выравнивается как нужно
+                TextAlignment = textAlignment == HorizontalAlignment.Left ? TextAlignment.Left :
+                               textAlignment == HorizontalAlignment.Right ? TextAlignment.Right :
+                               TextAlignment.Center,
+
                 FontSize = fontSize,
                 FontWeight = fontWeight,
                 FontStyle = fontStyle,
@@ -1963,7 +1971,7 @@ namespace Cash8Avalon
                                         // 2. client_name - text/varchar (может быть NULL)
                                         checkItem.ClientName = reader.IsDBNull(ordinals.ClientName)
                                             ? ""
-                                            : reader.GetString(ordinals.ClientName);
+                                            : reader.GetString(ordinals.ClientName).Trim();
 
                                         // 3. cash - numeric/decimal
                                         checkItem.Cash = reader.IsDBNull(ordinals.Cash)
@@ -1978,7 +1986,7 @@ namespace Cash8Avalon
                                         // 5. comment - text/varchar
                                         checkItem.Comment = reader.IsDBNull(ordinals.Comment)
                                             ? ""
-                                            : reader.GetString(ordinals.Comment);
+                                            : reader.GetString(ordinals.Comment).Trim();
 
                                         // 6. its_print - boolean
                                         checkItem.ItsPrint = reader.IsDBNull(ordinals.ItsPrint)

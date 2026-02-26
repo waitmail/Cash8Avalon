@@ -200,29 +200,18 @@ namespace Cash8Avalon
         {
             try
             {
-                //using (var conn = MainStaticClass.NpgsqlConn())
-                //{
-                //    conn.Open();
-                //    string query = "SELECT include_piot FROM constants LIMIT 1";
-                //    using (var command = new NpgsqlCommand(query, conn))
-                //    {
-                //        var result = command.ExecuteScalar();
-                //        return result != null && result != DBNull.Value
-                //            ? Convert.ToBoolean(result)
-                //            : false;
-                //    }
-                //}
-                //if (MainStaticClass.Nick_Shop == "A01")
-                //{
-                //    return true;
-                //}
-                //else
-                //{
-                //    return false;
-                //}
-
-                return MainStaticClass.Nick_Shop == "A01";
-
+                using (var conn = MainStaticClass.NpgsqlConn())
+                {
+                    conn.Open();
+                    string query = "SELECT include_piot FROM constants LIMIT 1";
+                    using (var command = new NpgsqlCommand(query, conn))
+                    {
+                        var result = command.ExecuteScalar();
+                        return result != null && result != DBNull.Value
+                            ? Convert.ToBoolean(result)
+                            : false;
+                    }
+                }
             }
             catch (Exception ex)
             {

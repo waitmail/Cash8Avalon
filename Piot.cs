@@ -2,6 +2,7 @@
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -229,7 +230,7 @@ namespace Cash8Avalon
             {
                 name = "Cash8Avalon",
                 version = "1.0.0",
-                id = "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                id = "fd69a394-6e87-4393-b8d6-a46102d177ad",//   "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                 token = "6ba7b810-9dad-11d1-80b4-00c04fd430c8" // Замените на реальный токен
             };
 
@@ -491,11 +492,11 @@ namespace Cash8Avalon
                     {
                         if (answer_check_mark.codes[0].errorCode == 10)
                         {
-                            await MessageBox.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки данный код не найден в БД ЧЗ", "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error);
+                            await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки данный код не найден в БД ЧЗ", "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
                         }
                         else
                         {
-                            await MessageBox.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки " + answer_check_mark.codes[0].message, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error);
+                            await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки " + answer_check_mark.codes[0].message, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
                         }
                         result_check = false;
                     }
@@ -503,8 +504,8 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка при запросе к ПИот", MessageBoxButton.OK, MessageBoxType.Error);
-                //MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + "  не пройдена криптографическая проверка."+ ex.Message, cash_Check.numdoc.ToString(), codes[0].ToString(), "1");
+                await MessageBoxHelper.Show(ex.Message+"\r\n"+ex.StackTrace, "Ошибка при запросе к ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + ex.Message + "\r\n" + ex.StackTrace, cash_Check.numdoc.ToString(), codes[0].ToString(), "2");
                 result_check = false;
             }
 
@@ -986,195 +987,233 @@ namespace Cash8Avalon
                 }
             }
 
+            //            public ApiResponse SendCodeRequest(string code, string url, ClientInfo clientInfo)
+            //            {
+            //                try
+            //                {
+            //                    // 🔥 1. Нормализуем URL — добавляем протокол, если отсутствует
+            //                    if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            //                        !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            //                    {
+            //                        // По умолчанию используем https для локального сервера с сертификатом
+            //                        url = "https://" + url.TrimStart('/');
+            //                    }
+
+            //                    // Создаем и заполняем объект данных
+            //                    var clientData = new ClientData
+            //                    {
+            //                        codes = new List<string> { code },
+            //                        client_info = clientInfo
+            //                    };
+
+            //                    // Сериализуем в JSON с помощью Newtonsoft.Json
+            //                    string jsonData = JsonConvert.SerializeObject(clientData);
+
+            //                    // 🔥 2. Настраиваем TLS протоколы (обязательно для современных серверов)
+            //                    ServicePointManager.SecurityProtocol =
+            //                        SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+
+            //                    // 🔥 3. ПРИНИМАЕМ САМОПОДПИСАННЫЕ СЕРТИФИКАТЫ (для локального сервера)
+            //                    ServicePointManager.ServerCertificateValidationCallback =
+            //                        (sender, certificate, chain, sslPolicyErrors) =>
+            //                        {
+            //                            // Для отладки можно логировать ошибки сертификатов
+            ////#if DEBUG
+            ////                            if (sslPolicyErrors != SslPolicyErrors.None)
+            ////                            {
+            ////                                System.Diagnostics.Debug.WriteLine(
+            ////                                    $"[CDN] Cert warning: {sslPolicyErrors}, Subject: {certificate?.Subject}, Issuer: {certificate?.Issuer}");
+            ////                            }
+            ////#endif
+            //                            // ✅ Принимаем все сертификаты (только для локального/тестового сервера!)
+            //                            return true;
+            //                        };
+
+            //                    // 🔥 4. Отключаем проверку отзыва сертификата (для локального сервера)
+            //                    ServicePointManager.CheckCertificateRevocationList = false;
+
+            //                    var request = (HttpWebRequest)WebRequest.Create(url);
+            //                    request.Timeout = 1500; // 1.5 секунды таймаут
+            //                    request.Method = "POST";
+            //                    request.ContentType = "application/json";
+            //                    request.Accept = "application/json";
+            //                    request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+            //                    // 🔥 5. Записываем данные в тело запроса с явной кодировкой UTF-8
+            //                    using (var stream = request.GetRequestStream())
+            //                    using (var writer = new StreamWriter(stream, Encoding.UTF8))
+            //                    {
+            //                        writer.Write(jsonData);
+            //                        writer.Flush();
+            //                    }
+
+            //                    // Получаем ответ
+            //                    using (var response = (HttpWebResponse)request.GetResponse())
+            //                    using (var responseStream = response.GetResponseStream())
+            //                    using (var reader = new StreamReader(responseStream, Encoding.UTF8))
+            //                    {
+            //                        string result = reader.ReadToEnd();
+            //                        return ApiResponse.CreateSuccess(result, (int)response.StatusCode);
+            //                    }
+            //                }
+            //                catch (WebException ex)
+            //                {
+            //                    // 🔥 6. Детальное логирование для диагностики
+            //                    System.Diagnostics.Debug.WriteLine($"[CDN] WebException: Status={ex.Status}, Message={ex.Message}");
+            //                    if (ex.InnerException != null)
+            //                    {
+            //                        System.Diagnostics.Debug.WriteLine($"[CDN] Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+
+            //                        // 🔥 Ключевое: если AuthenticationException — это проблема сертификата
+            //                        if (ex.InnerException is System.Security.Authentication.AuthenticationException authEx)
+            //                        {
+            //                            System.Diagnostics.Debug.WriteLine($"[CDN] ❗ СЕРТИФИКАТ: {authEx.Message}");
+            //                        }
+            //                    }
+
+            //                    int? statusCode = null;
+            //                    Exception exceptionToReturn = ex;
+
+            //                    if (ex.Response != null)
+            //                    {
+            //                        try
+            //                        {
+            //                            using (var errorResponse = (HttpWebResponse)ex.Response)
+            //                            using (var reader = new StreamReader(errorResponse.GetResponseStream(), Encoding.UTF8))
+            //                            {
+            //                                string errorText = reader.ReadToEnd();
+            //                                statusCode = (int)errorResponse.StatusCode;
+            //                                exceptionToReturn = new Exception($"HTTP Error: {statusCode} - {errorText}", ex);
+            //                            }
+            //                        }
+            //                        catch
+            //                        {
+            //                            // Игнорируем ошибки чтения тела ошибки
+            //                        }
+            //                    }
+
+            //                    return ApiResponse.CreateError(exceptionToReturn, statusCode);
+            //                }
+            //                catch (TimeoutException ex)
+            //                {
+            //                    System.Diagnostics.Debug.WriteLine($"[CDN] Timeout: {ex.Message}");
+            //                    return ApiResponse.CreateError(ex);
+            //                }
+            //                catch (Exception ex)
+            //                {
+            //                    System.Diagnostics.Debug.WriteLine($"[CDN] Unexpected error: {ex.GetType().Name}: {ex.Message}");
+            //                    return ApiResponse.CreateError(ex);
+            //                }
+            //            }
+
             public ApiResponse SendCodeRequest(string code, string url, ClientInfo clientInfo)
             {
                 try
                 {
-                    // 🔥 1. Нормализуем URL — добавляем протокол, если отсутствует
+                    // 🔥 0. Очищаем код от BOM и мусора
+                    //string cleanCode = CleanMarkingCode(code);
+
+                    // 🔥 Логирование для отладки (удалите в продакшене)
+                    //Debug.WriteLine($"[CDN] Original code bytes: {BitConverter.ToString(Encoding.UTF8.GetBytes(code))}");
+                    //Debug.WriteLine($"[CDN] Cleaned code: '{cleanCode}'");
+                    //Debug.WriteLine($"[CDN] Cleaned code bytes: {BitConverter.ToString(Encoding.UTF8.GetBytes(cleanCode))}");
+
+                    // 🔥 1. Нормализуем URL
                     if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                         !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
-                        // По умолчанию используем https для локального сервера с сертификатом
                         url = "https://" + url.TrimStart('/');
                     }
 
-                    // Создаем и заполняем объект данных
+                    // 🔥 2. Создаем данные с очищенным кодом
                     var clientData = new ClientData
                     {
-                        codes = new List<string> { code },
+                        codes = new List<string> { code },  // ✅ Используем cleanCode
                         client_info = clientInfo
                     };
 
-                    // Сериализуем в JSON с помощью Newtonsoft.Json
-                    string jsonData = JsonConvert.SerializeObject(clientData);
+                    // 🔥 3. Сериализуем с настройками для безопасности
+                    var jsonSettings = new JsonSerializerSettings
+                    {
+                        StringEscapeHandling = StringEscapeHandling.EscapeNonAscii,
+                        NullValueHandling = NullValueHandling.Ignore
+                    };
+                    string jsonData = JsonConvert.SerializeObject(clientData, jsonSettings);
 
-                    // 🔥 2. Настраиваем TLS протоколы (обязательно для современных серверов)
+                    // 🔥 4. Логируем отправляемый JSON (для отладки)
+                    Debug.WriteLine($"[CDN] Sending JSON: {jsonData}");
+
+                    // 🔥 5. Настраиваем TLS и сертификаты
                     ServicePointManager.SecurityProtocol =
                         SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
 
-                    // 🔥 3. ПРИНИМАЕМ САМОПОДПИСАННЫЕ СЕРТИФИКАТЫ (для локального сервера)
                     ServicePointManager.ServerCertificateValidationCallback =
-                        (sender, certificate, chain, sslPolicyErrors) =>
-                        {
-                            // Для отладки можно логировать ошибки сертификатов
-//#if DEBUG
-//                            if (sslPolicyErrors != SslPolicyErrors.None)
-//                            {
-//                                System.Diagnostics.Debug.WriteLine(
-//                                    $"[CDN] Cert warning: {sslPolicyErrors}, Subject: {certificate?.Subject}, Issuer: {certificate?.Issuer}");
-//                            }
-//#endif
-                            // ✅ Принимаем все сертификаты (только для локального/тестового сервера!)
-                            return true;
-                        };
+                        (sender, certificate, chain, sslPolicyErrors) => true;
 
-                    // 🔥 4. Отключаем проверку отзыва сертификата (для локального сервера)
                     ServicePointManager.CheckCertificateRevocationList = false;
 
                     var request = (HttpWebRequest)WebRequest.Create(url);
-                    request.Timeout = 1500; // 1.5 секунды таймаут
+                    request.Timeout = 1500;
                     request.Method = "POST";
                     request.ContentType = "application/json";
                     request.Accept = "application/json";
                     request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
-                    // 🔥 5. Записываем данные в тело запроса с явной кодировкой UTF-8
-                    using (var stream = request.GetRequestStream())
-                    using (var writer = new StreamWriter(stream, Encoding.UTF8))
+                    // 🔥 6. Записываем данные с UTF-8
+                    using (var stream = request.GetRequestStream())                  
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 8192, leaveOpen: false))
                     {
                         writer.Write(jsonData);
                         writer.Flush();
                     }
 
-                    // Получаем ответ
+                    // 🔥 7. Получаем ответ
                     using (var response = (HttpWebResponse)request.GetResponse())
                     using (var responseStream = response.GetResponseStream())
                     using (var reader = new StreamReader(responseStream, Encoding.UTF8))
                     {
                         string result = reader.ReadToEnd();
+                        Debug.WriteLine($"[CDN] Response: {result}");
                         return ApiResponse.CreateSuccess(result, (int)response.StatusCode);
                     }
                 }
                 catch (WebException ex)
                 {
-                    // 🔥 6. Детальное логирование для диагностики
-                    System.Diagnostics.Debug.WriteLine($"[CDN] WebException: Status={ex.Status}, Message={ex.Message}");
+                    Debug.WriteLine($"[CDN] WebException: Status={ex.Status}, Message={ex.Message}");
                     if (ex.InnerException != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[CDN] Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
-
-                        // 🔥 Ключевое: если AuthenticationException — это проблема сертификата
-                        if (ex.InnerException is System.Security.Authentication.AuthenticationException authEx)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[CDN] ❗ СЕРТИФИКАТ: {authEx.Message}");
-                        }
+                        Debug.WriteLine($"[CDN] Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
                     }
 
+                    // 🔥 Читаем тело ошибки
+                    string errorBody = null;
                     int? statusCode = null;
-                    Exception exceptionToReturn = ex;
 
-                    if (ex.Response != null)
+                    if (ex.Response is HttpWebResponse errorResponse)
                     {
+                        statusCode = (int)errorResponse.StatusCode;
                         try
                         {
-                            using (var errorResponse = (HttpWebResponse)ex.Response)
                             using (var reader = new StreamReader(errorResponse.GetResponseStream(), Encoding.UTF8))
                             {
-                                string errorText = reader.ReadToEnd();
-                                statusCode = (int)errorResponse.StatusCode;
-                                exceptionToReturn = new Exception($"HTTP Error: {statusCode} - {errorText}", ex);
+                                errorBody = reader.ReadToEnd();
+                                Debug.WriteLine($"[CDN] Error body: {errorBody}");
                             }
                         }
-                        catch
-                        {
-                            // Игнорируем ошибки чтения тела ошибки
-                        }
+                        catch { }
                     }
 
-                    return ApiResponse.CreateError(exceptionToReturn, statusCode);
-                }
-                catch (TimeoutException ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[CDN] Timeout: {ex.Message}");
-                    return ApiResponse.CreateError(ex);
+                    return ApiResponse.CreateError(
+                        new Exception($"HTTP {(int?)statusCode ?? 0}: {errorBody ?? ex.Message}", ex),
+                        statusCode);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[CDN] Unexpected error: {ex.GetType().Name}: {ex.Message}");
+                    Debug.WriteLine($"[CDN] Unexpected error: {ex.GetType().Name}: {ex.Message}");
+                    Debug.WriteLine(ex.StackTrace);
                     return ApiResponse.CreateError(ex);
                 }
-            }
-
-            //    public ApiResponse SendCodeRequest(string code, string url, ClientInfo clientInfo)
-            //    {
-            //        try
-            //        {
-            //            // Создаем и заполняем объект данных
-            //            var clientData = new ClientData
-            //            {
-            //                codes = new List<string> { code },
-            //                client_info = clientInfo
-            //            };
-
-            //            // Сериализуем в JSON с помощью Newtonsoft.Json
-            //            string jsonData = JsonConvert.SerializeObject(clientData);
-
-            //            // Настраиваем web-запрос
-            //            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
-
-            //            var request = (HttpWebRequest)WebRequest.Create(url);
-            //            //request.Timeout = MainStaticClass.PiotInfo.codesCheckTimeout == 0 ? 1500 : MainStaticClass.PiotInfo.codesCheckTimeout;
-            //            request.Timeout = 1500;
-            //            request.Method = "POST";
-            //            request.ContentType = "application/json";
-            //            request.Accept = "application/json";
-            //            request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-
-            //            // Записываем данные в тело запроса
-            //            using (var streamWriter = new StreamWriter(request.GetRequestStream()))
-            //            {
-            //                streamWriter.Write(jsonData);
-            //                streamWriter.Flush();
-            //            }
-
-            //            // Получаем ответ
-            //            using (var response = (HttpWebResponse)request.GetResponse())
-            //            using (var streamReader = new StreamReader(response.GetResponseStream()))
-            //            {
-            //                string result = streamReader.ReadToEnd();
-            //                return ApiResponse.CreateSuccess(result, (int)response.StatusCode);
-            //            }
-            //        }
-            //        catch (WebException ex)
-            //        {
-            //            int? statusCode = null;
-            //            Exception exceptionToReturn = ex;
-
-            //            if (ex.Response != null)
-            //            {
-            //                using (var errorResponse = (HttpWebResponse)ex.Response)
-            //                using (var reader = new StreamReader(errorResponse.GetResponseStream()))
-            //                {
-            //                    string errorText = reader.ReadToEnd();
-            //                    statusCode = (int)errorResponse.StatusCode;
-
-            //                    // Создаем исключение с деталями HTTP
-            //                    exceptionToReturn = new Exception($"HTTP Error: {statusCode} - {errorText}", ex);
-            //                }
-            //            }
-
-            //            return ApiResponse.CreateError(exceptionToReturn, statusCode);
-            //        }
-            //        catch (TimeoutException ex)
-            //        {
-            //            return ApiResponse.CreateError(ex);
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            return ApiResponse.CreateError(ex);
-            //        }
-            //    }
-            //}
+            }            
         }
     }
 }

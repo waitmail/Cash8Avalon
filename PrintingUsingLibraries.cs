@@ -786,7 +786,14 @@ namespace Cash8Avalon
                     }
                     if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
                     {
-                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT120);
+                        if (DateTime.Now.Year >= 2026)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT122);
+                        }
+                        else
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT120);
+                        }
                     }
                 }
                 else

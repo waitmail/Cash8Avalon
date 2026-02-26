@@ -335,10 +335,21 @@ namespace Cash8Avalon
 
                         if (comboBoxNdsIp != null && reader["nds_ip"] != DBNull.Value)
                         {
-                            int ndsIndex = Convert.ToInt32(reader["nds_ip"]);
-                            if (ndsIndex >= 0 && ndsIndex < comboBoxNdsIp.Items.Count)
-                                comboBoxNdsIp.SelectedIndex = ndsIndex;
+                            //int ndsIndex = Convert.ToInt32(reader["nds_ip"]);
+                            //if (ndsIndex >= 0 && ndsIndex < comboBoxNdsIp.Items.Count)
+                            //    comboBoxNdsIp.SelectedIndex = ndsIndex;
+                            int index = comboBoxNdsIp.Items.IndexOf(reader["nds_ip"].ToString());
+                            if (index == -1)
+                            {
+                                comboBoxNdsIp.SelectedIndex = 0;
+                            }
+                            else
+                            {
+                                comboBoxNdsIp.SelectedIndex = index;// Convert.ToInt16(reader["nds_ip"]);
+                            }
                         }
+
+                        
 
 
                         txtPiotUrl.Text = reader["piot_url"].ToString();
@@ -589,7 +600,16 @@ namespace Cash8Avalon
             string scale_serial_port = comboBoxScalePort?.SelectedIndex >= 0 ? comboBoxScalePort.SelectedItem?.ToString() ?? "" : "";
             string variant_connect_fn = comboBoxVariantConnectFn?.SelectedIndex >= 0 ? comboBoxVariantConnectFn.SelectedIndex.ToString() : "0";
             string fn_ipaddr = txtB_fn_ipaddr?.Text?.Trim() ?? "";
-            string nds_ip = comboBoxNdsIp?.SelectedIndex >= 0 ? comboBoxNdsIp.SelectedIndex.ToString() : "0";
+            //string nds_ip = comboBoxNdsIp?.SelectedIndex >= 0 ? comboBoxNdsIp.SelectedIndex.ToString() : "0";
+            string nds_ip = "";
+            if (comboBoxNdsIp.SelectedIndex > 0)
+            {
+                nds_ip = comboBoxNdsIp.SelectedItem.ToString();
+            }
+            else
+            {
+                nds_ip = "0";
+            }
             string idAcquirerTerminal = txtIdAcquiringTerminal?.Text ?? "";
             string ipAddressAcquiringTerminal = txtIpAddressAcquiringTerminal?.Text?.Trim() ?? "";
             string constantConversion = txtConstantConversion?.Text?.Trim() ?? "";

@@ -83,6 +83,7 @@ namespace Cash8Avalon
             public bool grayZone { get; set; }
             public int soldUnitCount { get; set; }
             public int innerUnitCount { get; set; }
+            public string message { get; set; }
         }
 
         public class AnswerCheckMark
@@ -92,6 +93,7 @@ namespace Cash8Avalon
             public List<Code> codes { get; set; }
             public string reqId { get; set; }
             public long reqTimestamp { get; set; }
+            
         }
 
         private CDN_List get_cdn_info()
@@ -596,6 +598,9 @@ namespace Cash8Avalon
 
             string body = JsonConvert.SerializeObject(check_mark, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             body = body.Replace("\\u001d", @"u001d");
+            //body = body.Replace("\u001d", @"\u001d");
+            //string marking_code = mark_str.Replace("\u001d", @"u001d");         
+
             error = false;
 
             //Если в результате все в таймаутах или недоступно тогда пробуем хоть куда то выполнить запрос.
@@ -662,7 +667,7 @@ namespace Cash8Avalon
                         error = false;
                         //StringBuilder sb = new StringBuilder();
 
-                        string s = "ТОВАР НЕ МОЖЕТ БЫТЬ ПРОДАН!\r\n";
+                        string s = "ТОВАР НЕ МОЖЕТ БЫТЬ ПРОДАН!\r\n"+answer_check_mark.codes[0].message+"\r\n";
                         if (!answer_check_mark.codes[0].isOwner)
                         {
                             if (answer_check_mark.codes[0].groupIds != null)

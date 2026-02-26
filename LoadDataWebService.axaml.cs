@@ -1,4 +1,4 @@
-//using Avalonia;
+п»ї//using Avalonia;
 //using Avalonia.Controls;
 //using Avalonia.Interactivity;
 //using Avalonia.Markup.Xaml;
@@ -18,7 +18,7 @@
 //{
 //    public partial class LoadDataWebService : Window
 //    {
-//        // Элементы управления
+//        // Р­Р»РµРјРµРЅС‚С‹ СѓРїСЂР°РІР»РµРЅРёСЏ
 //        private Button _btn_new_load;
 //        private ProgressBar _progressBar1;
 //        private TextBlock _statusText;
@@ -26,7 +26,7 @@
 //        private TextBlock _timeInfoText;
 //        private StackPanel _progressPanel;
 
-//        // Состояние загрузки
+//        // РЎРѕСЃС‚РѕСЏРЅРёРµ Р·Р°РіСЂСѓР·РєРё
 //        private CancellationTokenSource _cancellationTokenSource;
 //        private bool _isLoading = false;
 //        private readonly TimeSpan _loadTimeout = TimeSpan.FromMinutes(30);
@@ -59,7 +59,7 @@
 //            if (_btn_new_load != null)
 //                _btn_new_load.Click += Btn_new_load_Click;
 
-//            // Скрываем панель прогресса при старте
+//            // РЎРєСЂС‹РІР°РµРј РїР°РЅРµР»СЊ РїСЂРѕРіСЂРµСЃСЃР° РїСЂРё СЃС‚Р°СЂС‚Рµ
 //            if (_progressPanel != null)
 //                _progressPanel.IsVisible = false;
 
@@ -70,7 +70,7 @@
 //                _progressBar1.Value = 0;
 //        }
 
-//        #region Классы данных
+//        #region РљР»Р°СЃСЃС‹ РґР°РЅРЅС‹С…
 
 //        public class LoadPacketData : IDisposable
 //        {
@@ -230,13 +230,13 @@
 
 //            public void Dispose()
 //            {
-//                // Освобождение ресурсов
+//                // РћСЃРІРѕР±РѕР¶РґРµРЅРёРµ СЂРµСЃСѓСЂСЃРѕРІ
 //            }
 //        }
 
 //        #endregion
 
-//        #region Обработчики событий UI
+//        #region РћР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ UI
 
 //        private async void Btn_new_load_Click(object sender, RoutedEventArgs e)
 //        {
@@ -245,19 +245,19 @@
 
 //        #endregion
 
-//        #region Основная логика загрузки
+//        #region РћСЃРЅРѕРІРЅР°СЏ Р»РѕРіРёРєР° Р·Р°РіСЂСѓР·РєРё
 
 //        private async Task StartAsyncLoad()
 //        {
 //            if (_isLoading)
 //            {
-//                await MessageBox.Show("Загрузка уже выполняется", "Информация", owner: this);
+//                await MessageBox.Show("Р—Р°РіСЂСѓР·РєР° СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ", "РРЅС„РѕСЂРјР°С†РёСЏ", owner: this);
 //                return;
 //            }
 
 //            var result = await MessageBox.Show(
-//                "Выполнить загрузку данных из системы?",
-//                "Подтверждение",
+//                "Р’С‹РїРѕР»РЅРёС‚СЊ Р·Р°РіСЂСѓР·РєСѓ РґР°РЅРЅС‹С… РёР· СЃРёСЃС‚РµРјС‹?",
+//                "РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ",
 //                MessageBoxButton.YesNo,
 //                MessageBoxType.Question,
 //                this);
@@ -273,10 +273,10 @@
 //            {
 //                SetLoadingState(true);
 
-//                // Запускаем таймер для отображения времени
+//                // Р—Р°РїСѓСЃРєР°РµРј С‚Р°Р№РјРµСЂ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІСЂРµРјРµРЅРё
 //                StartTimer();
 
-//                // Запускаем загрузку в отдельном потоке
+//                // Р—Р°РїСѓСЃРєР°РµРј Р·Р°РіСЂСѓР·РєСѓ РІ РѕС‚РґРµР»СЊРЅРѕРј РїРѕС‚РѕРєРµ
 //                var loadTask = Task.Run(async () =>
 //                {
 //                    try
@@ -285,16 +285,16 @@
 //                    }
 //                    catch (OperationCanceledException)
 //                    {
-//                        return (false, "Операция отменена пользователем");
+//                        return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј");
 //                    }
 //                    catch (Exception ex)
 //                    {
-//                        Console.WriteLine($"Ошибка в задаче загрузки: {ex.Message}");
-//                        return (false, $"Ошибка при выполнении загрузки: {ex.Message}");
+//                        Console.WriteLine($"РћС€РёР±РєР° РІ Р·Р°РґР°С‡Рµ Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
+//                        return (false, $"РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
 //                    }
 //                }, _cancellationTokenSource.Token);
 
-//                // Таймаут загрузки
+//                // РўР°Р№РјР°СѓС‚ Р·Р°РіСЂСѓР·РєРё
 //                var timeoutTask = Task.Delay(_loadTimeout, _cancellationTokenSource.Token);
 
 //                var completedTask = await Task.WhenAny(loadTask, timeoutTask);
@@ -307,7 +307,7 @@
 
 //                var (success, errorMessage) = await loadTask;
 
-//                // Показываем результат только если не была отмена пользователем
+//                // РџРѕРєР°Р·С‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ С‚РѕР»СЊРєРѕ РµСЃР»Рё РЅРµ Р±С‹Р»Р° РѕС‚РјРµРЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј
 //                if (!_userCancelled)
 //                {
 //                    await HandleLoadResultAsync(success, errorMessage);
@@ -317,7 +317,7 @@
 //            {
 //                if (!_userCancelled)
 //                {
-//                    await MessageBox.Show($"Ошибка при запуске загрузки: {ex.Message}", "Ошибка", owner: this);
+//                    await MessageBox.Show($"РћС€РёР±РєР° РїСЂРё Р·Р°РїСѓСЃРєРµ Р·Р°РіСЂСѓР·РєРё: {ex.Message}", "РћС€РёР±РєР°", owner: this);
 //                }
 //            }
 //            finally
@@ -336,48 +336,48 @@
 
 //            try
 //            {
-//                // Этап 1: Подготовка (без очистки памяти!)
-//                await UpdateProgressAsync("Подготовка к загрузке...", 0);
+//                // Р­С‚Р°Рї 1: РџРѕРґРіРѕС‚РѕРІРєР° (Р±РµР· РѕС‡РёСЃС‚РєРё РїР°РјСЏС‚Рё!)
+//                await UpdateProgressAsync("РџРѕРґРіРѕС‚РѕРІРєР° Рє Р·Р°РіСЂСѓР·РєРµ...", 0);
 //                await PrepareForLoadAsync(cancellationToken, skipClearMemory: true);
 
 //                if (cancellationToken.IsCancellationRequested)
-//                    return (false, "Операция отменена");
+//                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-//                // Этап 2: Проверка сервиса
-//                await UpdateProgressAsync("Проверка соединения с веб-сервисом...", 5);
+//                // Р­С‚Р°Рї 2: РџСЂРѕРІРµСЂРєР° СЃРµСЂРІРёСЃР°
+//                await UpdateProgressAsync("РџСЂРѕРІРµСЂРєР° СЃРѕРµРґРёРЅРµРЅРёСЏ СЃ РІРµР±-СЃРµСЂРІРёСЃРѕРј...", 5);
 //                if (!await CheckServiceAvailabilityAsync(cancellationToken))
 //                {
-//                    return (false, "Веб-сервис недоступен");
+//                    return (false, "Р’РµР±-СЃРµСЂРІРёСЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ");
 //                }
 
 //                if (cancellationToken.IsCancellationRequested)
-//                    return (false, "Операция отменена");
+//                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-//                // Этап 3: Создание временных таблиц
-//                await UpdateProgressAsync("Подготовка временных таблиц...", 10);
+//                // Р­С‚Р°Рї 3: РЎРѕР·РґР°РЅРёРµ РІСЂРµРјРµРЅРЅС‹С… С‚Р°Р±Р»РёС†
+//                await UpdateProgressAsync("РџРѕРґРіРѕС‚РѕРІРєР° РІСЂРµРјРµРЅРЅС‹С… С‚Р°Р±Р»РёС†...", 10);
 //                await CreateTempTablesAsync(cancellationToken);
 
 //                if (cancellationToken.IsCancellationRequested)
-//                    return (false, "Операция отменена");
+//                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-//                // Этап 4: Получение данных с сервера
-//                await UpdateProgressAsync("Получение данных с сервера...", 15);
+//                // Р­С‚Р°Рї 4: РџРѕР»СѓС‡РµРЅРёРµ РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°
+//                await UpdateProgressAsync("РџРѕР»СѓС‡РµРЅРёРµ РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°...", 15);
 //                var serverData = await GetDataFromServerAsync(cancellationToken);
 //                if (!serverData.success)
 //                {
-//                    errorMessage = "Не удалось получить данные с сервера";
+//                    errorMessage = "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ СЃ СЃРµСЂРІРµСЂР°";
 //                    if (!string.IsNullOrEmpty(serverData.errorMessage))
 //                        errorMessage = serverData.errorMessage;
 //                    return (false, errorMessage);
 //                }
 
 //                if (cancellationToken.IsCancellationRequested)
-//                    return (false, "Операция отменена");
+//                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-//                // Теперь прогресс 20%, готовимся к вставке данных в БД
-//                await UpdateProgressAsync("Подготовка к сохранению данных...", 20);
+//                // РўРµРїРµСЂСЊ РїСЂРѕРіСЂРµСЃСЃ 20%, РіРѕС‚РѕРІРёРјСЃСЏ Рє РІСЃС‚Р°РІРєРµ РґР°РЅРЅС‹С… РІ Р‘Р”
+//                await UpdateProgressAsync("РџРѕРґРіРѕС‚РѕРІРєР° Рє СЃРѕС…СЂР°РЅРµРЅРёСЋ РґР°РЅРЅС‹С…...", 20);
 
-//                // Этап 5: Сохранение данных в БД - здесь прогресс будет идти от 20% до 80%
+//                // Р­С‚Р°Рї 5: РЎРѕС…СЂР°РЅРµРЅРёРµ РґР°РЅРЅС‹С… РІ Р‘Р” - Р·РґРµСЃСЊ РїСЂРѕРіСЂРµСЃСЃ Р±СѓРґРµС‚ РёРґС‚Рё РѕС‚ 20% РґРѕ 80%
 //                var saveResult = await SaveDataToDatabaseAsync(serverData.data, cancellationToken, 20, 80);
 //                if (!saveResult.success)
 //                {
@@ -385,34 +385,34 @@
 //                }
 
 //                if (cancellationToken.IsCancellationRequested)
-//                    return (false, "Операция отменена");
+//                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-//                // Этап 6: Финализация операций с БД
-//                await UpdateProgressAsync("Завершение операций с базой данных...", 85);
+//                // Р­С‚Р°Рї 6: Р¤РёРЅР°Р»РёР·Р°С†РёСЏ РѕРїРµСЂР°С†РёР№ СЃ Р‘Р”
+//                await UpdateProgressAsync("Р—Р°РІРµСЂС€РµРЅРёРµ РѕРїРµСЂР°С†РёР№ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…...", 85);
 //                await FinalizeLoadAsync(cancellationToken);
 
-//                // ТОЛЬКО ПОСЛЕ УСПЕШНОЙ ЗАГРУЗКИ В БД:
-//                // Этап 7: Очистка и перезаполнение памяти
-//                await UpdateProgressAsync("Обновление данных в памяти...", 90);
+//                // РўРћР›Р¬РљРћ РџРћРЎР›Р• РЈРЎРџР•РЁРќРћР™ Р—РђР“Р РЈР—РљР Р’ Р‘Р”:
+//                // Р­С‚Р°Рї 7: РћС‡РёСЃС‚РєР° Рё РїРµСЂРµР·Р°РїРѕР»РЅРµРЅРёРµ РїР°РјСЏС‚Рё
+//                await UpdateProgressAsync("РћР±РЅРѕРІР»РµРЅРёРµ РґР°РЅРЅС‹С… РІ РїР°РјСЏС‚Рё...", 90);
 //                var memoryResult = await RefreshMemoryDataAsync(cancellationToken);
 //                if (!memoryResult.success)
 //                {
-//                    // Это предупреждение, но не критическая ошибка
+//                    // Р­С‚Рѕ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ, РЅРѕ РЅРµ РєСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°
 //                    errorMessage = memoryResult.errorMessage;
-//                    Console.WriteLine($"Предупреждение при обновлении памяти: {errorMessage}");
+//                    Console.WriteLine($"РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё РїР°РјСЏС‚Рё: {errorMessage}");
 //                }
 
 //                if (cancellationToken.IsCancellationRequested)
-//                    return (false, "Операция отменена");
+//                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-//                await UpdateProgressAsync("Готово", 100);
+//                await UpdateProgressAsync("Р“РѕС‚РѕРІРѕ", 100);
 
 //                return (true, "");
 //            }
 //            catch (Exception ex)
 //            {
 //                Console.WriteLine($"ERROR in PerformFullLoadAsync: {ex.Message}");
-//                return (false, $"Ошибка при выполнении загрузки: {ex.Message}");
+//                return (false, $"РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
 //            }
 //        }
 
@@ -420,36 +420,36 @@
 //        {
 //            try
 //            {
-//                // 0. Устанавливаем владельца для InventoryManager
-//                // Это простое присваивание статического поля, не требует UI потока
+//                // 0. РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІР»Р°РґРµР»СЊС†Р° РґР»СЏ InventoryManager
+//                // Р­С‚Рѕ РїСЂРѕСЃС‚РѕРµ РїСЂРёСЃРІР°РёРІР°РЅРёРµ СЃС‚Р°С‚РёС‡РµСЃРєРѕРіРѕ РїРѕР»СЏ, РЅРµ С‚СЂРµР±СѓРµС‚ UI РїРѕС‚РѕРєР°
 //                InventoryManager.SetOwnerWindow(this);
 
-//                // 1. Очищаем кэш в памяти
-//                await UpdateProgressAsync("Очистка кэша в памяти...", 85);
+//                // 1. РћС‡РёС‰Р°РµРј РєСЌС€ РІ РїР°РјСЏС‚Рё
+//                await UpdateProgressAsync("РћС‡РёСЃС‚РєР° РєСЌС€Р° РІ РїР°РјСЏС‚Рё...", 85);
 
-//                // ClearDictionaryProductData тоже не требует UI потока (простая работа с коллекциями)
+//                // ClearDictionaryProductData С‚РѕР¶Рµ РЅРµ С‚СЂРµР±СѓРµС‚ UI РїРѕС‚РѕРєР° (РїСЂРѕСЃС‚Р°СЏ СЂР°Р±РѕС‚Р° СЃ РєРѕР»Р»РµРєС†РёСЏРјРё)
 //                InventoryManager.ClearDictionaryProductData();
 
-//                // 2. Ждем немного для стабилизации
+//                // 2. Р–РґРµРј РЅРµРјРЅРѕРіРѕ РґР»СЏ СЃС‚Р°Р±РёР»РёР·Р°С†РёРё
 //                await Task.Delay(100, cancellationToken);
 
-//                // 3. Заполняем товары
-//                await UpdateProgressAsync("Загрузка товаров в память...", 90);
+//                // 3. Р—Р°РїРѕР»РЅСЏРµРј С‚РѕРІР°СЂС‹
+//                await UpdateProgressAsync("Р—Р°РіСЂСѓР·РєР° С‚РѕРІР°СЂРѕРІ РІ РїР°РјСЏС‚СЊ...", 90);
 //                try
 //                {
-//                    // Передаем текущее окно как владельца для MessageBox
+//                    // РџРµСЂРµРґР°РµРј С‚РµРєСѓС‰РµРµ РѕРєРЅРѕ РєР°Рє РІР»Р°РґРµР»СЊС†Р° РґР»СЏ MessageBox
 //                    await InventoryManager.FillDictionaryProductDataAsync(this);
 //                }
 //                catch (Exception ex)
 //                {
-//                    return (false, $"Ошибка при загрузке товаров в память: {ex.Message}");
+//                    return (false, $"РћС€РёР±РєР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ С‚РѕРІР°СЂРѕРІ РІ РїР°РјСЏС‚СЊ: {ex.Message}");
 //                }
 
-//                // 4. Загружаем акции (в фоне)
-//                await UpdateProgressAsync("Загрузка данных об акциях...", 95);
+//                // 4. Р—Р°РіСЂСѓР¶Р°РµРј Р°РєС†РёРё (РІ С„РѕРЅРµ)
+//                await UpdateProgressAsync("Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… РѕР± Р°РєС†РёСЏС…...", 95);
 //                try
 //                {
-//                    // DictionaryPriceGiftAction - это свойство, вызываем его для инициализации
+//                    // DictionaryPriceGiftAction - СЌС‚Рѕ СЃРІРѕР№СЃС‚РІРѕ, РІС‹Р·С‹РІР°РµРј РµРіРѕ РґР»СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
 //                    _ = Task.Run(() =>
 //                    {
 //                        try
@@ -458,30 +458,30 @@
 //                        }
 //                        catch (Exception ex)
 //                        {
-//                            Console.WriteLine($"Предупреждение: не удалось загрузить цены подарков: {ex.Message}");
+//                            Console.WriteLine($"РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ: РЅРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С†РµРЅС‹ РїРѕРґР°СЂРєРѕРІ: {ex.Message}");
 //                        }
 //                    }, cancellationToken);
 //                }
 //                catch (Exception ex)
 //                {
-//                    // Это не критическая ошибка, только логируем
-//                    Console.WriteLine($"Предупреждение при загрузке акций: {ex.Message}");
+//                    // Р­С‚Рѕ РЅРµ РєСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°, С‚РѕР»СЊРєРѕ Р»РѕРіРёСЂСѓРµРј
+//                    Console.WriteLine($"РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ РїСЂРё Р·Р°РіСЂСѓР·РєРµ Р°РєС†РёР№: {ex.Message}");
 //                }
 
-//                // 5. Проверяем, что кэш загружен
+//                // 5. РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РєСЌС€ Р·Р°РіСЂСѓР¶РµРЅ
 //                await Task.Delay(200, cancellationToken);
 
 //                if (!InventoryManager.completeDictionaryProductData)
 //                {
-//                    return (false, "Кэш товаров не был успешно загружен");
+//                    return (false, "РљСЌС€ С‚РѕРІР°СЂРѕРІ РЅРµ Р±С‹Р» СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅ");
 //                }
 
-//                await UpdateProgressAsync("Кэш памяти обновлен", 100);
+//                await UpdateProgressAsync("РљСЌС€ РїР°РјСЏС‚Рё РѕР±РЅРѕРІР»РµРЅ", 100);
 //                return (true, "");
 //            }
 //            catch (Exception ex)
 //            {
-//                return (false, $"Ошибка при обновлении данных в памяти: {ex.Message}");
+//                return (false, $"РћС€РёР±РєР° РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё РґР°РЅРЅС‹С… РІ РїР°РјСЏС‚Рё: {ex.Message}");
 //            }
 //        }
 
@@ -489,7 +489,7 @@
 //        {
 //            try
 //            {
-//                // Очищаем память только если явно не указано пропустить
+//                // РћС‡РёС‰Р°РµРј РїР°РјСЏС‚СЊ С‚РѕР»СЊРєРѕ РµСЃР»Рё СЏРІРЅРѕ РЅРµ СѓРєР°Р·Р°РЅРѕ РїСЂРѕРїСѓСЃС‚РёС‚СЊ
 //                if (!skipClearMemory)
 //                {
 //                    await Dispatcher.UIThread.InvokeAsync(() =>
@@ -501,12 +501,12 @@
 //                        }
 //                        catch (Exception ex)
 //                        {
-//                            Console.WriteLine($"Ошибка при очистке кэша: {ex.Message}");
+//                            Console.WriteLine($"РћС€РёР±РєР° РїСЂРё РѕС‡РёСЃС‚РєРµ РєСЌС€Р°: {ex.Message}");
 //                        }
 //                    });
 //                }
 
-//                // Сборка мусора
+//                // РЎР±РѕСЂРєР° РјСѓСЃРѕСЂР°
 //                await Task.Run(() =>
 //                {
 //                    try
@@ -521,11 +521,11 @@
 //            }
 //            catch (Exception ex)
 //            {
-//                Console.WriteLine($"Ошибка при подготовке: {ex.Message}");
+//                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё РїРѕРґРіРѕС‚РѕРІРєРµ: {ex.Message}");
 //            }
 //        }
 
-//        #region Таймер для отображения времени
+//        #region РўР°Р№РјРµСЂ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІСЂРµРјРµРЅРё
 
 //        private void StartTimer()
 //        {
@@ -537,7 +537,7 @@
 //                    {
 //                        var elapsed = _stopwatch.Elapsed;
 //                        if (_timeInfoText != null)
-//                            _timeInfoText.Text = $"Время загрузки: {elapsed:mm\\:ss}";
+//                            _timeInfoText.Text = $"Р’СЂРµРјСЏ Р·Р°РіСЂСѓР·РєРё: {elapsed:mm\\:ss}";
 //                    }
 //                });
 //            }, null, 0, 1000);
@@ -555,14 +555,14 @@
 //                Dispatcher.UIThread.InvokeAsync(() =>
 //                {
 //                    if (_timeInfoText != null)
-//                        _timeInfoText.Text = $"Общее время загрузки: {elapsed:mm\\:ss}";
+//                        _timeInfoText.Text = $"РћР±С‰РµРµ РІСЂРµРјСЏ Р·Р°РіСЂСѓР·РєРё: {elapsed:mm\\:ss}";
 //                });
 //            }
 //        }
 
 //        #endregion
 
-//        #region Методы загрузки
+//        #region РњРµС‚РѕРґС‹ Р·Р°РіСЂСѓР·РєРё
 
 //        private async Task<bool> CheckServiceAvailabilityAsync(CancellationToken cancellationToken)
 //        {
@@ -584,7 +584,7 @@
 //            }
 //            catch (Exception ex)
 //            {
-//                Console.WriteLine($"Ошибка при создании временных таблиц: {ex.Message}");
+//                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё РІСЂРµРјРµРЅРЅС‹С… С‚Р°Р±Р»РёС†: {ex.Message}");
 //            }
 //        }
 
@@ -597,13 +597,13 @@
 //                    string nick_shop = MainStaticClass.Nick_Shop?.Trim();
 //                    if (string.IsNullOrEmpty(nick_shop))
 //                    {
-//                        return (false, null, "Не удалось получить название магазина");
+//                        return (false, null, "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РЅР°Р·РІР°РЅРёРµ РјР°РіР°Р·РёРЅР°");
 //                    }
 
 //                    string code_shop = MainStaticClass.Code_Shop?.Trim();
 //                    if (string.IsNullOrEmpty(code_shop))
 //                    {
-//                        return (false, null, "Не удалось получить код магазина");
+//                        return (false, null, "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РјР°РіР°Р·РёРЅР°");
 //                    }
 
 //                    string count_day = CryptorEngine.get_count_day();
@@ -629,12 +629,12 @@
 
 //                        if (loadPacketData == null)
 //                        {
-//                            return (false, null, "Не удалось получить данные с сервера (null результат)");
+//                            return (false, null, "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ СЃ СЃРµСЂРІРµСЂР° (null СЂРµР·СѓР»СЊС‚Р°С‚)");
 //                        }
 
 //                        if (!loadPacketData.PacketIsFull)
 //                        {
-//                            string errorMsg = "Пакет данных не полный";
+//                            string errorMsg = "РџР°РєРµС‚ РґР°РЅРЅС‹С… РЅРµ РїРѕР»РЅС‹Р№";
 //                            if (!string.IsNullOrEmpty(loadPacketData.Exception))
 //                                errorMsg += $": {loadPacketData.Exception}";
 //                            return (false, null, errorMsg);
@@ -642,7 +642,7 @@
 
 //                        if (loadPacketData.Exchange)
 //                        {
-//                            return (false, null, "Пакет данных получен во время обновления данных на сервере");
+//                            return (false, null, "РџР°РєРµС‚ РґР°РЅРЅС‹С… РїРѕР»СѓС‡РµРЅ РІРѕ РІСЂРµРјСЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РґР°РЅРЅС‹С… РЅР° СЃРµСЂРІРµСЂРµ");
 //                        }
 
 //                        return (true, loadPacketData, "");
@@ -650,12 +650,12 @@
 //                }
 //                catch (Exception ex)
 //                {
-//                    return (false, null, $"Ошибка при получении данных с сервера: {ex.Message}");
+//                    return (false, null, $"РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°: {ex.Message}");
 //                }
 //            }, cancellationToken);
 //        }
 
-//        // Новая перегрузка метода с поддержкой прогресса
+//        // РќРѕРІР°СЏ РїРµСЂРµРіСЂСѓР·РєР° РјРµС‚РѕРґР° СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РїСЂРѕРіСЂРµСЃСЃР°
 //        private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
 //            LoadPacketData loadPacketData,
 //            CancellationToken cancellationToken,
@@ -677,7 +677,7 @@
 //                int totalQueries = queries.Count;
 //                int completedQueries = 0;
 
-//                // Рассчитываем прогресс для каждого запроса
+//                // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј РїСЂРѕРіСЂРµСЃСЃ РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·Р°РїСЂРѕСЃР°
 //                int progressRange = endProgress - startProgress;
 
 //                foreach (string query in queries)
@@ -692,14 +692,14 @@
 
 //                    completedQueries++;
 
-//                    // Рассчитываем текущий прогресс
+//                    // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С‚РµРєСѓС‰РёР№ РїСЂРѕРіСЂРµСЃСЃ
 //                    double progressPercentage = (double)completedQueries / totalQueries;
 //                    int currentProgress = startProgress + (int)(progressPercentage * progressRange);
 
-//                    await UpdateProgressAsync($"Выполнение запросов ({completedQueries}/{totalQueries})...", currentProgress);
+//                    await UpdateProgressAsync($"Р’С‹РїРѕР»РЅРµРЅРёРµ Р·Р°РїСЂРѕСЃРѕРІ ({completedQueries}/{totalQueries})...", currentProgress);
 //                }
 
-//                // Обновление даты последнего обновления
+//                // РћР±РЅРѕРІР»РµРЅРёРµ РґР°С‚С‹ РїРѕСЃР»РµРґРЅРµРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ
 //                string updateQuery = "UPDATE date_sync SET tovar = @date";
 //                using (var command = new NpgsqlCommand(updateQuery, conn))
 //                {
@@ -717,12 +717,12 @@
 
 //                await tran.CommitAsync(cancellationToken);
 
-//                // Отправка подтверждения
+//                // РћС‚РїСЂР°РІРєР° РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ
 //                try
 //                {
 //                    if (!await MainStaticClass.SendResultGetData())
 //                    {
-//                        Console.WriteLine("WARNING: Не удалось отправить информацию об успешной загрузке");
+//                        Console.WriteLine("WARNING: РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ РѕР± СѓСЃРїРµС€РЅРѕР№ Р·Р°РіСЂСѓР·РєРµ");
 //                    }
 //                }
 //                catch { }
@@ -731,8 +731,8 @@
 //            }
 //            catch (NpgsqlException ex)
 //            {
-//                string errorMsg = $"Ошибка базы данных: {ex.Message}";
-//                Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
+//                string errorMsg = $"РћС€РёР±РєР° Р±Р°Р·С‹ РґР°РЅРЅС‹С…: {ex.Message}";
+//                Console.WriteLine($"РћС€РёР±РєР° Npgsql: {ex.Message}");
 
 //                if (tran != null)
 //                {
@@ -743,8 +743,8 @@
 //            }
 //            catch (Exception ex)
 //            {
-//                string errorMsg = $"Ошибка при сохранении данных: {ex.Message}";
-//                Console.WriteLine($"Ошибка: {ex.Message}");
+//                string errorMsg = $"РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё РґР°РЅРЅС‹С…: {ex.Message}";
+//                Console.WriteLine($"РћС€РёР±РєР°: {ex.Message}");
 
 //                if (tran != null)
 //                {
@@ -765,32 +765,32 @@
 //            }
 //        }
 
-//        // Оригинальный метод для обратной совместимости
+//        // РћСЂРёРіРёРЅР°Р»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РѕР±СЂР°С‚РЅРѕР№ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
 //        private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
 //            LoadPacketData loadPacketData,
 //            CancellationToken cancellationToken)
 //        {
-//            // Вызываем новую перегрузку со значениями по умолчанию
+//            // Р’С‹Р·С‹РІР°РµРј РЅРѕРІСѓСЋ РїРµСЂРµРіСЂСѓР·РєСѓ СЃРѕ Р·РЅР°С‡РµРЅРёСЏРјРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
 //            return await SaveDataToDatabaseAsync(loadPacketData, cancellationToken, 0, 100);
 //        }
 
 //        private void PrepareDatabaseQueries(LoadPacketData loadPacketData, List<string> queries)
 //        {
-//            // Очистка таблиц
+//            // РћС‡РёСЃС‚РєР° С‚Р°Р±Р»РёС†
 //            queries.Add("DELETE FROM action_table");
 //            queries.Add("DELETE FROM action_header");
 //            queries.Add("DELETE FROM advertisement");
 
-//            // Обновление токена
+//            // РћР±РЅРѕРІР»РµРЅРёРµ С‚РѕРєРµРЅР°
 //            if (!string.IsNullOrEmpty(loadPacketData.TokenMark))
 //            {
 //                queries.Add($"UPDATE constants SET cdn_token='{EscapeSql(loadPacketData.TokenMark)}'");
 //            }
 
-//            // Создание временной таблицы для товаров
+//            // РЎРѕР·РґР°РЅРёРµ РІСЂРµРјРµРЅРЅРѕР№ С‚Р°Р±Р»РёС†С‹ РґР»СЏ С‚РѕРІР°СЂРѕРІ
 //            queries.Add("DELETE FROM tovar2");
 
-//            // Вставка товаров во временную таблицу
+//            // Р’СЃС‚Р°РІРєР° С‚РѕРІР°СЂРѕРІ РІРѕ РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ
 //            if (loadPacketData.ListTovar?.Count > 0)
 //            {
 //                foreach (var tovar in loadPacketData.ListTovar)
@@ -806,14 +806,14 @@
 //                }
 //            }
 
-//            // Обновление основной таблицы товаров
+//            // РћР±РЅРѕРІР»РµРЅРёРµ РѕСЃРЅРѕРІРЅРѕР№ С‚Р°Р±Р»РёС†С‹ С‚РѕРІР°СЂРѕРІ
 //            queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
 //            queries.Add(GetInsertQuery());
 //            queries.Add(GetUpdateQuery());
 //            queries.Add("DELETE FROM tovar2");
 //            queries.Add("DELETE FROM barcode");
 
-//            // Вставка штрихкодов
+//            // Р’СЃС‚Р°РІРєР° С€С‚СЂРёС…РєРѕРґРѕРІ
 //            if (loadPacketData.ListBarcode?.Count > 0)
 //            {
 //                foreach (var barcode in loadPacketData.ListBarcode)
@@ -822,7 +822,7 @@
 //                }
 //            }
 
-//            // Вставка характеристик
+//            // Р’СЃС‚Р°РІРєР° С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє
 //            if (loadPacketData.ListCharacteristic?.Count > 0)
 //            {
 //                queries.Add("DELETE FROM characteristic");
@@ -835,7 +835,7 @@
 //                }
 //            }
 
-//            // Вставка сертификатов
+//            // Р’СЃС‚Р°РІРєР° СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ
 //            queries.Add("DELETE FROM sertificates");
 //            if (loadPacketData.ListSertificate?.Count > 0)
 //            {
@@ -848,7 +848,7 @@
 //                }
 //            }
 
-//            // Вставка акций
+//            // Р’СЃС‚Р°РІРєР° Р°РєС†РёР№
 //            if (loadPacketData.ListActionHeader?.Count > 0)
 //            {
 //                foreach (var actionHeader in loadPacketData.ListActionHeader)
@@ -871,14 +871,14 @@
 //            }
 //            else
 //            {
-//                // Уведомление показывается через MessageBox.Show в основном потоке
+//                // РЈРІРµРґРѕРјР»РµРЅРёРµ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‡РµСЂРµР· MessageBox.Show РІ РѕСЃРЅРѕРІРЅРѕРј РїРѕС‚РѕРєРµ
 //                Dispatcher.UIThread.InvokeAsync(async () =>
 //                {
-//                    await MessageBox.Show("Нет данных по акциям", "Проверка наличия акций", MessageBoxButton.OK, MessageBoxType.Info);
+//                    await MessageBox.Show("РќРµС‚ РґР°РЅРЅС‹С… РїРѕ Р°РєС†РёСЏРј", "РџСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ Р°РєС†РёР№", MessageBoxButton.OK, MessageBoxType.Info);
 //                });
 //            }
 
-//            // Вставка табличных данных акций
+//            // Р’СЃС‚Р°РІРєР° С‚Р°Р±Р»РёС‡РЅС‹С… РґР°РЅРЅС‹С… Р°РєС†РёР№
 //            if (loadPacketData.ListActionTable?.Count > 0)
 //            {
 //                foreach (var actionTable in loadPacketData.ListActionTable)
@@ -890,7 +890,7 @@
 //                }
 //            }
 
-//            // Вставка рекламных текстов
+//            // Р’СЃС‚Р°РІРєР° СЂРµРєР»Р°РјРЅС‹С… С‚РµРєСЃС‚РѕРІ
 //            if (loadPacketData.ListPromoText?.Count > 0)
 //            {
 //                foreach (var promoText in loadPacketData.ListPromoText)
@@ -901,7 +901,7 @@
 //                }
 //            }
 
-//            // Вставка клиентов акций
+//            // Р’СЃС‚Р°РІРєР° РєР»РёРµРЅС‚РѕРІ Р°РєС†РёР№
 //            queries.Add("DELETE FROM action_clients");
 //            if (loadPacketData.ListActionClients?.Count > 0)
 //            {
@@ -933,8 +933,8 @@
 //                    await Dispatcher.UIThread.InvokeAsync(async () =>
 //                    {
 //                        await MessageBox.Show(
-//                            "Это была первая загрузка данных. Для применения новых параметров программа будет перезапущена.",
-//                            "Первая загрузка",
+//                            "Р­С‚Рѕ Р±С‹Р»Р° РїРµСЂРІР°СЏ Р·Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…. Р”Р»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ РЅРѕРІС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ РїСЂРѕРіСЂР°РјРјР° Р±СѓРґРµС‚ РїРµСЂРµР·Р°РїСѓС‰РµРЅР°.",
+//                            "РџРµСЂРІР°СЏ Р·Р°РіСЂСѓР·РєР°",
 //                            MessageBoxButton.OK,
 //                            MessageBoxType.Info,
 //                            this);
@@ -956,7 +956,7 @@
 
 //        #endregion
 
-//        #region Метод load_bonus_clients
+//        #region РњРµС‚РѕРґ load_bonus_clients
 
 //        public async Task load_bonus_clients(bool show_message)
 //        {
@@ -973,7 +973,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show("Веб сервис недоступен", "Ошибка", owner: this);
+//                            await MessageBox.Show("Р’РµР± СЃРµСЂРІРёСЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ", "РћС€РёР±РєР°", owner: this);
 //                        });
 //                    }
 //                    return;
@@ -989,7 +989,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show("Не удалось получить название магазина", "Ошибка", owner: this);
+//                            await MessageBox.Show("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РЅР°Р·РІР°РЅРёРµ РјР°РіР°Р·РёРЅР°", "РћС€РёР±РєР°", owner: this);
 //                        });
 //                    }
 //                    return;
@@ -1002,7 +1002,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show("Не удалось получить код магазина", "Ошибка", owner: this);
+//                            await MessageBox.Show("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РјР°РіР°Р·РёРЅР°", "РћС€РёР±РєР°", owner: this);
 //                        });
 //                    }
 //                    return;
@@ -1023,7 +1023,7 @@
 //                {
 //                    await Dispatcher.UIThread.InvokeAsync(async () =>
 //                    {
-//                        await MessageBox.Show(ex.Message, "Ошибка", owner: this);
+//                        await MessageBox.Show(ex.Message, "РћС€РёР±РєР°", owner: this);
 //                    });
 //                }
 
@@ -1033,7 +1033,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show("При обработке запроса на сервере произошли ошибки", "Ошибка", owner: this);
+//                            await MessageBox.Show("РџСЂРё РѕР±СЂР°Р±РѕС‚РєРµ Р·Р°РїСЂРѕСЃР° РЅР° СЃРµСЂРІРµСЂРµ РїСЂРѕРёР·РѕС€Р»Рё РѕС€РёР±РєРё", "РћС€РёР±РєР°", owner: this);
 //                        });
 //                    }
 //                    return;
@@ -1103,7 +1103,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show("Клиенты успешно загружены", "Успех", owner: this);
+//                            await MessageBox.Show("РљР»РёРµРЅС‚С‹ СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅС‹", "РЈСЃРїРµС…", owner: this);
 //                        });
 //                    }
 //                }
@@ -1113,7 +1113,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show(query + "\n" + ex.Message, "Ошибка при импорте данных", owner: this);
+//                            await MessageBox.Show(query + "\n" + ex.Message, "РћС€РёР±РєР° РїСЂРё РёРјРїРѕСЂС‚Рµ РґР°РЅРЅС‹С…", owner: this);
 //                        });
 //                    }
 //                    if (tran != null)
@@ -1127,7 +1127,7 @@
 //                    {
 //                        await Dispatcher.UIThread.InvokeAsync(async () =>
 //                        {
-//                            await MessageBox.Show(query + "\n" + ex.Message, "Ошибка при импорте данных", owner: this);
+//                            await MessageBox.Show(query + "\n" + ex.Message, "РћС€РёР±РєР° РїСЂРё РёРјРїРѕСЂС‚Рµ РґР°РЅРЅС‹С…", owner: this);
 //                        });
 //                    }
 //                    if (tran != null)
@@ -1145,7 +1145,7 @@
 //            }
 //            catch (Exception ex)
 //            {
-//                Console.WriteLine($"Ошибка в load_bonus_clients: {ex.Message}");
+//                Console.WriteLine($"РћС€РёР±РєР° РІ load_bonus_clients: {ex.Message}");
 //            }
 //        }
 
@@ -1182,7 +1182,7 @@
 
 //        #endregion
 
-//        #region Вспомогательные методы из оригинального кода
+//        #region Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ РјРµС‚РѕРґС‹ РёР· РѕСЂРёРіРёРЅР°Р»СЊРЅРѕРіРѕ РєРѕРґР°
 
 //        private void check_temp_tables()
 //        {
@@ -1215,7 +1215,7 @@
 //            }
 //            catch (Exception ex)
 //            {
-//                Console.WriteLine($"Ошибка при создании таблицы tovar2: {ex.Message}");
+//                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё С‚Р°Р±Р»РёС†С‹ tovar2: {ex.Message}");
 //            }
 //        }
 
@@ -1363,7 +1363,7 @@
 //            }
 //            catch (Exception ex)
 //            {
-//                Console.WriteLine($"Ошибка при проверке первой загрузки: {ex.Message}");
+//                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё РїСЂРѕРІРµСЂРєРµ РїРµСЂРІРѕР№ Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
 //            }
 
 //            return result;
@@ -1371,7 +1371,7 @@
 
 //        #endregion
 
-//        #region Методы для работы с UI
+//        #region РњРµС‚РѕРґС‹ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ UI
 
 //        private void SetLoadingState(bool isLoading)
 //        {
@@ -1430,8 +1430,8 @@
 //            await Dispatcher.UIThread.InvokeAsync(async () =>
 //            {
 //                await MessageBox.Show(
-//                    $"Загрузка превысила лимит времени ({_loadTimeout.TotalMinutes} минут)",
-//                    "Таймаут",
+//                    $"Р—Р°РіСЂСѓР·РєР° РїСЂРµРІС‹СЃРёР»Р° Р»РёРјРёС‚ РІСЂРµРјРµРЅРё ({_loadTimeout.TotalMinutes} РјРёРЅСѓС‚)",
+//                    "РўР°Р№РјР°СѓС‚",
 //                    owner: this);
 //            });
 //        }
@@ -1443,19 +1443,19 @@
 //                if (success)
 //                {
 //                    await MessageBox.Show(
-//                        "Загрузка данных успешно завершена",
-//                        "Успех",
+//                        "Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… СѓСЃРїРµС€РЅРѕ Р·Р°РІРµСЂС€РµРЅР°",
+//                        "РЈСЃРїРµС…",
 //                        owner: this);
 //                }
 //                else
 //                {
-//                    string message = "Не удалось выполнить загрузку данных";
+//                    string message = "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ Р·Р°РіСЂСѓР·РєСѓ РґР°РЅРЅС‹С…";
 //                    if (!string.IsNullOrEmpty(errorMessage))
-//                        message += $"\n\nПричина: {errorMessage}";
+//                        message += $"\n\nРџСЂРёС‡РёРЅР°: {errorMessage}";
 
 //                    await MessageBox.Show(
 //                        message,
-//                        "Ошибка",
+//                        "РћС€РёР±РєР°",
 //                        owner: this);
 //                }
 //            });
@@ -1475,8 +1475,8 @@
 //        private async void ShowCancelDialog()
 //        {
 //            var result = await MessageBox.Show(
-//                "Идет загрузка данных. Вы уверены, что хотите отменить?",
-//                "Подтверждение",
+//                "РРґРµС‚ Р·Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…. Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РѕС‚РјРµРЅРёС‚СЊ?",
+//                "РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ",
 //                MessageBoxButton.YesNo,
 //                MessageBoxType.Warning,
 //                this);
@@ -1486,7 +1486,7 @@
 //                _userCancelled = true;
 //                _cancellationTokenSource?.Cancel();
 
-//                // Закрываем окно после небольшой задержки для корректной отмены
+//                // Р—Р°РєСЂС‹РІР°РµРј РѕРєРЅРѕ РїРѕСЃР»Рµ РЅРµР±РѕР»СЊС€РѕР№ Р·Р°РґРµСЂР¶РєРё РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕС‚РјРµРЅС‹
 //                await Task.Delay(100);
 //                RequestClose?.Invoke(this, EventArgs.Empty);
 //            }
@@ -1520,7 +1520,7 @@ namespace Cash8Avalon
 {
     public partial class LoadDataWebService : Window
     {
-        // Элементы управления
+        // Р­Р»РµРјРµРЅС‚С‹ СѓРїСЂР°РІР»РµРЅРёСЏ
         private Button _btn_new_load;
         private ProgressBar _progressBar1;
         private TextBlock _statusText;
@@ -1528,7 +1528,7 @@ namespace Cash8Avalon
         private TextBlock _timeInfoText;
         private StackPanel _progressPanel;
 
-        // Состояние загрузки
+        // РЎРѕСЃС‚РѕСЏРЅРёРµ Р·Р°РіСЂСѓР·РєРё
         private CancellationTokenSource _cancellationTokenSource;
         private bool _isLoading = false;
         private readonly TimeSpan _loadTimeout = TimeSpan.FromMinutes(30);
@@ -1561,7 +1561,7 @@ namespace Cash8Avalon
             if (_btn_new_load != null)
                 _btn_new_load.Click += Btn_new_load_Click;
 
-            // Скрываем панель прогресса при старте
+            // РЎРєСЂС‹РІР°РµРј РїР°РЅРµР»СЊ РїСЂРѕРіСЂРµСЃСЃР° РїСЂРё СЃС‚Р°СЂС‚Рµ
             if (_progressPanel != null)
                 _progressPanel.IsVisible = false;
 
@@ -1572,7 +1572,7 @@ namespace Cash8Avalon
                 _progressBar1.Value = 0;
         }
 
-        #region Классы данных
+        #region РљР»Р°СЃСЃС‹ РґР°РЅРЅС‹С…
 
         public class LoadPacketData : IDisposable
         {
@@ -1732,13 +1732,13 @@ namespace Cash8Avalon
 
             public void Dispose()
             {
-                // Освобождение ресурсов
+                // РћСЃРІРѕР±РѕР¶РґРµРЅРёРµ СЂРµСЃСѓСЂСЃРѕРІ
             }
         }
 
         #endregion
 
-        #region Обработчики событий UI
+        #region РћР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ UI
 
         private async void Btn_new_load_Click(object sender, RoutedEventArgs e)
         {
@@ -1747,19 +1747,19 @@ namespace Cash8Avalon
 
         #endregion
 
-        #region Основная логика загрузки
+        #region РћСЃРЅРѕРІРЅР°СЏ Р»РѕРіРёРєР° Р·Р°РіСЂСѓР·РєРё
 
         private async Task StartAsyncLoad()
         {
             if (_isLoading)
             {
-                await MessageBox.Show("Загрузка уже выполняется", "Информация", owner: this);
+                await MessageBox.Show("Р—Р°РіСЂСѓР·РєР° СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ", "РРЅС„РѕСЂРјР°С†РёСЏ", owner: this);
                 return;
             }
 
             var result = await MessageBox.Show(
-                "Выполнить загрузку данных из системы?",
-                "Подтверждение",
+                "Р’С‹РїРѕР»РЅРёС‚СЊ Р·Р°РіСЂСѓР·РєСѓ РґР°РЅРЅС‹С… РёР· СЃРёСЃС‚РµРјС‹?",
+                "РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ",
                 MessageBoxButton.YesNo,
                 MessageBoxType.Question,
                 this);
@@ -1773,9 +1773,9 @@ namespace Cash8Avalon
 
             try
             {
-                SetLoadingState(true); // Кнопка станет зеленой
+                SetLoadingState(true); // РљРЅРѕРїРєР° СЃС‚Р°РЅРµС‚ Р·РµР»РµРЅРѕР№
 
-                // Убираем временно обработчик клика
+                // РЈР±РёСЂР°РµРј РІСЂРµРјРµРЅРЅРѕ РѕР±СЂР°Р±РѕС‚С‡РёРє РєР»РёРєР°
                 if (_btn_new_load != null)
                     _btn_new_load.Click -= Btn_new_load_Click;
 
@@ -1789,12 +1789,12 @@ namespace Cash8Avalon
                     }
                     catch (OperationCanceledException)
                     {
-                        return (false, "Операция отменена пользователем");
+                        return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Ошибка в задаче загрузки: {ex.Message}");
-                        return (false, $"Ошибка при выполнении загрузки: {ex.Message}");
+                        Console.WriteLine($"РћС€РёР±РєР° РІ Р·Р°РґР°С‡Рµ Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
+                        return (false, $"РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
                     }
                 }, _cancellationTokenSource.Token);
 
@@ -1818,14 +1818,14 @@ namespace Cash8Avalon
             {
                 if (!_userCancelled)
                 {
-                    await MessageBox.Show($"Ошибка при запуске загрузки: {ex.Message}", "Ошибка", owner: this);
+                    await MessageBox.Show($"РћС€РёР±РєР° РїСЂРё Р·Р°РїСѓСЃРєРµ Р·Р°РіСЂСѓР·РєРё: {ex.Message}", "РћС€РёР±РєР°", owner: this);
                 }
             }
             finally
             {
-                SetLoadingState(false); // Кнопка станет синей
+                SetLoadingState(false); // РљРЅРѕРїРєР° СЃС‚Р°РЅРµС‚ СЃРёРЅРµР№
 
-                // Возвращаем обработчик клика
+                // Р’РѕР·РІСЂР°С‰Р°РµРј РѕР±СЂР°Р±РѕС‚С‡РёРє РєР»РёРєР°
                 if (_btn_new_load != null)
                     _btn_new_load.Click += Btn_new_load_Click;
 
@@ -1842,48 +1842,48 @@ namespace Cash8Avalon
 
             try
             {
-                // Этап 1: Подготовка (без очистки памяти!)
-                await UpdateProgressAsync("Подготовка к загрузке...", 0);
+                // Р­С‚Р°Рї 1: РџРѕРґРіРѕС‚РѕРІРєР° (Р±РµР· РѕС‡РёСЃС‚РєРё РїР°РјСЏС‚Рё!)
+                await UpdateProgressAsync("РџРѕРґРіРѕС‚РѕРІРєР° Рє Р·Р°РіСЂСѓР·РєРµ...", 0);
                 await PrepareForLoadAsync(cancellationToken, skipClearMemory: true);
 
                 if (cancellationToken.IsCancellationRequested)
-                    return (false, "Операция отменена");
+                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-                // Этап 2: Проверка сервиса
-                await UpdateProgressAsync("Проверка соединения с веб-сервисом...", 5);
+                // Р­С‚Р°Рї 2: РџСЂРѕРІРµСЂРєР° СЃРµСЂРІРёСЃР°
+                await UpdateProgressAsync("РџСЂРѕРІРµСЂРєР° СЃРѕРµРґРёРЅРµРЅРёСЏ СЃ РІРµР±-СЃРµСЂРІРёСЃРѕРј...", 5);
                 if (!await CheckServiceAvailabilityAsync(cancellationToken))
                 {
-                    return (false, "Веб-сервис недоступен");
+                    return (false, "Р’РµР±-СЃРµСЂРІРёСЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ");
                 }
 
                 if (cancellationToken.IsCancellationRequested)
-                    return (false, "Операция отменена");
+                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-                // Этап 3: Создание временных таблиц
-                await UpdateProgressAsync("Подготовка временных таблиц...", 10);
+                // Р­С‚Р°Рї 3: РЎРѕР·РґР°РЅРёРµ РІСЂРµРјРµРЅРЅС‹С… С‚Р°Р±Р»РёС†
+                await UpdateProgressAsync("РџРѕРґРіРѕС‚РѕРІРєР° РІСЂРµРјРµРЅРЅС‹С… С‚Р°Р±Р»РёС†...", 10);
                 await CreateTempTablesAsync(cancellationToken);
 
                 if (cancellationToken.IsCancellationRequested)
-                    return (false, "Операция отменена");
+                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-                // Этап 4: Получение данных с сервера
-                await UpdateProgressAsync("Получение данных с сервера...", 15);
+                // Р­С‚Р°Рї 4: РџРѕР»СѓС‡РµРЅРёРµ РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°
+                await UpdateProgressAsync("РџРѕР»СѓС‡РµРЅРёРµ РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°...", 15);
                 var serverData = await GetDataFromServerAsync(cancellationToken);
                 if (!serverData.success)
                 {
-                    errorMessage = "Не удалось получить данные с сервера";
+                    errorMessage = "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ СЃ СЃРµСЂРІРµСЂР°";
                     if (!string.IsNullOrEmpty(serverData.errorMessage))
                         errorMessage = serverData.errorMessage;
                     return (false, errorMessage);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
-                    return (false, "Операция отменена");
+                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-                // Теперь прогресс 20%, готовимся к вставке данных в БД
-                await UpdateProgressAsync("Подготовка к сохранению данных...", 20);
+                // РўРµРїРµСЂСЊ РїСЂРѕРіСЂРµСЃСЃ 20%, РіРѕС‚РѕРІРёРјСЃСЏ Рє РІСЃС‚Р°РІРєРµ РґР°РЅРЅС‹С… РІ Р‘Р”
+                await UpdateProgressAsync("РџРѕРґРіРѕС‚РѕРІРєР° Рє СЃРѕС…СЂР°РЅРµРЅРёСЋ РґР°РЅРЅС‹С…...", 20);
 
-                // Этап 5: Сохранение данных в БД - здесь прогресс будет идти от 20% до 80%
+                // Р­С‚Р°Рї 5: РЎРѕС…СЂР°РЅРµРЅРёРµ РґР°РЅРЅС‹С… РІ Р‘Р” - Р·РґРµСЃСЊ РїСЂРѕРіСЂРµСЃСЃ Р±СѓРґРµС‚ РёРґС‚Рё РѕС‚ 20% РґРѕ 80%
                 var saveResult = await SaveDataToDatabaseAsync(serverData.data, cancellationToken, 20, 80);
                 if (!saveResult.success)
                 {
@@ -1891,34 +1891,34 @@ namespace Cash8Avalon
                 }
 
                 if (cancellationToken.IsCancellationRequested)
-                    return (false, "Операция отменена");
+                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-                // Этап 6: Финализация операций с БД
-                await UpdateProgressAsync("Завершение операций с базой данных...", 85);
+                // Р­С‚Р°Рї 6: Р¤РёРЅР°Р»РёР·Р°С†РёСЏ РѕРїРµСЂР°С†РёР№ СЃ Р‘Р”
+                await UpdateProgressAsync("Р—Р°РІРµСЂС€РµРЅРёРµ РѕРїРµСЂР°С†РёР№ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…...", 85);
                 await FinalizeLoadAsync(cancellationToken);
 
-                // ТОЛЬКО ПОСЛЕ УСПЕШНОЙ ЗАГРУЗКИ В БД:
-                // Этап 7: Очистка и перезаполнение памяти
-                await UpdateProgressAsync("Обновление данных в памяти...", 90);
+                // РўРћР›Р¬РљРћ РџРћРЎР›Р• РЈРЎРџР•РЁРќРћР™ Р—РђР“Р РЈР—РљР Р’ Р‘Р”:
+                // Р­С‚Р°Рї 7: РћС‡РёСЃС‚РєР° Рё РїРµСЂРµР·Р°РїРѕР»РЅРµРЅРёРµ РїР°РјСЏС‚Рё
+                await UpdateProgressAsync("РћР±РЅРѕРІР»РµРЅРёРµ РґР°РЅРЅС‹С… РІ РїР°РјСЏС‚Рё...", 90);
                 var memoryResult = await RefreshMemoryDataAsync(cancellationToken);
                 if (!memoryResult.success)
                 {
-                    // Это предупреждение, но не критическая ошибка
+                    // Р­С‚Рѕ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ, РЅРѕ РЅРµ РєСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°
                     errorMessage = memoryResult.errorMessage;
-                    Console.WriteLine($"Предупреждение при обновлении памяти: {errorMessage}");
+                    Console.WriteLine($"РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё РїР°РјСЏС‚Рё: {errorMessage}");
                 }
 
                 if (cancellationToken.IsCancellationRequested)
-                    return (false, "Операция отменена");
+                    return (false, "РћРїРµСЂР°С†РёСЏ РѕС‚РјРµРЅРµРЅР°");
 
-                await UpdateProgressAsync("Готово", 100);
+                await UpdateProgressAsync("Р“РѕС‚РѕРІРѕ", 100);
 
                 return (true, "");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"ERROR in PerformFullLoadAsync: {ex.Message}");
-                return (false, $"Ошибка при выполнении загрузки: {ex.Message}");
+                return (false, $"РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
             }
         }
 
@@ -1926,36 +1926,36 @@ namespace Cash8Avalon
         {
             try
             {
-                // 0. Устанавливаем владельца для InventoryManager
-                // Это простое присваивание статического поля, не требует UI потока
+                // 0. РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІР»Р°РґРµР»СЊС†Р° РґР»СЏ InventoryManager
+                // Р­С‚Рѕ РїСЂРѕСЃС‚РѕРµ РїСЂРёСЃРІР°РёРІР°РЅРёРµ СЃС‚Р°С‚РёС‡РµСЃРєРѕРіРѕ РїРѕР»СЏ, РЅРµ С‚СЂРµР±СѓРµС‚ UI РїРѕС‚РѕРєР°
                 InventoryManager.SetOwnerWindow(this);
 
-                // 1. Очищаем кэш в памяти
-                await UpdateProgressAsync("Очистка кэша в памяти...", 85);
+                // 1. РћС‡РёС‰Р°РµРј РєСЌС€ РІ РїР°РјСЏС‚Рё
+                await UpdateProgressAsync("РћС‡РёСЃС‚РєР° РєСЌС€Р° РІ РїР°РјСЏС‚Рё...", 85);
 
-                // ClearDictionaryProductData тоже не требует UI потока (простая работа с коллекциями)
+                // ClearDictionaryProductData С‚РѕР¶Рµ РЅРµ С‚СЂРµР±СѓРµС‚ UI РїРѕС‚РѕРєР° (РїСЂРѕСЃС‚Р°СЏ СЂР°Р±РѕС‚Р° СЃ РєРѕР»Р»РµРєС†РёСЏРјРё)
                 InventoryManager.ClearDictionaryProductData();
 
-                // 2. Ждем немного для стабилизации
+                // 2. Р–РґРµРј РЅРµРјРЅРѕРіРѕ РґР»СЏ СЃС‚Р°Р±РёР»РёР·Р°С†РёРё
                 await Task.Delay(100, cancellationToken);
 
-                // 3. Заполняем товары
-                await UpdateProgressAsync("Загрузка товаров в память...", 90);
+                // 3. Р—Р°РїРѕР»РЅСЏРµРј С‚РѕРІР°СЂС‹
+                await UpdateProgressAsync("Р—Р°РіСЂСѓР·РєР° С‚РѕРІР°СЂРѕРІ РІ РїР°РјСЏС‚СЊ...", 90);
                 try
                 {
-                    // Передаем текущее окно как владельца для MessageBox
+                    // РџРµСЂРµРґР°РµРј С‚РµРєСѓС‰РµРµ РѕРєРЅРѕ РєР°Рє РІР»Р°РґРµР»СЊС†Р° РґР»СЏ MessageBox
                     await InventoryManager.FillDictionaryProductDataAsync(this);
                 }
                 catch (Exception ex)
                 {
-                    return (false, $"Ошибка при загрузке товаров в память: {ex.Message}");
+                    return (false, $"РћС€РёР±РєР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ С‚РѕРІР°СЂРѕРІ РІ РїР°РјСЏС‚СЊ: {ex.Message}");
                 }
 
-                // 4. Загружаем акции (в фоне)
-                await UpdateProgressAsync("Загрузка данных об акциях...", 95);
+                // 4. Р—Р°РіСЂСѓР¶Р°РµРј Р°РєС†РёРё (РІ С„РѕРЅРµ)
+                await UpdateProgressAsync("Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… РѕР± Р°РєС†РёСЏС…...", 95);
                 try
                 {
-                    // DictionaryPriceGiftAction - это свойство, вызываем его для инициализации
+                    // DictionaryPriceGiftAction - СЌС‚Рѕ СЃРІРѕР№СЃС‚РІРѕ, РІС‹Р·С‹РІР°РµРј РµРіРѕ РґР»СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
                     _ = Task.Run(() =>
                     {
                         try
@@ -1964,31 +1964,31 @@ namespace Cash8Avalon
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Предупреждение: не удалось загрузить цены подарков: {ex.Message}");
+                            Console.WriteLine($"РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ: РЅРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С†РµРЅС‹ РїРѕРґР°СЂРєРѕРІ: {ex.Message}");
                         }
                     }, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    // Это не критическая ошибка, только логируем
-                    Console.WriteLine($"Предупреждение при загрузке акций: {ex.Message}");
+                    // Р­С‚Рѕ РЅРµ РєСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°, С‚РѕР»СЊРєРѕ Р»РѕРіРёСЂСѓРµРј
+                    Console.WriteLine($"РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ РїСЂРё Р·Р°РіСЂСѓР·РєРµ Р°РєС†РёР№: {ex.Message}");
                 }
 
-                // 5. Проверяем, что кэш загружен
+                // 5. РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РєСЌС€ Р·Р°РіСЂСѓР¶РµРЅ
                 await Task.Delay(200, cancellationToken);
 
-                // Сначала проверяем валидность словаря
+                // РЎРЅР°С‡Р°Р»Р° РїСЂРѕРІРµСЂСЏРµРј РІР°Р»РёРґРЅРѕСЃС‚СЊ СЃР»РѕРІР°СЂСЏ
                 if (!InventoryManager.IsDictionaryValid)
                 {
-                    return (false, "Кэш товаров не был успешно загружен");
+                    return (false, "РљСЌС€ С‚РѕРІР°СЂРѕРІ РЅРµ Р±С‹Р» СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅ");
                 }
 
-                await UpdateProgressAsync("Кэш памяти обновлен", 100);
+                await UpdateProgressAsync("РљСЌС€ РїР°РјСЏС‚Рё РѕР±РЅРѕРІР»РµРЅ", 100);
                 return (true, "");
             }
             catch (Exception ex)
             {
-                return (false, $"Ошибка при обновлении данных в памяти: {ex.Message}");
+                return (false, $"РћС€РёР±РєР° РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё РґР°РЅРЅС‹С… РІ РїР°РјСЏС‚Рё: {ex.Message}");
             }
         }
 
@@ -1996,21 +1996,21 @@ namespace Cash8Avalon
         {
             try
             {
-                // Очищаем память только если явно не указано пропустить
+                // РћС‡РёС‰Р°РµРј РїР°РјСЏС‚СЊ С‚РѕР»СЊРєРѕ РµСЃР»Рё СЏРІРЅРѕ РЅРµ СѓРєР°Р·Р°РЅРѕ РїСЂРѕРїСѓСЃС‚РёС‚СЊ
                 if (!skipClearMemory)
                 {
                     try
                     {
-                        // Убрал Dispatcher - это не UI операция
+                        // РЈР±СЂР°Р» Dispatcher - СЌС‚Рѕ РЅРµ UI РѕРїРµСЂР°С†РёСЏ
                         InventoryManager.ClearDictionaryProductData();
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Ошибка при очистке кэша: {ex.Message}");
+                        Console.WriteLine($"РћС€РёР±РєР° РїСЂРё РѕС‡РёСЃС‚РєРµ РєСЌС€Р°: {ex.Message}");
                     }
                 }
 
-                // Сборка мусора
+                // РЎР±РѕСЂРєР° РјСѓСЃРѕСЂР°
                 await Task.Run(() =>
                 {
                     try
@@ -2025,11 +2025,11 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при подготовке: {ex.Message}");
+                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё РїРѕРґРіРѕС‚РѕРІРєРµ: {ex.Message}");
             }
         }
 
-        #region Таймер для отображения времени
+        #region РўР°Р№РјРµСЂ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІСЂРµРјРµРЅРё
 
         private void StartTimer()
         {
@@ -2041,7 +2041,7 @@ namespace Cash8Avalon
                     {
                         var elapsed = _stopwatch.Elapsed;
                         if (_timeInfoText != null)
-                            _timeInfoText.Text = $"Время загрузки: {elapsed:mm\\:ss}";
+                            _timeInfoText.Text = $"Р’СЂРµРјСЏ Р·Р°РіСЂСѓР·РєРё: {elapsed:mm\\:ss}";
                     }
                 });
             }, null, 0, 1000);
@@ -2059,14 +2059,14 @@ namespace Cash8Avalon
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (_timeInfoText != null)
-                        _timeInfoText.Text = $"Общее время загрузки: {elapsed:mm\\:ss}";
+                        _timeInfoText.Text = $"РћР±С‰РµРµ РІСЂРµРјСЏ Р·Р°РіСЂСѓР·РєРё: {elapsed:mm\\:ss}";
                 });
             }
         }
 
         #endregion
 
-        #region Методы загрузки
+        #region РњРµС‚РѕРґС‹ Р·Р°РіСЂСѓР·РєРё
 
         private async Task<bool> CheckServiceAvailabilityAsync(CancellationToken cancellationToken)
         {
@@ -2088,7 +2088,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при создании временных таблиц: {ex.Message}");
+                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё РІСЂРµРјРµРЅРЅС‹С… С‚Р°Р±Р»РёС†: {ex.Message}");
             }
         }
 
@@ -2101,13 +2101,13 @@ namespace Cash8Avalon
                     string nick_shop = MainStaticClass.Nick_Shop?.Trim();
                     if (string.IsNullOrEmpty(nick_shop))
                     {
-                        return (false, null, "Не удалось получить название магазина");
+                        return (false, null, "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РЅР°Р·РІР°РЅРёРµ РјР°РіР°Р·РёРЅР°");
                     }
 
                     string code_shop = MainStaticClass.Code_Shop?.Trim();
                     if (string.IsNullOrEmpty(code_shop))
                     {
-                        return (false, null, "Не удалось получить код магазина");
+                        return (false, null, "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РјР°РіР°Р·РёРЅР°");
                     }
 
                     string count_day = CryptorEngine.get_count_day();
@@ -2133,12 +2133,12 @@ namespace Cash8Avalon
 
                         if (loadPacketData == null)
                         {
-                            return (false, null, "Не удалось получить данные с сервера (null результат)");
+                            return (false, null, "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ СЃ СЃРµСЂРІРµСЂР° (null СЂРµР·СѓР»СЊС‚Р°С‚)");
                         }
 
                         if (!loadPacketData.PacketIsFull)
                         {
-                            string errorMsg = "Пакет данных не полный";
+                            string errorMsg = "РџР°РєРµС‚ РґР°РЅРЅС‹С… РЅРµ РїРѕР»РЅС‹Р№";
                             if (!string.IsNullOrEmpty(loadPacketData.Exception))
                                 errorMsg += $": {loadPacketData.Exception}";
                             return (false, null, errorMsg);
@@ -2146,7 +2146,7 @@ namespace Cash8Avalon
 
                         if (loadPacketData.Exchange)
                         {
-                            return (false, null, "Пакет данных получен во время обновления данных на сервере");
+                            return (false, null, "РџР°РєРµС‚ РґР°РЅРЅС‹С… РїРѕР»СѓС‡РµРЅ РІРѕ РІСЂРµРјСЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РґР°РЅРЅС‹С… РЅР° СЃРµСЂРІРµСЂРµ");
                         }
 
                         return (true, loadPacketData, "");
@@ -2154,12 +2154,12 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    return (false, null, $"Ошибка при получении данных с сервера: {ex.Message}");
+                    return (false, null, $"РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°: {ex.Message}");
                 }
             }, cancellationToken);
         }
 
-        // Новая перегрузка метода с поддержкой прогресса
+        // РќРѕРІР°СЏ РїРµСЂРµРіСЂСѓР·РєР° РјРµС‚РѕРґР° СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РїСЂРѕРіСЂРµСЃСЃР°
         private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
             LoadPacketData loadPacketData,
             CancellationToken cancellationToken,
@@ -2181,7 +2181,7 @@ namespace Cash8Avalon
                 int totalQueries = queries.Count;
                 int completedQueries = 0;
 
-                // Рассчитываем прогресс для каждого запроса
+                // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј РїСЂРѕРіСЂРµСЃСЃ РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·Р°РїСЂРѕСЃР°
                 int progressRange = endProgress - startProgress;
 
                 foreach (string query in queries)
@@ -2196,14 +2196,14 @@ namespace Cash8Avalon
 
                     completedQueries++;
 
-                    // Рассчитываем текущий прогресс
+                    // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С‚РµРєСѓС‰РёР№ РїСЂРѕРіСЂРµСЃСЃ
                     double progressPercentage = (double)completedQueries / totalQueries;
                     int currentProgress = startProgress + (int)(progressPercentage * progressRange);
 
-                    await UpdateProgressAsync($"Выполнение запросов ({completedQueries}/{totalQueries})...", currentProgress);
+                    await UpdateProgressAsync($"Р’С‹РїРѕР»РЅРµРЅРёРµ Р·Р°РїСЂРѕСЃРѕРІ ({completedQueries}/{totalQueries})...", currentProgress);
                 }
 
-                // Обновление даты последнего обновления
+                // РћР±РЅРѕРІР»РµРЅРёРµ РґР°С‚С‹ РїРѕСЃР»РµРґРЅРµРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ
                 string updateQuery = "UPDATE date_sync SET tovar = @date";
                 using (var command = new NpgsqlCommand(updateQuery, conn))
                 {
@@ -2221,12 +2221,12 @@ namespace Cash8Avalon
 
                 await tran.CommitAsync(cancellationToken);
 
-                // Отправка подтверждения
+                // РћС‚РїСЂР°РІРєР° РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ
                 try
                 {
                     if (!await MainStaticClass.SendResultGetData())
                     {
-                        Console.WriteLine("WARNING: Не удалось отправить информацию об успешной загрузке");
+                        Console.WriteLine("WARNING: РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ РѕР± СѓСЃРїРµС€РЅРѕР№ Р·Р°РіСЂСѓР·РєРµ");
                     }
                 }
                 catch { }
@@ -2235,8 +2235,8 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                string errorMsg = $"Ошибка базы данных: {ex.Message}";
-                Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
+                string errorMsg = $"РћС€РёР±РєР° Р±Р°Р·С‹ РґР°РЅРЅС‹С…: {ex.Message}";
+                Console.WriteLine($"РћС€РёР±РєР° Npgsql: {ex.Message}");
 
                 if (tran != null)
                 {
@@ -2247,8 +2247,8 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                string errorMsg = $"Ошибка при сохранении данных: {ex.Message}";
-                Console.WriteLine($"Ошибка: {ex.Message}");
+                string errorMsg = $"РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё РґР°РЅРЅС‹С…: {ex.Message}";
+                Console.WriteLine($"РћС€РёР±РєР°: {ex.Message}");
 
                 if (tran != null)
                 {
@@ -2269,32 +2269,32 @@ namespace Cash8Avalon
             }
         }
 
-        // Оригинальный метод для обратной совместимости
+        // РћСЂРёРіРёРЅР°Р»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РѕР±СЂР°С‚РЅРѕР№ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
         private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
             LoadPacketData loadPacketData,
             CancellationToken cancellationToken)
         {
-            // Вызываем новую перегрузку со значениями по умолчанию
+            // Р’С‹Р·С‹РІР°РµРј РЅРѕРІСѓСЋ РїРµСЂРµРіСЂСѓР·РєСѓ СЃРѕ Р·РЅР°С‡РµРЅРёСЏРјРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
             return await SaveDataToDatabaseAsync(loadPacketData, cancellationToken, 0, 100);
         }
 
         private void PrepareDatabaseQueries(LoadPacketData loadPacketData, List<string> queries)
         {
-            // Очистка таблиц
+            // РћС‡РёСЃС‚РєР° С‚Р°Р±Р»РёС†
             queries.Add("DELETE FROM action_table");
             queries.Add("DELETE FROM action_header");
             queries.Add("DELETE FROM advertisement");
 
-            // Обновление токена
+            // РћР±РЅРѕРІР»РµРЅРёРµ С‚РѕРєРµРЅР°
             if (!string.IsNullOrEmpty(loadPacketData.TokenMark))
             {
                 queries.Add($"UPDATE constants SET cdn_token='{EscapeSql(loadPacketData.TokenMark)}'");
             }
 
-            // Создание временной таблицы для товаров
+            // РЎРѕР·РґР°РЅРёРµ РІСЂРµРјРµРЅРЅРѕР№ С‚Р°Р±Р»РёС†С‹ РґР»СЏ С‚РѕРІР°СЂРѕРІ
             queries.Add("DELETE FROM tovar2");
 
-            // Вставка товаров во временную таблицу
+            // Р’СЃС‚Р°РІРєР° С‚РѕРІР°СЂРѕРІ РІРѕ РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ
             if (loadPacketData.ListTovar?.Count > 0)
             {
                 foreach (var tovar in loadPacketData.ListTovar)
@@ -2310,14 +2310,14 @@ namespace Cash8Avalon
                 }
             }
 
-            // Обновление основной таблицы товаров
+            // РћР±РЅРѕРІР»РµРЅРёРµ РѕСЃРЅРѕРІРЅРѕР№ С‚Р°Р±Р»РёС†С‹ С‚РѕРІР°СЂРѕРІ
             queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
             queries.Add(GetInsertQuery());
             queries.Add(GetUpdateQuery());
             queries.Add("DELETE FROM tovar2");
             queries.Add("DELETE FROM barcode");
 
-            // Вставка штрихкодов
+            // Р’СЃС‚Р°РІРєР° С€С‚СЂРёС…РєРѕРґРѕРІ
             if (loadPacketData.ListBarcode?.Count > 0)
             {
                 foreach (var barcode in loadPacketData.ListBarcode)
@@ -2326,7 +2326,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Вставка характеристик
+            // Р’СЃС‚Р°РІРєР° С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє
             if (loadPacketData.ListCharacteristic?.Count > 0)
             {
                 queries.Add("DELETE FROM characteristic");
@@ -2339,7 +2339,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Вставка сертификатов
+            // Р’СЃС‚Р°РІРєР° СЃРµСЂС‚РёС„РёРєР°С‚РѕРІ
             queries.Add("DELETE FROM sertificates");
             if (loadPacketData.ListSertificate?.Count > 0)
             {
@@ -2352,7 +2352,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Вставка акций
+            // Р’СЃС‚Р°РІРєР° Р°РєС†РёР№
             if (loadPacketData.ListActionHeader?.Count > 0)
             {
                 foreach (var actionHeader in loadPacketData.ListActionHeader)
@@ -2375,14 +2375,14 @@ namespace Cash8Avalon
             }
             else
             {
-                // Уведомление показывается через MessageBox.Show
+                // РЈРІРµРґРѕРјР»РµРЅРёРµ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‡РµСЂРµР· MessageBox.Show
                 _ = Task.Run(async () =>
                 {
                     try
                     {
                         await MessageBox.Show(
-                            "Нет данных по акциям",
-                            "Проверка наличия акций",
+                            "РќРµС‚ РґР°РЅРЅС‹С… РїРѕ Р°РєС†РёСЏРј",
+                            "РџСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ Р°РєС†РёР№",
                             MessageBoxButton.OK,
                             MessageBoxType.Info,
                             this);
@@ -2391,7 +2391,7 @@ namespace Cash8Avalon
                 });
             }
 
-            // Вставка табличных данных акций
+            // Р’СЃС‚Р°РІРєР° С‚Р°Р±Р»РёС‡РЅС‹С… РґР°РЅРЅС‹С… Р°РєС†РёР№
             if (loadPacketData.ListActionTable?.Count > 0)
             {
                 foreach (var actionTable in loadPacketData.ListActionTable)
@@ -2403,7 +2403,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Вставка рекламных текстов
+            // Р’СЃС‚Р°РІРєР° СЂРµРєР»Р°РјРЅС‹С… С‚РµРєСЃС‚РѕРІ
             if (loadPacketData.ListPromoText?.Count > 0)
             {
                 foreach (var promoText in loadPacketData.ListPromoText)
@@ -2414,7 +2414,7 @@ namespace Cash8Avalon
                 }
             }
 
-            // Вставка клиентов акций
+            // Р’СЃС‚Р°РІРєР° РєР»РёРµРЅС‚РѕРІ Р°РєС†РёР№
             queries.Add("DELETE FROM action_clients");
             if (loadPacketData.ListActionClients?.Count > 0)
             {
@@ -2443,10 +2443,10 @@ namespace Cash8Avalon
 
                 if (CheckFirstLoadData())
                 {
-                    // Убрал Dispatcher - MessageBox.Show сам обрабатывает UI поток
+                    // РЈР±СЂР°Р» Dispatcher - MessageBox.Show СЃР°Рј РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ UI РїРѕС‚РѕРє
                     await MessageBox.Show(
-                        "Это была первая загрузка данных. Для применения новых параметров программа будет перезапущена.",
-                        "Первая загрузка",
+                        "Р­С‚Рѕ Р±С‹Р»Р° РїРµСЂРІР°СЏ Р·Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…. Р”Р»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ РЅРѕРІС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ РїСЂРѕРіСЂР°РјРјР° Р±СѓРґРµС‚ РїРµСЂРµР·Р°РїСѓС‰РµРЅР°.",
+                        "РџРµСЂРІР°СЏ Р·Р°РіСЂСѓР·РєР°",
                         MessageBoxButton.OK,
                         MessageBoxType.Info,
                         this);
@@ -2467,7 +2467,7 @@ namespace Cash8Avalon
 
         #endregion
 
-        #region Метод load_bonus_clients
+        #region РњРµС‚РѕРґ load_bonus_clients
 
         public async Task load_bonus_clients(bool show_message)
         {
@@ -2482,7 +2482,7 @@ namespace Cash8Avalon
                 {
                     if (show_message)
                     {
-                        await MessageBox.Show("Веб сервис недоступен", "Ошибка", owner: this);
+                        await MessageBox.Show("Р’РµР± СЃРµСЂРІРёСЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ", "РћС€РёР±РєР°", owner: this);
                     }
                     return;
                 }
@@ -2495,7 +2495,7 @@ namespace Cash8Avalon
                 {
                     if (show_message)
                     {
-                        await MessageBox.Show("Не удалось получить название магазина", "Ошибка", owner: this);
+                        await MessageBox.Show("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РЅР°Р·РІР°РЅРёРµ РјР°РіР°Р·РёРЅР°", "РћС€РёР±РєР°", owner: this);
                     }
                     return;
                 }
@@ -2505,7 +2505,7 @@ namespace Cash8Avalon
                 {
                     if (show_message)
                     {
-                        await MessageBox.Show("Не удалось получить код магазина", "Ошибка", owner: this);
+                        await MessageBox.Show("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РјР°РіР°Р·РёРЅР°", "РћС€РёР±РєР°", owner: this);
                     }
                     return;
                 }
@@ -2523,14 +2523,14 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    await MessageBox.Show(ex.Message, "Ошибка", owner: this);
+                    await MessageBox.Show(ex.Message, "РћС€РёР±РєР°", owner: this);
                 }
 
                 if (result_query == "-1")
                 {
                     if (show_message)
                     {
-                        await MessageBox.Show("При обработке запроса на сервере произошли ошибки", "Ошибка", owner: this);
+                        await MessageBox.Show("РџСЂРё РѕР±СЂР°Р±РѕС‚РєРµ Р·Р°РїСЂРѕСЃР° РЅР° СЃРµСЂРІРµСЂРµ РїСЂРѕРёР·РѕС€Р»Рё РѕС€РёР±РєРё", "РћС€РёР±РєР°", owner: this);
                     }
                     return;
                 }
@@ -2587,7 +2587,8 @@ namespace Cash8Avalon
                         }
                     }
 
-                    query = "UPDATE constants SET last_date_download_bonus_clients='" + local_last_date_download_bonus_clients + "'";
+                    query = "UPDATE constants SET last_date_download_bonus_clients='" + local_last_date_download_bonus_clients + "';"+
+                        "UPDATE date_sync SET client='" + local_last_date_download_bonus_clients + "'"; ;
                     command = new NpgsqlCommand(query, conn);
                     command.Transaction = tran;
                     command.ExecuteNonQuery();
@@ -2597,14 +2598,14 @@ namespace Cash8Avalon
 
                     if (show_message)
                     {
-                        await MessageBox.Show("Клиенты успешно загружены", "Успех", owner: this);
+                        await MessageBox.Show("РљР»РёРµРЅС‚С‹ СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅС‹", "РЈСЃРїРµС…", owner: this);
                     }
                 }
                 catch (NpgsqlException ex)
                 {
                     if (show_message)
                     {
-                        await MessageBox.Show(query + "\n" + ex.Message, "Ошибка при импорте данных", owner: this);
+                        await MessageBox.Show(query + "\n" + ex.Message, "РћС€РёР±РєР° РїСЂРё РёРјРїРѕСЂС‚Рµ РґР°РЅРЅС‹С…", owner: this);
                     }
                     if (tran != null)
                     {
@@ -2615,7 +2616,7 @@ namespace Cash8Avalon
                 {
                     if (show_message)
                     {
-                        await MessageBox.Show(query + "\n" + ex.Message, "Ошибка при импорте данных", owner: this);
+                        await MessageBox.Show(query + "\n" + ex.Message, "РћС€РёР±РєР° РїСЂРё РёРјРїРѕСЂС‚Рµ РґР°РЅРЅС‹С…", owner: this);
                     }
                     if (tran != null)
                     {
@@ -2632,7 +2633,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка в load_bonus_clients: {ex.Message}");
+                Console.WriteLine($"РћС€РёР±РєР° РІ load_bonus_clients: {ex.Message}");
             }
         }
 
@@ -2669,7 +2670,7 @@ namespace Cash8Avalon
 
         #endregion
 
-        #region Вспомогательные методы из оригинального кода
+        #region Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ РјРµС‚РѕРґС‹ РёР· РѕСЂРёРіРёРЅР°Р»СЊРЅРѕРіРѕ РєРѕРґР°
 
         private void check_temp_tables()
         {
@@ -2702,7 +2703,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при создании таблицы tovar2: {ex.Message}");
+                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё С‚Р°Р±Р»РёС†С‹ tovar2: {ex.Message}");
             }
         }
 
@@ -2787,39 +2788,92 @@ namespace Cash8Avalon
             WHERE tovar.code = t2.code;";
         }
 
+        //public static DateTime last_date_download_tovars()
+        //{
+        //    DateTime result = new DateTime(2000, 1, 1);
+
+        //    NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+
+        //    try
+        //    {
+        //        conn.Open();
+        //        string query = "SELECT tovar FROM date_sync";
+        //        NpgsqlCommand command = new NpgsqlCommand(query, conn);
+        //        object query_result = command.ExecuteScalar();
+        //        if (query_result != null)
+        //        {
+        //            result = Convert.ToDateTime(query_result);
+        //        }
+        //        conn.Close();
+        //    }
+        //    catch (NpgsqlException)
+        //    {
+
+        //    }
+        //    catch (Exception)
+        //    {
+
+        //    }
+        //    finally
+        //    {
+        //        if (conn.State == ConnectionState.Open)
+        //        {
+        //            conn.Close();
+
+        //        }
+        //    }
+
+        //    return result;
+        //}
+
         public static DateTime last_date_download_tovars()
         {
             DateTime result = new DateTime(2000, 1, 1);
-
             NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
 
             try
             {
                 conn.Open();
                 string query = "SELECT tovar FROM date_sync";
-                NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                object query_result = command.ExecuteScalar();
-                if (query_result != null)
+
+                using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
                 {
-                    result = Convert.ToDateTime(query_result);
+                    object query_result = command.ExecuteScalar();
+
+                    if (query_result != null && query_result != DBNull.Value)
+                    {
+                        // вњ… Р’Р°СЂРёР°РЅС‚ 1: Р•СЃР»Рё РїСЂРёС€С‘Р» DateOnly (.NET 6+)
+                        if (query_result is DateOnly dateOnly)
+                        {
+                            result = dateOnly.ToDateTime(TimeOnly.MinValue);
+                            Console.WriteLine($"[DEBUG] РљРѕРЅРІРµСЂС‚РёСЂРѕРІР°РЅРѕ РёР· DateOnly: {result}");
+                        }
+                        // вњ… Р’Р°СЂРёР°РЅС‚ 2: Р•СЃР»Рё РїСЂРёС€С‘Р» DateTime
+                        else if (query_result is DateTime dateTime)
+                        {
+                            result = dateTime;
+                            Console.WriteLine($"[DEBUG] РџРѕР»СѓС‡РµРЅРѕ DateTime: {result}");
+                        }
+                        // вњ… Р’Р°СЂРёР°РЅС‚ 3: РЈРЅРёРІРµСЂСЃР°Р»СЊРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ
+                        else
+                        {
+                            result = Convert.ToDateTime(query_result);
+                            Console.WriteLine($"[DEBUG] РљРѕРЅРІРµСЂС‚РёСЂРѕРІР°РЅРѕ С‡РµСЂРµР· Convert: {result}");
+                        }
+                    }
                 }
-                conn.Close();
-            }
-            catch (NpgsqlException)
+            }           
+            catch (Exception ex)
             {
-
-            }
-            catch (Exception)
-            {
-
+                Console.WriteLine($"[ERROR] Exception: {ex.Message}");
             }
             finally
             {
                 if (conn.State == ConnectionState.Open)
                 {
                     conn.Close();
-
                 }
+                conn.Dispose();
             }
 
             return result;
@@ -2850,7 +2904,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при проверке первой загрузки: {ex.Message}");
+                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё РїСЂРѕРІРµСЂРєРµ РїРµСЂРІРѕР№ Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
             }
 
             return result;
@@ -2858,7 +2912,7 @@ namespace Cash8Avalon
 
         #endregion
 
-        #region Методы для работы с UI
+        #region РњРµС‚РѕРґС‹ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ UI
 
         private void SetLoadingState(bool isLoading)
         {
@@ -2871,15 +2925,15 @@ namespace Cash8Avalon
                     if (isLoading)
                     {
                         _btn_new_load.Background = new SolidColorBrush(Color.Parse("#4CAF50"));
-                        _btn_new_load.Content = "Идет загрузка...";
-                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Wait); // Курсор-часики
+                        _btn_new_load.Content = "РРґРµС‚ Р·Р°РіСЂСѓР·РєР°...";
+                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Wait); // РљСѓСЂСЃРѕСЂ-С‡Р°СЃРёРєРё
                         _btn_new_load.Click -= Btn_new_load_Click;
                     }
                     else
                     {
                         _btn_new_load.Background = new SolidColorBrush(Color.Parse("#2196F3"));
-                        _btn_new_load.Content = "Начать загрузку данных";
-                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Hand); // Обычная рука
+                        _btn_new_load.Content = "РќР°С‡Р°С‚СЊ Р·Р°РіСЂСѓР·РєСѓ РґР°РЅРЅС‹С…";
+                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Hand); // РћР±С‹С‡РЅР°СЏ СЂСѓРєР°
                         _btn_new_load.Click += Btn_new_load_Click;
                     }
                 }
@@ -2933,8 +2987,8 @@ namespace Cash8Avalon
             _cancellationTokenSource?.Cancel();
 
             await MessageBox.Show(
-                $"Загрузка превысила лимит времени ({_loadTimeout.TotalMinutes} минут)",
-                "Таймаут",
+                $"Р—Р°РіСЂСѓР·РєР° РїСЂРµРІС‹СЃРёР»Р° Р»РёРјРёС‚ РІСЂРµРјРµРЅРё ({_loadTimeout.TotalMinutes} РјРёРЅСѓС‚)",
+                "РўР°Р№РјР°СѓС‚",
                 owner: this);
         }
 
@@ -2943,19 +2997,19 @@ namespace Cash8Avalon
             if (success)
             {
                 await MessageBox.Show(
-                    "Загрузка данных успешно завершена",
-                    "Успех",
+                    "Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… СѓСЃРїРµС€РЅРѕ Р·Р°РІРµСЂС€РµРЅР°",
+                    "РЈСЃРїРµС…",
                     owner: this);
             }
             else
             {
-                string message = "Не удалось выполнить загрузку данных";
+                string message = "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ Р·Р°РіСЂСѓР·РєСѓ РґР°РЅРЅС‹С…";
                 if (!string.IsNullOrEmpty(errorMessage))
-                    message += $"\n\nПричина: {errorMessage}";
+                    message += $"\n\nРџСЂРёС‡РёРЅР°: {errorMessage}";
 
                 await MessageBox.Show(
                     message,
-                    "Ошибка",
+                    "РћС€РёР±РєР°",
                     owner: this);
             }
         }
@@ -2976,8 +3030,8 @@ namespace Cash8Avalon
         private async void ShowCancelDialog()
         {
             var result = await MessageBox.Show(
-                "Идет загрузка данных. Вы уверены, что хотите отменить?",
-                "Подтверждение",
+                "РРґРµС‚ Р·Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…. Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РѕС‚РјРµРЅРёС‚СЊ?",
+                "РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ",
                 MessageBoxButton.YesNo,
                 MessageBoxType.Warning,
                 this);
@@ -2987,7 +3041,7 @@ namespace Cash8Avalon
                 _userCancelled = true;
                 _cancellationTokenSource?.Cancel();
 
-                // Закрываем окно после небольшой задержки для корректной отмены
+                // Р—Р°РєСЂС‹РІР°РµРј РѕРєРЅРѕ РїРѕСЃР»Рµ РЅРµР±РѕР»СЊС€РѕР№ Р·Р°РґРµСЂР¶РєРё РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕС‚РјРµРЅС‹
                 await Task.Delay(100);
                 RequestClose?.Invoke(this, EventArgs.Empty);
             }
