@@ -361,13 +361,13 @@ namespace Cash8Avalon
                         return;
                     }
 
-                    // Проверяем, если телефон должен начинаться с 9
-                    if (code.Length != 13 && !code.StartsWith("9"))
-                    {
-                        await MessageBox.Show("Номер телефона должен начинаться с 9");
-                        _inputBarcodeTextBox?.SelectAll();
-                        return;
-                    }
+                    //// Проверяем, если телефон должен начинаться с 9
+                    //if (code.Length != 13 && !code.StartsWith("9"))
+                    //{
+                    //    await MessageBox.Show("Номер телефона должен начинаться с 9");
+                    //    _inputBarcodeTextBox?.SelectAll();
+                    //    return;
+                    //}
 
                     // Устанавливаем введенный код в публичное свойство
                     // EnteredBarcode - это свойство с геттером, которое возвращает значение из TextBox

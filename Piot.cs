@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Security;
 using System.Text;
 using System.Threading.Tasks;
+using Tmds.DBus.Protocol;
 
 namespace Cash8Avalon
 {
@@ -243,6 +244,7 @@ namespace Cash8Avalon
 
                 string imc = Convert.ToBase64String(textAsBytes);
                 var response = apiClient.SendCodeRequest(imc, url, clientInfo);
+
                 if (!response.Success)
                 {
                     //if (cash_Check.comboBox_mode.SelectedItem != null)
@@ -295,6 +297,9 @@ namespace Cash8Avalon
                 //]
                 //}
                 //}";
+                
+                //Записываем лог 
+                MainStaticClass.write_cdn_log(response.Data, numdoc.ToString(), codes[0].ToString(), "1");
                 apiResponse = JsonConvert.DeserializeObject<ApiResponse>(response.Data);
                 //var answer_check_mark=;
                 //if (apiResponse.errorCode != null)
@@ -1153,7 +1158,7 @@ namespace Cash8Avalon
                     ServicePointManager.CheckCertificateRevocationList = false;
 
                     var request = (HttpWebRequest)WebRequest.Create(url);
-                    request.Timeout = 1500;
+                    request.Timeout = 3000;
                     request.Method = "POST";
                     request.ContentType = "application/json";
                     request.Accept = "application/json";

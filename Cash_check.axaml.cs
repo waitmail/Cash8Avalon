@@ -2434,6 +2434,10 @@ namespace Cash8Avalon
 
         private async void show_pay_form()
         {
+            if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
+            {
+                InputSearchProduct.Focus();
+            }
 
             MainStaticClass.write_event_in_log("Попытка перейти в окно оплаты", "Документ чек", numdoc.ToString());
             pay_form.InitializeComponent();
@@ -4773,7 +4777,7 @@ namespace Cash8Avalon
             // Проверка длины очищенной строки
             if (!qr_code_lenght.Contains(cleanedCode.Length))
             {
-                await MessageBoxHelper.Show($"Длина {cleanedCode.Length} недопустима", "Ошибка");
+                await MessageBoxHelper.Show($"Длина {cleanedCode.Length} недопустима \r\n {cleanedCode}", "Ошибка",this);
                 return false;
             }
 

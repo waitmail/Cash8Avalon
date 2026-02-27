@@ -49,7 +49,22 @@ public partial class FPTK22 : Window
         btn_date_mark_Click(null, null);
         load_status_open_shop();
         load_status_close_shop();
-        get_summ_in_cashe_Click(null, null);
+        
+        if (MainStaticClass.Code_right_of_user == 1)
+        {
+            get_summ_in_cashe_Click(null, null);
+        }
+        else
+        {
+            var _get_summ_in_cashe = this.FindControl<Button>("get_summ_in_cashe");
+            _get_summ_in_cashe.IsEnabled = false;
+
+            var _x_report = this.FindControl<Button>("x_report");
+            _x_report.IsEnabled = false;
+
+            var _z_report = this.FindControl<Button>("z_report");
+            _z_report.IsEnabled = false;
+        }
     }
 
     private void get_fiscall_info()
