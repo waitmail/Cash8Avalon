@@ -2576,7 +2576,8 @@ namespace Cash8Avalon
             //await pay_form.ShowDialog(this);
             // //// С возвратом фокуса на конкретный элемент:
 
-            await ModalWindowHelper.ShowModalWindow(this, pay_form, _productsScrollViewer);
+            //await ModalWindowHelper.ShowModalWindow(this, pay_form, _productsScrollViewer);
+            await ModalWindowHelper.ShowModalWindow(this, pay_form, InputSearchProduct);
 
             if (Convert.ToBoolean(pay_form.Tag) == true)
             {
@@ -2601,10 +2602,7 @@ namespace Cash8Avalon
         public async void cancel_action()
         {
             this.Focus();
-            if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
-            {
-                InputSearchProduct.Focus();
-            }
+            
 
             if (check_type.SelectedIndex != 0)
             {
@@ -2615,6 +2613,22 @@ namespace Cash8Avalon
 
             RestoreProductsData();
             await RecalculateAllProducts();
+            if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
+            {
+
+                // ✅ ИСПРАВЛЕНИЕ: Ставим задачу фокуса в очередь ПОСЛЕ отрисовки
+                Dispatcher.UIThread.Post(() =>
+                {
+                    InputSearchProduct.Focus();
+
+                    // Если это TextBox, полезно также установить каретку в конец или выделить текст
+                    if (InputSearchProduct is TextBox textBox)
+                    {
+                        textBox.CaretIndex = textBox.Text?.Length ?? 0;
+                        // textBox.SelectAll(); // Можно раскомментировать, если нужно выделять всё
+                    }
+                }, DispatcherPriority.ApplicationIdle); // Приоритет "когда приложение свободно"
+            }
         }
 
         public bool ValidateCheckSumAtDiscount()
