@@ -47,8 +47,8 @@ namespace Cash8Avalon
             public string? req1265 { get; set; }
         }
 
-        private Panel _modalOverlay;
-        private Window _activeDialog;
+        //private Panel _modalOverlay;
+        //private Window _activeDialog;
 
         // Модели данных
         public Dictionary<string, uint> cdn_markers_result_check = new Dictionary<string, uint>();
@@ -115,6 +115,9 @@ namespace Cash8Avalon
         public bool payment_by_sbp_sales = false;
 
         public event EventHandler Loaded;
+        
+        private readonly List<DispatcherTimer> _activeTimers = new List<DispatcherTimer>();
+        private bool _isDisposed = false;
 
         public bool reopened = false;
         public bool print_promo_picture = false;
@@ -252,7 +255,125 @@ namespace Cash8Avalon
 
             UpdateWindowTitle();
             this.Opened += OnOpened;
+            this.Closed += OnClosed;
+
             Console.WriteLine("=== Конструктор Cash_check завершен ===");
+        }
+
+        private async void OnClosed(object? sender, EventArgs e)
+        {
+            Console.WriteLine("=== Окно Cash_check закрыто, запуск очистки ===");
+            await Dispatcher.UIThread.InvokeAsync(Cleanup);
+        }
+
+        /// <summary>
+        /// ✅ Гарантированная очистка ресурсов
+        /// </summary>
+        /// <summary>
+        /// ✅ Гарантированная очистка ресурсов
+        /// </summary>
+        private void Cleanup()
+        {
+            if (_isDisposed) return;
+            _isDisposed = true;
+
+            Console.WriteLine("--- Очистка ресурсов Cash_check ---");
+
+            try
+            {
+                // 1. Таймеры
+                foreach (var timer in _activeTimers.ToList())
+                {
+                    try { timer?.Stop(); } catch { }
+                }
+                _activeTimers.Clear();
+
+                // 2. События контролов
+                UnsubscribeControlEvents();
+
+                // 3. Глобальные события окна
+                this.RemoveHandler(KeyDownEvent, OnGlobalKeyDownForProducts);
+                this.RemoveHandler(KeyDownEvent, OnGlobalKeyDownForForm);
+
+                // 4. События Grid и ScrollViewer
+                if (_productsScrollViewer != null)
+                {
+                    _productsScrollViewer.ScrollChanged -= OnProductsScrollChanged;
+                    _productsScrollViewer.PointerPressed -= OnProductsScrollViewerPointerPressed;
+                }
+                if (_productsTableGrid != null)
+                {
+                    _productsTableGrid.PointerPressed -= OnProductsTableGridPointerPressed;
+                    _productsTableGrid.ContextMenu = null;
+                }
+
+                // 5. Веб-запрос
+                request?.Abort();
+                request = null;
+
+                // 6. Форма оплаты (разрывает циклическую ссылку!)
+                if (pay_form != null)
+                {
+                    pay_form.cc = null;
+                    pay_form = null;
+                }
+
+                // 7. Водяные знаки
+                RemoveWatermark();
+                RemoveWatermarkOverlay();
+
+                // 8. Коллекции данных
+                _productsData?.Clear();
+                _productsDataBackup?.Clear();
+                _certificatesData?.Clear();
+                action_barcode_list?.Clear();
+                action_barcode_bonus_list?.Clear();
+
+                // 9. DataTable
+                table?.Clear();
+                table?.Dispose();
+                table = null;
+
+                Console.WriteLine("✓ Ресурсы Cash_check очищены");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при очистке Cash_check: {ex.Message}");
+            }
+        }
+
+        private void UnsubscribeControlEvents()
+        {
+            try
+            {
+                if (BtnFillOnSales != null)
+                    BtnFillOnSales.Click -= BtnFillOnSales_Click;
+
+                if (CheckType != null)
+                    CheckType.SelectionChanged -= CheckType_SelectionChanged;
+
+                if (ClientBarcodeOrPhone != null)
+                    ClientBarcodeOrPhone.KeyDown -= ClientBarcodeOrPhone_KeyDown;
+
+                if (InputSearchProduct != null)
+                    InputSearchProduct.KeyDown -= InputSearchProduct_KeyDown;
+
+                if (Pay != null)
+                    Pay.Click -= Pay_Click;
+
+                if (btn_get_name != null)
+                    btn_get_name.Click -= btn_get_name_Click;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при отписке: {ex.Message}");
+            }
+        }
+
+        protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnDetachedFromVisualTree(e);
+            Cleanup();
         }
 
         private async void OnOpened(object sender, EventArgs e)
@@ -5041,20 +5162,22 @@ namespace Cash8Avalon
                 _productsScrollViewer.PointerPressed += OnProductsScrollViewerPointerPressed;
 
                 // 8. Синхронизация горизонтальной прокрутки
-                _productsScrollViewer.ScrollChanged += (s, e) =>
-                {
-                    try
-                    {
-                        if (_headerGrid != null)
-                        {
-                            _headerGrid.Margin = new Thickness(-_productsScrollViewer.Offset.X, 0, 0, 0);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"✗ Ошибка при синхронизации прокрутки: {ex.Message}");
-                    }
-                };
+                //_productsScrollViewer.ScrollChanged += (s, e) =>
+                //{
+                //    try
+                //    {
+                //        if (_headerGrid != null)
+                //        {
+                //            _headerGrid.Margin = new Thickness(-_productsScrollViewer.Offset.X, 0, 0, 0);
+                //        }
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        Console.WriteLine($"✗ Ошибка при синхронизации прокрутки: {ex.Message}");
+                //    }
+                //};
+
+                _productsScrollViewer.ScrollChanged += OnProductsScrollChanged;
 
                 // 9. Компоновка
                 Grid.SetRow(_headerGrid, 0);
@@ -5110,6 +5233,21 @@ namespace Cash8Avalon
                 {
                     _tabProducts.Content = new Panel();
                 }
+            }
+        }
+
+        private void OnProductsScrollChanged(object? sender, ScrollChangedEventArgs e)
+        {
+            try
+            {
+                if (_headerGrid != null && _productsScrollViewer != null)
+                {
+                    _headerGrid.Margin = new Thickness(-_productsScrollViewer.Offset.X, 0, 0, 0);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при синхронизации прокрутки: {ex.Message}");
             }
         }
 
@@ -6134,6 +6272,8 @@ namespace Cash8Avalon
                             Interval = TimeSpan.FromMilliseconds(2000)
                         };
 
+                        _activeTimers.Add(timer);
+
                         timer.Tick += (s, e) =>
                         {
                             textBlock.Foreground = originalForeground;
@@ -6141,6 +6281,7 @@ namespace Cash8Avalon
                             textBlock.FontWeight = FontWeight.Normal;
                             textBlock.Text = _productsData[dataIndex].Quantity.ToString();
                             timer.Stop();
+                            _activeTimers.Remove(timer);
                         };
 
                         timer.Start();
@@ -6187,10 +6328,13 @@ namespace Cash8Avalon
                             Interval = TimeSpan.FromMilliseconds(2000)
                         };
 
+                        _activeTimers.Add(timer);
+
                         timer.Tick += (s, e) =>
                         {
                             ToolTip.SetTip(border, null);
                             timer.Stop();
+                            _activeTimers.Remove(timer);
                         };
 
                         timer.Start();
@@ -6346,6 +6490,8 @@ namespace Cash8Avalon
                     Interval = TimeSpan.FromMilliseconds(200)
                 };
 
+                _activeTimers.Add(flashTimer);
+
                 flashTimer.Tick += (s, e) =>
                 {
                     if (flashCounter % 2 == 0)
@@ -6366,6 +6512,7 @@ namespace Cash8Avalon
                         flashTimer.Stop();
                         // Удаляем временный Border
                         _productsTableGrid.Children.Remove(cellBorder);
+                        _activeTimers.Remove(flashTimer);
                     }
                 };
 
@@ -8033,6 +8180,7 @@ namespace Cash8Avalon
         {
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             int tick = 0;
+            _activeTimers.Add(timer);
 
             timer.Tick += (s, e) =>
             {
@@ -8053,6 +8201,7 @@ namespace Cash8Avalon
                     timer.Stop();
                     // Восстанавливаем цвет на основе актуального значения
                     UpdateBorderColor(numericUpDown, border);
+                    _activeTimers.Remove(timer);
                 }
             };
 
