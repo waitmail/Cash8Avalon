@@ -34,6 +34,118 @@ using AtolConstants = Atol.Drivers10.Fptr.Constants;
 namespace Cash8Avalon
 {
 
+    public static class TimeSync
+    {
+        private static DateTime _cachedServerTime = DateTime.MinValue;
+        private static DateTime _lastSuccessfulFetch = DateTime.MinValue;
+        private static readonly TimeSpan _cacheDuration = TimeSpan.FromHours(1);
+        private static readonly object _timeLock = new object();
+
+        // Флаг, что время было успешно получено хотя бы раз
+        private static bool _hasValidTime = false;
+
+        // Максимальный возраст кэша, который мы считаем приемлемым
+        private static readonly TimeSpan _maxCacheAge = TimeSpan.FromHours(24);
+
+        public static DateTime GetServerTime()
+        {
+            lock (_timeLock)
+            {
+                // Если есть свежий кэш - используем его с коррекцией
+                if (_cachedServerTime != DateTime.MinValue &&
+                    DateTime.Now - _lastSuccessfulFetch < _cacheDuration)
+                {
+                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+                    return _cachedServerTime.Add(elapsed);
+                }
+
+                // Пробуем обновить кэш
+                bool fetched = TryFetchServerTime();
+
+                if (fetched)
+                {
+                    // Успешно обновили
+                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+                    return _cachedServerTime.Add(elapsed);
+                }
+
+                // Не удалось обновить, но есть старый кэш
+                if (_cachedServerTime != DateTime.MinValue)
+                {
+                    TimeSpan cacheAge = DateTime.Now - _lastSuccessfulFetch;
+
+                    // Если кэш не слишком старый - используем его
+                    if (cacheAge < _maxCacheAge)
+                    {
+                        Console.WriteLine($"[TimeSync] Внимание: используем кэш возрастом {cacheAge.TotalHours:F1} часов");
+
+                        TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+                        return _cachedServerTime.Add(elapsed);
+                    }
+                }
+
+                // Совсем нет данных - возвращаем локальное время с пометкой
+                Console.WriteLine($"[TimeSync] Критично: нет данных о времени сервера");
+                return DateTime.Now; // или new DateTime(1,1,1) если нужен признак ошибки
+            }
+        }
+
+        public static void SetInitialTime(DateTime serverTime)
+        {
+            lock (_timeLock)
+            {
+                _cachedServerTime = serverTime;
+                _lastSuccessfulFetch = DateTime.Now;
+                _hasValidTime = true;
+
+                Console.WriteLine($"[TimeSync] Начальное время установлено: сервер={serverTime:HH:mm:ss}, локальное={_lastSuccessfulFetch:HH:mm:ss}");
+            }
+        }
+
+        private static bool TryFetchServerTime()
+        {
+            try
+            {
+                DS ds = MainStaticClass.get_ds();
+                ds.Timeout = 15000;
+
+                DateTime serverTime = ds.GetDateTimeServer();
+
+                _cachedServerTime = serverTime;
+                _lastSuccessfulFetch = DateTime.Now;
+                _hasValidTime = true;
+
+                Console.WriteLine($"[TimeSync] Успешно: сервер={serverTime:HH:mm:ss}, локальное={DateTime.Now:HH:mm:ss}");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TimeSync] Ошибка: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Для проверки в других методах
+        public static bool IsTimeReliable()
+        {
+            if (!_hasValidTime) return false;
+
+            TimeSpan cacheAge = DateTime.Now - _lastSuccessfulFetch;
+            return cacheAge < _cacheDuration;
+        }
+
+        // Принудительно сбросить кэш (например, при долгой работе)
+        public static void ResetCache()
+        {
+            lock (_timeLock)
+            {
+                _cachedServerTime = DateTime.MinValue;
+                _hasValidTime = false;
+            }
+        }
+    }
+
     class MainStaticClass
     {
         //public static Cash_check cc = null;
@@ -3686,29 +3798,29 @@ namespace Cash8Avalon
 
 
 
-        private static DateTime get_datetime_on_server()
-        {
-            DateTime result = new DateTime(1, 1, 1);
+        //private static DateTime get_datetime_on_server()
+        //{
+        //    DateTime result = new DateTime(1, 1, 1);
 
-            //if (!MainStaticClass.service_is_worker())
-            //{
-            //    return result;
-            //}
+        //    //if (!MainStaticClass.service_is_worker())
+        //    //{
+        //    //    return result;
+        //    //}
 
-            try
-            {
-                DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 15000;
-                result = ds.GetDateTimeServer();
-            }
-            catch (Exception)
-            {
+        //    try
+        //    {
+        //        DS ds = MainStaticClass.get_ds();
+        //        ds.Timeout = 15000;
+        //        result = ds.GetDateTimeServer();
+        //    }
+        //    catch (Exception)
+        //    {
 
-            }
+        //    }
 
-            return result;
+        //    return result;
 
-        }
+        //}
 
 
         /// <summary>
@@ -3755,49 +3867,96 @@ namespace Cash8Avalon
         /// за диапазоном разрешенных дат
         /// </summary>
         /// <returns></returns>
+        //public static int get_documents_out_of_the_range_of_dates()
+        //{
+        //    int result = 0;
+
+        //    DateTime result_query_datetime_on_server = get_datetime_on_server();
+        //    if (result_query_datetime_on_server == new DateTime(1, 1, 1))
+        //    {
+        //        result = -1;
+        //    }
+        //    else
+        //    {
+        //        NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+        //        try
+        //        {
+        //            conn.Open();
+        //            string query = "SELECT COUNT(*) FROM checks_header WHERE (date_time_write<@start_data OR date_time_write>@current_data) AND is_sent = 0";
+        //            NpgsqlParameter start_data = new NpgsqlParameter("start_data", result_query_datetime_on_server.AddDays(-31));
+        //            NpgsqlParameter current_data = new NpgsqlParameter("current_data", result_query_datetime_on_server.AddHours(2));
+        //            NpgsqlCommand command = new NpgsqlCommand(query, conn);
+        //            command.Parameters.Add(start_data);
+        //            command.Parameters.Add(current_data);
+        //            result = Convert.ToInt32(command.ExecuteScalar());
+        //            conn.Close();
+        //        }
+        //        catch (NpgsqlException)
+        //        {
+        //            result = -2;
+        //        }
+        //        catch (Exception)
+        //        {
+        //            result = -2;
+        //        }
+        //        finally
+        //        {
+        //            if (conn.State == ConnectionState.Open)
+        //            {
+        //                conn.Close();
+        //            }
+
+        //        }
+        //    }
+
+        //    return result;
+        //}
+
         public static int get_documents_out_of_the_range_of_dates()
         {
             int result = 0;
 
-            DateTime result_query_datetime_on_server = get_datetime_on_server();
-            if (result_query_datetime_on_server == new DateTime(1, 1, 1))
+            DateTime serverTime = TimeSync.GetServerTime();
+
+            // Проверяем, что время получено
+            if (serverTime == DateTime.MinValue)
             {
-                result = -1;
+                return -1;
             }
-            else
+
+            using (var conn = MainStaticClass.NpgsqlConn())
             {
-                NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
                 try
                 {
                     conn.Open();
-                    string query = "SELECT COUNT(*) FROM checks_header WHERE (date_time_write<@start_data OR date_time_write>@current_data) AND is_sent = 0";
-                    NpgsqlParameter start_data = new NpgsqlParameter("start_data", result_query_datetime_on_server.AddDays(-31));
-                    NpgsqlParameter current_data = new NpgsqlParameter("current_data", result_query_datetime_on_server.AddHours(2));
-                    NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                    command.Parameters.Add(start_data);
-                    command.Parameters.Add(current_data);
-                    result = Convert.ToInt32(command.ExecuteScalar());
-                    conn.Close();
+
+                    // Используем серверное время для расчета границ
+                    string query = "SELECT COUNT(*) FROM checks_header WHERE (date_time_write < @start_data OR date_time_write > @current_data) AND is_sent = 0";
+
+                    using (var command = new NpgsqlCommand(query, conn))
+                    {
+                        command.Parameters.AddWithValue("@start_data", serverTime.AddDays(-31));
+                        command.Parameters.AddWithValue("@current_data", serverTime.AddHours(2));
+
+                        result = Convert.ToInt32(command.ExecuteScalar());
+                    }
+
+                    return result;
                 }
                 catch (NpgsqlException)
                 {
-                    result = -2;
+                    return -2;
                 }
                 catch (Exception)
                 {
-                    result = -2;
+                    return -2;
                 }
                 finally
                 {
                     if (conn.State == ConnectionState.Open)
-                    {
                         conn.Close();
-                    }
-
                 }
             }
-
-            return result;
         }
 
         public async static Task<int> GetUnloadingInterval()

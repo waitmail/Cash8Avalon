@@ -42,7 +42,7 @@ namespace Cash8Avalon
         private ScrollViewer _scrollViewer;
         private Grid _tableGrid;
         private List<CheckItem> _checkItems = new List<CheckItem>();
-        private int _currentRow = 1; // 0 - заголовки
+        private int _currentRow = 0;
         private int _selectedRowIndex = -1;
         private Border _selectedRowBorder;
 
@@ -61,6 +61,7 @@ namespace Cash8Avalon
 
         private DateTime _currentDate = DateTime.Today;
         private TextBox _txtSelectedDate = null;
+        private Grid _headerGrid; // <-- ДОБАВИТЬ ЭТО
 
         public Cash_checks()
         {
@@ -319,16 +320,12 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Создание таблицы полностью из кода
-        /// </summary>
         private void CreateTableFromCode()
         {
             try
             {
                 Console.WriteLine("Создание таблицы из кода...");
 
-                // Находим Border для таблицы
                 var tableBorder = this.FindControl<Border>("TableBorder");
                 if (tableBorder == null)
                 {
@@ -336,63 +333,86 @@ namespace Cash8Avalon
                     return;
                 }
 
-                // Создаем ScrollViewer
-                _scrollViewer = new ScrollViewer
+                // 1. Главный контейнер
+                var mainContainer = new Grid();
+                mainContainer.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); // Шапка
+                mainContainer.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star))); // Данные
+
+                // 2. Сетка шапки
+                _headerGrid = new Grid
                 {
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    Background = Brushes.White,
-                    Focusable = true
+                    Background = Brushes.LightBlue,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Top
                 };
 
-                // Подписываемся на события ScrollViewer
-                _scrollViewer.PointerPressed += OnScrollViewerPointerPressed;
-
-                // Создаем Grid для таблицы
+                // 3. Сетка данных
                 _tableGrid = new Grid
                 {
                     Background = Brushes.White,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     VerticalAlignment = VerticalAlignment.Stretch
                 };
-
-                // Подписываемся на события Grid
                 _tableGrid.PointerPressed += OnTableGridPointerPressed;
 
-                // Добавляем колонки с пропорциональными ширинами
-                var columnDefinitions = new[]
+                // 4. Настройка колонок (одинаковая для обеих сеток)
+                var columnWidths = new[]
                 {
-                    new ColumnDefinition(0.8, GridUnitType.Star),   // Статус
-                    new ColumnDefinition(0.8, GridUnitType.Star),   // Дата
-                    new ColumnDefinition(2.0, GridUnitType.Star),   // Клиент
-                    new ColumnDefinition(0.8, GridUnitType.Star),   // Сумма
-                    new ColumnDefinition(0.8, GridUnitType.Star),   // Сдача
-                    new ColumnDefinition(2.0, GridUnitType.Star),   // Комментарий
-                    new ColumnDefinition(0.7, GridUnitType.Star),   // Тип
-                    new ColumnDefinition(0.8, GridUnitType.Star),   // Номер
-                    new ColumnDefinition(0.5, GridUnitType.Star),   // Напечатан
-                    new ColumnDefinition(0.5, GridUnitType.Star)    // ПечатьП
-                };
+            new GridLength(0.8, GridUnitType.Star),
+            new GridLength(0.8, GridUnitType.Star),
+            new GridLength(2.0, GridUnitType.Star),
+            new GridLength(0.8, GridUnitType.Star),
+            new GridLength(0.8, GridUnitType.Star),
+            new GridLength(2.0, GridUnitType.Star),
+            new GridLength(0.7, GridUnitType.Star),
+            new GridLength(0.8, GridUnitType.Star),
+            new GridLength(0.5, GridUnitType.Star),
+            new GridLength(0.5, GridUnitType.Star)
+        };
 
-                foreach (var colDef in columnDefinitions)
+                foreach (var width in columnWidths)
                 {
-                    _tableGrid.ColumnDefinitions.Add(colDef);
+                    _headerGrid.ColumnDefinitions.Add(new ColumnDefinition(width));
+                    _tableGrid.ColumnDefinitions.Add(new ColumnDefinition(width));
                 }
 
-                // Создаем строку заголовков (строка 0)
-                _tableGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
+                // 5. Создаем заголовки
                 CreateHeaderRow();
 
-                // ✅ ДОБАВЛЯЕМ СТРОКУ "ЗАГРУЗКА..." СРАЗУ
+                // 6. Строка загрузки
+                _currentRow = 0;
                 AddLoadingRow();
 
-                // Добавляем Grid в ScrollViewer
-                _scrollViewer.Content = _tableGrid;
+                // 7. ScrollViewer
+                _scrollViewer = new ScrollViewer
+                {
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Background = Brushes.White,
+                    Focusable = true,
+                    Content = _tableGrid
+                };
+                _scrollViewer.PointerPressed += OnScrollViewerPointerPressed;
 
-                // Добавляем ScrollViewer в Border
-                tableBorder.Child = _scrollViewer;
+                // 8. Синхронизация прокрутки (ИСПРАВЛЕНО)
+                _scrollViewer.ScrollChanged += (s, e) =>
+                {
+                    if (_headerGrid != null)
+                    {
+                        _headerGrid.Margin = new Thickness(-_scrollViewer.Offset.X, 0, 0, 0);
+                    }
+                };
 
-                Console.WriteLine("✓ Таблица создана из кода");
+                // 9. Компоновка
+                Grid.SetRow(_headerGrid, 0);
+                mainContainer.Children.Add(_headerGrid);
+
+                Grid.SetRow(_scrollViewer, 1);
+                mainContainer.Children.Add(_scrollViewer);
+
+                tableBorder.Child = mainContainer;
+
+                Console.WriteLine("✓ Таблица создана с фиксированной шапкой");
             }
             catch (Exception ex)
             {
@@ -401,7 +421,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// ✅ Добавление строки "Загрузка..."
+        /// ✅ Добавление строки "Загрузка..." с безопасной анимацией
         /// </summary>
         private void AddLoadingRow()
         {
@@ -463,16 +483,25 @@ namespace Cash8Avalon
                         Margin = new Thickness(2)
                     };
 
-                    // Простая анимация (можно заменить на настоящую анимацию)
-                    DispatcherTimer timer = null;
-                    timer = new DispatcherTimer
+                    // Создаем таймер
+                    var timer = new DispatcherTimer
                     {
                         Interval = TimeSpan.FromMilliseconds(300 + (i * 200))
                     };
+
+                    // Логика анимации
                     timer.Tick += (s, e) =>
                     {
                         dot.Opacity = dot.Opacity == 0.4 ? 1.0 : 0.4;
                     };
+
+                    // ✅ ВАЖНОЕ ДОБАВЛЕНИЕ: Останавливаем таймер, когда точка удаляется из таблицы
+                    // Это предотвращает утечки памяти и ошибки после очистки таблицы
+                    dot.DetachedFromVisualTree += (s, e) =>
+                    {
+                        timer.Stop();
+                    };
+
                     timer.Start();
 
                     dotsContainer.Children.Add(dot);
@@ -520,7 +549,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Создание строки заголовков
+        /// Создание строки заголовков (теперь в отдельном Grid)
         /// </summary>
         private void CreateHeaderRow()
         {
@@ -528,12 +557,15 @@ namespace Cash8Avalon
             {
                 var headers = new[] { "Статус", "Дата", "Клиент", "Сумма", "Сдача", "Комментарий", "Тип", "Номер", "Напечатан", "ПечатьП" };
 
+                // Добавляем строку в шапку (она там всего одна)
+                _headerGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
+
                 for (int i = 0; i < headers.Length; i++)
                 {
                     var headerBorder = new Border
                     {
                         BorderBrush = Brushes.Gray,
-                        BorderThickness = new Thickness(0, 0, 1, 2),
+                        BorderThickness = new Thickness(0, 0, 1, 2), // Нижняя граница толще
                         Background = Brushes.LightBlue,
                         Child = new TextBlock
                         {
@@ -548,8 +580,8 @@ namespace Cash8Avalon
                     };
 
                     Grid.SetColumn(headerBorder, i);
-                    Grid.SetRow(headerBorder, 0);
-                    _tableGrid.Children.Add(headerBorder);
+                    Grid.SetRow(headerBorder, 0); // Всегда 0-я строка в шапке
+                    _headerGrid.Children.Add(headerBorder);
                 }
 
                 Console.WriteLine("✓ Заголовки созданы");
@@ -758,7 +790,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Очистка таблицы (кроме заголовков)
+        /// Очистка таблицы данных
         /// </summary>
         private void ClearTable()
         {
@@ -767,28 +799,13 @@ namespace Cash8Avalon
                 // Удаляем выделение
                 ClearSelection();
 
-                // Удаляем все строки кроме заголовков
-                while (_tableGrid.RowDefinitions.Count > 1)
-                {
-                    _tableGrid.RowDefinitions.RemoveAt(_tableGrid.RowDefinitions.Count - 1);
-                }
+                // Полностью очищаем сетку данных
+                _tableGrid.Children.Clear();
+                _tableGrid.RowDefinitions.Clear();
 
-                // Удаляем все элементы кроме заголовков
-                var elementsToRemove = new List<Control>();
-                foreach (Control child in _tableGrid.Children)
-                {
-                    if (Grid.GetRow(child) > 0)
-                    {
-                        elementsToRemove.Add(child);
-                    }
-                }
+                // Сбрасываем счетчик строк (теперь 0, так как нет строки заголовка)
+                _currentRow = 0;
 
-                foreach (var element in elementsToRemove)
-                {
-                    _tableGrid.Children.Remove(element);
-                }
-
-                _currentRow = 1;
                 _checkItems.Clear();
                 _selectedRowIndex = -1;
 
@@ -803,7 +820,7 @@ namespace Cash8Avalon
         /// <summary>
         /// Выделение строки по индексу
         /// </summary>
-        private void SelectRow(int rowIndex, bool scrollToRow = true)  // Добавляем параметр scrollToRow
+        private void SelectRow(int rowIndex, bool scrollToRow = true)
         {
             try
             {
@@ -819,8 +836,8 @@ namespace Cash8Avalon
                 // Устанавливаем новое выделение
                 _selectedRowIndex = rowIndex;
 
-                // Находим Border строки (Grid.Row = rowIndex + 1, так как строка 0 - заголовки)
-                int gridRowIndex = rowIndex + 1;
+                // ✅ ИСПРАВЛЕНО: Теперь индексы совпадают (rowIndex = gridRowIndex)
+                int gridRowIndex = rowIndex;
 
                 foreach (Control child in _tableGrid.Children)
                 {

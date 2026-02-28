@@ -2,7 +2,9 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cash8Avalon.ViewModels;
@@ -11,6 +13,7 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -108,30 +111,134 @@ namespace Cash8Avalon
             e.Cancel = true;
             _unloadingTimer?.Stop();
 
-            // 3. Создаем и показываем окно "Подождите"
+            // 3. Создаем и показываем окно "Подождите" с индикацией времени
             var waitWindow = new Window
             {
                 Title = "Завершение работы",
-                Content = new TextBlock
-                {
-                    Text = "Завершение работы...\nИдёт отправка данных на сервер.",
-                    Margin = new Avalonia.Thickness(20),
-                    FontSize = 16,
-                    TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                },
                 SizeToContent = SizeToContent.WidthAndHeight,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 CanResize = false,
                 SystemDecorations = SystemDecorations.BorderOnly,
-                Topmost = true // Чтобы было видно поверх всего
+                Topmost = true
             };
 
+            // Создаем содержимое окна с таймером
+            var stackPanel = new StackPanel
+            {
+                Margin = new Thickness(30),
+                Spacing = 15,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+
+            var titleText = new TextBlock
+            {
+                Text = "Завершение работы...",
+                FontSize = 18,
+                FontWeight = FontWeight.Bold,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+
+            var messageText = new TextBlock
+            {
+                Text = "Идёт отправка данных на сервер.",
+                FontSize = 14,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 400
+            };
+
+            // Таймер для отображения прошедшего времени
+            var timerText = new TextBlock
+            {
+                Text = "⏱ 0 сек",
+                FontSize = 16,
+                FontWeight = FontWeight.Bold,
+                Foreground = new SolidColorBrush(Color.Parse("#2196F3")),
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                Margin = new Thickness(0, 5, 0, 5)
+            };
+
+            // Прогресс-бар для визуальной индикации
+            var progressBar = new ProgressBar
+            {
+                Width = 300,
+                Height = 8,
+                IsIndeterminate = true,
+                Foreground = new SolidColorBrush(Color.Parse("#2196F3")),
+                Background = new SolidColorBrush(Color.Parse("#E3F2FD")),
+                Margin = new Thickness(0, 5, 0, 5),
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+
+            // Анимированные точки для "активности"
+            var dotsPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                Spacing = 5
+            };
+
+            for (int i = 0; i < 3; i++)
+            {
+                var dot = new Border
+                {
+                    Width = 8,
+                    Height = 8,
+                    CornerRadius = new CornerRadius(4),
+                    Background = new SolidColorBrush(Color.Parse("#2196F3")),
+                    Opacity = 0.3
+                };
+                dotsPanel.Children.Add(dot);
+            }
+
+            stackPanel.Children.Add(titleText);
+            stackPanel.Children.Add(messageText);
+            stackPanel.Children.Add(timerText);
+            stackPanel.Children.Add(progressBar);
+            stackPanel.Children.Add(dotsPanel);
+
+            waitWindow.Content = stackPanel;
             waitWindow.Show();
 
-            // 4. Принудительно закрываем все дочерние окна (журналы, чеки и т.д.)
+            // 4. Таймер для обновления времени и анимации точек
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            var uiTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+
+            // Для анимации точек
+            int dotAnimationStep = 0;
+
+            uiTimer.Tick += (s, e) =>
+            {
+                if (stopwatch.IsRunning)
+                {
+                    // Обновляем текст с прошедшим временем
+                    var elapsed = stopwatch.Elapsed;
+                    timerText.Text = $"⏱ {elapsed.Seconds}.{elapsed.Milliseconds / 100} сек";
+
+                    // Анимация точек
+                    dotAnimationStep++;
+                    for (int i = 0; i < dotsPanel.Children.Count; i++)
+                    {
+                        if (dotsPanel.Children[i] is Border dot)
+                        {
+                            // Каждая точка мигает со своей фазой
+                            double opacity = 0.3 + 0.7 * Math.Sin(dotAnimationStep * 0.1 + i * 2);
+                            dot.Opacity = Math.Max(0.2, Math.Min(1.0, opacity));
+                        }
+                    }
+                }
+            };
+
+            uiTimer.Start();
+
+            // 5. Принудительно закрываем все дочерние окна
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                // ✅ ИСПРАВЛЕНИЕ: Получаем окна через ClassicDesktopStyleApplicationLifetime
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
                 {
                     var windowsToClose = desktopLifetime.Windows
@@ -140,80 +247,48 @@ namespace Cash8Avalon
 
                     foreach (var win in windowsToClose)
                     {
-                        try { win.Close(); } catch { /* игнорируем ошибки */ }
+                        try { win.Close(); } catch { }
                     }
                 }
             }, DispatcherPriority.Background);
 
-            // Даем интерфейсу время отрисоваться
             await Task.Delay(100);
-
-            // Флаг для отслеживания, нужно ли закрывать программу в конце
-            bool shouldCloseApp = true;
 
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await PerformUnloadAsync(cts.Token);
+
+                // Если дошли сюда - всё хорошо, просто закрываемся
+                Console.WriteLine($"✓ Выгрузка завершена за {stopwatch.Elapsed.TotalSeconds:F1} сек");
             }
             catch (OperationCanceledException)
             {
-                // Закрываем окно ожидания перед показом ошибки
-                waitWindow.Close();
-
+                // Таймаут - просто логируем и закрываемся
                 MainStaticClass.WriteRecordErrorLog("Таймаут выгрузки при закрытии",
                     "MainWindow_Closing", 0, MainStaticClass.CashDeskNumber, "CancellationToken");
-                Console.WriteLine("⚠ Закрытие: таймаут выгрузки");
-
-                await MessageBox.Show(
-                    "Время ожидания истекло. Данные могут быть сохранены не полностью.",
-                    "Предупреждение",
-                    MessageBoxButton.OK,
-                    MessageBoxType.Warning,
-                    this);
+                Console.WriteLine($"⚠ Таймаут выгрузки через {stopwatch.Elapsed.TotalSeconds:F1} сек");
             }
             catch (Exception ex)
             {
-                waitWindow.Close();
-
+                // Ошибка - логируем и закрываемся
                 MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
                     "Ошибка выгрузки при закрытии приложения");
-                Console.WriteLine($"✗ Закрытие: ошибка выгрузки: {ex.Message}");
-
-                if (this.IsVisible)
-                {
-                    var result = await MessageBox.Show(
-                        $"Не удалось сохранить данные: {ex.Message}\n\nЗакрыть приложение?",
-                        "Ошибка",
-                        MessageBoxButton.YesNo,
-                        MessageBoxType.Error,
-                        this);
-
-                    if (result == MessageBoxResult.No)
-                    {
-                        // Пользователь отменил закрытие
-                        shouldCloseApp = false;
-                    }
-                }
+                Console.WriteLine($"✗ Ошибка выгрузки через {stopwatch.Elapsed.TotalSeconds:F1} сек: {ex.Message}");
             }
             finally
             {
-                // Гарантируем закрытие окна ожидания
-                if (waitWindow.IsVisible) waitWindow.Close();
+                uiTimer.Stop();
+                stopwatch.Stop();
+
+                if (waitWindow.IsVisible)
+                    waitWindow.Close();
             }
 
-            // 5. Если ошибок не было или пользователь согласился закрыть
-            if (shouldCloseApp)
-            {
-                _isReallyClosing = true;
-                this.Closing -= MainWindow_Closing; // Отписываемся, чтобы не зациклиться
-                this.Close(); // Закрываем окно по-настоящему
-            }
-            else
-            {
-                // Если пользователь нажал "Нет" при ошибке, сбрасываем флаги
-                _isReallyClosing = false;
-            }
+            // ВСЕГДА закрываемся, без вопросов к пользователю
+            _isReallyClosing = true;
+            this.Closing -= MainWindow_Closing;
+            this.Close();
         }
 
         private void InitializeUnloadingTimer()
@@ -244,13 +319,13 @@ namespace Cash8Avalon
             MainStaticClass.EncryptData(filePath, defaultSettings);
         }
 
-        private async Task ShowUpdateWindowModalAsync()
+        private async Task ShowUpdateWindowModalAsync(bool show_phone)
         {
             try
             {
                 var updateWindow = new LoadProgramFromInternet
                 {
-                    show_phone = true,
+                    //show_phone = true,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
@@ -334,13 +409,13 @@ namespace Cash8Avalon
             await Task.Delay(50);
 
             // Быстрая проверка в фоне
-            //bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+            bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
 
-            //if (hasUpdate)
-            //{
-            //    // Показываем модальное окно обновления
-            //    await ShowUpdateWindowModalAsync();
-            //}
+            if (hasUpdate)
+            {
+                // Показываем модальное окно обновления
+                await ShowUpdateWindowModalAsync(false);
+            }
 
             // Создаем окно авторизации
             var loginWindow = new Interface_switching();
@@ -519,7 +594,86 @@ namespace Cash8Avalon
                 // Закрываем главное окно при отмене
                 this.Close();
             }
-           
+
+            // ✅ Явно инициализируем TimeSync при старте (не блокирует UI)
+            _ = InitializeTimeSyncAsync().ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    Console.WriteLine($"[TimeSync] Критическая ошибка: {t.Exception?.Message}");
+                }
+            });
+
+        }
+
+
+
+        /// <summary>
+        /// maxAttempts	3	Сколько раз метод будет пытаться получить время, если предыдущие попытки неудачны
+        ///timeoutSeconds	5	Сколько секунд ждать ответа от сервера для каждой попытки
+        ///maxDelaySeconds	5	Максимальная задержка между попытками(фактическая задержка = min(номер_попытки, maxDelaySeconds) секунд)
+        /// </summary>
+        /// <param name="maxAttempts"></param>
+        /// <param name="timeoutSeconds"></param>
+        /// <param name="maxDelaySeconds"></param>
+        /// <returns></returns>
+        private async Task InitializeTimeSyncAsync(
+    int maxAttempts = 100,
+    int timeoutSeconds = 15,
+    int maxDelaySeconds = 600)
+        {
+            Console.WriteLine($"[TimeSync] Запуск инициализации (попыток: {maxAttempts}, таймаут: {timeoutSeconds}с)");
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    Console.WriteLine($"[TimeSync] Попытка {attempt} из {maxAttempts}...");
+
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+                    DateTime serverTime = await GetServerTimeOnStartupAsync(cts.Token);
+
+                    Console.WriteLine($"[TimeSync] ✅ УСПЕХ! Попытка {attempt}: {serverTime:HH:mm:ss}");
+                    TimeSync.SetInitialTime(serverTime);
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine($"[TimeSync] Попытка {attempt}: таймаут ({timeoutSeconds}с)");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[TimeSync] Попытка {attempt}: ошибка - {ex.Message}");
+                }
+
+                if (attempt < maxAttempts)
+                {
+                    int delay = 1000 * Math.Min(attempt, maxDelaySeconds);
+                    Console.WriteLine($"[TimeSync] Следующая попытка через {delay}мс...");
+                    await Task.Delay(delay);
+                }
+            }
+
+            Console.WriteLine($"[TimeSync] ⚠ Не удалось инициализировать после {maxAttempts} попыток");
+        }
+
+        private static async Task<DateTime> GetServerTimeOnStartupAsync(CancellationToken token)
+        {
+            return await Task.Run(() =>
+            {
+                DS ds = MainStaticClass.get_ds();
+                ds.Timeout = 60000;
+
+                // Проверяем отмену перед вызовом
+                token.ThrowIfCancellationRequested();
+
+                var result = ds.GetDateTimeServer();
+
+                // Проверяем отмену после вызова
+                token.ThrowIfCancellationRequested();
+
+                return result;
+            }, token);
         }
 
         public class Users
