@@ -1852,7 +1852,7 @@ namespace Cash8Avalon
             }
         }
 
-        public async void CheckTaxationTypes()
+        public async void CheckTaxationTypes(Window owner)
         {
             uint taxationTypes = 0;
             try
@@ -1892,12 +1892,12 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    await MessageBox.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения");
+                    await MessageBox.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения", owner);
                 }
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения");
+                await MessageBox.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения", owner);
             }
         }
 

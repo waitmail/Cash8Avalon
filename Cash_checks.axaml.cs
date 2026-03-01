@@ -2485,7 +2485,6 @@ namespace Cash8Avalon
 
             try
             {
-                // Обновляем время последней записи чека
                 MainStaticClass.Last_Write_Check = DateTime.Now;
 
                 // ✅ await вместо fire-and-forget

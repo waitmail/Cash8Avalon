@@ -393,9 +393,15 @@ namespace Cash8Avalon
                             {
                                 _ = LoadCdnWithStartAsync(_lifetimeCts.Token);
                             }
+                            if (await MainStaticClass.PrintingUsingLibraries(this) == 1)
+                            {
+                                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                                printingUsingLibraries.CheckTaxationTypes(this);
+                            }
                         }
 
-                        _ = CheckFilesAndFolders();
+                        _ = CheckFilesAndFolders();                       
+
                         Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
                     }
                     else
