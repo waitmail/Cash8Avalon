@@ -746,6 +746,17 @@ namespace Cash8Avalon
                 return;
             }
 
+            get_data_on_sales();
+            //check_sum_header_and_table();
+            if (were_mistakes)//Произошли какие то ошибки при выгрузке
+            {
+                return;
+            }
+            if ((salesPortions.ListSalesPortionsHeader.Count == 0) || (salesPortions.ListSalesPortionsTable.Count == 0))
+            {
+                return;
+            }
+
             if (!MainStaticClass.service_is_worker())
             {
                 return;
@@ -794,16 +805,16 @@ namespace Cash8Avalon
             //    dt.Rows.Clear();
             //}
 
-            get_data_on_sales();
-            //check_sum_header_and_table();
-            if (were_mistakes)//Произошли какие то ошибки при выгрузке
-            {
-                return;
-            }
-            if ((salesPortions.ListSalesPortionsHeader.Count == 0) || (salesPortions.ListSalesPortionsTable.Count == 0))
-            {
-                return;
-            }
+            //get_data_on_sales();
+            ////check_sum_header_and_table();
+            //if (were_mistakes)//Произошли какие то ошибки при выгрузке
+            //{
+            //    return;
+            //}
+            //if ((salesPortions.ListSalesPortionsHeader.Count == 0) || (salesPortions.ListSalesPortionsTable.Count == 0))
+            //{
+            //    return;
+            //}
             string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
             bool result_web_quey = false;
             string data = JsonConvert.SerializeObject(salesPortions, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });

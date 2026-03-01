@@ -1702,7 +1702,7 @@ namespace Cash8Avalon
                     checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
                     await tcs.Task;
                 }
-
+                checkWindow = null;
                 // Обновляем список документов
                 LoadDocuments();
 
@@ -1714,9 +1714,6 @@ namespace Cash8Avalon
                 Console.WriteLine(ex.StackTrace);
                 await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
             }
-
-
-
         }
 
         private async Task<bool> AllIsFilled()
