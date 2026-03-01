@@ -63,6 +63,11 @@ namespace Cash8Avalon
         private TextBox _txtSelectedDate = null;
         private Grid _headerGrid; // <-- ДОБАВИТЬ ЭТО
 
+        private bool _isDisposed = false;
+
+        // ✅ Ссылка на таймер фокуса, чтобы его можно было остановить
+        private DispatcherTimer _focusTimer;
+
         public Cash_checks()
         {
             Console.WriteLine("=== Конструктор Cash_checks начат ===");
@@ -91,6 +96,8 @@ namespace Cash8Avalon
 
                 UpdateDateDisplay();
 
+                this.Unloaded += OnUnloaded;
+
                 Console.WriteLine("✓ Конструктор завершен успешно");
             }
             catch (Exception ex)
@@ -100,6 +107,101 @@ namespace Cash8Avalon
             }
 
             Console.WriteLine("=== Конструктор Cash_checks завершен ===");
+        }
+
+        private void OnUnloaded(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Console.WriteLine("=== Начало очистки ресурсов Cash_checks ===");
+
+                // ✅ 1. СРАЗУ устанавливаем флаг, чтобы остановить все асинхронные операции
+                _isDisposed = true;
+
+                // ✅ 2. Останавливаем таймеры
+                if (_statusTimer != null)
+                {
+                    _statusTimer.Stop();
+                    _statusTimer.Elapsed -= StatusTimer_Elapsed;
+                    _statusTimer.Dispose();
+                    _statusTimer = null;
+                }
+
+                if (_focusTimer != null)
+                {
+                    _focusTimer.Stop();
+                    _focusTimer = null;
+                }
+
+                // 3. Удаляем глобальный обработчик
+                this.RemoveHandler(KeyDownEvent, OnGlobalKeyDown);
+
+                // 4. Отписка от событий (опционально, если сохраните ссылки на кнопки)
+                // UnsubscribeControlEvents(); 
+
+                // 5. Очистка
+                _checkItems?.Clear();
+                _selectedRowBorder = null;
+                _scrollViewer = null;
+                _tableGrid = null;
+                _txtStatusBox = null;
+
+                Console.WriteLine("✓ Ресурсы успешно очищены");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при очистке ресурсов: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Отписка от событий элементов управления
+        /// </summary>
+        private void UnsubscribeControlEvents()
+        {
+            try
+            {
+                // Отписываемся от событий таблицы и скролла
+                if (_tableGrid != null)
+                {
+                    _tableGrid.PointerPressed -= OnTableGridPointerPressed;
+                }
+
+                if (_scrollViewer != null)
+                {
+                    _scrollViewer.PointerPressed -= OnScrollViewerPointerPressed;
+                    //_scrollViewer.ScrollChanged -= OnScrollViewerScrollChanged; // Если добавляли обработчик
+                }
+
+                // Отписываемся от кнопок, найденных через FindControl
+                // (Это хорошая практика, хотя при удалении контрола из визуального дерева ссылки обычно разрываются автоматически,
+                // но явная отписка гарантирует отсутствие утечек)
+
+                var closeButton = this.FindControl<Button>("btnClose");
+                if (closeButton != null) closeButton.Click -= CloseButton_Click;
+
+                var button1 = this.FindControl<Button>("button1");
+                if (button1 != null) button1.Click -= Button1_Click;
+
+                var fillButton = this.FindControl<Button>("fill");
+                if (fillButton != null) fillButton.Click -= Fill_Click;
+
+                var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
+                if (checkBox != null) checkBox.Click -= CheckBox_show_3_last_checks_Click;
+
+                var updateButton = this.FindControl<Button>("btn_update_status_send");
+                if (updateButton != null) updateButton.Click -= Btn_update_status_send_Click;
+
+                var checkActionsButton = this.FindControl<Button>("btn_check_actions");
+                if (checkActionsButton != null) checkActionsButton.Click -= Btn_check_actions_Click;
+
+                var image = this.FindControl<Image>("pictureBox_get_update_program");
+                if (image != null) image.DoubleTapped -= PictureBox_get_update_program_DoubleTapped;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при отписке от событий: {ex.Message}");
+            }
         }
 
         private void UpdateDateDisplay()
@@ -1861,6 +1963,7 @@ namespace Cash8Avalon
         {
             try
             {
+                if (_isDisposed) return;
                 Console.WriteLine("=== Асинхронная загрузка документов ===");
 
                 var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
@@ -2159,48 +2262,37 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("Восстановление фокуса после загрузки данных...");
 
-                // Даем немного времени для завершения обновления UI
-                DispatcherTimer focusTimer = new DispatcherTimer
+                // Останавливаем предыдущий таймер, если он был
+                if (_focusTimer != null)
                 {
-                    Interval = TimeSpan.FromMilliseconds(100)
-                };
+                    _focusTimer.Stop();
+                }
 
-                focusTimer.Tick += (s, e) =>
+                _focusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+
+                _focusTimer.Tick += (s, e) =>
                 {
-                    focusTimer.Stop();
-
                     try
                     {
-                        // Просто устанавливаем фокус на UserControl
+                        // ✅ Проверяем флаг перед любыми действиями
+                        if (_isDisposed) return;
+
+                        _focusTimer.Stop();
                         this.Focus();
-                        Console.WriteLine("✓ Фокус установлен на UserControl");
 
-                        // Дополнительно: через небольшой промежуток пробуем установить на таблицу
-                        DispatcherTimer tableFocusTimer = new DispatcherTimer
+                        if (_scrollViewer != null && !_isDisposed)
                         {
-                            Interval = TimeSpan.FromMilliseconds(50)
-                        };
-
-                        tableFocusTimer.Tick += (s2, e2) =>
-                        {
-                            tableFocusTimer.Stop();
-
-                            if (_scrollViewer != null)
-                            {
-                                _scrollViewer.Focus();
-                                Console.WriteLine("✓ Дополнительная попытка фокуса на ScrollViewer");
-                            }
-                        };
-
-                        tableFocusTimer.Start();
+                            _scrollViewer.Focus();
+                            Console.WriteLine("✓ Фокус установлен на ScrollViewer");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"✗ Ошибка при восстановлении фокуса: {ex.Message}");
+                        Console.WriteLine($"✗ Ошибка в тике таймера фокуса: {ex.Message}");
                     }
                 };
 
-                focusTimer.Start();
+                _focusTimer.Start();
             }
             catch (Exception ex)
             {
