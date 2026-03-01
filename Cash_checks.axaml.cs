@@ -261,7 +261,7 @@ namespace Cash8Avalon
                 Height = 200,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Content = mainPanel,
-                CanResize=false
+                CanResize = false
             };
 
             // Подписываемся на события кнопок
@@ -1310,7 +1310,7 @@ namespace Cash8Avalon
                 bool? dialogResult = checkWindow.Tag as bool?;
                 if (dialogResult == true)
                 {
-                    Console.WriteLine("Чек успешно обработан");                    
+                    Console.WriteLine("Чек успешно обработан");
                 }
                 LoadDocuments(); // Обновляем список после создания чека
             }
@@ -1330,14 +1330,15 @@ namespace Cash8Avalon
         {
             try
             {
-                // ВЫПОЛНЯЕМ ВСЕ ТЯЖЕЛЫЕ ОПЕРАЦИИ В ПОТОКЕ ТАЙМЕРА, А НЕ В UI
+                // ✅ ПРОВЕРКА в самом начале
+                if (_isDisposed) return;
+
+                // Тяжелые операции — в фоне
                 int documentsNotOut = MainStaticClass.get_documents_not_out();
                 string documents_not_out = documentsNotOut.ToString();
-
                 int documents_out_of_the_range_of_dates = MainStaticClass.get_documents_out_of_the_range_of_dates();
 
                 string result = "";
-
                 if (documents_not_out == "-1")
                 {
                     result = " Произошли ошибки при получении кол-ва неотправленных документов, ";
@@ -1362,50 +1363,46 @@ namespace Cash8Avalon
 
                 result += "  " + DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
 
-                // ТОЛЬКО ОБНОВЛЕНИЕ UI - В ДИСПЕТЧЕРЕ
+                // ✅ Обновление UI — только через Dispatcher и с проверкой
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
                     {
+                        // ✅ Двойная проверка внутри Dispatcher
+                        if (_isDisposed) return;
                         if (_txtStatusBox != null)
                         {
                             _txtStatusBox.Text = result;
                         }
-                        else
-                        {
-                            _txtStatusBox = this.FindControl<TextBox>("txtB_not_unloaded_docs");
-                            if (_txtStatusBox != null)
-                            {
-                                _txtStatusBox.Text = result;
-                            }
-                        }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"✗ Ошибка обновления UI: {ex.Message}");
+                        if (!_isDisposed)
+                        {
+                            Console.WriteLine($"✗ Ошибка обновления UI: {ex.Message}");
+                        }
                     }
                 });
 
-                // Проверка версии - тоже в фоне
+                // ✅ Проверка версии — тоже с защитой
                 bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
-
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
                     {
+                        if (_isDisposed) return;
                         var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
                         if (pictureBox != null)
                         {
                             pictureBox.IsVisible = hasNewVersion;
-                            if (hasNewVersion)
-                            {
-                                Console.WriteLine("✓ Обнаружена новая версия программы");
-                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
+                        if (!_isDisposed)
+                        {
+                            Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
+                        }
                     }
                 });
             }
@@ -1413,18 +1410,17 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка в GetStatusSendDocument: {ex.Message}");
 
-                // Показываем ошибку в UI
-                Dispatcher.UIThread.InvokeAsync(() =>
+                // ✅ Безопасное обновление ошибки
+                if (!_isDisposed)
                 {
-                    try
+                    Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        if (_txtStatusBox != null)
+                        if (!_isDisposed && _txtStatusBox != null)
                         {
                             _txtStatusBox.Text = $"⚠ Ошибка связи с БД {DateTime.Now:dd-MM-yyyy HH:mm:ss}";
                         }
-                    }
-                    catch { }
-                });
+                    });
+                }
             }
         }
 
@@ -1471,9 +1467,12 @@ namespace Cash8Avalon
         {
             try
             {
+                // ✅ Проверка перед началом
+                if (_isDisposed) return;
+
                 int unloadInterval = await MainStaticClass.GetUnloadingInterval();
 
-                if (unloadInterval > 0)
+                if (unloadInterval > 0 && !_isDisposed)
                 {
                     _statusTimer = new System.Timers.Timer(unloadInterval * 60 * 1000);
                     _statusTimer.Elapsed += StatusTimer_Elapsed;
@@ -1482,8 +1481,24 @@ namespace Cash8Avalon
 
                     Console.WriteLine($"✓ Таймер статуса инициализирован с интервалом {unloadInterval} мин.");
 
-                    // Первоначальное обновление статуса - в фоне
-                    Task.Run(() => GetStatusSendDocument());
+                    // ✅ Запуск с обработкой ошибок
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (!_isDisposed)
+                            {
+                                GetStatusSendDocument();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!_isDisposed)
+                            {
+                                Console.WriteLine($"✗ Ошибка в начальном обновлении статуса: {ex.Message}");
+                            }
+                        }
+                    });
                 }
                 else
                 {
@@ -1500,24 +1515,33 @@ namespace Cash8Avalon
         /// Обработчик события таймера
         /// </summary>
         private void StatusTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
+        {            
             try
             {
-                // Проверяем, прошла ли минута с последнего выполнения
+                // ✅ ПРОВЕРКА: если контрол уже выгружен — выходим
+                if (_isDisposed) return;
+
                 if (DateTime.Now > _timerExecute.AddSeconds(59))
                 {
-                    // Обновляем статус отправки документов
+                    // ✅ ЕЩЁ РАЗ ПРОВЕРЯЕМ перед вызовом
+                    if (_isDisposed) return;
+
                     GetStatusSendDocument();
 
-                    // Обновляем время последнего выполнения
-                    _timerExecute = DateTime.Now;
-
-                    Console.WriteLine($"✓ Статус отправки обновлен в {DateTime.Now:HH:mm:ss}");
+                    if (!_isDisposed)
+                    {
+                        _timerExecute = DateTime.Now;
+                        Console.WriteLine($"✓ Статус отправки обновлен в {DateTime.Now:HH:mm:ss}");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Ошибка в обработчике таймера: {ex.Message}");
+                // ✅ Игнорируем ошибки при закрытии
+                if (!_isDisposed)
+                {
+                    Console.WriteLine($"✗ Ошибка в обработчике таймера: {ex.Message}");
+                }
             }
         }
 
@@ -1874,7 +1898,7 @@ namespace Cash8Avalon
             bool isTableFocused = _scrollViewer?.IsFocused == true ||
                                  _tableGrid?.IsFocused == true ||
                                  IsChildFocused(_scrollViewer);
-           
+
 
             if (!isTableFocused) return;
 
@@ -2049,7 +2073,7 @@ namespace Cash8Avalon
                             {
                                 command.Parameters.AddWithValue("@startDate", selectedDate);
                                 command.Parameters.AddWithValue("@endDate", selectedDate.AddDays(1));
-                                                                
+
                                 using (var reader = command.ExecuteReader())
                                 {
                                     // 📋 Получаем ординалы один раз перед циклом - это эффективнее
@@ -2214,7 +2238,7 @@ namespace Cash8Avalon
                 });
 
                 Console.WriteLine($"✓ Асинхронная загрузка завершена: {checkItems.Count} записей");
-                RestoreFocusAfterLoad();                
+                RestoreFocusAfterLoad();
             }
             catch (Exception ex)
             {
@@ -2452,23 +2476,38 @@ namespace Cash8Avalon
             LoadDocuments();
         }
 
-        private void Btn_update_status_send_Click(object sender, RoutedEventArgs e)
+        private async void Btn_update_status_send_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("Кнопка 'Обновить' нажата");
+
+            // ✅ Проверка перед операцией
+            if (_isDisposed) return;
 
             try
             {
                 // Обновляем время последней записи чека
                 MainStaticClass.Last_Write_Check = DateTime.Now;
 
-                // Запускаем обновление статуса
-                Task.Run(() => GetStatusSendDocument());
+                // ✅ await вместо fire-and-forget
+                await Task.Run(() => GetStatusSendDocument());
 
-                Console.WriteLine("✓ Обновление статуса запущено");
+                Console.WriteLine("✓ Обновление статуса завершено");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при обновлении статуса: {ex.Message}");
+
+                // ✅ Безопасное обновление ошибки
+                if (!_isDisposed)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!_isDisposed && _txtStatusBox != null)
+                        {
+                            _txtStatusBox.Text = $"⚠ Ошибка: {ex.Message}";
+                        }
+                    });
+                }
             }
         }
 

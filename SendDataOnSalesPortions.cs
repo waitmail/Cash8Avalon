@@ -746,6 +746,23 @@ namespace Cash8Avalon
                 return;
             }
 
+            //Получить параметра для запроса на сервер 
+            nick_shop = MainStaticClass.Nick_Shop.Trim();
+            if (nick_shop.Trim().Length == 0)
+            {
+                return;
+            }
+            string code_shop = MainStaticClass.Code_Shop.Trim();
+            if (code_shop.Trim().Length == 0)
+            {
+                return;
+            }
+
+            salesPortions = new SalesPortions();
+            salesPortions.Shop = nick_shop;
+            salesPortions.Guid = code_shop;
+            salesPortions.Version = MainStaticClass.version().Replace(".", "");
+
             get_data_on_sales();
             //check_sum_header_and_table();
             if (were_mistakes)//Произошли какие то ошибки при выгрузке
@@ -765,22 +782,22 @@ namespace Cash8Avalon
             DS ds = MainStaticClass.get_ds();
             ds.Timeout = 30000;
 
-            //Получить параметра для запроса на сервер 
-            nick_shop = MainStaticClass.Nick_Shop.Trim();
-            if (nick_shop.Trim().Length == 0)
-            {
-                return;
-            }
-            string code_shop = MainStaticClass.Code_Shop.Trim();
-            if (code_shop.Trim().Length == 0)
-            {
-                return;
-            }
+            ////Получить параметра для запроса на сервер 
+            //nick_shop = MainStaticClass.Nick_Shop.Trim();
+            //if (nick_shop.Trim().Length == 0)
+            //{
+            //    return;
+            //}
+            //string code_shop = MainStaticClass.Code_Shop.Trim();
+            //if (code_shop.Trim().Length == 0)
+            //{
+            //    return;
+            //}
             string count_day = CryptorEngine.get_count_day();
-            salesPortions = new SalesPortions();
-            salesPortions.Shop = nick_shop;
-            salesPortions.Guid = code_shop;
-            salesPortions.Version = MainStaticClass.version().Replace(".", "");
+            //salesPortions = new SalesPortions();
+            //salesPortions.Shop = nick_shop;
+            //salesPortions.Guid = code_shop;
+            //salesPortions.Version = MainStaticClass.version().Replace(".", "");
             //if (dt == null)
             //{
             //    dt = new DataTable();
