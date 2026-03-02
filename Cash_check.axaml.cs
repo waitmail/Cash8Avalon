@@ -6357,75 +6357,90 @@ namespace Cash8Avalon
         /// Проверка, можно ли увеличивать количество для данного товара
         /// Возвращает false для весовых, маркированных товаров и сертификатов
         /// </summary>
+        //private bool CanIncreaseQuantity(ProductItem product)
+        //{
+        //    try
+        //    {
+        //        // Получаем данные товара из БД для проверки флагов
+        //        using (var conn = MainStaticClass.NpgsqlConn())
+        //        {
+        //            conn.Open();
+        //            string query = "SELECT its_certificate, its_marked, fractional FROM tovar WHERE code = @code";
+
+        //            using (var cmd = new NpgsqlCommand(query, conn))
+        //            {
+        //                cmd.Parameters.AddWithValue("@code", product.Code);
+
+        //                using (var reader = cmd.ExecuteReader())
+        //                {
+        //                    if (reader.Read())
+        //                    {
+        //                        bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
+        //                        bool isMarked = Convert.ToBoolean(reader["its_marked"]);
+        //                        bool isFractional = Convert.ToBoolean(reader["fractional"]);
+
+        //                        // Проверяем все ограничения:
+        //                        // 1. Сертификат - нельзя увеличивать количество
+        //                        // 2. Маркированный товар - нельзя увеличивать количество
+        //                        // 3. Весовой товар (fractional) - нельзя увеличивать количество
+
+        //                        if (isCertificate)
+        //                        {
+        //                            Console.WriteLine($"⚠ Товар {product.Tovar} - сертификат, увеличение количества запрещено");
+        //                            return false;
+        //                        }
+
+        //                        if (isMarked)
+        //                        {
+        //                            Console.WriteLine($"⚠ Товар {product.Tovar} - маркированный, увеличение количества запрещено");
+        //                            return false;
+        //                        }
+
+        //                        if (isFractional)
+        //                        {
+        //                            Console.WriteLine($"⚠ Товар {product.Tovar} - весовой, увеличение количества запрещено");
+        //                            return false;
+        //                        }
+
+        //                        // Все проверки пройдены - можно увеличивать
+        //                        return true;
+        //                    }
+        //                    else
+        //                    {
+        //                        // Товар не найден в БД - разрешаем увеличение по умолчанию
+        //                        Console.WriteLine($"⚠ Товар {product.Code} не найден в БД, разрешаем увеличение");
+        //                        return true;
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}");
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBoxHelper.Show($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}", "CanIncreaseQuantity",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //        // В случае ошибки разрешаем увеличение, чтобы не блокировать пользователя
+        //        return true;
+        //    }
+        //}
+
         private bool CanIncreaseQuantity(ProductItem product)
         {
-            try
-            {
-                // Получаем данные товара из БД для проверки флагов
-                using (var conn = MainStaticClass.NpgsqlConn())
-                {
-                    conn.Open();
-                    string query = "SELECT its_certificate, its_marked, fractional FROM tovar WHERE code = @code";
+            // Используем уже загруженные данные
+            // 1. Сертификат - нельзя увеличивать количество
+            if (product.IsSertificate) return false;
 
-                    using (var cmd = new NpgsqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@code", product.Code);
+            // 2. Маркированный товар - нельзя увеличивать количество
+            if (product.IsMarked) return false;
 
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
-                                bool isMarked = Convert.ToBoolean(reader["its_marked"]);
-                                bool isFractional = Convert.ToBoolean(reader["fractional"]);
+            // 3. Весовой товар (fractional) - нельзя увеличивать количество
+            if (product.IsFractional) return false;
 
-                                // Проверяем все ограничения:
-                                // 1. Сертификат - нельзя увеличивать количество
-                                // 2. Маркированный товар - нельзя увеличивать количество
-                                // 3. Весовой товар (fractional) - нельзя увеличивать количество
-
-                                if (isCertificate)
-                                {
-                                    Console.WriteLine($"⚠ Товар {product.Tovar} - сертификат, увеличение количества запрещено");
-                                    return false;
-                                }
-
-                                if (isMarked)
-                                {
-                                    Console.WriteLine($"⚠ Товар {product.Tovar} - маркированный, увеличение количества запрещено");
-                                    return false;
-                                }
-
-                                if (isFractional)
-                                {
-                                    Console.WriteLine($"⚠ Товар {product.Tovar} - весовой, увеличение количества запрещено");
-                                    return false;
-                                }
-
-                                // Все проверки пройдены - можно увеличивать
-                                return true;
-                            }
-                            else
-                            {
-                                // Товар не найден в БД - разрешаем увеличение по умолчанию
-                                Console.WriteLine($"⚠ Товар {product.Code} не найден в БД, разрешаем увеличение");
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await MessageBoxHelper.Show($"✗ Ошибка при проверке возможности увеличения количества: {ex.Message}", "CanIncreaseQuantity",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
-                });
-                // В случае ошибки разрешаем увеличение, чтобы не блокировать пользователя
-                return true;
-            }
+            return true;
         }
 
         // Улучшенный метод для эффекта изменения количества (бордеры ячеек)

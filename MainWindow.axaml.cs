@@ -220,23 +220,29 @@ namespace Cash8Avalon
             MainStaticClass.EncryptData(filePath, defaultSettings);
         }
 
-        private async Task ShowUpdateWindowModalAsync(bool show_phone)
+        /// <summary>
+        /// Показывает окно обновления и возвращает результат
+        /// </summary>
+        /// <returns>True — обновление успешно, False — отменено/ошибка</returns>
+        private async Task<bool> ShowUpdateWindowModalAsync(bool show_phone)
         {
             try
             {
                 var updateWindow = new LoadProgramFromInternet
                 {
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    show_phone = show_phone
                 };
 
-                if (this.IsVisible)
-                    await updateWindow.ShowDialog(this);
-                else
-                    updateWindow.Show();
+                // ✅ Всегда используем ShowDialog — окно уже показано
+                bool result = await updateWindow.ShowDialog(this);
+                Console.WriteLine($"[Update] Результат: {result}");
+                return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при показе окна обновления: {ex.Message}");
+                return false;
             }
         }
 
@@ -284,12 +290,24 @@ namespace Cash8Avalon
 
             bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
 
-            // ✅ Проверка перед UI операцией
             if (_isDisposed) return;
 
             if (hasUpdate)
             {
-                await ShowUpdateWindowModalAsync(false);
+                // ✅ Получаем результат обновления
+                bool updateSuccess = await ShowUpdateWindowModalAsync(false);
+
+                if (updateSuccess)
+                {
+                    // 🎯 Обновление успешно — программа перезапустится, выходим
+                    Console.WriteLine("✓ Обновление успешно, программа будет перезапущена");
+                    return;  // ← КЛЮЧЕВОЙ ВОЗВРАТ
+                }
+                else
+                {
+                    // ⚠ Обновление отменено/не удалось — продолжаем запуск
+                    Console.WriteLine("⚠ Обновление отменено или не удалось, продолжаем запуск");
+                }
             }
 
             var loginWindow = new Interface_switching();

@@ -65,8 +65,16 @@ namespace Cash8Avalon
 
         private bool _isDisposed = false;
 
+        // Добавить в поля класса:
+        private TranslateTransform _headerScrollTransform;
+        private bool _isUpdatingHeader = false; // для дополнительной защиты
+
         // ✅ Ссылка на таймер фокуса, чтобы его можно было остановить
         private DispatcherTimer _focusTimer;
+        
+        // Поля для хранения обработчиков (чтобы отписаться)
+        private EventHandler<SizeChangedEventArgs> _scrollSizeChangedHandler;
+        private EventHandler<ScrollChangedEventArgs> _scrollChangedHandler;
 
         public Cash_checks()
         {
@@ -115,10 +123,10 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("=== Начало очистки ресурсов Cash_checks ===");
 
-                // ✅ 1. СРАЗУ устанавливаем флаг, чтобы остановить все асинхронные операции
+                // 1. СРАЗУ устанавливаем флаг остановки
                 _isDisposed = true;
 
-                // ✅ 2. Останавливаем таймеры
+                // 2. Останавливаем и уничтожаем таймеры
                 if (_statusTimer != null)
                 {
                     _statusTimer.Stop();
@@ -133,18 +141,24 @@ namespace Cash8Avalon
                     _focusTimer = null;
                 }
 
-                // 3. Удаляем глобальный обработчик
+                // 3. Удаляем глобальный обработчик клавиатуры
                 this.RemoveHandler(KeyDownEvent, OnGlobalKeyDown);
 
-                // 4. Отписка от событий (опционально, если сохраните ссылки на кнопки)
-                // UnsubscribeControlEvents(); 
+                // 4. Отписываемся от всех событий (кнопки, таблица, синхронизация)
+                UnsubscribeControlEvents();
 
-                // 5. Очистка
+                // 5. Очистка коллекций и обнуление ссылок
                 _checkItems?.Clear();
                 _selectedRowBorder = null;
                 _scrollViewer = null;
                 _tableGrid = null;
                 _txtStatusBox = null;
+                _headerGrid = null;
+                _headerScrollTransform = null;
+
+                // Обнуляем ссылки на делегаты
+                _scrollSizeChangedHandler = null;
+                _scrollChangedHandler = null;
 
                 Console.WriteLine("✓ Ресурсы успешно очищены");
             }
@@ -161,7 +175,7 @@ namespace Cash8Avalon
         {
             try
             {
-                // Отписываемся от событий таблицы и скролла
+                // ✅ 1. Отписываемся от событий таблицы и скролла (включая синхронизацию)
                 if (_tableGrid != null)
                 {
                     _tableGrid.PointerPressed -= OnTableGridPointerPressed;
@@ -170,13 +184,16 @@ namespace Cash8Avalon
                 if (_scrollViewer != null)
                 {
                     _scrollViewer.PointerPressed -= OnScrollViewerPointerPressed;
-                    //_scrollViewer.ScrollChanged -= OnScrollViewerScrollChanged; // Если добавляли обработчик
+
+                    // ✅ ВАЖНО: Отписываемся от обработчиков синхронизации
+                    if (_scrollSizeChangedHandler != null)
+                        _scrollViewer.SizeChanged -= _scrollSizeChangedHandler;
+
+                    if (_scrollChangedHandler != null)
+                        _scrollViewer.ScrollChanged -= _scrollChangedHandler;
                 }
 
-                // Отписываемся от кнопок, найденных через FindControl
-                // (Это хорошая практика, хотя при удалении контрола из визуального дерева ссылки обычно разрываются автоматически,
-                // но явная отписка гарантирует отсутствие утечек)
-
+                // ✅ 2. Отписываемся от кнопок
                 var closeButton = this.FindControl<Button>("btnClose");
                 if (closeButton != null) closeButton.Click -= CloseButton_Click;
 
@@ -427,7 +444,6 @@ namespace Cash8Avalon
             try
             {
                 Console.WriteLine("Создание таблицы из кода...");
-
                 var tableBorder = this.FindControl<Border>("TableBorder");
                 if (tableBorder == null)
                 {
@@ -437,15 +453,16 @@ namespace Cash8Avalon
 
                 // 1. Главный контейнер
                 var mainContainer = new Grid();
-                mainContainer.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); // Шапка
-                mainContainer.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star))); // Данные
+                mainContainer.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                mainContainer.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star)));
 
                 // 2. Сетка шапки
                 _headerGrid = new Grid
                 {
                     Background = Brushes.LightBlue,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    VerticalAlignment = VerticalAlignment.Top
+                    HorizontalAlignment = HorizontalAlignment.Left, // ✅ Важно: Left (не даем растягиваться)
+                    VerticalAlignment = VerticalAlignment.Top,
+                    ClipToBounds = true
                 };
 
                 // 3. Сетка данных
@@ -460,16 +477,16 @@ namespace Cash8Avalon
                 // 4. Настройка колонок (одинаковая для обеих сеток)
                 var columnWidths = new[]
                 {
-            new GridLength(0.8, GridUnitType.Star),
-            new GridLength(0.8, GridUnitType.Star),
-            new GridLength(2.0, GridUnitType.Star),
-            new GridLength(0.8, GridUnitType.Star),
-            new GridLength(0.8, GridUnitType.Star),
-            new GridLength(2.0, GridUnitType.Star),
-            new GridLength(0.7, GridUnitType.Star),
-            new GridLength(0.8, GridUnitType.Star),
-            new GridLength(0.5, GridUnitType.Star),
-            new GridLength(0.5, GridUnitType.Star)
+            new GridLength(0.8, GridUnitType.Star), // 0: Статус
+            new GridLength(1.3, GridUnitType.Star), // 1: Дата
+            new GridLength(2.0, GridUnitType.Star), // 2: Клиент
+            new GridLength(0.8, GridUnitType.Star), // 3: Сумма
+            new GridLength(0.8, GridUnitType.Star), // 4: Сдача
+            new GridLength(2.0, GridUnitType.Star), // 5: Комментарий
+            new GridLength(0.7, GridUnitType.Star), // 6: Тип
+            new GridLength(0.8, GridUnitType.Star), // 7: Номер
+            new GridLength(0.5, GridUnitType.Star), // 8: Напечатан
+            new GridLength(0.5, GridUnitType.Star)  // 9: ПечатьП
         };
 
                 foreach (var width in columnWidths)
@@ -478,12 +495,14 @@ namespace Cash8Avalon
                     _tableGrid.ColumnDefinitions.Add(new ColumnDefinition(width));
                 }
 
-                // 5. Создаем заголовки
                 CreateHeaderRow();
 
-                // 6. Строка загрузки
                 _currentRow = 0;
                 AddLoadingRow();
+
+                // Инициализация трансформации
+                _headerScrollTransform = new TranslateTransform();
+                _headerGrid.RenderTransform = _headerScrollTransform;
 
                 // 7. ScrollViewer
                 _scrollViewer = new ScrollViewer
@@ -496,16 +515,47 @@ namespace Cash8Avalon
                 };
                 _scrollViewer.PointerPressed += OnScrollViewerPointerPressed;
 
-                // 8. Синхронизация прокрутки (ИСПРАВЛЕНО)
-                _scrollViewer.ScrollChanged += (s, e) =>
+                // ✅✅✅ СИНХРОНИЗАЦИЯ (ИДЕАЛЬНЫЙ ВАРИАНТ) ✅✅✅
+
+                // 1. Обработчик изменения размера (сохраняем в поле для отписки)
+                _scrollSizeChangedHandler = (s, e) =>
                 {
-                    if (_headerGrid != null)
+                    if (_isDisposed || _headerGrid == null || _scrollViewer == null || _isUpdatingHeader) return;
+
+                    var viewportWidth = _scrollViewer.Viewport.Width;
+
+                    // Синхронизируем только если есть изменение
+                    if (viewportWidth > 0 && !double.IsNaN(viewportWidth) &&
+                        Math.Abs(_headerGrid.Width - viewportWidth) > 0.5)
                     {
-                        _headerGrid.Margin = new Thickness(-_scrollViewer.Offset.X, 0, 0, 0);
+                        _isUpdatingHeader = true;
+                        _headerGrid.Width = viewportWidth;
+                        _isUpdatingHeader = false;
                     }
                 };
 
-                // 9. Компоновка
+                // 2. Обработчик прокрутки (сохраняем в поле для отписки)
+                _scrollChangedHandler = (s, e) =>
+                {
+                    // ✅ Проверка флага добавлена
+                    if (_isDisposed || _headerScrollTransform == null) return;
+                    _headerScrollTransform.X = -_scrollViewer.Offset.X;
+                };
+
+                // Подписываемся
+                _scrollViewer.SizeChanged += _scrollSizeChangedHandler;
+                _scrollViewer.ScrollChanged += _scrollChangedHandler;
+
+                // 3. Начальная синхронизация
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_isDisposed || _headerGrid == null || _scrollViewer?.Viewport.Width <= 0) return;
+
+                    _headerGrid.Width = _scrollViewer.Viewport.Width;
+                    Console.WriteLine($"✓ Начальная ширина шапки: {_headerGrid.Width:F1}");
+                }, DispatcherPriority.Render);
+
+                // 4. Компоновка
                 Grid.SetRow(_headerGrid, 0);
                 mainContainer.Children.Add(_headerGrid);
 
@@ -514,13 +564,14 @@ namespace Cash8Avalon
 
                 tableBorder.Child = mainContainer;
 
-                Console.WriteLine("✓ Таблица создана с фиксированной шапкой");
+                Console.WriteLine("✓ Таблица создана с надежной синхронизацией");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при создании таблицы: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// ✅ Добавление строки "Загрузка..." с безопасной анимацией
@@ -701,138 +752,133 @@ namespace Cash8Avalon
         {
             try
             {
-                // Добавляем новую строку в Grid
                 int gridRowIndex = _currentRow;
-                _tableGrid.RowDefinitions.Add(new RowDefinition(30, GridUnitType.Pixel));
 
-                // БАЗОВЫЙ ЦВЕТ по умолчанию (белые и AliceBlue строки поочередно)
+                // === МАСШТАБИРОВАНИЕ ===
+                const double baseFontSize = 14.0; // Базовый шрифт (можно менять)
+                const double baseDesignWidth = 1200.0;
+
+                double currentWidth = this.Bounds.Width;
+                if (currentWidth <= 0) currentWidth = baseDesignWidth;
+
+                double scale = currentWidth / baseDesignWidth;
+
+                // Рассчитываем размер шрифта (ограничиваем от 10 до 24)
+                double baseScaledFontSize = baseFontSize * scale;
+                baseScaledFontSize = Math.Max(10, Math.Min(baseScaledFontSize, 24));
+
+                // Рассчитываем высоту строки (ограничиваем от 25 до 45)
+                double rowHeight = 30 * scale;
+                rowHeight = Math.Max(25, Math.Min(rowHeight, 45));
+
+                // Добавляем строку с динамической высотой
+                _tableGrid.RowDefinitions.Add(new RowDefinition(rowHeight, GridUnitType.Pixel));
+
+                // Базовые стили
                 IBrush rowBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
                 FontWeight fontWeight = FontWeight.Normal;
                 FontStyle fontStyle = FontStyle.Normal;
-                double fontSize = 18;
+                double fontSize = baseScaledFontSize;
                 IBrush foreground = Brushes.Black;
                 TextDecorationCollection textDecorations = null;
 
-                // === ЛОГИКА ВЫДЕЛЕНИЯ СПЕЦИАЛЬНЫХ СЛУЧАЕВ ===
-
-                // 1. Удаленный чек (ItsDeleted == 1)
+                // === СПЕЦИАЛЬНЫЕ СЛУЧАИ ===
                 if (item.ItsDeleted == 1)
                 {
-                    // Прозрачный фон и зачеркнутый текст
                     rowBackground = Brushes.Transparent;
-                    fontSize = 18;
+                    fontSize = baseScaledFontSize * 0.9; // Чуть меньше для удаленных
                     fontStyle = FontStyle.Italic;
                     foreground = Brushes.Gray;
                     textDecorations = TextDecorations.Strikethrough;
                 }
-                // 2. Нераспечатанный чек (только для активных чеков)
                 else if (item.ItsDeleted == 0 && MainStaticClass.Use_Fiscall_Print)
                 {
-                    // Проверяем по логике из WinForms
-                    bool needHighlight = false;
-
-                    // Проверяем оба флага печати (или один, если другой не установлен)
-                    if (item.ItsPrint && item.ItsPrintP)
-                    {
-                        // Оба флага установлены - все распечатано
-                        needHighlight = false;
-                    }
-                    else
-                    {
-                        // Хотя бы один флаг не установлен - нужно выделение
-                        needHighlight = true;
-                    }
+                    bool needHighlight = !(item.ItsPrint && item.ItsPrintP);
 
                     if (needHighlight)
                     {
-                        // Розовый фон (аналог Color.Pink) и подчеркнутый жирный текст
-                        rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый цвет
-                        fontSize = 18;
+                        rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB"));
+                        fontSize = baseScaledFontSize * 1.1; // Чуть больше для выделенных
                         fontWeight = FontWeight.Bold;
                         textDecorations = TextDecorations.Underline;
                     }
                 }
 
-                // Создаем Border для всей строки
+                // Border для строки
                 var rowBorder = new Border
                 {
                     BorderBrush = Brushes.LightGray,
                     BorderThickness = new Thickness(0, 0, 0, 1),
                     Background = rowBackground,
-                    Tag = dataRowIndex // Сохраняем индекс данных
+                    Tag = dataRowIndex,
+                    Height = rowHeight // Явная высота не обязательна, так как RowDefinition уже задана, но не помешает
                 };
-
-                // Подписываемся на события клика
                 rowBorder.PointerPressed += OnRowPointerPressed;
 
                 Grid.SetColumnSpan(rowBorder, 10);
                 Grid.SetRow(rowBorder, gridRowIndex);
                 _tableGrid.Children.Add(rowBorder);
 
-                // === ДОБАВЛЯЕМ ЯЧЕЙКИ С УЧЕТОМ СТИЛЕЙ ===
+                // Ячейки с масштабированным шрифтом
+                AddStyledCell(0, gridRowIndex, item.ItsDeleted == 1 ? "Удален" : "Активен",
+                    HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 1: Статус (Удален/Активен)
-                AddStyledCell(0, gridRowIndex,
-                    item.ItsDeleted == 1 ? "Удален" : "Активен",
-                    HorizontalAlignment.Center,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(1, gridRowIndex, item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"),
+                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 2: Дата
-                AddStyledCell(1, gridRowIndex,
-                    item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"),
-                    HorizontalAlignment.Left,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(2, gridRowIndex, item.ClientName,
+                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 3: Клиент
-                AddStyledCell(2, gridRowIndex,
-                    item.ClientName,
-                    HorizontalAlignment.Left,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(3, gridRowIndex, item.Cash.ToString("N2"),
+                    HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 4: Сумма
-                AddStyledCell(3, gridRowIndex,
-                    item.Cash.ToString("N2"),
-                    HorizontalAlignment.Right,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(4, gridRowIndex, item.Remainder.ToString("N2"),
+                    HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 5: Сдача
-                AddStyledCell(4, gridRowIndex,
-                    item.Remainder.ToString("N2"),
-                    HorizontalAlignment.Right,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(5, gridRowIndex, item.Comment,
+                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 6: Комментарий
-                AddStyledCell(5, gridRowIndex,
-                    item.Comment,
-                    HorizontalAlignment.Left,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(6, gridRowIndex, item.CheckType,
+                    HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 7: Тип чека
-                AddStyledCell(6, gridRowIndex,
-                    item.CheckType,
-                    HorizontalAlignment.Center,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                AddStyledCell(7, gridRowIndex, item.DocumentNumber,
+                    HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // Колонка 8: Номер документа
-                AddStyledCell(7, gridRowIndex,
-                    item.DocumentNumber,
-                    HorizontalAlignment.Right,
-                    fontSize, fontWeight, fontStyle, foreground, textDecorations);
-
-                // Колонка 9: Напечатан (CheckBox)
-                AddCheckBoxCell(8, gridRowIndex, item.ItsPrint);
-
-                // Колонка 10: ПечатьП (CheckBox)
-                AddCheckBoxCell(9, gridRowIndex, item.ItsPrintP);
+                // CheckBox с масштабированием
+                AddCheckBoxCell(8, gridRowIndex, item.ItsPrint, fontSize);
+                AddCheckBoxCell(9, gridRowIndex, item.ItsPrintP, fontSize);
 
                 _currentRow++;
-
-                Console.WriteLine($"✓ Добавлена строка {dataRowIndex}: {item.DocumentNumber}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при добавлении строки: {ex.Message}");
             }
+        }
+
+        // Обновленный метод для CheckBox
+        private void AddCheckBoxCell(int column, int row, bool isChecked, double fontSize)
+        {
+            // Масштаб относительно базового шрифта 14
+            double scale = fontSize / 14.0;
+
+            var checkBox = new CheckBox
+            {
+                IsEnabled = false,
+                IsChecked = isChecked,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+
+                // ✅ ВАЖНО: Масштабируем от центра, чтобы галочка не смещалась
+                RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+                RenderTransform = new ScaleTransform(scale, scale),
+
+                Margin = new Thickness(2 * scale) // Масштабируем отступы
+            };
+
+            Grid.SetColumn(checkBox, column);
+            Grid.SetRow(checkBox, row);
+            _tableGrid.Children.Add(checkBox);
         }
 
         /// <summary>
