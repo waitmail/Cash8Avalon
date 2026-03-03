@@ -213,7 +213,7 @@
                                  Width="96"
                                  Height="43"
                                  Opacity="0"
-                                 IsVisible="False"
+                                 IsVisible="True"
                                  IsHitTestVisible="False"/>
                         
                         <TextBox x:Name="non_cash_sum"

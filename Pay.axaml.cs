@@ -65,6 +65,7 @@ namespace Cash8Avalon
             this.ShowInTaskbar = false;            
             this.Loaded += Pay_Loaded;            
             this.Opened += Pay_Opened;
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
         private void Pay_Loaded(object? sender, RoutedEventArgs e)
@@ -1392,35 +1393,35 @@ namespace Cash8Avalon
 
                                             if (answerTerminal.сode_response_in_15_field == "R10")
                                             {
-                                                await MessageBox.Show(" Операция отклонена ", "Оплата по терминалу");
+                                                await MessageBoxHelper.Show(" Операция отклонена ", "Оплата по терминалу",this);
                                                 break;
                                             }
                                             else if (answerTerminal.сode_response_in_15_field == "R11")
                                             {
-                                                await MessageBox.Show(" Операции по QR коду не существует. ", "Оплата по терминалу");
+                                                await MessageBoxHelper.Show(" Операции по QR коду не существует. ", "Оплата по терминалу", this);
                                                 break;
                                             }
                                             else if (answerTerminal.сode_response_in_15_field == "R12")
                                             {
                                                 if (answerTerminal.сode_response_in_39_field == "0")
                                                 {
-                                                    await MessageBox.Show(" Не получен ответ на запрос статуса ", "Оплата по терминалу");
+                                                    await MessageBoxHelper.Show(" Не получен ответ на запрос статуса ", "Оплата по терминалу", this);
                                                     break;
                                                 }
                                                 else if (answerTerminal.сode_response_in_39_field == "16")
                                                 {
-                                                    await MessageBox.Show(" Не получен ответ на запрос QR - кода ", "Оплата по терминалу");
+                                                    await MessageBoxHelper.Show(" Не получен ответ на запрос QR - кода ", "Оплата по терминалу", this);
                                                     break;
                                                 }
                                             }
                                             else if (answerTerminal.сode_response_in_15_field == "R13")
                                             {
-                                                await MessageBox.Show(" Запрос статуса не отправлен ", "Оплата по терминалу");
+                                                await MessageBoxHelper.Show(" Запрос статуса не отправлен ", "Оплата по терминалу", this);
                                                 break;
                                             }
                                             else if (answerTerminal.сode_response_in_15_field == "R14")
                                             {
-                                                await MessageBox.Show(" Операция не добавлена в базу транзакций терминала ", "Оплата по терминалу");
+                                                await MessageBoxHelper.Show(" Операция не добавлена в базу транзакций терминала ", "Оплата по терминалу", this);
                                                 break;
                                             }
                                             if (answerTerminal.error)
@@ -1951,7 +1952,7 @@ namespace Cash8Avalon
                 var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
                 var nonCashSumKopTextBox = this.FindControl<TextBox>("non_cash_sum_kop");
 
-                if (checkBox.IsChecked == true)
+                if (checkBox.IsChecked != true)
                 {
                     // Логика для включенного СБП
                     if (nonCashSumTextBox != null)
