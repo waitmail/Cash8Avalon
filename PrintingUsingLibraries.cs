@@ -1887,21 +1887,21 @@ namespace Cash8Avalon
                 {
                     if (MainStaticClass.SystemTaxation != expectedSystemTaxation)
                     {
-                        ShowTaxationMismatchMessage(taxationTypes, MainStaticClass.SystemTaxation);
+                        ShowTaxationMismatchMessage(taxationTypes, MainStaticClass.SystemTaxation, owner);
                     }
                 }
                 else
                 {
-                    await MessageBox.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения", owner);
+                    await MessageBoxHelper.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения", owner);
                 }
             }
             catch (Exception ex)
             {
-                await MessageBox.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения", owner);
+                await MessageBoxHelper.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения", owner);
             }
         }
 
-        private async void ShowTaxationMismatchMessage(uint taxationTypes, int systemTaxationInProgram)
+        private async void ShowTaxationMismatchMessage(uint taxationTypes, int systemTaxationInProgram,Window owner)
         {
             // Описание систем налогообложения в ФР
             var taxationDescriptionsFR = new Dictionary<uint, string>
@@ -1939,7 +1939,7 @@ namespace Cash8Avalon
                              $"Система налогообложения в программе: {programTaxationDescription}.\n" +
                              "Вам необходимо связаться с бухгалтерией для устранения расхождения.";
 
-            await MessageBox.Show(message, "Проверка системы налогообложения");
+            await MessageBoxHelper.Show(message, "Проверка системы налогообложения",MessageBoxButton.OK,MessageBoxType.Error,  owner);
         }
 
 

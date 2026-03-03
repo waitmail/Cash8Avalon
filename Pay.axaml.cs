@@ -116,7 +116,7 @@ namespace Cash8Avalon
             };
 
             ToolTip.SetTip(checkBox_do_not_send_payment_to_the_terminal, toolTipContent);
-            calculate();
+            CalculateChange();
         }
 
         //private void Pay_Opened(object? sender, EventArgs e)
@@ -276,7 +276,7 @@ namespace Cash8Avalon
 
         private void CashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
         {
-            calculate();
+            CalculateChange();
         }
         
         private void InitializeComponent()
@@ -323,11 +323,18 @@ namespace Cash8Avalon
             if (nonCashSumTextBox != null)
             {                
                 nonCashSumTextBox.KeyDown += NonCashSumTextBox_KeyDown;
-                nonCashSumTextBox.LostFocus += OnNonCashSumLostFocus;                
+                nonCashSumTextBox.LostFocus += OnNonCashSumLostFocus;
+                nonCashSumTextBox.TextChanged += NonCashSumTextBox_TextChanged;
+
                 nonCashSumTextBox.Text = "0";
             }
             
-        }        
+        }
+
+        private void NonCashSumTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+        {
+            CalculateChange();
+        }
 
         #region NonCashSum (Рубли) Handlers
 
@@ -350,12 +357,12 @@ namespace Cash8Avalon
                 }
             }
 
-            calculate();
+            CalculateChange();
         }
 
         private void NonCashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
         {
-            CalculateChange();
+            CalculateChange();            
         }
 
         #endregion
@@ -393,13 +400,16 @@ namespace Cash8Avalon
 
         private void NonCashSumKopTextBox_KeyUp(object? sender, KeyEventArgs e)
         {
-            CalculateChange();
+            // Вызываем пересчет сдачи после обработки клавиши
+            Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
         }
 
         #endregion
 
         private void NonCashSumTextBox_KeyDown(object? sender, KeyEventArgs e)
         {
+            // Вызываем пересчет сдачи после обработки клавиши
+            Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
             var textBox = sender as TextBox;
             if (textBox == null) return;
 
@@ -460,8 +470,7 @@ namespace Cash8Avalon
             }
 
             // Вызываем пересчет сдачи после обработки клавиши
-            Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
-        
+            Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);            
         }
 
         private char GetDigitFromKey(Key key)
@@ -867,7 +876,7 @@ namespace Cash8Avalon
                             "Сертификаты",
                             cc?.numdoc.ToString() ?? "0"
                         );
-                        calculate();
+                        CalculateChange();
                         //CalculateChange();
                     }
                     else
@@ -929,7 +938,7 @@ namespace Cash8Avalon
                 this.NonCashSum = rubles.ToString();
                 this.NonCashSumKop = kopecks.ToString("00");
             }
-            calculate();
+            CalculateChange();
         }
 
         // Обнулить безналичную оплату
@@ -937,14 +946,14 @@ namespace Cash8Avalon
         {
             this.NonCashSum = "0";
             this.NonCashSumKop = "00";
-            calculate();
+            CalculateChange();
         }
 
         // Обнулить наличные
         private void ClearCash()
         {
             this.CashSum = "0,00";
-            calculate();
+            CalculateChange();
         }
 
 
@@ -1000,69 +1009,69 @@ namespace Cash8Avalon
             return result;
         }
 
-        private async void calculate()
-        {
-            try
-            {
-                if (this.txtB_cash_sum.Text.Length == 0)
-                {
-                    this.txtB_cash_sum.Text = "0,00";
-                }
+        //private async void calculate()
+        //{
+        //    try
+        //    {
+        //        if (this.txtB_cash_sum.Text.Length == 0)
+        //        {
+        //            this.txtB_cash_sum.Text = "0,00";
+        //        }
 
-                this.txtB_cash_sum.Text = Convert.ToDouble(this.txtB_cash_sum.Text).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+        //        this.txtB_cash_sum.Text = Convert.ToDouble(this.txtB_cash_sum.Text).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
 
-                this.remainder.Text = Math.Round(
-                (double.Parse(txtB_cash_sum.Text) +
-                double.Parse(pay_bonus_many.Text) +
-                get_non_cash_sum() +
-                double.Parse(sertificates_sum.Text) - double.Parse(pay_sum.Text)), 2).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+        //        this.remainder.Text = Math.Round(
+        //        (double.Parse(txtB_cash_sum.Text) +
+        //        double.Parse(pay_bonus_many.Text) +
+        //        get_non_cash_sum() +
+        //        double.Parse(sertificates_sum.Text) - double.Parse(pay_sum.Text)), 2).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
 
-                //if (Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) + double.Parse(non_cash_sum.Text) +
-                //double.Parse(sertificates_sum.Text) + double.Parse(pay_bonus_many.Text) +
-                //Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100), 2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) < 0)
-                //{
-                //    //this.button_pay.IsEnabled = false;
-                //    await Dispatcher.UIThread.InvokeAsync(() =>
-                //    {
-                //        button_pay.IsEnabled = false;
-                //    }, DispatcherPriority.Render);
-                //}
-                //else
-                //{
-                //    //this.button_pay.IsEnabled = true;
-                //    await Dispatcher.UIThread.InvokeAsync(() =>
-                //    {
-                //        button_pay.IsEnabled = true;
-                //    }, DispatcherPriority.Render);
-                //}
-                // Вычисляем условие
-                bool shouldEnable = Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) +
-                                  double.Parse(non_cash_sum.Text) +
-                                  double.Parse(sertificates_sum.Text) +
-                                  double.Parse(pay_bonus_many.Text) +
-                                  Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100),
-                                  2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) >= 0;
+        //        //if (Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) + double.Parse(non_cash_sum.Text) +
+        //        //double.Parse(sertificates_sum.Text) + double.Parse(pay_bonus_many.Text) +
+        //        //Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100), 2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) < 0)
+        //        //{
+        //        //    //this.button_pay.IsEnabled = false;
+        //        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //        //    {
+        //        //        button_pay.IsEnabled = false;
+        //        //    }, DispatcherPriority.Render);
+        //        //}
+        //        //else
+        //        //{
+        //        //    //this.button_pay.IsEnabled = true;
+        //        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //        //    {
+        //        //        button_pay.IsEnabled = true;
+        //        //    }, DispatcherPriority.Render);
+        //        //}
+        //        // Вычисляем условие
+        //        bool shouldEnable = Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) +
+        //                          double.Parse(non_cash_sum.Text) +
+        //                          double.Parse(sertificates_sum.Text) +
+        //                          double.Parse(pay_bonus_many.Text) +
+        //                          Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100),
+        //                          2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) >= 0;
 
-                // Обновляем кнопку через Dispatcher с высоким приоритетом
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    button_pay.IsEnabled = shouldEnable;
-                }, DispatcherPriority.Render); // Используем Render для немедленного обновления
-                //await Task.Delay(2000);
+        //        // Обновляем кнопку через Dispatcher с высоким приоритетом
+        //        await Dispatcher.UIThread.InvokeAsync(() =>
+        //        {
+        //            button_pay.IsEnabled = shouldEnable;
+        //        }, DispatcherPriority.Render); // Используем Render для немедленного обновления
+        //        //await Task.Delay(2000);
 
-                Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
-            }
-            catch (Exception ex)
-            {
-                await MessageBox.Show("calculate " + ex.Message,"Ошибка при подсчете",MessageBoxButton.OK,MessageBoxType.Error);
-            }           
-        }
+        //        Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await MessageBox.Show("calculate " + ex.Message,"Ошибка при подсчете",MessageBoxButton.OK,MessageBoxType.Error);
+        //    }           
+        //}
 
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
             if (!await copFilledCorrectly())
             {
-                calculate();
+                CalculateChange();
                 return;
             }
                         
@@ -1338,7 +1347,7 @@ namespace Cash8Avalon
 
                                 if (!terminalResult.IsSuccess)
                                 {
-                                    calculate();
+                                    CalculateChange();
                                     cc.recharge_note = "";
 
                                     // ✅ ПОКАЗЫВАЕМ ПОДГОТОВЛЕННОЕ ПОЛЬЗОВАТЕЛЬСКОЕ СООБЩЕНИЕ
@@ -1450,7 +1459,7 @@ namespace Cash8Avalon
                                     }
                                     if (!complete)//если не удалось получить информацию об успешной оплате
                                     {
-                                        calculate();
+                                        CalculateChange();
                                         cc.recharge_note = "";
                                         await MessageBox.Show(" Неудачная попытка получения оплаты ", "СБП");
                                         return;
@@ -1683,7 +1692,7 @@ namespace Cash8Avalon
                             }
                             if (!complete)//ответ от терминала не удовлетворительный
                             {
-                                calculate();
+                                CalculateChange();
                                 await MessageBox.Show(" Неудачная попытка возврата оплаты ", "СБП");
                                 return;
                             }
@@ -1979,6 +1988,90 @@ namespace Cash8Avalon
             }
         }
 
+        //private void CalculateChange()
+        //{
+        //    var paySumTextBox = this.FindControl<TextBox>("pay_sum");
+        //    var cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
+        //    var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
+        //    var nonCashSumKopTextBox = this.FindControl<TextBox>("non_cash_sum_kop");
+        //    var sertificatesSumTextBox = this.FindControl<TextBox>("sertificates_sum");
+        //    var bonusManyTextBox = this.FindControl<TextBox>("pay_bonus_many");
+        //    var remainderTextBox = this.FindControl<TextBox>("remainder");
+
+        //    if (paySumTextBox != null && cashSumTextBox != null && remainderTextBox != null)
+        //    {
+        //        try
+        //        {
+        //            // Функция для безопасного парсинга
+        //            decimal ParseDecimal(string text)
+        //            {
+        //                if (string.IsNullOrWhiteSpace(text)) return 0m;
+        //                text = text.Replace(",", ".");
+        //                return decimal.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture);
+        //            }
+
+        //            int ParseInt(string text)
+        //            {
+        //                if (string.IsNullOrWhiteSpace(text)) return 0;
+        //                return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture);
+        //            }
+
+        //            // Парсим все суммы
+        //            decimal paySum = ParseDecimal(paySumTextBox.Text);
+        //            decimal cashSum = ParseDecimal(cashSumTextBox.Text);
+
+        //            decimal nonCashSum = 0;
+        //            if (nonCashSumTextBox != null)
+        //            {
+        //                nonCashSum = ParseDecimal(nonCashSumTextBox.Text);
+
+        //                // Добавляем копейки
+        //                if (nonCashSumKopTextBox != null)
+        //                {
+        //                    int kop = ParseInt(nonCashSumKopTextBox.Text);
+        //                    nonCashSum += kop / 100m;
+        //                }
+        //            }
+
+        //            decimal certificatesSum = 0;
+        //            if (sertificatesSumTextBox != null)
+        //            {
+        //                certificatesSum = ParseDecimal(sertificatesSumTextBox.Text);
+        //            }
+
+        //            decimal bonusSum = 0;
+        //            if (bonusManyTextBox != null)
+        //            {
+        //                bonusSum = ParseDecimal(bonusManyTextBox.Text);
+        //            }
+
+        //            // ИТОГО оплачено
+        //            decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
+
+        //            // Рассчитываем сдачу
+        //            decimal remainder = Math.Max(0, totalPaid - paySum);
+        //            remainderTextBox.Text = remainder.ToString("F2");
+
+        //            // Обновляем кнопку оплаты
+        //            var buttonPay = this.FindControl<Button>("button_pay");
+        //            if (buttonPay != null)
+        //            {
+        //                buttonPay.IsEnabled = totalPaid >= paySum;
+        //            }
+        //        }
+        //        catch (Exception)
+        //        {
+        //            // При ошибке парсинга устанавливаем сдачу 0
+        //            remainderTextBox.Text = "0,00";
+        //            var buttonPay = this.FindControl<Button>("button_pay");
+        //            if (buttonPay != null)
+        //            {
+        //                buttonPay.IsEnabled = false;
+        //            }
+        //        }
+        //    }
+        //}
+
         private void CalculateChange()
         {
             var paySumTextBox = this.FindControl<TextBox>("pay_sum");
@@ -1993,7 +2086,6 @@ namespace Cash8Avalon
             {
                 try
                 {
-                    // Функция для безопасного парсинга
                     decimal ParseDecimal(string text)
                     {
                         if (string.IsNullOrWhiteSpace(text)) return 0m;
@@ -2007,7 +2099,6 @@ namespace Cash8Avalon
                         return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture);
                     }
 
-                    // Парсим все суммы
                     decimal paySum = ParseDecimal(paySumTextBox.Text);
                     decimal cashSum = ParseDecimal(cashSumTextBox.Text);
 
@@ -2015,8 +2106,6 @@ namespace Cash8Avalon
                     if (nonCashSumTextBox != null)
                     {
                         nonCashSum = ParseDecimal(nonCashSumTextBox.Text);
-
-                        // Добавляем копейки
                         if (nonCashSumKopTextBox != null)
                         {
                             int kop = ParseInt(nonCashSumKopTextBox.Text);
@@ -2025,23 +2114,37 @@ namespace Cash8Avalon
                     }
 
                     decimal certificatesSum = 0;
-                    if (sertificatesSumTextBox != null)
-                    {
-                        certificatesSum = ParseDecimal(sertificatesSumTextBox.Text);
-                    }
+                    if (sertificatesSumTextBox != null) certificatesSum = ParseDecimal(sertificatesSumTextBox.Text);
 
                     decimal bonusSum = 0;
-                    if (bonusManyTextBox != null)
-                    {
-                        bonusSum = ParseDecimal(bonusManyTextBox.Text);
-                    }
+                    if (bonusManyTextBox != null) bonusSum = ParseDecimal(bonusManyTextBox.Text);
 
                     // ИТОГО оплачено
                     decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
 
                     // Рассчитываем сдачу
-                    decimal remainder = Math.Max(0, totalPaid - paySum);
+                    decimal remainder = totalPaid - paySum;
+
+                    // Форматируем вывод
                     remainderTextBox.Text = remainder.ToString("F2");
+
+                    // === ЛОГИКА ЦВЕТА ===
+
+                    // 1. Если остались должны (отрицательная сдача)
+                    bool isDebt = remainder < 0;
+
+                    // 2. Если сдача больше, чем внесено наличных 
+                    // (значит, переплата пошла по карте/сертификату, сдачу выдать невозможно)
+                    bool isOverpaidByNonCash = (remainder > cashSum);
+
+                    if (isDebt || isOverpaidByNonCash)
+                    {
+                        remainderTextBox.Foreground = Brushes.Red;
+                    }
+                    else
+                    {
+                        remainderTextBox.Foreground = Brushes.Green;
+                    }
 
                     // Обновляем кнопку оплаты
                     var buttonPay = this.FindControl<Button>("button_pay");
@@ -2052,13 +2155,10 @@ namespace Cash8Avalon
                 }
                 catch (Exception)
                 {
-                    // При ошибке парсинга устанавливаем сдачу 0
-                    remainderTextBox.Text = "0,00";
+                    remainderTextBox.Text = "0.00";
+                    remainderTextBox.Foreground = Brushes.Green;
                     var buttonPay = this.FindControl<Button>("button_pay");
-                    if (buttonPay != null)
-                    {
-                        buttonPay.IsEnabled = false;
-                    }
+                    if (buttonPay != null) buttonPay.IsEnabled = false;
                 }
             }
         }

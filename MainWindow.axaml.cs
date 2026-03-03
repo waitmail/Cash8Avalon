@@ -248,8 +248,10 @@ namespace Cash8Avalon
 
         protected override async void OnOpened(EventArgs e)
         {
+            // ✅ 1. Даем окну время на первичную отрисовку
             await Task.Delay(50);
 
+            // ✅ 2. Настройка размеров (особенно для Linux)
             if (OperatingSystem.IsLinux())
             {
                 this.WindowState = WindowState.Maximized;
@@ -261,6 +263,9 @@ namespace Cash8Avalon
                     this.Position = new PixelPoint(0, 0);
                 }
                 this.Topmost = true;
+
+                // ✅ Пауза, чтобы Linux WM успел обработать Topmost
+                await Task.Delay(50);
                 this.Topmost = false;
             }
             else
@@ -268,66 +273,51 @@ namespace Cash8Avalon
                 this.WindowState = WindowState.Maximized;
             }
 
+            // ✅ 3. Проверка конфигурации
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
             if (!File.Exists(configPath))
             {
                 CreateDefaultSettingsFile(configPath);
-
-                // ✅ Проверка перед UI операцией
                 if (_isDisposed) return;
-                await MessageBox.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}\r\nБудет создан новый с настройками по умолчанию.",
+
+                await MessageBoxHelper.Show($"Не обнаружен файл Setting.gaa в {AppDomain.CurrentDomain.BaseDirectory}\r\nБудет создан новый с настройками по умолчанию.",
                     "Проверка файлов настроек", MessageBoxButton.OK, MessageBoxType.Error, this);
+
+                // ✅ Пауза после закрытия MessageBox
+                await Task.Delay(100);
             }
 
             Console.WriteLine($"Загружаем конфигурацию из: {configPath}");
             MainStaticClass.loadConfig(configPath);
-
             base.OnOpened(e);
             UpdateMenuVisibility(0);
             _ = Task.Run(() => GetUsers(_lifetimeCts.Token));
 
             await Task.Delay(50);
 
+            // ✅ 4. Проверка обновлений
             bool hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
-
             if (_isDisposed) return;
 
             if (hasUpdate)
             {
-                // ✅ Получаем результат обновления
                 bool updateSuccess = await ShowUpdateWindowModalAsync(false);
-
                 if (updateSuccess)
                 {
-                    // 🎯 Обновление успешно — программа перезапустится, выходим
                     Console.WriteLine("✓ Обновление успешно, программа будет перезапущена");
-                    return;  // ← КЛЮЧЕВОЙ ВОЗВРАТ
+                    return;
                 }
-                else
-                {
-                    // ⚠ Обновление отменено/не удалось — продолжаем запуск
-                    Console.WriteLine("⚠ Обновление отменено или не удалось, продолжаем запуск");
-                }
+                // ✅ Пауза после окна обновления
+                await Task.Delay(100);
             }
 
+            // ✅ 5. Окно авторизации
             var loginWindow = new Interface_switching();
             bool loginSuccess = false;
-
-            loginWindow.AuthorizationSuccess += (s, password) =>
-            {
-                loginSuccess = true;
-                loginWindow.Close();
-            };
-
-            loginWindow.AuthorizationCancel += (s, args) =>
-            {
-                loginSuccess = false;
-                loginWindow.Close();
-            };
-
+            loginWindow.AuthorizationSuccess += (s, password) => { loginSuccess = true; loginWindow.Close(); };
+            loginWindow.AuthorizationCancel += (s, args) => { loginSuccess = false; loginWindow.Close(); };
             await loginWindow.ShowDialog(this);
 
-            // ✅ Проверка после диалога
             if (_isDisposed) return;
 
             if (loginSuccess)
@@ -335,16 +325,12 @@ namespace Cash8Avalon
                 try
                 {
                     UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
-
                     Console.WriteLine("=== ВЫПОЛНЕНИЕ ПРОВЕРОК ПРИ СТАРТЕ ===");
-
                     MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
                     MainStaticClass.Last_Write_Check = DateTime.Now.AddSeconds(1);
                     MainStaticClass.MainWindow = this;
 
                     string version_program = await MainStaticClass.GetAtolDriverVersion();
-
-                    // ✅ Проверка перед доступом к Title
                     if (_isDisposed) return;
 
                     this.Title = "Касса   " + MainStaticClass.CashDeskNumber;
@@ -359,7 +345,6 @@ namespace Cash8Avalon
                     {
                         _ = InventoryManager.FillDictionaryProductDataAsync(this);
                         _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);
-
                         await UpdateUnloadingPeriod();
 
                         int intervalMinutes = await MainStaticClass.GetUnloadingInterval();
@@ -378,14 +363,14 @@ namespace Cash8Avalon
                                 printing = new PrintingUsingLibraries();
                                 await printing.getShiftStatus(this);
                             }
-
                             MainStaticClass.validate_date_time_with_fn(10);
 
                             if (MainStaticClass.SystemTaxation == 0)
                             {
-                                // ✅ Проверка перед MessageBox
                                 if (_isDisposed) return;
-                                await MessageBox.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!", "Проверка системы налогообложения", MessageBoxButton.OK, MessageBoxType.Error);
+                                // ✅ Пауза перед важным предупреждением
+                                await Task.Delay(150);
+                                await MessageBoxHelper.Show("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!", "Проверка системы налогообложения", MessageBoxButton.OK, MessageBoxType.Error, this);
                             }
 
                             bool restart = false, error = false;
@@ -393,7 +378,8 @@ namespace Cash8Avalon
                             if (!error && restart)
                             {
                                 if (_isDisposed) return;
-                                await MessageBox.Show("У вас неверно была установлена версия ФН, необходим перезапуск программы", "Проверка версии ФН", MessageBoxButton.OK, MessageBoxType.Error);
+                                await Task.Delay(150);
+                                await MessageBoxHelper.Show("У вас неверно была установлена версия ФН, необходим перезапуск программы", "Проверка версии ФН", MessageBoxButton.OK, MessageBoxType.Error, this);
                                 this.Close();
                                 return;
                             }
@@ -405,12 +391,14 @@ namespace Cash8Avalon
                             if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                             {
                                 if (_isDisposed) return;
-                                await MessageBox.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error, this);
+                                await Task.Delay(150);
+                                await MessageBoxHelper.Show("В этой кассе не заполнен CDN токен!\r\nПРОДАЖА МАРКИРОВАННОГО ТОВАРА ОГРАНИЧЕНА!", "Проверка cdn токена", MessageBoxButton.OK, MessageBoxType.Error, this);
                             }
                             else
                             {
                                 _ = LoadCdnWithStartAsync(_lifetimeCts.Token);
                             }
+
                             if (await MainStaticClass.PrintingUsingLibraries(this) == 1)
                             {
                                 PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
@@ -418,24 +406,25 @@ namespace Cash8Avalon
                             }
                         }
 
-                        _ = CheckFilesAndFolders();                       
-
-                        Console.WriteLine("? ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
+                        _ = CheckFilesAndFolders();
+                        Console.WriteLine("✓ ВСЕ ПРОВЕРКИ УСПЕШНО ВЫПОЛНЕНЫ");
                     }
                     else
                     {
                         if (_isDisposed) return;
-                        await MessageBox.Show("В этой бд нет таблицы constatnts,необходимо создать таблицы бд", "Проверка наличия таблицы", this);
+                        await Task.Delay(150);
+                        await MessageBoxHelper.Show("В этой бд нет таблицы constatnts, необходимо создать таблицы бд", "Проверка наличия таблицы", MessageBoxButton.OK, MessageBoxType.Error, this);
                     }
 
                     _viewModel.OpenCashChecks();
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"? Критическая ошибка: {ex.Message}");
+                    Console.WriteLine($"✗ Критическая ошибка: {ex.Message}");
                     if (!_isDisposed)
                     {
-                        await MessageBox.Show($"? Критическая ошибка: {ex.Message}", "Старт программы", MessageBoxButton.OK, MessageBoxType.Error, this);
+                        await Task.Delay(150);
+                        await MessageBoxHelper.Show($"✗ Критическая ошибка: {ex.Message}", "Старт программы", MessageBoxButton.OK, MessageBoxType.Error, this);
                         this.Close();
                     }
                 }
@@ -533,14 +522,14 @@ namespace Cash8Avalon
 
                 if (nick_shop.Length == 0)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() => MessageBox.Show(" Не удалось получить название магазина ", "Проверка названия магазина", this));
+                    await Dispatcher.UIThread.InvokeAsync(() => MessageBoxHelper.Show(" Не удалось получить название магазина ", "Проверка названия магазина", this));
                     return;
                 }
 
                 string code_shop = MainStaticClass.Code_Shop.Trim();
                 if (code_shop.Length == 0)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() => MessageBox.Show(" Не удалось получить код магазина ", "Проверка кода магазина", this));
+                    await Dispatcher.UIThread.InvokeAsync(() => MessageBoxHelper.Show(" Не удалось получить код магазина ", "Проверка кода магазина", this));
                     return;
                 }
 
@@ -557,7 +546,7 @@ namespace Cash8Avalon
                 catch (Exception ex)
                 {
                     if (token.IsCancellationRequested) return;
-                    await Dispatcher.UIThread.InvokeAsync(() => MessageBox.Show("Произошли ошибки при получении пользователей от веб сервиса " + ex.Message + ".", "Синхронизация пользователей", this));
+                    await Dispatcher.UIThread.InvokeAsync(() => MessageBoxHelper.Show("Произошли ошибки при получении пользователей от веб сервиса " + ex.Message + ".", "Синхронизация пользователей", this));
                     return;
                 }
 
@@ -603,13 +592,13 @@ namespace Cash8Avalon
                     {
                         if (trans != null) trans.Rollback();
                         if (!token.IsCancellationRequested)
-                            await Dispatcher.UIThread.InvokeAsync(() => MessageBox.Show("Произошли ошибки sql при обновлении пользователей " + ex.Message, "Ошибки при обновлении пользователей", this));
+                            await Dispatcher.UIThread.InvokeAsync(() => MessageBoxHelper.Show("Произошли ошибки sql при обновлении пользователей " + ex.Message, "Ошибки при обновлении пользователей", this));
                     }
                     catch (Exception ex)
                     {
                         if (trans != null) trans.Rollback();
                         if (!token.IsCancellationRequested)
-                            await Dispatcher.UIThread.InvokeAsync(() => MessageBox.Show("Произошли общие ошибки при обновлении пользователей " + ex.Message, "Ошибки при обновлении пользователей", this));
+                            await Dispatcher.UIThread.InvokeAsync(() => MessageBoxHelper.Show("Произошли общие ошибки при обновлении пользователей " + ex.Message, "Ошибки при обновлении пользователей", this));
                     }
                 }
             }
@@ -649,7 +638,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при показе окна авторизации: {ex.Message}");
-                await MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка авторизации", MessageBoxButton.OK, MessageBoxType.Error);
+                await MessageBoxHelper.Show($"Ошибка: {ex.Message}", "Ошибка авторизации", MessageBoxButton.OK, MessageBoxType.Error);
             }
         }
 
@@ -675,7 +664,7 @@ namespace Cash8Avalon
                 // ✅ Проверка перед UI
                 if (!_isDisposed)
                 {
-                    await MessageBox.Show($"Ошибка при проверке/установке значения периода выгрузки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
+                    await MessageBoxHelper.Show($"Ошибка при проверке/установке значения периода выгрузки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
                 }
                 Console.WriteLine($"✗ Общая ошибка в UpdateUnloadingPeriod: {ex.Message}");
             }
@@ -1083,7 +1072,7 @@ namespace Cash8Avalon
                 await Task.Run(() => get_cdn_with_start(), linkedCts.Token);
             }
             catch (OperationCanceledException) { Console.WriteLine("Загрузка CDN отменена (таймаут или закрытие окна)."); }
-            catch (Exception ex) { await MessageBox.Show($"При загрузке CDN произошла ошибка: {ex.Message}"); }
+            catch (Exception ex) { await MessageBoxHelper.Show($"При загрузке CDN произошла ошибка: {ex.Message}"); }
         }
 
         private async Task CheckFilesAndFolders()
@@ -1105,7 +1094,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка/создание файлов и папок");
-                await Dispatcher.UIThread.InvokeAsync(async () => { await MessageBox.Show($"Ошибка при работе с папкой Pictures2: {ex.Message}", "Ошибка"); });
+                await Dispatcher.UIThread.InvokeAsync(async () => { await MessageBoxHelper.Show($"Ошибка при работе с папкой Pictures2: {ex.Message}", "Ошибка",this); });
             }
         }
 
@@ -1142,7 +1131,7 @@ namespace Cash8Avalon
                 // ✅ Пункт 4: Dispatcher и передача this
                 await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show("Ошибка sql check_system_taxation " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show("Ошибка sql check_system_taxation " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
             catch (Exception ex)
@@ -1150,7 +1139,7 @@ namespace Cash8Avalon
                 // ✅ Пункт 4: Dispatcher и передача this
                 await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBox.Show("Общая ошибка check_system_taxation " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show("Общая ошибка check_system_taxation " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
             finally

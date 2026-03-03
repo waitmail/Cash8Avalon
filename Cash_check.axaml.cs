@@ -5073,7 +5073,7 @@ namespace Cash8Avalon
                 mainContainer.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); // Шапка
                 mainContainer.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star))); // Данные
 
-                // 2. Сетка шапки - с явным определением строки
+                // 2. Сетка шапки
                 _headerGrid = new Grid
                 {
                     Background = Brushes.LightBlue,
@@ -5081,7 +5081,7 @@ namespace Cash8Avalon
                     VerticalAlignment = VerticalAlignment.Top
                 };
 
-                // ✅ ЯВНО ДОБАВЛЯЕМ СТРОКУ С ФИКСИРОВАННОЙ ВЫСОТОЙ 35px (как в списке чеков)
+                // ✅ ЯВНО ДОБАВЛЯЕМ СТРОКУ С ФИКСИРОВАННОЙ ВЫСОТОЙ 35px
                 _headerGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
 
                 // 3. Сетка данных
@@ -5093,8 +5093,7 @@ namespace Cash8Avalon
                 };
                 _productsTableGrid.PointerPressed += OnProductsTableGridPointerPressed;
 
-                // 4. Настройка колонок (одинаковая для обеих сеток)
-                // ✅ ИСПРАВЛЕНО: Создаем массив GridLength, а не ColumnDefinition
+                // 4. Настройка колонок
                 var columnLengths = new[]
                 {
             new GridLength(1, GridUnitType.Star),      // Код
@@ -5107,28 +5106,29 @@ namespace Cash8Avalon
             new GridLength(0.9, GridUnitType.Star),    // Акция
             new GridLength(0.9, GridUnitType.Star),    // Подарок
             new GridLength(0.9, GridUnitType.Star),    // Акция2
-            new GridLength(0.3, GridUnitType.Star)     // Марк
+            
+            // ✅ ИСПРАВЛЕНО: Фиксированная ширина 70 пикселей. 
+            // Колонка не будет расширяться, даже если маркировка очень длинная.
+            new GridLength(70, GridUnitType.Pixel)     // Марк
         };
 
-                // ✅ ИСПРАВЛЕНО: Создаем ColumnDefinition из GridLength
                 foreach (var length in columnLengths)
                 {
                     _headerGrid.ColumnDefinitions.Add(new ColumnDefinition(length));
                     _productsTableGrid.ColumnDefinitions.Add(new ColumnDefinition(length));
                 }
 
-                // 5. Создаем заголовки в отдельном Grid
+                // 5. Создаем заголовки
                 var columnHeaders = new[] { "Код", "Наименование", "Кол-во", "Цена", "Цена ск.", "Сумма", "Сумма ск.", "Акция", "Подарок", "Акция2", "Марк" };
 
-                // Используем улучшенную версию CreateHeaderRow с Padding
                 for (int i = 0; i < columnHeaders.Length; i++)
                 {
                     var headerBorder = new Border
                     {
                         BorderBrush = Brushes.Gray,
-                        BorderThickness = new Thickness(0, 0, 1, 2), // Нижняя граница толще
+                        BorderThickness = new Thickness(0, 0, 1, 2),
                         Background = Brushes.LightBlue,
-                        Padding = new Thickness(5, 5, 5, 5), // ✅ Добавляем Padding для вертикальных отступов
+                        Padding = new Thickness(5, 5, 5, 5),
                         Child = new TextBlock
                         {
                             Text = columnHeaders[i],
@@ -5141,16 +5141,16 @@ namespace Cash8Avalon
                     };
 
                     Grid.SetColumn(headerBorder, i);
-                    Grid.SetRow(headerBorder, 0); // Всегда 0-я строка в шапке
+                    Grid.SetRow(headerBorder, 0);
                     _headerGrid.Children.Add(headerBorder);
                 }
 
                 Console.WriteLine($"✓ Заголовки созданы: {columnHeaders.Length} колонок");
 
-                // 6. Строка загрузки (теперь в данных, индекс 0)
+                // 6. Строка загрузки
                 _productsCurrentRow = 0;
 
-                // 7. ScrollViewer для данных
+                // 7. ScrollViewer
                 _productsScrollViewer = new ScrollViewer
                 {
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -5161,22 +5161,7 @@ namespace Cash8Avalon
                 };
                 _productsScrollViewer.PointerPressed += OnProductsScrollViewerPointerPressed;
 
-                // 8. Синхронизация горизонтальной прокрутки
-                //_productsScrollViewer.ScrollChanged += (s, e) =>
-                //{
-                //    try
-                //    {
-                //        if (_headerGrid != null)
-                //        {
-                //            _headerGrid.Margin = new Thickness(-_productsScrollViewer.Offset.X, 0, 0, 0);
-                //        }
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        Console.WriteLine($"✗ Ошибка при синхронизации прокрутки: {ex.Message}");
-                //    }
-                //};
-
+                // 8. Синхронизация прокрутки
                 _productsScrollViewer.ScrollChanged += OnProductsScrollChanged;
 
                 // 9. Компоновка
@@ -5186,10 +5171,9 @@ namespace Cash8Avalon
                 Grid.SetRow(_productsScrollViewer, 1);
                 mainContainer.Children.Add(_productsScrollViewer);
 
-                // Устанавливаем контент TabItem
                 _tabProducts.Content = mainContainer;
 
-                Console.WriteLine($"✓ Grid для товаров создан с фиксированной шапкой высотой 35px");
+                Console.WriteLine($"✓ Grid для товаров создан (колонка Марк фиксирована 70px)");
             }
             catch (Exception ex)
             {
@@ -5231,6 +5215,7 @@ namespace Cash8Avalon
                 }
                 catch
                 {
+                    // Если и заглушка не создалась, устанавливаем пустую панель
                     _tabProducts.Content = new Panel();
                 }
             }
