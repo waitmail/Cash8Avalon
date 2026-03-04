@@ -698,12 +698,12 @@ namespace Cash8Avalon
             }
         }
 
-        public static async void validate_date_time_with_fn(int minutes)
+        public static async void validate_date_time_with_fn(int minutes,Window owner)
         {
             if (MainStaticClass.CashDeskNumber != 9)
             {                
                 PrintingUsingLibraries usingLibraries = new PrintingUsingLibraries();
-                await usingLibraries.validate_date_time_with_fn(minutes);               
+                await usingLibraries.validate_date_time_with_fn(minutes, owner);               
             }
         }
 
@@ -4803,9 +4803,9 @@ namespace Cash8Avalon
                 command.Dispose();
                 conn.Close();
             }
-            catch (NpgsqlException ex)
+            catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message);
+                await MessageBox.Show(ex.Message, "write_event_in_log");
             }
             finally
             {

@@ -76,6 +76,12 @@ namespace Cash8Avalon
         private EventHandler<SizeChangedEventArgs> _scrollSizeChangedHandler;
         private EventHandler<ScrollChangedEventArgs> _scrollChangedHandler;
 
+        // === КОНСТАНТЫ МАСШТАБИРОВАНИЯ ===
+        private const double BaseFontSize = 18.0;      // <-- БАЗОВЫЙ РАЗМЕР ШРИФТА. Меняйте здесь!
+        private const double BaseDesignWidth = 1920.0; // Эталонная ширина окна
+        private const double MaxFontSize = 50.0;       // Максимальный размер (было 24, увеличил)
+        private const double MinFontSize = 14.0;       // Минимальный размер
+
         public Cash_checks()
         {
             Console.WriteLine("=== Конструктор Cash_checks начат ===");
@@ -507,7 +513,9 @@ namespace Cash8Avalon
                 // 7. ScrollViewer
                 _scrollViewer = new ScrollViewer
                 {
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    // ✅ ВАЖНО: Disabled заставляет Grid сжиматься до ширины окна.
+                    // Если оставить Auto, Grid будет бесконечно широким, и перенос строк не сработает.
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                     Background = Brushes.White,
                     Focusable = true,
@@ -517,19 +525,22 @@ namespace Cash8Avalon
 
                 // ✅✅✅ СИНХРОНИЗАЦИЯ (ИДЕАЛЬНЫЙ ВАРИАНТ) ✅✅✅
 
-                // 1. Обработчик изменения размера (сохраняем в поле для отписки)
                 _scrollSizeChangedHandler = (s, e) =>
                 {
                     if (_isDisposed || _headerGrid == null || _scrollViewer == null || _isUpdatingHeader) return;
 
                     var viewportWidth = _scrollViewer.Viewport.Width;
 
-                    // Синхронизируем только если есть изменение
                     if (viewportWidth > 0 && !double.IsNaN(viewportWidth) &&
                         Math.Abs(_headerGrid.Width - viewportWidth) > 0.5)
                     {
                         _isUpdatingHeader = true;
                         _headerGrid.Width = viewportWidth;
+
+                        // ✅ ДОБАВЛЕНО: Принудительно ограничиваем ширину таблицы,
+                        // чтобы перенос строк работал в Star-колонках.
+                        _tableGrid.Width = viewportWidth;
+
                         _isUpdatingHeader = false;
                     }
                 };
@@ -718,7 +729,7 @@ namespace Cash8Avalon
                     var headerBorder = new Border
                     {
                         BorderBrush = Brushes.Gray,
-                        BorderThickness = new Thickness(0, 0, 1, 2), // Нижняя граница толще
+                        BorderThickness = new Thickness(0, 0, 1, 2),
                         Background = Brushes.LightBlue,
                         Child = new TextBlock
                         {
@@ -728,7 +739,11 @@ namespace Cash8Avalon
                             Margin = new Thickness(5, 0),
                             VerticalAlignment = VerticalAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            Foreground = Brushes.DarkBlue
+                            Foreground = Brushes.DarkBlue,
+
+                            // ✅ Добавляем обрезание для заголовков
+                            TextWrapping = TextWrapping.NoWrap,
+                            TextTrimming = TextTrimming.CharacterEllipsis
                         }
                     };
 
@@ -746,7 +761,7 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Добавление строки данных в таблицу (с учетом спец-стилей)
+        /// Добавление строки данных в таблицу (с учетом спец-стилей и масштабирования)
         /// </summary>
         private void AddRowToTable(CheckItem item, int dataRowIndex)
         {
@@ -755,24 +770,24 @@ namespace Cash8Avalon
                 int gridRowIndex = _currentRow;
 
                 // === МАСШТАБИРОВАНИЕ ===
-                const double baseFontSize = 14.0; // Базовый шрифт (можно менять)
-                const double baseDesignWidth = 1200.0;
-
+                // Используем поля класса (см. ниже после метода), чтобы менять в одном месте
                 double currentWidth = this.Bounds.Width;
-                if (currentWidth <= 0) currentWidth = baseDesignWidth;
+                if (currentWidth <= 0) currentWidth = BaseDesignWidth;
 
-                double scale = currentWidth / baseDesignWidth;
+                double scale = currentWidth / BaseDesignWidth;
 
-                // Рассчитываем размер шрифта (ограничиваем от 10 до 24)
-                double baseScaledFontSize = baseFontSize * scale;
-                baseScaledFontSize = Math.Max(10, Math.Min(baseScaledFontSize, 24));
+                // Рассчитываем размер шрифта
+                double baseScaledFontSize = BaseFontSize * scale;
 
-                // Рассчитываем высоту строки (ограничиваем от 25 до 45)
+                // Ограничиваем размер (Min 10, Max 50 - можно менять MaxFontSize)
+                baseScaledFontSize = Math.Max(MinFontSize, Math.Min(baseScaledFontSize, MaxFontSize));
+
+                // Рассчитываем высоту строки
                 double rowHeight = 30 * scale;
                 rowHeight = Math.Max(25, Math.Min(rowHeight, 45));
 
-                // Добавляем строку с динамической высотой
-                _tableGrid.RowDefinitions.Add(new RowDefinition(rowHeight, GridUnitType.Pixel));
+                // Автовысота с минимальной высотой
+                _tableGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto, MinHeight = rowHeight });
 
                 // Базовые стили
                 IBrush rowBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
@@ -782,11 +797,11 @@ namespace Cash8Avalon
                 IBrush foreground = Brushes.Black;
                 TextDecorationCollection textDecorations = null;
 
-                // === СПЕЦИАЛЬНЫЕ СЛУЧАИ ===
+                // === СПЕЦИАЛЬНЫЕ СЛУЧАИ (Удален / Не напечатан) ===
                 if (item.ItsDeleted == 1)
                 {
                     rowBackground = Brushes.Transparent;
-                    fontSize = baseScaledFontSize * 0.9; // Чуть меньше для удаленных
+                    fontSize = baseScaledFontSize * 0.9;
                     fontStyle = FontStyle.Italic;
                     foreground = Brushes.Gray;
                     textDecorations = TextDecorations.Strikethrough;
@@ -797,8 +812,8 @@ namespace Cash8Avalon
 
                     if (needHighlight)
                     {
-                        rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB"));
-                        fontSize = baseScaledFontSize * 1.1; // Чуть больше для выделенных
+                        rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый
+                        fontSize = baseScaledFontSize * 1.1;
                         fontWeight = FontWeight.Bold;
                         textDecorations = TextDecorations.Underline;
                     }
@@ -810,8 +825,7 @@ namespace Cash8Avalon
                     BorderBrush = Brushes.LightGray,
                     BorderThickness = new Thickness(0, 0, 0, 1),
                     Background = rowBackground,
-                    Tag = dataRowIndex,
-                    Height = rowHeight // Явная высота не обязательна, так как RowDefinition уже задана, но не помешает
+                    Tag = dataRowIndex
                 };
                 rowBorder.PointerPressed += OnRowPointerPressed;
 
@@ -819,28 +833,37 @@ namespace Cash8Avalon
                 Grid.SetRow(rowBorder, gridRowIndex);
                 _tableGrid.Children.Add(rowBorder);
 
-                // Ячейки с масштабированным шрифтом
+                // === ЯЧЕЙКИ ===
+
+                // 0: Статус (Без переноса)
                 AddStyledCell(0, gridRowIndex, item.ItsDeleted == 1 ? "Удален" : "Активен",
                     HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
+                // 1: Дата (Без переноса)
                 AddStyledCell(1, gridRowIndex, item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"),
                     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
+                // 2: Клиент (С ПЕРЕНОСОМ true - будет по центру по вертикали)
                 AddStyledCell(2, gridRowIndex, item.ClientName,
-                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
 
+                // 3: Сумма (Без переноса)
                 AddStyledCell(3, gridRowIndex, item.Cash.ToString("N2"),
                     HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
+                // 4: Сдача (Без переноса)
                 AddStyledCell(4, gridRowIndex, item.Remainder.ToString("N2"),
                     HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
+                // 5: Комментарий (С ПЕРЕНОСОМ true - будет по центру по вертикали)
                 AddStyledCell(5, gridRowIndex, item.Comment,
-                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
 
+                // 6: Тип (Без переноса)
                 AddStyledCell(6, gridRowIndex, item.CheckType,
                     HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
+                // 7: Номер (Без переноса)
                 AddStyledCell(7, gridRowIndex, item.DocumentNumber,
                     HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
@@ -882,23 +905,92 @@ namespace Cash8Avalon
         }
 
         /// <summary>
+        /// Обновление масштаба таблицы при изменении размера окна
+        /// </summary>
+        private void UpdateTableScaling()
+        {
+            try
+            {
+                if (_tableGrid == null || _checkItems == null) return;
+
+                // === РАСЧЕТ МАСШТАБА ===
+
+                // Эталонная ширина, при которой шрифт равен базовому (например, 1920 для FullHD)
+                const double referenceWidth = 1920.0;
+
+                // Базовый размер шрифта для эталонной ширины
+                const double baseFontSize = 26.0;
+
+                double currentWidth = this.Bounds.Width;
+                if (currentWidth <= 0) currentWidth = referenceWidth;
+
+                // Коэффициент масштабирования
+                double scale = currentWidth / referenceWidth;
+
+                // Ограничиваем масштаб (чтобы не было слишком мелко или крупно)
+                // При ширине 800px scale будет ~0.41 -> font ~6.5 (ограничим min 10)
+                // При ширине 1920px scale будет 1.0 -> font 16
+                // При ширине 3000px scale будет 1.56 -> font 25 (ограничим max 24)
+                double fontSize = baseFontSize * scale;
+                fontSize = Math.Max(10, Math.Min(fontSize, 42)); // Ограничение от 10 до 24
+
+                double rowHeight = 35 * scale; // Базовая высота 35
+                rowHeight = Math.Max(25, Math.Min(rowHeight, 50)); // Ограничение высоты
+
+                // === ПРИМЕНЕНИЕ К СТРОКАМ ===
+
+                // 1. Обновляем высоту строк (RowDefinitions)
+                for (int i = 0; i < _tableGrid.RowDefinitions.Count; i++)
+                {
+                    // Обновляем MinHeight, так как Height у нас Auto
+                    _tableGrid.RowDefinitions[i].MinHeight = rowHeight;
+                }
+
+                // 2. Обновляем размер шрифта в ячейках
+                foreach (var child in _tableGrid.Children)
+                {
+                    if (child is TextBlock textBlock)
+                    {
+                        textBlock.FontSize = fontSize;
+                    }
+                    else if (child is CheckBox checkBox)
+                    {
+                        // Масштабируем CheckBox через RenderTransform
+                        double scaleTransform = fontSize / 14.0; // 14 - базовый размер для чекбокса
+                        checkBox.RenderTransform = new ScaleTransform(scaleTransform, scaleTransform);
+                        checkBox.Margin = new Thickness(2 * scaleTransform);
+                    }
+                    else if (child is Border border)
+                    {
+                        // Обновляем высоту бордера, если нужно (хотя при Auto он сам подстроится под контент, MinHeight важнее)
+                        border.Height = rowHeight;
+                    }
+                }
+
+                Console.WriteLine($"✓ Масштаб обновлен: Width={currentWidth:F0}, Font={fontSize:F1}, RowH={rowHeight:F1}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка при обновлении масштаба: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Добавление ячейки со стилями
         /// </summary>
         private void AddStyledCell(int column, int row, string text,
-    HorizontalAlignment textAlignment,  // переименовали для ясности
-    double fontSize, FontWeight fontWeight, FontStyle fontStyle,
-    IBrush foreground, TextDecorationCollection textDecorations)
+            HorizontalAlignment textAlignment,
+            double fontSize, FontWeight fontWeight, FontStyle fontStyle,
+            IBrush foreground, TextDecorationCollection textDecorations, bool wrap = false)
         {
             var textBlock = new TextBlock
             {
                 Text = text,
                 Margin = new Thickness(5, 0),
-                VerticalAlignment = VerticalAlignment.Center,
 
-                // ✅ Ячейка растягивается на всю ширину колонки
-                HorizontalAlignment = HorizontalAlignment.Stretch,
+                // По умолчанию берем переданное выравнивание
+                HorizontalAlignment = textAlignment,
 
-                // ✅ А текст внутри выравнивается как нужно
                 TextAlignment = textAlignment == HorizontalAlignment.Left ? TextAlignment.Left :
                                textAlignment == HorizontalAlignment.Right ? TextAlignment.Right :
                                TextAlignment.Center,
@@ -912,6 +1004,28 @@ namespace Cash8Avalon
             if (textDecorations != null)
             {
                 textBlock.TextDecorations = textDecorations;
+            }
+
+            if (wrap)
+            {
+                // ✅ РЕЖИМ ПЕРЕНОСА
+                textBlock.TextWrapping = TextWrapping.Wrap;
+                textBlock.TextTrimming = TextTrimming.None;
+
+                // ВАЖНО: Для переноса TextBlock должен растягиваться на всю ширину (Stretch)
+                textBlock.HorizontalAlignment = HorizontalAlignment.Stretch;
+
+                // ✅ ИСПРАВЛЕНО: Center вместо Top
+                // Текст будет по центру ячейки, если ячейка выше одной строки.
+                // Перенос строк (Wrap) при этом продолжает работать корректно.
+                textBlock.VerticalAlignment = VerticalAlignment.Center;
+            }
+            else
+            {
+                // ✅ РЕЖИМ ОБРЕЗКИ
+                textBlock.TextWrapping = TextWrapping.NoWrap;
+                textBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+                textBlock.VerticalAlignment = VerticalAlignment.Center;
             }
 
             Grid.SetColumn(textBlock, column);
@@ -1706,7 +1820,7 @@ namespace Cash8Avalon
             Console.WriteLine("Insert нажат - создание нового чека");
 
             try
-            {
+            {               
                 // Проверка даты на компьютере
                 if (DateTime.Now <= MainStaticClass.GetMinDateWork)
                 {
@@ -1767,7 +1881,7 @@ namespace Cash8Avalon
                 }
 
                 // Проверка времени с ФН
-                MainStaticClass.validate_date_time_with_fn(15);
+                MainStaticClass.validate_date_time_with_fn(15,MainStaticClass.MainWindow);
 
                 // Создаем окно для нового чека
                 var checkWindow = new Cash_check();
@@ -2436,6 +2550,12 @@ namespace Cash8Avalon
         {
             try
             {
+                // ✅ Подписываемся на изменение размера контрола
+                this.SizeChanged += (s, e) =>
+                {
+                    UpdateTableScaling();
+                };
+
                 var button1 = this.FindControl<Button>("button1");
                 if (button1 != null)
                 {

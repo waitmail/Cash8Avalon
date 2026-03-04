@@ -137,7 +137,7 @@ public partial class FPTK22 : Window
             return;
         }
 
-        MainStaticClass.validate_date_time_with_fn(13);
+        MainStaticClass.validate_date_time_with_fn(13,this);
 
         avansButton.IsEnabled = false;
 

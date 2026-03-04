@@ -18,7 +18,8 @@
 
 	<DockPanel Background="#f0f2f5">
 		<!-- Верхнее меню - ПРОСТО ДОБАВЛЯЕМ x:Name="MainMenu" -->
-		<Menu x:Name="MainMenu"			  
+		<Menu x:Name="MainMenu"
+			  IsVisible="False"
               DockPanel.Dock="Top" 
               Background="White" 
               BorderBrush="#e0e0e0" 

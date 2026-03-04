@@ -29,6 +29,7 @@ using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AtolConstants = Atol.Drivers10.Fptr.Constants;
@@ -379,12 +380,16 @@ namespace Cash8Avalon
         private async void OnOpened(object sender, EventArgs e)
         {
             Console.WriteLine("Окно открыто (Opened)");
+            if (KeyboardHelper.IsCapsLockOn())
+            {
+                await MessageBoxHelper.Show("У ВАС ВКЛЮЧЕНКА КЛАВИША CAPS LOCK БУДУТ ПРОБЛЕМЫ ПРИ СЧИТЫВАНИИ МАРКИРОВКИ!!!", "Проверка при вводе нового чека", this);
+            }
 
             // Если это новый чек, устанавливаем фокус на поле поиска
             if (IsNewCheck)
             {
                 await SetFocusToSearchBox();
-            }
+            }          
         }
 
 
@@ -1833,13 +1838,15 @@ namespace Cash8Avalon
                     this.InputSearchProduct.Focus();
                 }, DispatcherPriority.Render);
             }
-        }       
+        }
+               
 
-
-        private void CheckControls()
+        private async Task CheckControls()
         {
             try
             {
+               
+
                 Console.WriteLine("=== Проверка и заполнение контролов ===");
 
                 BtnFillOnSales = this.FindControl<Button>("btn_fill_on_sales");
@@ -1886,19 +1893,19 @@ namespace Cash8Avalon
                 _tabCertificates = this.FindControl<TabItem>("tabCertificates");
 
                 btn_get_name.Click += btn_get_name_Click;
-
+                
                 Console.WriteLine("✓ Все основные контролы проверены");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
+                await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     await MessageBoxHelper.Show($"Ошибка при проверке контролов: {ex.Message}", "Проверка контролов",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
             }
-        }
+        }      
 
         private async void BtnFillOnSales_Click(object? sender, RoutedEventArgs e)
         {
@@ -3895,263 +3902,614 @@ namespace Cash8Avalon
 
         private async void find_product()
         {
-            string search_param = InputSearchProduct.Text?.Trim();
+            try
+            {
+                string search_param = InputSearchProduct.Text?.Trim();
 
-            if (CheckType.SelectedIndex == 1)
-            {
-                await MessageBoxHelper.Show("В чек возврата нельзя добавлять новые товары.\nВы можете только изменить количество уже добавленных товаров.",
-                    "Информация",
-                    MessageBoxButton.OK,
-                    MessageBoxType.Warning,
-                    this);
-                InputSearchProduct.Text = string.Empty;
-                return;
-            }
+                // 1. Проверка типа чека (Возврат)
+                if (CheckType.SelectedIndex == 1)
+                {
+                    await MessageBoxHelper.Show(
+                        "В чек возврата нельзя добавлять новые товары.\nВы можете только изменить количество уже добавленных товаров.",
+                        "Информация",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Warning,
+                        this);
 
-            // Проверка на null и пустую строку
-            if (string.IsNullOrEmpty(search_param))
-            {
-                return;
-            }
-            //search_param = InputSearchProduct.Text.Trim();
-            InputSearchProduct.Text = string.Empty;
-            int Length = search_param.Length;
-            string gtin = string.Empty;
-            if (Length == 0)
-            {
-                return;
-            }
+                    InputSearchProduct.Text = string.Empty;
+                    return;
+                }
 
-            if (Length > 13)//попробуем получить gtin
-            {
-                search_param = CleanQrCodeString(search_param);
-                if (!await ValidateQrCodeAsync(search_param))//выполнить все проверки по длине и структуре кода маркировки
+                // 2. Проверка на пустой ввод
+                if (string.IsNullOrEmpty(search_param))
                 {
                     return;
                 }
 
-                if (Length > 18)
+                // Очищаем поле ввода сразу после получения данных
+                InputSearchProduct.Text = string.Empty;
+
+                // 3. Основная логика
+                int length = search_param.Length;
+
+                if (length > 13) // Это может быть код маркировки
                 {
-                    if ((search_param.Substring(0, 2) == "01") && (search_param.Substring(16, 2) == "21"))
+                    // Очищаем код от служебных символов сканера
+                    search_param = CleanQrCodeString(search_param);
+
+                    // Обновляем длину после очистки (важно!)
+                    length = search_param.Length;
+
+                    // Валидация кода маркировки
+                    if (!await ValidateQrCodeAsync(search_param))
                     {
-                        gtin = search_param.Substring(3, 13);
-                        find_barcode_or_code_in_tovar_new(gtin, search_param);
+                        return;
+                    }
+
+                    // Извлечение GTIN
+                    string gtin = string.Empty;
+
+                    if (length > 18)
+                    {
+                        // Стандартный формат DataMatrix: 01<GTIN>21<SERIAL>
+                        // ✅ Убрали дублирующую проверку длины
+                        if (search_param.StartsWith("01") &&
+                            search_param.Length >= 18 &&
+                            search_param.Substring(16, 2) == "21")
+                        {
+                            gtin = search_param.Substring(3, 13);
+                            await FindBarcodeOrCodeInTovarNewAsync(gtin, search_param);
+                        }
+                        else
+                        {
+                            // Нестандартный формат — пробуем извлечь GTIN со 2-го символа
+                            if (search_param.Length >= 14)
+                            {
+                                gtin = search_param.Substring(1, 13);
+                                await FindBarcodeOrCodeInTovarNewAsync(gtin, search_param);
+                            }
+                            else
+                            {
+                                // Код слишком короткий — ищем как есть
+                                await FindBarcodeOrCodeInTovarNewAsync(search_param, "");
+                            }
+                        }
                     }
                     else
                     {
-                        gtin = search_param.Substring(1, 13);
-                        find_barcode_or_code_in_tovar_new(gtin, search_param);
+                        // Длина > 13 но <= 18 (промежуточные варианты)
+                        await FindBarcodeOrCodeInTovarNewAsync(search_param, "");
                     }
                 }
+                else // Length <= 13 (Обычный штрих-код EAN13 или короткий код)
+                {
+                    await FindBarcodeOrCodeInTovarNewAsync(search_param, "");
+                }
             }
-            else //Length <= 13)
+            catch (Exception ex)
             {
-                find_barcode_or_code_in_tovar_new(search_param, "");
+                // ✅ Логируем ошибку для техподдержки
+                Console.WriteLine($"Критическая ошибка в find_product: {ex.Message}");
+                MainStaticClass.WriteRecordErrorLog(
+                    ex,
+                    0,
+                    MainStaticClass.CashDeskNumber,
+                    "Ошибка в find_product");
+
+                // ✅ Проверяем, не закрыто ли окно, перед показом UI
+                if (!_isDisposed)
+                {
+                    await MessageBoxHelper.Show(
+                        $"Произошла ошибка при поиске товара:\n{ex.Message}",
+                        "Ошибка",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
+                }
             }
-        }
-
-        //private async Task ShowTovarNotFoundWindow(Window owner)
-        //{
-        //    var t_n_f = new TovarNotFound();
-        //    await t_n_f.ShowDialog(owner);
-
-        //    // Добавляем await
-        //    await Dispatcher.UIThread.InvokeAsync(() =>
-        //    {
-        //        this.InputSearchProduct.Focus();
-        //    }, DispatcherPriority.Render);
-        //}
+        }      
 
         private async Task ShowTovarNotFoundWindow(Window owner)
         {
-            await ModalWindowHelper.ShowModalWindow<TovarNotFound>(owner);
-            //// 1. Сначала убираем фокус с родительского окна
-            //await Dispatcher.UIThread.InvokeAsync(() =>
-            //{
-            //    FocusManager?.ClearFocus();
-
-            //    // Делаем родительское окно неактивным для клавиатуры
-            //    this.IsHitTestVisible = false;
-
-            //    if (_productsScrollViewer != null)
-            //    {
-            //        _productsScrollViewer.Focusable = false;
-            //    }
-            //}, DispatcherPriority.Render);
-
-            //// ===== ПОДГОТОВКА РОДИТЕЛЯ =====
-            //await Dispatcher.UIThread.InvokeAsync(() =>
-            //{
-            //    // Снимаем Topmost с родителя
-            //    owner.Topmost = false;
-            //}, DispatcherPriority.Render);
-
-            //// Небольшая задержка для Linux
-            //await Task.Delay(20);
-
-            //// ===== СОЗДАЁМ И НАСТРАИВАЕМ ДОЧЕРНЕЕ ОКНО =====
-            //var t_n_f = new TovarNotFound();
-
-            //// ВАЖНО: Topmost ДО ShowDialog
-            //t_n_f.Topmost = true;
-
-            //// ===== ПОКАЗЫВАЕМ =====
-            //await t_n_f.ShowDialog(owner);
-
-            //// ===== ВОССТАНАВЛИВАЕМ РОДИТЕЛЯ =====
-            //await Dispatcher.UIThread.InvokeAsync(async () =>
-            //{
-            //    owner.Activate();
-            //    owner.Focus();
-
-            //    if (this.InputSearchProduct != null)
-            //    {
-            //        this.InputSearchProduct.Focus();
-            //    }
-            //}, DispatcherPriority.Render);
+            await ModalWindowHelper.ShowModalWindow<TovarNotFound>(owner,InputSearchProduct);           
         }
 
-        
+        //public async void find_barcode_or_code_in_tovar_new(string barcode, string marking_code)
+        //{
+
+        //    //DateTime start = DateTime.Now;
+        //    //Повторная проверка если документ не новый или уже вызвано окно оплаты подбор товара не работает
+        //    if (!IsNewCheck)
+        //    {
+        //        return;
+        //    }
+
+        //    if (this.check_type.SelectedIndex > 0)
+        //    {
+        //        if (barcode.Trim().Length > 6)
+        //        {
+        //            await MessageBoxHelper.Show("Поиск товара прерван ! Длина кода превышает 6 символов ", "Поиск товара",MessageBoxButton.OK,MessageBoxType.Error, this);
+        //            return;
+        //        }
+        //    }
+        //    else if (this.check_type.SelectedIndex < 0)
+        //    {
+        //        await MessageBoxHelper.Show(" Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново.", "Проверки при получении типа чека.",MessageBoxButton.OK,MessageBoxType.Error,this);
+        //        MainStaticClass.WriteRecordErrorLog("Произошла ошибка при получении типа чека", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново");
+        //        var window = this.FindAncestorOfType<Window>();
+        //        if (window != null)
+        //        {
+        //            window.Close();
+        //        }
+
+        //    }
+
+        //    MainStaticClass.write_event_in_log("Попытка добавить новый товар в чек " + barcode, "Документ чек", numdoc.ToString());
+
+        //    //Здесь проверка штрихкода на весовой товар с весов ****************************************
+        //    bool ProductFromScales = false;
+        //    double WeightFromScales = 0;
+        //    if (barcode.Length == 13)
+        //    {
+        //        if (barcode.Substring(0, 2) == "23")//Это штрихкод с весов 
+        //        {
+        //            WeightFromScales = Math.Round(double.Parse(barcode.Substring(8, 4)) / 1000, 3, MidpointRounding.AwayFromZero);//Получить вес в кг с весов
+        //            barcode = Convert.ToInt32(barcode.Substring(2, 6)).ToString();//Здесь переопределяем штрихкод для дальнейшего стандартного поведения 
+        //            ProductFromScales = true;
+        //        }
+        //    }           
+
+        //    ProductData productData = await InventoryManager.FindProductAsync(barcode, this);
+
+        //    if (productData.IsEmpty())
+        //    {
+        //        last_tovar.Text = barcode;
+        //        await ShowTovarNotFoundWindow(this);                
+        //        return;
+        //    }
+
+        //    // Проверяем маркированный товар
+        //    if (productData.IsMarked())
+        //    {
+        //        bool error = false;
+        //        if (marking_code == "")
+        //        {                  
+        //            // Создаем диалог
+        //            var dialog = new InputActionBarcode();
+        //            dialog.call_type = 6;
+
+        //            // Настройка окна для стабильной работы на Linux
+        //            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        //            dialog.CanResize = false;
+        //            dialog.SystemDecorations = SystemDecorations.None;
+
+        //            //bool? result = await dialog.ShowModal(null);
+        //            bool? result = await dialog.ShowModalBlocking(this as Window);
+        //            await ActivateWindow(this);
+        //            if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
+        //            {
+        //                // Проверяем, что получили валидный код
+        //                marking_code = dialog.EnteredBarcode ?? string.Empty;
+        //                dialog = null;                        
+
+        //                if (!qr_code_lenght.Contains(marking_code.Length))
+        //                {                            
+        //                    await MessageBoxHelper.Show(
+        //                        marking_code + "\r\n Ваш код маркировки имеет длину " +
+        //                        marking_code.Length.ToString() +
+        //                        " символов при этом он не входит в допустимый диапазон.",
+        //                        "Проверка qr-кода",
+        //                        MessageBoxButton.OK,
+        //                        MessageBoxType.Error,
+        //                        this);
+        //                    error = true;
+        //                }
+        //                else if (string.IsNullOrEmpty(marking_code))
+        //                {
+        //                    error = true;
+        //                }
+        //            }
+        //            else
+        //            {
+        //                if (!productData.IsRefusalMarking())//нельзя пропускать маркировку 
+        //                {
+        //                    error = true;
+        //                }
+        //            }
+        //            dialog = null;
+        //        }
+
+        //        if (error)
+        //        {
+        //            last_tovar.Text = barcode;
+        //            await ShowTovarNotFoundWindow(this);
+        //            this.Focus();
+        //            return;
+        //        }
+        //        //если все ок тогда проверяем код маркировки в ФР, пока без пиот или сдн, позже добавлю
+        //        marking_code = add_gs1(marking_code);//Обязательно добавляем разделитель групп 
+        //        if (!string.IsNullOrEmpty(marking_code))
+        //        {
+        //            bool markingExists = CheckMarkingExists(marking_code);
+        //            if (markingExists)
+        //            {
+        //                await MessageBoxHelper.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error, this);
+        //                return;
+        //            }
+        //        }
+
+        //        if (productData.IsCDNCheck())
+        //        {
+
+        //            if (MainStaticClass.IncludedPiot)
+        //            {                       
+        //                if (!await MainStaticClass.piot_cdn_check(productData, marking_code, this))
+        //                {
+        //                    await ShowTovarNotFoundWindow(this);
+        //                    this.Focus();
+        //                    return;
+        //                }
+        //            }
+        //            else
+        //            {                        
+        //                if (!await MainStaticClass.cdn_check(productData, marking_code, this))
+        //                {
+        //                    await ShowTovarNotFoundWindow(this);
+        //                    this.Focus();
+        //                    await ActivateWindow(this);
+        //                    return;
+        //                }
+        //                await ActivateWindow(this);
+        //            }
+        //        }
 
 
-        public async void find_barcode_or_code_in_tovar_new(string barcode, string marking_code)
+        //        byte[] textAsBytes = Encoding.Default.GetBytes(marking_code);
+        //        string imc = Convert.ToBase64String(textAsBytes);
+
+        //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+        //        if (!await printingUsingLibraries.check_marking_code(marking_code, this.numdoc.ToString(), this.cdn_markers_result_check, this.check_type.SelectedIndex))
+        //        {
+        //            error = true;
+        //            last_tovar.Text = barcode;
+        //            await ShowTovarNotFoundWindow(this);
+        //            this.Focus();
+        //            return;
+        //        }
+        //    }
+
+        //    if (this._productsTableGrid.RowDefinitions.Count - 1 > 70)//Превышен предел строк
+        //    {
+
+        //        await MessageBoxHelper.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error, this);
+
+        //        last_tovar.Text = barcode;
+        //        await ShowTovarNotFoundWindow(this);
+        //        this.Focus();
+        //        return;                
+        //    }
+
+        //    //Надо проверить может уже сертификат есть в чеке      
+        //    if (productData.isCertificate())
+        //    {
+        //        bool find_sertificate = CheckCertificateExists(barcode);
+
+        //        if (find_sertificate)
+        //        {
+        //            await MessageBoxHelper.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+        //            this.Focus();
+        //            return;
+        //        }
+        //    }           
+
+        //    //КОНЕЦ Надо проверить может уже сертификат есть в чеке                                    
+
+        //    if (!productData.IsFractional())
+        //    {
+        //        if (WeightFromScales != 0)
+        //        {
+        //            await MessageBoxHelper.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error,this);
+        //            this.Focus();
+        //            return;
+        //        }
+        //    }  
+
+        //    //Проверка по сертификату
+        //    if (productData.isCertificate())
+        //    {
+        //        if (!await check_sertificate_for_sales(barcode))
+        //        {
+        //            return;
+        //        }
+        //        DS ds = MainStaticClass.get_ds();
+        //        ds.Timeout = 60000;
+        //        //Получить параметр для запроса на сервер 
+        //        string nick_shop = MainStaticClass.Nick_Shop.Trim();
+        //        if (nick_shop.Trim().Length == 0)
+        //        {
+        //            await MessageBoxHelper.Show(" Не удалось получить название магазина ");
+        //            return;
+        //        }
+        //        string code_shop = MainStaticClass.Code_Shop.Trim();
+        //        if (code_shop.Trim().Length == 0)
+        //        {
+        //            await MessageBoxHelper.Show(" Не удалось получить код магазина ");
+        //            return;
+        //        }
+        //        string count_day = CryptorEngine.get_count_day();
+        //        string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
+
+        //        string sertificate_code = barcode;
+        //        string encrypt_data = CryptorEngine.Encrypt(sertificate_code, true, key);
+        //        string status = "";
+        //        try
+        //        {
+        //            status = ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encrypt_data, MainStaticClass.GetWorkSchema.ToString());
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            await MessageBoxHelper.Show(ex.Message+"\r\n"+" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
+        //            return;
+        //        }
+        //        if (status == "-1")
+        //        {
+        //            await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами","Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            MainStaticClass.WriteRecordErrorLog("Произошли ошибки на сервере при работе с сертификатами", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
+        //            return;
+        //        }
+        //        else
+        //        {
+        //            string decrypt_data = CryptorEngine.Decrypt(status, true, key);
+        //            if (decrypt_data == "1")
+        //            {
+        //                await MessageBoxHelper.Show("Сертификат уже активирован","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+        //                return;
+        //            }
+        //        }
+
+        //    }
+
+        //    ProductItem existingProduct = null;
+
+        //    if ((!productData.IsMarked()) && (!productData.isCertificate()) && (!productData.IsFractional())) // && ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3)))
+        //    {                
+        //        existingProduct = _productsData.FirstOrDefault(p => p.Code == productData.Code);
+        //    }
+
+        //    if (existingProduct != null)
+        //    {
+        //        // Если товар уже есть в чеке, увеличиваем количество
+        //        existingProduct.Quantity++;
+        //        RecalculateProductSums(existingProduct);
+
+        //        // Получаем индекс товара в коллекции
+        //        int productIndex = _productsData.IndexOf(existingProduct);
+
+        //        // Обновляем строку в Grid
+        //        UpdateProductRowInGrid(productIndex);
+        //        UpdateTotalSum();
+
+        //        // Показываем эффект увеличения
+        //        ShowQuantityEffect(productIndex, true);
+
+        //        // ВЫДЕЛЯЕМ СТРОКУ С УВЕЛИЧЕННЫМ ТОВАРОМ
+        //        SelectProductRow(productIndex);
+
+        //        // Устанавливаем фокус на ScrollViewer для обработки клавиатуры
+        //        _productsScrollViewer?.Focus();
+
+        //        return;
+        //    }
+
+        //    var productItem = new ProductItem
+        //    {
+        //        Code = (int)productData.Code,
+        //        Tovar = productData.GetName(),
+        //        Quantity = 1,
+        //        Price = productData.Price,
+        //        // Начальная цена со скидкой = базовая цена
+        //        // Акционные скидки применятся позже
+        //        PriceAtDiscount = productData.Price,
+        //        Sum = 0,
+        //        SumAtDiscount = 0,
+        //        Action = 0,
+        //        Gift = 0,
+        //        Action2 = 0,
+        //        Mark = !string.IsNullOrEmpty(marking_code) ? marking_code : "0",
+        //        IsSertificate = productData.isCertificate(),
+        //        IsFractional = productData.IsFractional(),
+        //        IsMarked = productData.IsMarked()
+        //    };
+
+        //    //Здесь показ веса весового товара в диалоге
+        //    if (productItem.IsFractional)
+        //    {
+        //        //double? result = await ShowQuantityDialog(productItem.Tovar, Convert.ToDouble(productItem.Quantity), productItem.IsFractional);
+        //        double? result = await ShowQuantityDialog(productItem.Tovar, 0.001, productItem.IsFractional,0);
+        //        if (result != null)
+        //        {
+        //            productItem.Quantity = Convert.ToDecimal(result);
+        //        }
+        //        else
+        //        {
+        //            await ShowTovarNotFoundWindow(this);
+        //            return;
+        //        }
+        //    }
+
+        //    // Пересчитываем суммы
+        //    RecalculateProductSums(productItem);
+
+        //    last_tovar.Text = productData.GetName();           
+
+
+        //    // Добавляем в коллекцию данных
+        //    _productsData.Add(productItem);
+
+        //    // Обновляем Grid (оптимизированная версия - добавляем только одну строку)
+        //    await AddSingleProductToGrid(productItem);
+
+        //    // Обновляем общую сумму
+        //    UpdateTotalSum();           
+
+        //    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");//нужно для того чтобы в окне оплаты взять сумму из БД
+
+        //    // Выделяем добавленную строку
+        //    SelectProductRow(_productsData.Count - 1);
+        //    await RestoreFocusLinux_productsScrollViewerAsync();
+        //}
+
+        public async Task FindBarcodeOrCodeInTovarNewAsync(string barcode, string marking_code)
         {
-
-            //DateTime start = DateTime.Now;
-            //Повторная проверка если документ не новый или уже вызвано окно оплаты подбор товара не работает
-            if (!IsNewCheck)
+            try
             {
-                return;
-            }
-
-            if (this.check_type.SelectedIndex > 0)
-            {
-                if (barcode.Trim().Length > 6)
+                // ✅ Повторная проверка: если документ не новый — выходим
+                if (!IsNewCheck)
                 {
-                    await MessageBoxHelper.Show("Поиск товара прерван ! Длина кода превышает 6 символов ", "Поиск товара",MessageBoxButton.OK,MessageBoxType.Error, this);
                     return;
                 }
-            }
-            else if (this.check_type.SelectedIndex < 0)
-            {
-                await MessageBoxHelper.Show(" Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново.", "Проверки при получении типа чека.",MessageBoxButton.OK,MessageBoxType.Error,this);
-                MainStaticClass.WriteRecordErrorLog("Произошла ошибка при получении типа чека", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново");
-                var window = this.FindAncestorOfType<Window>();
-                if (window != null)
+
+                // ✅ Проверка типа чека
+                if (this.check_type.SelectedIndex > 0)
                 {
-                    window.Close();
-                }
-
-            }
-
-            MainStaticClass.write_event_in_log("Попытка добавить новый товар в чек " + barcode, "Документ чек", numdoc.ToString());
-
-            //Здесь проверка штрихкода на весовой товар с весов ****************************************
-            bool ProductFromScales = false;
-            double WeightFromScales = 0;
-            if (barcode.Length == 13)
-            {
-                if (barcode.Substring(0, 2) == "23")//Это штрихкод с весов 
-                {
-                    WeightFromScales = Math.Round(double.Parse(barcode.Substring(8, 4)) / 1000, 3, MidpointRounding.AwayFromZero);//Получить вес в кг с весов
-                    barcode = Convert.ToInt32(barcode.Substring(2, 6)).ToString();//Здесь переопределяем штрихкод для дальнейшего стандартного поведения 
-                    ProductFromScales = true;
-                }
-            }           
-
-            ProductData productData = await InventoryManager.FindProductAsync(barcode, this);
-
-            if (productData.IsEmpty())
-            {
-                last_tovar.Text = barcode;
-                await ShowTovarNotFoundWindow(this);                
-                return;
-            }
-
-            // Проверяем маркированный товар
-            if (productData.IsMarked())
-            {
-                bool error = false;
-                if (marking_code == "")
-                {                  
-                    // Создаем диалог
-                    var dialog = new InputActionBarcode();
-                    dialog.call_type = 6;
-
-                    // Настройка окна для стабильной работы на Linux
-                    dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                    dialog.CanResize = false;
-                    dialog.SystemDecorations = SystemDecorations.None;
-
-                    //bool? result = await dialog.ShowModal(null);
-                    bool? result = await dialog.ShowModalBlocking(this as Window);
-                    await ActivateWindow(this);
-                    if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
+                    if (barcode.Trim().Length > 6)
                     {
-                        // Проверяем, что получили валидный код
-                        marking_code = dialog.EnteredBarcode ?? string.Empty;
-                        dialog = null;                        
-
-                        if (!qr_code_lenght.Contains(marking_code.Length))
-                        {                            
-                            await MessageBoxHelper.Show(
-                                marking_code + "\r\n Ваш код маркировки имеет длину " +
-                                marking_code.Length.ToString() +
-                                " символов при этом он не входит в допустимый диапазон.",
-                                "Проверка qr-кода",
-                                MessageBoxButton.OK,
-                                MessageBoxType.Error,
-                                this);
-                            error = true;
-                        }
-                        else if (string.IsNullOrEmpty(marking_code))
-                        {
-                            error = true;
-                        }
-                    }
-                    else
-                    {
-                        if (!productData.IsRefusalMarking())//нельзя пропускать маркировку 
-                        {
-                            error = true;
-                        }
-                    }
-                    dialog = null;
-                }
-                
-                if (error)
-                {
-                    last_tovar.Text = barcode;
-                    await ShowTovarNotFoundWindow(this);
-                    this.Focus();
-                    return;
-                }
-                //если все ок тогда проверяем код маркировки в ФР, пока без пиот или сдн, позже добавлю
-                marking_code = add_gs1(marking_code);//Обязательно добавляем разделитель групп 
-                if (!string.IsNullOrEmpty(marking_code))
-                {
-                    bool markingExists = CheckMarkingExists(marking_code);
-                    if (markingExists)
-                    {
-                        await MessageBoxHelper.Show("Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.", "Проверка маркировки",MessageBoxButton.OK,MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show(
+                            "Поиск товара прерван! Длина кода превышает 6 символов",
+                            "Поиск товара",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error,
+                            this);
                         return;
                     }
                 }
-
-                if (productData.IsCDNCheck())
+                else if (this.check_type.SelectedIndex < 0)
                 {
-                    if (MainStaticClass.IncludedPiot)
-                    {                       
-                        if (!await MainStaticClass.piot_cdn_check(productData, marking_code, this))
+                    await MessageBoxHelper.Show(
+                        "Произошла ошибка при получении типа чека. Чек будет закрыт, попробуйте создать его заново.",
+                        "Проверки при получении типа чека",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
+                    MainStaticClass.WriteRecordErrorLog(
+                        "Произошла ошибка при получении типа чека",
+                        "find_barcode_or_code_in_tovar_new",
+                        numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        "Произошла ошибка при получении типа чека, чек будет закрыт попробуйте создать его заново");
+
+                    var window = this.FindAncestorOfType<Window>();
+                    window?.Close();
+                    return;
+                }
+
+                MainStaticClass.write_event_in_log(
+                    "Попытка добавить новый товар в чек " + barcode,
+                    "Документ чек",
+                    numdoc.ToString());
+
+                // ✅ Проверка весового товара со шкалы
+                bool ProductFromScales = false;
+                double WeightFromScales = 0;
+                if (barcode.Length == 13 && barcode.Substring(0, 2) == "23")
+                {
+                    WeightFromScales = Math.Round(
+                        double.Parse(barcode.Substring(8, 4)) / 1000,
+                        3,
+                        MidpointRounding.AwayFromZero);
+                    barcode = Convert.ToInt32(barcode.Substring(2, 6)).ToString();
+                    ProductFromScales = true;
+                }
+
+                // ✅ Поиск товара
+                ProductData productData = await InventoryManager.FindProductAsync(barcode, this);
+
+                if (productData.IsEmpty())
+                {
+                    last_tovar.Text = barcode;
+                    await ShowTovarNotFoundWindow(this);
+                    return;
+                }
+
+                // ✅ Проверка маркированного товара
+                if (productData.IsMarked())
+                {
+                    bool error = false;
+
+                    if (string.IsNullOrEmpty(marking_code))
+                    {
+                        var dialog = new InputActionBarcode
                         {
-                            await ShowTovarNotFoundWindow(this);
-                            this.Focus();
+                            call_type = 6,
+                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                            CanResize = false,
+                            SystemDecorations = SystemDecorations.None
+                        };
+
+                        bool? result = await dialog.ShowModalBlocking(this as Window);
+                        await ActivateWindow(this);
+
+                        if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
+                        {
+                            marking_code = dialog.EnteredBarcode;
+
+                            if (!qr_code_lenght.Contains(marking_code.Length))
+                            {
+                                await MessageBoxHelper.Show(
+                                    $"{marking_code}\r\nВаш код маркировки имеет длину {marking_code.Length} символов, " +
+                                    "при этом он не входит в допустимый диапазон.",
+                                    "Проверка qr-кода",
+                                    MessageBoxButton.OK,
+                                    MessageBoxType.Error,
+                                    this);
+                                error = true;
+                            }
+                            else if (string.IsNullOrEmpty(marking_code))
+                            {
+                                error = true;
+                            }
+                        }
+                        else
+                        {
+                            if (!productData.IsRefusalMarking())
+                            {
+                                error = true;
+                            }
+                        }
+                    }
+
+                    if (error)
+                    {
+                        last_tovar.Text = barcode;
+                        await ShowTovarNotFoundWindow(this);
+                        this.Focus();
+                        return;
+                    }
+
+                    marking_code = add_gs1(marking_code);
+
+                    if (!string.IsNullOrEmpty(marking_code))
+                    {
+                        if (CheckMarkingExists(marking_code))
+                        {
+                            await MessageBoxHelper.Show(
+                                "Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.",
+                                "Проверка маркировки",
+                                MessageBoxButton.OK,
+                                MessageBoxType.Error,
+                                this);
                             return;
                         }
                     }
-                    else
-                    {                        
-                        if (!await MainStaticClass.cdn_check(productData, marking_code, this))
+
+                    if (productData.IsCDNCheck())
+                    {
+                        bool cdnOk = MainStaticClass.IncludedPiot
+                            ? await MainStaticClass.piot_cdn_check(productData, marking_code, this)
+                            : await MainStaticClass.cdn_check(productData, marking_code, this);
+
+                        if (!cdnOk)
                         {
                             await ShowTovarNotFoundWindow(this);
                             this.Focus();
@@ -4160,203 +4518,232 @@ namespace Cash8Avalon
                         }
                         await ActivateWindow(this);
                     }
+
+                    var printingUsingLibraries = new PrintingUsingLibraries();
+                    if (!await printingUsingLibraries.check_marking_code(
+                        marking_code,
+                        this.numdoc.ToString(),
+                        this.cdn_markers_result_check,
+                        this.check_type.SelectedIndex))
+                    {
+                        last_tovar.Text = barcode;
+                        await ShowTovarNotFoundWindow(this);
+                        this.Focus();
+                        return;
+                    }
                 }
 
-
-                byte[] textAsBytes = Encoding.Default.GetBytes(marking_code);
-                string imc = Convert.ToBase64String(textAsBytes);
-
-                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                if (!await printingUsingLibraries.check_marking_code(marking_code, this.numdoc.ToString(), this.cdn_markers_result_check, this.check_type.SelectedIndex))
+                // ✅ Проверка лимита строк в чеке
+                if (this._productsTableGrid.RowDefinitions.Count - 1 > 70)
                 {
-                    error = true;
+                    await MessageBoxHelper.Show(
+                        "В одном чеке может быть максимум 70 строк.\r\nЕсли у покупателя еще есть товары — продавайте их в другом чеке.",
+                        "Проверка количества строк",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
                     last_tovar.Text = barcode;
                     await ShowTovarNotFoundWindow(this);
                     this.Focus();
                     return;
                 }
-            }
 
-            if (this._productsTableGrid.RowDefinitions.Count - 1 > 70)//Превышен предел строк
-            {
-
-                await MessageBoxHelper.Show("В одном чеке может быть максимум 70 строк.\r\n Если у покупателя еще есть товары продавайте их в другом чеке.", "Проверка количества строк",MessageBoxButton.OK,MessageBoxType.Error, this);
-
-                last_tovar.Text = barcode;
-                await ShowTovarNotFoundWindow(this);
-                this.Focus();
-                return;                
-            }
-            
-            //Надо проверить может уже сертификат есть в чеке      
-            if (productData.isCertificate())
-            {
-                bool find_sertificate = CheckCertificateExists(barcode);
-
-                if (find_sertificate)
+                // ✅ Проверка сертификата на дубликат
+                if (productData.isCertificate() && CheckCertificateExists(barcode))
                 {
-                    await MessageBoxHelper.Show("Этот сертификат уже добавлен в чек","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show(
+                        "Этот сертификат уже добавлен в чек",
+                        "Проверка сертификата",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
                     this.Focus();
                     return;
                 }
-            }           
 
-            //КОНЕЦ Надо проверить может уже сертификат есть в чеке                                    
-
-            if (!productData.IsFractional())
-            {
-                if (WeightFromScales != 0)
+                // ✅ Проверка: весовой товар + вес со шкалы
+                if (!productData.IsFractional() && WeightFromScales != 0)
                 {
-                    await MessageBoxHelper.Show("Товар с кодом/штрихкодом " + barcode + " не является весовым и в чек добавлен не будет ","Проверка ввода товара",MessageBoxButton.OK,MessageBoxType.Error,this);
+                    await MessageBoxHelper.Show(
+                        $"Товар с кодом/штрихкодом {barcode} не является весовым и в чек добавлен не будет",
+                        "Проверка ввода товара",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
                     this.Focus();
                     return;
                 }
-            }  
 
-            //Проверка по сертификату
-            if (productData.isCertificate())
-            {
-                if (!await check_sertificate_for_sales(barcode))
+                // ✅ Проверка сертификата через сервер
+                if (productData.isCertificate())
                 {
-                    return;
-                }
-                DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 60000;
-                //Получить параметр для запроса на сервер 
-                string nick_shop = MainStaticClass.Nick_Shop.Trim();
-                if (nick_shop.Trim().Length == 0)
-                {
-                    await MessageBoxHelper.Show(" Не удалось получить название магазина ");
-                    return;
-                }
-                string code_shop = MainStaticClass.Code_Shop.Trim();
-                if (code_shop.Trim().Length == 0)
-                {
-                    await MessageBoxHelper.Show(" Не удалось получить код магазина ");
-                    return;
-                }
-                string count_day = CryptorEngine.get_count_day();
-                string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
+                    if (!await check_sertificate_for_sales(barcode))
+                    {
+                        return;
+                    }
 
-                string sertificate_code = barcode;
-                string encrypt_data = CryptorEngine.Encrypt(sertificate_code, true, key);
-                string status = "";
-                try
-                {
-                    status = ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encrypt_data, MainStaticClass.GetWorkSchema.ToString());
-                }
-                catch (Exception ex)
-                {
-                    await MessageBoxHelper.Show(ex.Message+"\r\n"+" Отсутствует доступ в интернет с кассы или же на сервере, который обрабатывает сертификаты.", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
-                    return;
-                }
-                if (status == "-1")
-                {
-                    await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами","Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    MainStaticClass.WriteRecordErrorLog("Произошли ошибки на сервере при работе с сертификатами", "find_barcode_or_code_in_tovar_new", numdoc, MainStaticClass.CashDeskNumber, "Проверка активации сертификата при продаже");
-                    return;
-                }
-                else
-                {
+                    DS ds = MainStaticClass.get_ds();
+                    ds.Timeout = 60000;
+
+                    string nick_shop = MainStaticClass.Nick_Shop.Trim();
+                    string code_shop = MainStaticClass.Code_Shop.Trim();
+                    if (string.IsNullOrEmpty(nick_shop) || string.IsNullOrEmpty(code_shop))
+                    {
+                        await MessageBoxHelper.Show(
+                            string.IsNullOrEmpty(nick_shop) ? "Не удалось получить название магазина" : "Не удалось получить код магазина",
+                            "Ошибка",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error,
+                            this);
+                        return;
+                    }
+
+                    string count_day = CryptorEngine.get_count_day();
+                    string key = nick_shop + count_day + code_shop;
+                    string encrypt_data = CryptorEngine.Encrypt(barcode, true, key);
+
+                    string status;
+                    try
+                    {
+                        status = ds.GetStatusSertificat(
+                            MainStaticClass.Nick_Shop,
+                            encrypt_data,
+                            MainStaticClass.GetWorkSchema.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        await MessageBoxHelper.Show(
+                            ex.Message + "\r\nОтсутствует доступ в интернет с кассы или сервера сертификатов.",
+                            "Проверка сертификата",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error,
+                            this);
+                        MainStaticClass.WriteRecordErrorLog(
+                            ex,
+                            numdoc,
+                            MainStaticClass.CashDeskNumber,
+                            "Проверка активации сертификата при продаже");
+                        return;
+                    }
+
+                    if (status == "-1")
+                    {
+                        await MessageBoxHelper.Show(
+                            "Произошли ошибки на сервере при работе с сертификатами",
+                            "Проверка сертификата",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error,
+                            this);
+                        MainStaticClass.WriteRecordErrorLog(
+                            "Произошли ошибки на сервере при работе с сертификатами",
+                            "find_barcode_or_code_in_tovar_new",
+                            numdoc,
+                            MainStaticClass.CashDeskNumber,
+                            "Проверка активации сертификата при продаже");
+                        return;
+                    }
+
                     string decrypt_data = CryptorEngine.Decrypt(status, true, key);
                     if (decrypt_data == "1")
                     {
-                        await MessageBoxHelper.Show("Сертификат уже активирован","Проверка сертификата",MessageBoxButton.OK,MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show(
+                            "Сертификат уже активирован",
+                            "Проверка сертификата",
+                            MessageBoxButton.OK,
+                            MessageBoxType.Error,
+                            this);
                         return;
                     }
                 }
 
-            }
-
-            ProductItem existingProduct = null;
-
-            if ((!productData.IsMarked()) && (!productData.isCertificate()) && (!productData.IsFractional())) // && ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3)))
-            {                
-                existingProduct = _productsData.FirstOrDefault(p => p.Code == productData.Code);
-            }
-
-            if (existingProduct != null)
-            {
-                // Если товар уже есть в чеке, увеличиваем количество
-                existingProduct.Quantity++;
-                RecalculateProductSums(existingProduct);
-
-                // Получаем индекс товара в коллекции
-                int productIndex = _productsData.IndexOf(existingProduct);
-
-                // Обновляем строку в Grid
-                UpdateProductRowInGrid(productIndex);
-                UpdateTotalSum();
-
-                // Показываем эффект увеличения
-                ShowQuantityEffect(productIndex, true);
-
-                // ВЫДЕЛЯЕМ СТРОКУ С УВЕЛИЧЕННЫМ ТОВАРОМ
-                SelectProductRow(productIndex);
-
-                // Устанавливаем фокус на ScrollViewer для обработки клавиатуры
-                _productsScrollViewer?.Focus();
-
-                return;
-            }
-
-            var productItem = new ProductItem
-            {
-                Code = (int)productData.Code,
-                Tovar = productData.GetName(),
-                Quantity = 1,
-                Price = productData.Price,
-                // Начальная цена со скидкой = базовая цена
-                // Акционные скидки применятся позже
-                PriceAtDiscount = productData.Price,
-                Sum = 0,
-                SumAtDiscount = 0,
-                Action = 0,
-                Gift = 0,
-                Action2 = 0,
-                Mark = !string.IsNullOrEmpty(marking_code) ? marking_code : "0",
-                IsSertificate = productData.isCertificate(),
-                IsFractional = productData.IsFractional(),
-                IsMarked = productData.IsMarked()
-            };
-
-            //Здесь показ веса весового товара в диалоге
-            if (productItem.IsFractional)
-            {
-                //double? result = await ShowQuantityDialog(productItem.Tovar, Convert.ToDouble(productItem.Quantity), productItem.IsFractional);
-                double? result = await ShowQuantityDialog(productItem.Tovar, 0.001, productItem.IsFractional,0);
-                if (result != null)
+                // ✅ Проверка: товар уже в чеке (для немаркированных, не-сертификатов, не-весовых)
+                ProductItem existingProduct = null;
+                if (!productData.IsMarked() && !productData.isCertificate() && !productData.IsFractional())
                 {
-                    productItem.Quantity = Convert.ToDecimal(result);
+                    existingProduct = _productsData.FirstOrDefault(p => p.Code == productData.Code);
                 }
-                else
+
+                if (existingProduct != null)
                 {
-                    await ShowTovarNotFoundWindow(this);
+                    existingProduct.Quantity++;
+                    RecalculateProductSums(existingProduct);
+                    int productIndex = _productsData.IndexOf(existingProduct);
+                    UpdateProductRowInGrid(productIndex);
+                    UpdateTotalSum();
+                    ShowQuantityEffect(productIndex, true);
+                    SelectProductRow(productIndex);
+                    _productsScrollViewer?.Focus();
                     return;
                 }
+
+                // ✅ Создание нового товара
+                var productItem = new ProductItem
+                {
+                    Code = (int)productData.Code,
+                    Tovar = productData.GetName(),
+                    Quantity = 1,
+                    Price = productData.Price,
+                    PriceAtDiscount = productData.Price,
+                    Sum = 0,
+                    SumAtDiscount = 0,
+                    Action = 0,
+                    Gift = 0,
+                    Action2 = 0,
+                    Mark = !string.IsNullOrEmpty(marking_code) ? marking_code : "0",
+                    IsSertificate = productData.isCertificate(),
+                    IsFractional = productData.IsFractional(),
+                    IsMarked = productData.IsMarked()
+                };
+
+                // ✅ Диалог количества для весового товара
+                if (productItem.IsFractional)
+                {
+                    double? result = await ShowQuantityDialog(
+                        productItem.Tovar,
+                        0.001,
+                        productItem.IsFractional,
+                        0);
+
+                    if (result != null)
+                    {
+                        productItem.Quantity = Convert.ToDecimal(result);
+                    }
+                    else
+                    {
+                        await ShowTovarNotFoundWindow(this);
+                        return;
+                    }
+                }
+
+                RecalculateProductSums(productItem);
+                last_tovar.Text = productData.GetName();
+                _productsData.Add(productItem);
+                await AddSingleProductToGrid(productItem);
+                UpdateTotalSum();
+                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                SelectProductRow(_productsData.Count - 1);
+                await RestoreFocusLinux_productsScrollViewerAsync();
             }
+            catch (Exception ex)
+            {
+                // ✅ Локальный перехват ошибок для async void
+                Console.WriteLine($"[find_barcode...] Ошибка: {ex.Message}");
+                MainStaticClass.WriteRecordErrorLog(
+                    ex,
+                    numdoc,
+                    MainStaticClass.CashDeskNumber,
+                    "Ошибка в find_barcode_or_code_in_tovar_new");
 
-            // Пересчитываем суммы
-            RecalculateProductSums(productItem);
-            
-            last_tovar.Text = productData.GetName();           
-
-
-            // Добавляем в коллекцию данных
-            _productsData.Add(productItem);
-
-            // Обновляем Grid (оптимизированная версия - добавляем только одну строку)
-            await AddSingleProductToGrid(productItem);
-
-            // Обновляем общую сумму
-            UpdateTotalSum();           
-
-            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");//нужно для того чтобы в окне оплаты взять сумму из БД
-
-            // Выделяем добавленную строку
-            SelectProductRow(_productsData.Count - 1);
-            await RestoreFocusLinux_productsScrollViewerAsync();
+                if (!_isDisposed)
+                {
+                    await MessageBoxHelper.Show(
+                        $"Ошибка добавления товара: {ex.Message}",
+                        "Ошибка",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
+                }
+            }
         }
 
         /// <summary>
@@ -4647,7 +5034,11 @@ namespace Cash8Avalon
                 {
                     int gridRowIndex = _productsCurrentRow;
 
-                    _productsTableGrid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
+                    // ✅ ИСПРАВЛЕНО: Используем Auto вместо фиксированной высоты 40px
+                    var rowDef = new RowDefinition(GridLength.Auto);
+                    rowDef.MinHeight = 40; // Минимальная высота
+                    _productsTableGrid.RowDefinitions.Add(rowDef);
+
                     var rowElements = CreateRowElements(gridRowIndex, productItem, _productsData.Count - 1);
                     _productsTableGrid.Children.AddRange(rowElements);
                     _productsCurrentRow++;
@@ -4902,18 +5293,31 @@ namespace Cash8Avalon
 
         private async Task<bool> ValidateQrCodeAsync(string cleanedCode)
         {
-            // Проверка HTTP в очищенной строке
+            // ✅ Проверка HTTP в очищенной строке (используем StartsWith)
             if (cleanedCode.Length >= 4 &&
-                cleanedCode.Substring(0, 4).IndexOf("HTTP", StringComparison.OrdinalIgnoreCase) != -1)
+                cleanedCode.StartsWith("HTTP", StringComparison.OrdinalIgnoreCase))
             {
-                await MessageBoxHelper.Show("Содержит HTTP", "Ошибка");
+                await MessageBoxHelper.Show("Содержит HTTP", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return false;
             }
 
-            // Проверка длины очищенной строки
+            // ✅ Проверка длины очищенной строки
             if (!qr_code_lenght.Contains(cleanedCode.Length))
             {
-                await MessageBoxHelper.Show($"Длина {cleanedCode.Length} недопустима \r\n {cleanedCode}", "Ошибка",this);
+                await MessageBoxHelper.Show($"Длина {cleanedCode.Length} недопустима \r\n {cleanedCode}",
+                    "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                return false;
+            }
+
+            // ✅ Проверка на кириллицу
+            if (System.Text.RegularExpressions.Regex.IsMatch(cleanedCode, "[а-яА-ЯёЁ]"))
+            {
+                await MessageBoxHelper.Show(
+                    "Обнаружены кириллические символы. ПЕРЕКЛЮЧИТЕ ЯЗЫК ВВОДА НА АНГЛИЙСКИЙ И ПОВТОРИТЕ ВВОД КОДА МАРКИРОВКИ ЕЩЕ РАЗ",
+                    "Проверка ввода кода маркировки",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this);
                 return false;
             }
 
@@ -5097,7 +5501,7 @@ namespace Cash8Avalon
                 var columnLengths = new[]
                 {
             new GridLength(1, GridUnitType.Star),      // Код
-            new GridLength(4, GridUnitType.Star),      // Наименование
+            new GridLength(4, GridUnitType.Star),      // Наименование (будет переносить текст)
             new GridLength(1, GridUnitType.Star),      // Кол-во
             new GridLength(1.2, GridUnitType.Star),    // Цена
             new GridLength(1.2, GridUnitType.Star),    // Цена со ск.
@@ -5107,8 +5511,7 @@ namespace Cash8Avalon
             new GridLength(0.9, GridUnitType.Star),    // Подарок
             new GridLength(0.9, GridUnitType.Star),    // Акция2
             
-            // ✅ ИСПРАВЛЕНО: Фиксированная ширина 70 пикселей. 
-            // Колонка не будет расширяться, даже если маркировка очень длинная.
+            // Фиксированная ширина для маркировки
             new GridLength(70, GridUnitType.Pixel)     // Марк
         };
 
@@ -5136,7 +5539,9 @@ namespace Cash8Avalon
                             FontSize = 12,
                             VerticalAlignment = VerticalAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            Foreground = Brushes.DarkBlue
+                            Foreground = Brushes.DarkBlue,
+                            TextWrapping = TextWrapping.NoWrap, // Заголовки не переносим
+                            TextTrimming = TextTrimming.CharacterEllipsis // Если места мало - троеточие
                         }
                     };
 
@@ -5153,7 +5558,7 @@ namespace Cash8Avalon
                 // 7. ScrollViewer
                 _productsScrollViewer = new ScrollViewer
                 {
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, // ✅ ИСПРАВЛЕНО: Disabled заставляет Grid сжиматься до ширины окна, включая перенос текста
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                     Background = Brushes.White,
                     Focusable = true,
@@ -5161,7 +5566,7 @@ namespace Cash8Avalon
                 };
                 _productsScrollViewer.PointerPressed += OnProductsScrollViewerPointerPressed;
 
-                // 8. Синхронизация прокрутки
+                // 8. Синхронизация прокрутки (для горизонтали больше не нужна, но оставим для вертикали или общего использования)
                 _productsScrollViewer.ScrollChanged += OnProductsScrollChanged;
 
                 // 9. Компоновка
@@ -5173,7 +5578,7 @@ namespace Cash8Avalon
 
                 _tabProducts.Content = mainContainer;
 
-                Console.WriteLine($"✓ Grid для товаров создан (колонка Марк фиксирована 70px)");
+                Console.WriteLine($"✓ Grid для товаров создан (горизонтальная прокрутка отключена для корректного переноса текста)");
             }
             catch (Exception ex)
             {
@@ -5215,7 +5620,6 @@ namespace Cash8Avalon
                 }
                 catch
                 {
-                    // Если и заглушка не создалась, устанавливаем пустую панель
                     _tabProducts.Content = new Panel();
                 }
             }
@@ -5425,7 +5829,12 @@ namespace Cash8Avalon
                     int gridRowIndex = currentRow + rowIndex;
 
                     // Добавляем RowDefinition
-                    grid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
+                    //grid.RowDefinitions.Add(new RowDefinition(40, GridUnitType.Pixel));
+
+                    // ✅ ИСПРАВЛЕНО: Высота строки Auto, чтобы перенос текста увеличивал строку, а не обрезал её
+                    var rowDef = new RowDefinition(GridLength.Auto);
+                    rowDef.MinHeight = 40; // Минимальная высота строки
+                    grid.RowDefinitions.Add(rowDef);
 
                     // СОЗДАЕМ ВСЕ ЭЛЕМЕНТЫ СТРОКИ И ДОБАВЛЯЕМ В ОБЩИЙ СПИСОК
                     allElements.AddRange(CreateRowElements(gridRowIndex, product, rowIndex));
@@ -5510,11 +5919,11 @@ namespace Cash8Avalon
             {
                 Text = text?.Trim() ?? string.Empty,
                 Margin = new Thickness(5, 2, 5, 2),
-                VerticalAlignment = VerticalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Top, // ✅ Выравнивание по верху, так как высота строки может расти
                 HorizontalAlignment = alignment,
-                TextWrapping = TextWrapping.Wrap,
+                TextWrapping = TextWrapping.Wrap,          // Перенос включен
                 FontSize = PRODUCT_FONT_SIZE,
-                MaxHeight = 50,
+                // MaxHeight = 50, // ✅ УБИРАЕМ обрезку
                 IsHitTestVisible = false
             };
 
@@ -9071,204 +9480,7 @@ namespace Cash8Avalon
             set_sale_disburse_button();
         }
 
-        protected virtual async Task OnLoaded()
-        {
-            //this.num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
-            //this.num_cash.Tag = MainStaticClass.CashDeskNumber;       
-         
-            ////Создание таблицы для перераспределения акций
-            //DataColumn dc = new DataColumn("Code", System.Type.GetType("System.Int32"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("Tovar", System.Type.GetType("System.String"));
-            //table.Columns.Add(dc);           
-            //dc = new DataColumn("Quantity", System.Type.GetType("System.Int32"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("Price", System.Type.GetType("System.Decimal"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("PriceAtDiscount", System.Type.GetType("System.Decimal"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("Sum", System.Type.GetType("System.Decimal"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("SumAtDiscount", System.Type.GetType("System.Decimal"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("Action", System.Type.GetType("System.Int32"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("Gift", System.Type.GetType("System.Int32"));
-            //table.Columns.Add(dc);
-            //dc = new DataColumn("Action2", System.Type.GetType("System.Int32"));
-            //table.Columns.Add(dc);
-
-            ////this.inputbarcode.Focus();
-            //this.txtB_search_product.Focus();
-
-            //if (MainStaticClass.GetVersionFn == 1)
-            //{
-            //    checkBox_print_check.IsVisible = false;
-            //}
-            //checkBox_print_check.IsChecked = true;
-
-            //if (IsNewCheck)
-            //{
-            //    guid = Guid.NewGuid().ToString();
-                
-
-            //    checkBox_to_print_repeatedly.IsVisible = false;
-            //    //label9.Visible = false;
-            //    //label10.Visible = false;
-            //    //label11.Visible = false;
-            //    //label13.Visible = false;
-            //    txtB_non_cash_money.IsVisible = false;
-            //    txtB_sertificate_money.IsVisible = false;
-            //    txtB_cash_money.IsVisible = false;
-            //    txtB_bonus_money.IsVisible = false;
-
-            //    //inputbarcode.Focus();
-            //    this.txtB_search_product.Focus();
-
-
-            //    this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
-            //    this.Discount = 0;
-            //    this.user.Text = MainStaticClass.Cash_Operator;
-            //    this.user.Tag = MainStaticClass.Cash_Operator_Client_Code;//gaa поменять на инн
-            //    numdoc = get_new_number_document();
-            //    if (numdoc == 0)
-            //    {
-            //        MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
-            //        MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
-            //        this.Close();
-            //    }
-            //    this.txtB_num_doc.Text = this.numdoc.ToString();
-            //    MainStaticClass.write_event_in_log(" Ввод нового документа ", "Документ чек", numdoc.ToString());
-            //    this.check_type.SelectedIndex = 0;
-            //    this.check_type.IsEnabled = true;
-            //    set_sale_disburse_button();
-            //}
-            //else
-            //{
-            //    reopened = true;
-            //    checkBox_print_check.IsEnabled = false;
-            //    //Документ не новый поэтому запретим в нем ввод и изменение                
-            //    last_tovar.IsEnabled = false;
-            //    //txtB_email_telephone.Enabled = false;
-            //    txtB_inn.IsEnabled = false;
-            //    btn_get_name.IsEnabled = false;
-            //    //txtB_client_phone.Enabled = false;
-            //    txtB_name.IsEnabled = false;
-            //    comment.IsEnabled = false;
-                
-            //    int status = get_its_deleted_document();
-            //    if ((status == 0) || (status == 1))
-            //    {
-            //        //this.type_pay.Enabled = false;
-            //        //this.label4.Enabled = false;
-            //        this.check_type.IsEnabled = false;
-            //        //this.inputbarcode.Enabled = false;
-            //        this.txtB_search_product.IsEnabled = false;
-            //        this.client_barcode.IsEnabled = false;
-            //        //this.sale_cancellation.Enabled = false;
-            //        //this.inventory.Enabled = false;
-            //        //this.comment.Enabled = false;
-            //        //to_open_the_written_down_document();
-            //        enable_print();
-            //        if (MainStaticClass.Code_right_of_user != 1)
-            //        {
-            //            this.pay.IsEnabled = false;
-            //        }
-            //        //itsnew = true;
-            //    }
-            //    else if (status == 2)
-            //    {
-            //        IsNewCheck = true;
-            //        Discount = 0;
-            //        //this.label4.Enabled = true;
-            //        this.check_type.IsEnabled = true;
-            //        //this.inputbarcode.Enabled = true;
-            //        this.txtB_search_product.IsEnabled = true;
-            //        this.client_barcode.IsEnabled = false;
-            //        ToOpenTheWrittenDownDocument();
-            //        get_old_document_Discount();
-            //        check_type.IsEnabled = false;
-            //        IsNewCheck = true;
-            //    }
-            //}
-
-            ////this.Top = 0;
-            ////this.Left = 0;
-            ////this.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height);
-            ////this.panel2.Left = 0;
-            ////this.listView2.Left = 20;
-
-            ////this.panel2.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height / 2);
-            ////this.listView2.Size = new System.Drawing.Size(SystemInformation.PrimaryMonitorSize.Width - 50, SystemInformation.PrimaryMonitorSize.Height / 2 - 50);
-
-
-            //if (IsNewCheck)
-            //{
-            //    //first_start_com_barcode_scaner();
-            //    selection_goods = true;
-            //    //inputbarcode.Focus();
-            //    this.txtB_search_product.Focus();
-            //    //список допустимых длин qr кодов                
-            //    qr_code_lenght.Add(29);
-            //    qr_code_lenght.Add(30);
-            //    qr_code_lenght.Add(31);
-            //    qr_code_lenght.Add(32);
-            //    qr_code_lenght.Add(37);
-            //    qr_code_lenght.Add(40);
-            //    qr_code_lenght.Add(41);
-            //    qr_code_lenght.Add(76);
-            //    qr_code_lenght.Add(83);
-            //    qr_code_lenght.Add(115);
-            //    qr_code_lenght.Add(127);
-
-            //    if (MainStaticClass.PrintingUsingLibraries == 1)
-            //    {
-            //        IFptr fptr = MainStaticClass.FPTR;
-
-            //        if (!fptr.isOpened())
-            //        {
-            //            fptr.open();
-            //        }
-
-            //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
-            //        fptr.queryData();
-            //        if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
-            //        {
-            //            MessageBoxHelper.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
-            //        }
-            //    }
-            //}
-            //else
-            //{
-            //    if (MainStaticClass.Use_Fiscall_Print)
-            //    {
-            //        if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
-            //        {
-            //            if (await ItcPrinted())
-            //            {
-            //                this.pay.IsEnabled = false;
-            //                this.checkBox_to_print_repeatedly.IsEnabled = false;
-            //            }
-            //        }
-            //        else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
-            //        {
-            //            if (await ItcPrinted())
-            //            {
-            //                this.checkBox_to_print_repeatedly.IsEnabled = false;
-            //            }
-            //            if (await ItcPrintedP())
-            //            {
-            //                this.checkBox_to_print_repeatedly_p.IsEnabled = false;
-            //            }
-            //            if (await ItcPrinted() && await this.ItcPrintedP())
-            //            {
-            //                this.pay.IsEnabled = false;
-            //            }
-            //        }
-            //    }
-            //}          
-        }
-
+        
         private void enable_print()
         {
             if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))

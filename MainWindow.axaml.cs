@@ -363,7 +363,7 @@ namespace Cash8Avalon
                                 printing = new PrintingUsingLibraries();
                                 await printing.getShiftStatus(this);
                             }
-                            MainStaticClass.validate_date_time_with_fn(10);
+                            MainStaticClass.validate_date_time_with_fn(10,this);
 
                             if (MainStaticClass.SystemTaxation == 0)
                             {
@@ -402,7 +402,7 @@ namespace Cash8Avalon
                             if (await MainStaticClass.PrintingUsingLibraries(this) == 1)
                             {
                                 PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                                printingUsingLibraries.CheckTaxationTypes(this);
+                                await printingUsingLibraries.CheckTaxationTypes(this);
                             }
                         }
 
@@ -511,7 +511,7 @@ namespace Cash8Avalon
             public string fiscals_forbidden { get; set; }
         }
 
-        private async void GetUsers(CancellationToken token)
+        private async Task GetUsers(CancellationToken token)
         {
             try
             {
@@ -644,8 +644,18 @@ namespace Cash8Avalon
 
         private void UpdateMenuVisibility(int userRights)
         {
-            var menu = MainMenu ?? this.FindControl<Menu>("MainMenu");
-            if (menu != null) menu.IsVisible = userRights != 2;
+            //var menu = MainMenu ?? this.FindControl<Menu>("MainMenu");
+            //if (menu != null) menu.IsVisible = userRights != 2;
+            var menu = this.FindControl<Menu>("MainMenu");
+            if (menu != null)
+            {
+                // Логика:
+                // 1. Если userRights == 0 (при старте) -> Скрываем (false)
+                // 2. Если userRights == 2 (ограниченные права) -> Скрываем (false)
+                // 3. Во всех остальных случаях -> Показываем (true)
+
+                menu.IsVisible = userRights > 0 && userRights != 2;
+            }
         }
 
         private async Task UpdateUnloadingPeriod()
