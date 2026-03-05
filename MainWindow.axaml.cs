@@ -434,10 +434,13 @@ namespace Cash8Avalon
                 this.Close();
             }
 
-            _ = InitializeTimeSyncAsync(_lifetimeCts.Token).ContinueWith(t =>
+            if (await MainStaticClass.GetUnloadingInterval() != 0)
             {
-                if (t.IsFaulted) Console.WriteLine($"[TimeSync] Критическая ошибка: {t.Exception?.Message}");
-            });
+                _ = InitializeTimeSyncAsync(_lifetimeCts.Token).ContinueWith(t =>
+                {
+                    if (t.IsFaulted) Console.WriteLine($"[TimeSync] Критическая ошибка: {t.Exception?.Message}");
+                });
+            }
         }
 
         private async Task InitializeTimeSyncAsync(CancellationToken token, int maxAttempts = 100, int timeoutSeconds = 15, int maxDelaySeconds = 600)

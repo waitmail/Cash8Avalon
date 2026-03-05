@@ -3895,12 +3895,12 @@ namespace Cash8Avalon
                 case Key.Enter:
                     Console.WriteLine("Enter нажат в поле поиска товара");
                     e.Handled = true;
-                    find_product();
+                    FindProduct();
                     break;
             }
         }
 
-        private async void find_product()
+        private async void FindProduct()
         {
             try
             {
@@ -4467,7 +4467,10 @@ namespace Cash8Avalon
                             }
                             else if (string.IsNullOrEmpty(marking_code))
                             {
-                                error = true;
+                                if (!productData.IsRefusalMarking())
+                                {
+                                    error = true;
+                                }
                             }
                         }
                         else
@@ -4487,49 +4490,65 @@ namespace Cash8Avalon
                         return;
                     }
 
-                    marking_code = add_gs1(marking_code);
-
-                    if (!string.IsNullOrEmpty(marking_code))
+                    if (marking_code.Trim() != "")//Может быть пустой если стоит признак пропускать маркировку и отказались от ввода кода 
                     {
-                        if (CheckMarkingExists(marking_code))
+                        marking_code = add_gs1(marking_code);
+
+                        if (!string.IsNullOrEmpty(marking_code))
                         {
-                            await MessageBoxHelper.Show(
-                                "Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.",
-                                "Проверка маркировки",
-                                MessageBoxButton.OK,
-                                MessageBoxType.Error,
-                                this);
-                            return;
+                            if (CheckMarkingExists(marking_code))
+                            {
+                                await MessageBoxHelper.Show(
+                                    "Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.",
+                                    "Проверка маркировки",
+                                    MessageBoxButton.OK,
+                                    MessageBoxType.Error,
+                                    this);
+                                return;
+                            }
                         }
-                    }
 
-                    if (productData.IsCDNCheck())
-                    {
-                        bool cdnOk = MainStaticClass.IncludedPiot
-                            ? await MainStaticClass.piot_cdn_check(productData, marking_code, this)
-                            : await MainStaticClass.cdn_check(productData, marking_code, this);
-
-                        if (!cdnOk)
+                        if (productData.IsCDNCheck())
                         {
+                            bool cdnOk = MainStaticClass.IncludedPiot
+                                ? await MainStaticClass.piot_cdn_check(productData, marking_code, this)
+                                : await MainStaticClass.cdn_check(productData, marking_code, this);
+
+                            if (!cdnOk)
+                            {
+                                if (!productData.IsRefusalMarking())
+                                {
+                                    await ShowTovarNotFoundWindow(this);
+                                    this.Focus();
+                                    await ActivateWindow(this);
+                                }
+                                return;
+                            }
+                            await ActivateWindow(this);
+                        }
+
+                        var printingUsingLibraries = new PrintingUsingLibraries();
+                        if (!await printingUsingLibraries.check_marking_code(
+                            marking_code,
+                            this.numdoc.ToString(),
+                            this.cdn_markers_result_check,
+                            this.check_type.SelectedIndex))
+                        {
+                            last_tovar.Text = barcode;
                             await ShowTovarNotFoundWindow(this);
                             this.Focus();
-                            await ActivateWindow(this);
                             return;
                         }
-                        await ActivateWindow(this);
                     }
-
-                    var printingUsingLibraries = new PrintingUsingLibraries();
-                    if (!await printingUsingLibraries.check_marking_code(
-                        marking_code,
-                        this.numdoc.ToString(),
-                        this.cdn_markers_result_check,
-                        this.check_type.SelectedIndex))
+                    else
                     {
-                        last_tovar.Text = barcode;
-                        await ShowTovarNotFoundWindow(this);
-                        this.Focus();
-                        return;
+                        if (!productData.IsRefusalMarking())
+                        {
+                            last_tovar.Text = barcode;
+                            await ShowTovarNotFoundWindow(this);
+                            this.Focus();
+                            return;
+                        }
                     }
                 }
 
