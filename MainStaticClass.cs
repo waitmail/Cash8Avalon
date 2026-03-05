@@ -4805,7 +4805,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBox.Show(ex.Message, "write_event_in_log");
+                await MessageBox.Show(ex.Message, "write_event_in_log",MainStaticClass.MainWindow);
             }
             finally
             {

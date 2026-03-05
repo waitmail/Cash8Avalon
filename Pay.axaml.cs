@@ -119,160 +119,90 @@ namespace Cash8Avalon
             CalculateChange();
         }
 
-        //private void Pay_Opened(object? sender, EventArgs e)
+        //private async void Pay_Opened(object? sender, EventArgs e)
         //{
-        //    // При открытии окна принудительно устанавливаем фокус
-        //    Dispatcher.UIThread.InvokeAsync(() =>
+        //    // ✅ 1. Сначала "выталкиваем" окно наверх (хак для X11)
+        //    this.Topmost = true;
+
+        //    // ✅ 2. Делаем небольшую паузу.
+        //    // В Linux (X11) окно должно успеть "проявиться" в системе, 
+        //    // иначе фокус может не встать.
+        //    await Task.Delay(100);
+
+        //    // ✅ 3. Возвращаем нормальное поведение окна
+        //    this.Topmost = false;
+
+        //    // ✅ 4. Активируем окно и ставим фокус
+        //    this.Activate();
+
+        //    if (cashSumTextBox != null)
         //    {
-        //        this.Focus();
-        //        this.Activate(); // Пробуем активировать окно
+        //        cashSumTextBox.Focus();
 
-        //        if (cashSumTextBox != null)
+        //        // Дополнительно: выделяем весь текст, чтобы кассир сразу печатал новое число
+        //        // (работает, если это TextBox)
+        //        if (cashSumTextBox is TextBox tb)
         //        {
-        //            cashSumTextBox.Focus();
+        //            tb.SelectAll();
         //        }
-
-        //        // Для Linux особенно важно
-        //        this.Topmost = true;
-        //        //this.Topmost = false;
-        //    }, DispatcherPriority.Render);           
+        //    }
         //}
 
         private async void Pay_Opened(object? sender, EventArgs e)
         {
-            //await Dispatcher.UIThread.InvokeAsync(async () =>
-            //{
-            //    this.Activate();
+            // ✅ 1. "Выталкиваем" окно наверх (хак для X11)
+            this.Topmost = true;
 
-            //    if (cashSumTextBox != null)
-            //    {
-            //        cashSumTextBox.Focus();
-            //        await Task.Delay(100);
+            // ✅ 2. Пауза для Linux (X11)
+            await Task.Delay(100);
 
-            //        for (int i = 0; i < 3; i++)
-            //        {
-            //            var keyEvent = new KeyEventArgs
-            //            {
-            //                RoutedEvent = InputElement.KeyDownEvent,
-            //                Key = Key.Tab,
-            //                KeyModifiers = KeyModifiers.None
-            //            };
-            //            this.RaiseEvent(keyEvent);
-            //            await Task.Delay(50);
-            //        }
-            //    }
-
-            //    this.Topmost = true;
-            //    this.Topmost = false;
-            //    this.Topmost = true;
-
-            //    ////// Показываем фокус
-            //    //var focused = FocusManager?.GetFocusedElement();
-            //    //string focusInfo = focused == null
-            //    //    ? "Фокус отсутствует!"
-            //    //    : $"Фокус на: {focused.GetType().Name}\nИмя: {(focused as Control)?.Name ?? "нет"}";
-
-            //    //await MessageBox.Show(focusInfo, "Информация о фокусе", MessageBoxButton.OK, MessageBoxType.Info, this);               
-
-            //}, DispatcherPriority.Render);
-            //await Dispatcher.UIThread.InvokeAsync(() =>
-            //{
-            //    if (cashSumTextBox != null)
-            //    {
-            //        // Для Linux - специальная обработка
-            //        if (OperatingSystem.IsLinux())
-            //        {
-            //            // Сначала активируем окно
-            //            this.Activate();
-            //            this.Topmost = true;
-            //            this.Topmost = false;
-
-            //            // Небольшая задержка для оконного менеджера
-            //            Task.Delay(50).ContinueWith(_ =>
-            //            {
-            //                Dispatcher.UIThread.InvokeAsync(() =>
-            //                {
-            //                    cashSumTextBox.Focus();
-            //                    cashSumTextBox.SelectAll();
-            //                });
-            //            });
-            //        }
-            //        else
-            //        {
-            //            cashSumTextBox.Focus();
-            //            cashSumTextBox.SelectAll();
-            //        }
-            //    }
-            //}, DispatcherPriority.Render);
-
-            //await ActivateWindow(this);
-            //await MessageBoxHelper.ActivateWindow(this);
-            //await Task.Delay(50); // Даём время оконному менеджеру
-
-            //await Dispatcher.UIThread.InvokeAsync(async () =>
-            //{
-            //    // 1. Активируем окно
-            //    this.Activate();
-            //    this.Focus();
-
-            //    // 2. Трюк с Topmost для Linux
-            //    this.Topmost = false;
-            //    this.Topmost = true;
-
-            //    // 3. Небольшая задержка
-            //    await Task.Delay(100);
-
-            //    // 4. Устанавливаем фокус на TextBox
-            //    if (cashSumTextBox != null)
-            //    {
-            //        cashSumTextBox.Focus();
-            //        //cashSumTextBox.SelectAll();
-
-            //        // Принудительно сигнализируем о фокусе
-            //        //KeyboardDevice?.SetFocusedElement(this, cashSumTextBox, NavigationMethod.Unspecified);
-            //    }
-
-            //    // 5. Ещё раз активируем
-            //    this.Activate();
-
-            //}, DispatcherPriority.Render);
+            // ✅ 3. Возвращаем нормальное поведение
             this.Topmost = false;
-            
+
+            // ✅ 4. Активируем окно
+            this.Activate();
+
+            if (cashSumTextBox != null)
+            {
+                cashSumTextBox.Focus();
+
+                // ✅ Логика выделения целой части для Avalonia
+                if (cashSumTextBox is TextBox tb)
+                {
+                    string text = tb.Text;
+
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        // Ищем позицию разделителя (точки или запятой)
+                        int dotIndex = text.IndexOf('.');
+                        int commaIndex = text.IndexOf(',');
+
+                        // Берём минимальный индекс, если есть оба разделителя
+                        int separatorIndex = -1;
+
+                        if (dotIndex != -1 && commaIndex != -1)
+                            separatorIndex = Math.Min(dotIndex, commaIndex);
+                        else if (dotIndex != -1)
+                            separatorIndex = dotIndex;
+                        else
+                            separatorIndex = commaIndex;
+
+                        // Если разделитель найден и он не в самом начале
+                        if (separatorIndex > 0)
+                        {
+                            // ✅ Avalonia: используем SelectionStart/SelectionEnd
+                            tb.SelectionStart = 0;
+                            tb.SelectionEnd = separatorIndex;
+                        }
+                        else
+                        {
+                            // Если разделителя нет — выделяем всё
+                            tb.SelectAll();
+                        }
+                    }
+                }
+            }
         }
-
-        //private async Task ActivateWindow(Window window)
-        //{
-        //    if (window == null) return;
-
-        //    await Dispatcher.UIThread.InvokeAsync(() =>
-        //    {
-        //        if (window.IsVisible)
-        //        {
-        //            // Попытка активировать окно
-        //            window.Activate();
-        //            window.Focus();
-
-        //            // Для Linux - трюк с Topmost
-        //            if (OperatingSystem.IsLinux())
-        //            {
-        //                window.Topmost = true;
-        //                window.Topmost = false;
-        //                window.Topmost = true;
-        //            }
-        //        }
-        //    }, DispatcherPriority.Render);
-
-        //    // Дайте оконному менеджеру время отреагировать
-        //    if (OperatingSystem.IsLinux())
-        //    {
-        //        await Task.Delay(100); // 100 мс для надежности
-        //    }
-        //    else
-        //    {
-        //        await Task.Delay(10); // Для Windows достаточно
-        //    }
-        //}
-
 
         private void CashSumTextBox_KeyUp(object? sender, KeyEventArgs e)
         {
@@ -1007,68 +937,14 @@ namespace Cash8Avalon
             }
 
             return result;
-        }
-
-        //private async void calculate()
-        //{
-        //    try
-        //    {
-        //        if (this.txtB_cash_sum.Text.Length == 0)
-        //        {
-        //            this.txtB_cash_sum.Text = "0,00";
-        //        }
-
-        //        this.txtB_cash_sum.Text = Convert.ToDouble(this.txtB_cash_sum.Text).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
-
-        //        this.remainder.Text = Math.Round(
-        //        (double.Parse(txtB_cash_sum.Text) +
-        //        double.Parse(pay_bonus_many.Text) +
-        //        get_non_cash_sum() +
-        //        double.Parse(sertificates_sum.Text) - double.Parse(pay_sum.Text)), 2).ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
-
-        //        //if (Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) + double.Parse(non_cash_sum.Text) +
-        //        //double.Parse(sertificates_sum.Text) + double.Parse(pay_bonus_many.Text) +
-        //        //Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100), 2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) < 0)
-        //        //{
-        //        //    //this.button_pay.IsEnabled = false;
-        //        //    await Dispatcher.UIThread.InvokeAsync(() =>
-        //        //    {
-        //        //        button_pay.IsEnabled = false;
-        //        //    }, DispatcherPriority.Render);
-        //        //}
-        //        //else
-        //        //{
-        //        //    //this.button_pay.IsEnabled = true;
-        //        //    await Dispatcher.UIThread.InvokeAsync(() =>
-        //        //    {
-        //        //        button_pay.IsEnabled = true;
-        //        //    }, DispatcherPriority.Render);
-        //        //}
-        //        // Вычисляем условие
-        //        bool shouldEnable = Math.Round(double.Parse(txtB_cash_sum.Text.Replace(".", ",")) +
-        //                          double.Parse(non_cash_sum.Text) +
-        //                          double.Parse(sertificates_sum.Text) +
-        //                          double.Parse(pay_bonus_many.Text) +
-        //                          Convert.ToDouble(double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100),
-        //                          2, MidpointRounding.AwayFromZero) - double.Parse(pay_sum.Text.Replace(".", ",")) >= 0;
-
-        //        // Обновляем кнопку через Dispatcher с высоким приоритетом
-        //        await Dispatcher.UIThread.InvokeAsync(() =>
-        //        {
-        //            button_pay.IsEnabled = shouldEnable;
-        //        }, DispatcherPriority.Render); // Используем Render для немедленного обновления
-        //        //await Task.Delay(2000);
-
-        //        Dispatcher.UIThread.Post(() => CalculateChange(), DispatcherPriority.Background);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await MessageBox.Show("calculate " + ex.Message,"Ошибка при подсчете",MessageBoxButton.OK,MessageBoxType.Error);
-        //    }           
-        //}
+        }      
 
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
+            if (!this.button_pay.IsEnabled == true)
+            {
+                return;
+            }
             if (!await copFilledCorrectly())
             {
                 CalculateChange();

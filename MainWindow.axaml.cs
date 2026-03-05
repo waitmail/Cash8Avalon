@@ -248,6 +248,7 @@ namespace Cash8Avalon
 
         protected override async void OnOpened(EventArgs e)
         {
+            MainStaticClass.MainWindow = this;
             // ✅ 1. Даем окну время на первичную отрисовку
             await Task.Delay(50);
 
@@ -328,7 +329,7 @@ namespace Cash8Avalon
                     Console.WriteLine("=== ВЫПОЛНЕНИЕ ПРОВЕРОК ПРИ СТАРТЕ ===");
                     MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
                     MainStaticClass.Last_Write_Check = DateTime.Now.AddSeconds(1);
-                    MainStaticClass.MainWindow = this;
+                    
 
                     string version_program = await MainStaticClass.GetAtolDriverVersion();
                     if (_isDisposed) return;

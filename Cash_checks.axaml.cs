@@ -340,18 +340,14 @@ namespace Cash8Avalon
         {
             try
             {
-                // Инициализируем контролы сразу в UI потоке
                 InitializeControls();
-
                 Console.WriteLine("✓ Контролы инициализированы");
 
-                // ЗАГРУЖАЕМ ДАННЫЕ АСИНХРОННО, НЕ БЛОКИРУЯ ПОКАЗ ФОРМЫ
+                // ✅ ДОБАВЛЕНО: Небольшая задержка для отрисовки макета перед загрузкой
+                await Task.Delay(50);
+
                 await LoadDocumentsAsync();
-
                 Console.WriteLine("✓ Данные загружены асинхронно");
-
-                // Первоначальное обновление статуса в фоне
-                _ = Task.Run(() => GetStatusSendDocument());
             }
             catch (Exception ex)
             {
@@ -466,7 +462,8 @@ namespace Cash8Avalon
                 _headerGrid = new Grid
                 {
                     Background = Brushes.LightBlue,
-                    HorizontalAlignment = HorizontalAlignment.Left, // ✅ Важно: Left (не даем растягиваться)
+                    // ✅ ИЗМЕНЕНО: Stretch вместо Left, чтобы занимать всю доступную ширину сразу
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
                     VerticalAlignment = VerticalAlignment.Top,
                     ClipToBounds = true
                 };
@@ -494,7 +491,6 @@ namespace Cash8Avalon
             new GridLength(0.5, GridUnitType.Star), // 8: Напечатан
             new GridLength(0.5, GridUnitType.Star)  // 9: ПечатьП
         };
-
                 foreach (var width in columnWidths)
                 {
                     _headerGrid.ColumnDefinitions.Add(new ColumnDefinition(width));
@@ -502,7 +498,6 @@ namespace Cash8Avalon
                 }
 
                 CreateHeaderRow();
-
                 _currentRow = 0;
                 AddLoadingRow();
 
@@ -513,8 +508,6 @@ namespace Cash8Avalon
                 // 7. ScrollViewer
                 _scrollViewer = new ScrollViewer
                 {
-                    // ✅ ВАЖНО: Disabled заставляет Grid сжиматься до ширины окна.
-                    // Если оставить Auto, Grid будет бесконечно широким, и перенос строк не сработает.
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                     Background = Brushes.White,
@@ -523,56 +516,62 @@ namespace Cash8Avalon
                 };
                 _scrollViewer.PointerPressed += OnScrollViewerPointerPressed;
 
-                // ✅✅✅ СИНХРОНИЗАЦИЯ (ИДЕАЛЬНЫЙ ВАРИАНТ) ✅✅✅
-
+                // ✅✅✅ СИНХРОНИЗАЦИЯ ✅✅✅
                 _scrollSizeChangedHandler = (s, e) =>
                 {
                     if (_isDisposed || _headerGrid == null || _scrollViewer == null || _isUpdatingHeader) return;
-
                     var viewportWidth = _scrollViewer.Viewport.Width;
-
+                    // ✅ Увеличил допуск до 1.0 для стабильности
                     if (viewportWidth > 0 && !double.IsNaN(viewportWidth) &&
-                        Math.Abs(_headerGrid.Width - viewportWidth) > 0.5)
+                        Math.Abs(_headerGrid.Width - viewportWidth) > 1.0)
                     {
                         _isUpdatingHeader = true;
                         _headerGrid.Width = viewportWidth;
-
-                        // ✅ ДОБАВЛЕНО: Принудительно ограничиваем ширину таблицы,
-                        // чтобы перенос строк работал в Star-колонках.
                         _tableGrid.Width = viewportWidth;
-
                         _isUpdatingHeader = false;
                     }
                 };
 
-                // 2. Обработчик прокрутки (сохраняем в поле для отписки)
                 _scrollChangedHandler = (s, e) =>
                 {
-                    // ✅ Проверка флага добавлена
                     if (_isDisposed || _headerScrollTransform == null) return;
                     _headerScrollTransform.X = -_scrollViewer.Offset.X;
                 };
 
-                // Подписываемся
                 _scrollViewer.SizeChanged += _scrollSizeChangedHandler;
                 _scrollViewer.ScrollChanged += _scrollChangedHandler;
 
-                // 3. Начальная синхронизация
+                // 3. ✅ НАЧАЛЬНАЯ СИНХРОНИЗАЦИЯ (ИСПРАВЛЕННАЯ)
+                // Используем DispatcherPriority.Loaded, чтобы выполнить после измерения, но до рендера
                 Dispatcher.UIThread.Post(() =>
                 {
-                    if (_isDisposed || _headerGrid == null || _scrollViewer?.Viewport.Width <= 0) return;
+                    if (_isDisposed || _headerGrid == null || _scrollViewer == null) return;
 
-                    _headerGrid.Width = _scrollViewer.Viewport.Width;
-                    Console.WriteLine($"✓ Начальная ширина шапки: {_headerGrid.Width:F1}");
-                }, DispatcherPriority.Render);
+                    var viewportWidth = _scrollViewer.Viewport.Width;
+                    // ✅ Если Viewport еще 0, берем ширину самого контрола
+                    if (viewportWidth <= 0 || double.IsNaN(viewportWidth))
+                    {
+                        viewportWidth = this.Bounds.Width > 0 ? this.Bounds.Width : 800;
+                    }
+
+                    _headerGrid.Width = viewportWidth;
+                    _tableGrid.Width = viewportWidth;
+
+                    // ✅ ВАЖНО: Принудительно обновляем макет, чтобы Grid пересчитал Star-колонки
+                    _headerGrid.Measure(new Size(viewportWidth, double.PositiveInfinity));
+                    _headerGrid.Arrange(new Rect(0, 0, viewportWidth, _headerGrid.DesiredSize.Height));
+
+                    _tableGrid.Measure(new Size(viewportWidth, double.PositiveInfinity));
+                    _tableGrid.Arrange(new Rect(0, 0, viewportWidth, _tableGrid.DesiredSize.Height));
+
+                    Console.WriteLine($"✓ Начальная ширина шапки установлена: {_headerGrid.Width:F1}");
+                }, DispatcherPriority.Loaded); // ✅ Изменено с Render на Loaded
 
                 // 4. Компоновка
                 Grid.SetRow(_headerGrid, 0);
                 mainContainer.Children.Add(_headerGrid);
-
                 Grid.SetRow(_scrollViewer, 1);
                 mainContainer.Children.Add(_scrollViewer);
-
                 tableBorder.Child = mainContainer;
 
                 Console.WriteLine("✓ Таблица создана с надежной синхронизацией");
@@ -911,42 +910,29 @@ namespace Cash8Avalon
         {
             try
             {
-                if (_tableGrid == null || _checkItems == null) return;
+                if (_tableGrid == null || _checkItems == null || _headerGrid == null) return;
 
-                // === РАСЧЕТ МАСШТАБА ===
+                // ✅ ЗАЩИТА: Не обновляем масштаб, если ширина еще не установлена
+                if (_headerGrid.Width <= 0) return;
 
-                // Эталонная ширина, при которой шрифт равен базовому (например, 1920 для FullHD)
                 const double referenceWidth = 1920.0;
-
-                // Базовый размер шрифта для эталонной ширины
                 const double baseFontSize = 26.0;
 
                 double currentWidth = this.Bounds.Width;
                 if (currentWidth <= 0) currentWidth = referenceWidth;
 
-                // Коэффициент масштабирования
                 double scale = currentWidth / referenceWidth;
-
-                // Ограничиваем масштаб (чтобы не было слишком мелко или крупно)
-                // При ширине 800px scale будет ~0.41 -> font ~6.5 (ограничим min 10)
-                // При ширине 1920px scale будет 1.0 -> font 16
-                // При ширине 3000px scale будет 1.56 -> font 25 (ограничим max 24)
                 double fontSize = baseFontSize * scale;
-                fontSize = Math.Max(10, Math.Min(fontSize, 42)); // Ограничение от 10 до 24
+                fontSize = Math.Max(10, Math.Min(fontSize, 42));
 
-                double rowHeight = 35 * scale; // Базовая высота 35
-                rowHeight = Math.Max(25, Math.Min(rowHeight, 50)); // Ограничение высоты
+                double rowHeight = 35 * scale;
+                rowHeight = Math.Max(25, Math.Min(rowHeight, 50));
 
-                // === ПРИМЕНЕНИЕ К СТРОКАМ ===
-
-                // 1. Обновляем высоту строк (RowDefinitions)
                 for (int i = 0; i < _tableGrid.RowDefinitions.Count; i++)
                 {
-                    // Обновляем MinHeight, так как Height у нас Auto
                     _tableGrid.RowDefinitions[i].MinHeight = rowHeight;
                 }
 
-                // 2. Обновляем размер шрифта в ячейках
                 foreach (var child in _tableGrid.Children)
                 {
                     if (child is TextBlock textBlock)
@@ -955,19 +941,20 @@ namespace Cash8Avalon
                     }
                     else if (child is CheckBox checkBox)
                     {
-                        // Масштабируем CheckBox через RenderTransform
-                        double scaleTransform = fontSize / 14.0; // 14 - базовый размер для чекбокса
+                        double scaleTransform = fontSize / 14.0;
                         checkBox.RenderTransform = new ScaleTransform(scaleTransform, scaleTransform);
                         checkBox.Margin = new Thickness(2 * scaleTransform);
                     }
-                    else if (child is Border border)
-                    {
-                        // Обновляем высоту бордера, если нужно (хотя при Auto он сам подстроится под контент, MinHeight важнее)
-                        border.Height = rowHeight;
-                    }
                 }
 
-                Console.WriteLine($"✓ Масштаб обновлен: Width={currentWidth:F0}, Font={fontSize:F1}, RowH={rowHeight:F1}");
+                // ✅ Синхронизируем ширину шапки после масштабирования
+                if (_scrollViewer != null && _scrollViewer.Viewport.Width > 0)
+                {
+                    _headerGrid.Width = _scrollViewer.Viewport.Width;
+                    _tableGrid.Width = _scrollViewer.Viewport.Width;
+                }
+
+                Console.WriteLine($"✓ Масштаб обновлен: Width={currentWidth:F0}, Font={fontSize:F1}");
             }
             catch (Exception ex)
             {
@@ -1976,7 +1963,8 @@ namespace Cash8Avalon
                 if (parentWindow != null)
                 {
                     // Показываем как диалог (модальное окно)
-                    await checkWindow.ShowDialog(parentWindow);
+                    //await checkWindow.ShowDialog(parentWindow);
+                    await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
                 }
                 else
                 {

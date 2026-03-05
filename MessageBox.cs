@@ -1146,6 +1146,964 @@
 //    }
 //}
 
+//using Avalonia;
+//using Avalonia.Controls;
+//using Avalonia.Controls.ApplicationLifetimes;
+//using Avalonia.Input;
+//using Avalonia.Interactivity;
+//using Avalonia.Layout;
+//using Avalonia.Media;
+//using Avalonia.Threading;
+//using System;
+//using System.Linq;
+//using System.Threading.Tasks;
+
+//// ENUM ТИПОВ СООБЩЕНИЙ
+//public enum MessageBoxType
+//{
+//    Info,
+//    Warning,
+//    Error,
+//    Question
+//}
+
+//// ENUM КНОПОК
+//public enum MessageBoxButton
+//{
+//    OK,
+//    OKCancel,
+//    YesNo,
+//    YesNoCancel
+//}
+
+//// ENUM РЕЗУЛЬТАТОВ
+//public enum MessageBoxResult
+//{
+//    None,
+//    OK,
+//    Cancel,
+//    Yes,
+//    No
+//}
+
+//// КЛАСС MESSAGEBOX
+//public static class MessageBox
+//{
+//    // ========== ПУБЛИЧНЫЕ МЕТОДЫ ==========
+
+//    public static async Task Show(string message, string title = "", Window owner = null)
+//    {
+//        await ShowInternal(message, title, MessageBoxButton.OK, MessageBoxType.Info, owner);
+//    }
+
+//    public static async Task<MessageBoxResult> Show(string message, string title,
+//                                                     MessageBoxButton buttons,
+//                                                     MessageBoxType type = MessageBoxType.Info,
+//                                                     Window owner = null)
+//    {
+//        return await ShowInternal(message, title, buttons, type, owner);
+//    }
+
+//    // ========== ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД ==========
+//    //private static async Task<MessageBoxResult> ShowInternal(string message, string title,
+//    //                                                         MessageBoxButton buttons,
+//    //                                                         MessageBoxType type,
+//    //                                                         Window explicitOwner)
+//    //{
+//    //    if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+//    //    {
+//    //        return MessageBoxResult.None;
+//    //    }
+
+//    //    var tcs = new TaskCompletionSource<MessageBoxResult>();
+
+//    //    // ОПРЕДЕЛЕНИЕ РОДИТЕЛЬСКОГО ОКНА
+//    //    Window ownerWindow = null;
+
+//    //    if (explicitOwner != null && explicitOwner.IsVisible)
+//    //    {
+//    //        ownerWindow = explicitOwner;
+//    //    }
+//    //    else if (desktop.Windows.Count > 0)
+//    //    {
+//    //        ownerWindow = desktop.Windows.FirstOrDefault(w => w.IsActive) ??
+//    //                      desktop.Windows.FirstOrDefault(w => w.IsVisible);
+//    //    }
+//    //    else if (desktop.MainWindow != null && desktop.MainWindow.IsVisible)
+//    //    {
+//    //        ownerWindow = desktop.MainWindow;
+//    //    }
+
+//    //    // СОЗДАЕМ ОКНО СРАЗУ С TOPMOST = TRUE
+//    //    var mainWindow = new Window
+//    //    {
+//    //        Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+//    //        MinWidth = 420,
+//    //        MinHeight = 220,
+//    //        MaxWidth = 800,
+//    //        MaxHeight = 600,
+//    //        WindowStartupLocation = ownerWindow != null
+//    //            ? WindowStartupLocation.CenterOwner
+//    //            : WindowStartupLocation.CenterScreen,
+//    //        CanResize = false,
+//    //        CanMinimize = false,
+//    //        CanMaximize = false,
+//    //        ShowInTaskbar = false,
+//    //        SystemDecorations = SystemDecorations.None,
+//    //        Topmost = true,  // ВАЖНО: сразу true
+//    //        SizeToContent = SizeToContent.WidthAndHeight,
+//    //        Background = Brushes.Transparent
+//    //    };
+
+//    //    // ========== СОЗДАНИЕ UI ==========
+
+//    //    var mainBorder = new Border
+//    //    {
+//    //        Background = Brushes.White,
+//    //        BorderBrush = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+//    //        BorderThickness = new Thickness(3),
+//    //        CornerRadius = new CornerRadius(5)
+//    //    };
+
+//    //    var blueHeader = new Border
+//    //    {
+//    //        Height = 30,
+//    //        Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+//    //        CornerRadius = new CornerRadius(5, 5, 0, 0),
+//    //        HorizontalAlignment = HorizontalAlignment.Stretch,
+//    //        VerticalAlignment = VerticalAlignment.Top,
+//    //        Child = new Grid
+//    //        {
+//    //            Children =
+//    //            {
+//    //                new TextBlock
+//    //                {
+//    //                    Text = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+//    //                    Foreground = Brushes.White,
+//    //                    FontSize = 14,
+//    //                    FontWeight = FontWeight.Bold,
+//    //                    VerticalAlignment = VerticalAlignment.Center,
+//    //                    HorizontalAlignment = HorizontalAlignment.Left,
+//    //                    Margin = new Thickness(15, 0, 0, 0)
+//    //                },
+//    //                new Button
+//    //                {
+//    //                    Content = "✕",
+//    //                    Width = 26,
+//    //                    Height = 26,
+//    //                    HorizontalAlignment = HorizontalAlignment.Right,
+//    //                    VerticalAlignment = VerticalAlignment.Center,
+//    //                    Margin = new Thickness(0, 0, 8, 0),
+//    //                    FontSize = 14,
+//    //                    FontWeight = FontWeight.Bold,
+//    //                    Background = Brushes.Transparent,
+//    //                    BorderThickness = new Thickness(0),
+//    //                    Foreground = Brushes.White,
+//    //                    Cursor = new Cursor(StandardCursorType.Hand)
+//    //                }
+//    //            }
+//    //        }
+//    //    };
+
+//    //    var messageStack = new StackPanel
+//    //    {
+//    //        Orientation = Orientation.Horizontal,
+//    //        Spacing = 20,
+//    //        HorizontalAlignment = HorizontalAlignment.Center
+//    //    };
+
+//    //    var iconText = new TextBlock
+//    //    {
+//    //        Text = GetIconEmoji(type),
+//    //        FontSize = 32,
+//    //        VerticalAlignment = VerticalAlignment.Center,
+//    //        Foreground = GetIconColor(type)
+//    //    };
+
+//    //    var messageText = new TextBlock
+//    //    {
+//    //        Text = message,
+//    //        TextWrapping = TextWrapping.Wrap,
+//    //        FontSize = 14,
+//    //        VerticalAlignment = VerticalAlignment.Center,
+//    //        MaxWidth = 500,
+//    //        MinWidth = 220,
+//    //        Foreground = Brushes.Black
+//    //    };
+
+//    //    messageStack.Children.Add(iconText);
+//    //    messageStack.Children.Add(messageText);
+
+//    //    var buttonStack = new StackPanel
+//    //    {
+//    //        Orientation = Orientation.Horizontal,
+//    //        HorizontalAlignment = HorizontalAlignment.Center,
+//    //        Spacing = 15
+//    //    };
+
+//    //    Button defaultButton = null;
+
+//    //    // СОЗДАНИЕ КНОПОК
+//    //    switch (buttons)
+//    //    {
+//    //        case MessageBoxButton.OK:
+//    //            defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+//    //            buttonStack.Children.Add(defaultButton);
+//    //            break;
+
+//    //        case MessageBoxButton.OKCancel:
+//    //            var okBtn = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+//    //            var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
+//    //            buttonStack.Children.Add(okBtn);
+//    //            buttonStack.Children.Add(cancelBtn);
+//    //            defaultButton = okBtn;
+//    //            break;
+
+//    //        case MessageBoxButton.YesNo:
+//    //            var yesBtn = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
+//    //            var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
+//    //            buttonStack.Children.Add(yesBtn);
+//    //            buttonStack.Children.Add(noBtn);
+//    //            defaultButton = yesBtn;
+//    //            break;
+
+//    //        case MessageBoxButton.YesNoCancel:
+//    //            var yesButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
+//    //            var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
+//    //            var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
+//    //            buttonStack.Children.Add(yesButton);
+//    //            buttonStack.Children.Add(noButton);
+//    //            buttonStack.Children.Add(cancelButton);
+//    //            defaultButton = yesButton;
+//    //            break;
+//    //    }
+
+//    //    var contentStack = new StackPanel
+//    //    {
+//    //        Spacing = 25,
+//    //        VerticalAlignment = VerticalAlignment.Center,
+//    //        HorizontalAlignment = HorizontalAlignment.Center
+//    //    };
+
+//    //    contentStack.Children.Add(messageStack);
+//    //    contentStack.Children.Add(buttonStack);
+
+//    //    var contentGrid = new Grid
+//    //    {
+//    //        Margin = new Thickness(25, 45, 25, 25),
+//    //        Children = { contentStack }
+//    //    };
+
+//    //    var innerBorder = new Border
+//    //    {
+//    //        Background = Brushes.White,
+//    //        BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
+//    //        BorderThickness = new Thickness(1),
+//    //        CornerRadius = new CornerRadius(3),
+//    //        Margin = new Thickness(2),
+//    //        Child = new Grid
+//    //        {
+//    //            Children = { contentGrid, blueHeader }
+//    //        }
+//    //    };
+
+//    //    mainBorder.Child = innerBorder;
+//    //    mainWindow.Content = mainBorder;
+
+//    //    // ========== СОХРАНЯЕМ ССЫЛКУ НА КНОПКУ ==========
+//    //    var capturedDefaultButton = defaultButton;
+
+//    //    // ========== ЕДИНСТВЕННЫЙ ОБРАБОТЧИК ОТКРЫТИЯ ==========
+//    //    mainWindow.Opened += async (s, e) =>
+//    //    {
+//    //        // ===== ГАРАНТИРОВАННЫЙ ФОКУС ДЛЯ LINUX =====
+//    //        await Task.Delay(50); // Даём время оконному менеджеру
+
+//    //        await Dispatcher.UIThread.InvokeAsync(async () =>
+//    //        {
+//    //            // 1. Активируем окно
+//    //            mainWindow.Activate();
+//    //            mainWindow.Focus();
+
+//    //            // 2. Трюк с Topmost для Linux
+//    //            mainWindow.Topmost = false;
+//    //            mainWindow.Topmost = true;
+
+//    //            // 3. Задержка для применения
+//    //            await Task.Delay(100);
+
+//    //            // 4. Фокус на кнопку
+//    //            if (capturedDefaultButton != null)
+//    //            {
+//    //                capturedDefaultButton.Focus();
+//    //            }
+
+//    //            // 5. Финальная активация
+//    //            mainWindow.Activate();
+
+//    //        }, DispatcherPriority.Render);
+//    //    };
+
+//    //    // ========== ОБРАБОТЧИК ПОТЕРИ ФОКУСА ==========
+//    //    mainWindow.Deactivated += async (s, e) =>
+//    //    {           
+//    //        // Если окно ещё видимо - возвращаем фокус
+//    //        if (mainWindow.IsVisible)
+//    //        {
+//    //            await Dispatcher.UIThread.InvokeAsync(async () =>
+//    //            {
+//    //                await Task.Delay(50);
+
+//    //                mainWindow.Topmost = false;
+//    //                mainWindow.Topmost = true;
+//    //                mainWindow.Activate();
+
+//    //                if (capturedDefaultButton != null)
+//    //                {
+//    //                    capturedDefaultButton.Focus();
+//    //                }
+
+//    //            }, DispatcherPriority.Render);
+//    //        }
+//    //    };
+
+//    //    // ========== ОБРАБОТЧИК ЗАКРЫТИЯ ==========
+//    //    mainWindow.Closed += (s, e) =>
+//    //    {
+//    //        if (!tcs.Task.IsCompleted)
+//    //            tcs.TrySetResult(MessageBoxResult.None);
+//    //    };
+
+//    //    // ========== КНОПКА ЗАКРЫТИЯ ==========
+//    //    if (blueHeader.Child is Grid headerGrid)
+//    //    {
+//    //        foreach (var child in headerGrid.Children)
+//    //        {
+//    //            if (child is Button closeButton && closeButton.Content as string == "✕")
+//    //            {
+//    //                closeButton.Click += (s, e) =>
+//    //                {
+//    //                    tcs.TrySetResult(MessageBoxResult.Cancel);
+//    //                    mainWindow.Close();
+//    //                };
+
+//    //                closeButton.PointerEntered += (s, e) =>
+//    //                {
+//    //                    closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+//    //                };
+
+//    //                closeButton.PointerExited += (s, e) =>
+//    //                {
+//    //                    closeButton.Background = Brushes.Transparent;
+//    //                };
+//    //            }
+//    //        }
+//    //    }
+
+//    //    // ========== ОБРАБОТКА КЛАВИШ ==========
+//    //    mainWindow.KeyDown += (s, e) =>
+//    //    {
+//    //        if (e.Key == Key.Escape)
+//    //        {
+//    //            e.Handled = true;
+//    //            tcs.TrySetResult(MessageBoxResult.Cancel);
+//    //            mainWindow.Close();
+//    //            return;
+//    //        }
+
+//    //        if (e.Key == Key.Enter)
+//    //        {
+//    //            e.Handled = true;
+//    //            if (capturedDefaultButton != null)
+//    //            {
+//    //                tcs.TrySetResult((MessageBoxResult)capturedDefaultButton.Tag);
+//    //                mainWindow.Close();
+//    //            }
+//    //        }
+//    //    };
+
+//    //    // ========== ПОКАЗ ОКНА ==========
+//    //    try
+//    //    {
+//    //        if (ownerWindow != null)
+//    //        {
+//    //            await mainWindow.ShowDialog(ownerWindow);
+//    //        }
+//    //        else
+//    //        {
+//    //            mainWindow.Show();
+//    //            // Ждём результата
+//    //            await tcs.Task;
+//    //        }
+//    //    }
+//    //    catch (Exception ex)
+//    //    {
+//    //        Console.WriteLine($"Ошибка MessageBox: {ex.Message}");
+//    //        return MessageBoxResult.None;
+//    //    }
+
+//    //    return await tcs.Task;
+//    //}
+
+//    // ========== ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД ==========
+//    private static async Task<MessageBoxResult> ShowInternal(string message, string title,
+//                                                             MessageBoxButton buttons,
+//                                                             MessageBoxType type,
+//                                                             Window explicitOwner)
+//    {
+//        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+//        {
+//            return MessageBoxResult.None;
+//        }
+
+//        var tcs = new TaskCompletionSource<MessageBoxResult>();
+
+//        // ========== ОПРЕДЕЛЕНИЕ РОДИТЕЛЬСКОГО ОКНА ==========
+//        Window ownerWindow = null;
+//        if (explicitOwner != null && explicitOwner.IsVisible)
+//        {
+//            ownerWindow = explicitOwner;
+//        }
+//        else if (desktop.Windows.Count > 0)
+//        {
+//            ownerWindow = desktop.Windows.FirstOrDefault(w => w.IsActive) ??
+//                          desktop.Windows.FirstOrDefault(w => w.IsVisible);
+//        }
+//        else if (desktop.MainWindow != null && desktop.MainWindow.IsVisible)
+//        {
+//            ownerWindow = desktop.MainWindow;
+//        }
+
+//        // ========== СОЗДАЕМ ОКНО ==========
+//        var mainWindow = new Window
+//        {
+//            Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+//            MinWidth = 420,
+//            MinHeight = 220,
+//            MaxWidth = 800,
+//            MaxHeight = 600,
+//            WindowStartupLocation = ownerWindow != null
+//                ? WindowStartupLocation.CenterOwner
+//                : WindowStartupLocation.CenterScreen,
+//            CanResize = false,
+//            CanMinimize = false,
+//            CanMaximize = false,
+//            ShowInTaskbar = false,
+//            SystemDecorations = SystemDecorations.None,
+//            Topmost = true,
+//            SizeToContent = SizeToContent.WidthAndHeight,
+//            Background = Brushes.Transparent
+//        };
+
+//        // ========== СОЗДАНИЕ UI ==========
+//        var mainBorder = new Border
+//        {
+//            Background = Brushes.White,
+//            BorderBrush = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+//            BorderThickness = new Thickness(3),
+//            CornerRadius = new CornerRadius(5)
+//        };
+
+//        var blueHeader = new Border
+//        {
+//            Height = 30,
+//            Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+//            CornerRadius = new CornerRadius(5, 5, 0, 0),
+//            HorizontalAlignment = HorizontalAlignment.Stretch,
+//            VerticalAlignment = VerticalAlignment.Top,
+//            Child = new Grid
+//            {
+//                Children =
+//            {
+//                new TextBlock
+//                {
+//                    Text = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+//                    Foreground = Brushes.White,
+//                    FontSize = 14,
+//                    FontWeight = FontWeight.Bold,
+//                    VerticalAlignment = VerticalAlignment.Center,
+//                    HorizontalAlignment = HorizontalAlignment.Left,
+//                    Margin = new Thickness(15, 0, 0, 0)
+//                },
+//                new Button
+//                {
+//                    Content = "✕",
+//                    Width = 26,
+//                    Height = 26,
+//                    HorizontalAlignment = HorizontalAlignment.Right,
+//                    VerticalAlignment = VerticalAlignment.Center,
+//                    Margin = new Thickness(0, 0, 8, 0),
+//                    FontSize = 14,
+//                    FontWeight = FontWeight.Bold,
+//                    Background = Brushes.Transparent,
+//                    BorderThickness = new Thickness(0),
+//                    Foreground = Brushes.White,
+//                    Cursor = new Cursor(StandardCursorType.Hand)
+//                }
+//            }
+//            }
+//        };
+
+//        var messageStack = new StackPanel
+//        {
+//            Orientation = Orientation.Horizontal,
+//            Spacing = 20,
+//            HorizontalAlignment = HorizontalAlignment.Center
+//        };
+
+//        var iconText = new TextBlock
+//        {
+//            Text = GetIconEmoji(type),
+//            FontSize = 32,
+//            VerticalAlignment = VerticalAlignment.Center,
+//            Foreground = GetIconColor(type)
+//        };
+
+//        var messageText = new TextBlock
+//        {
+//            Text = message,
+//            TextWrapping = TextWrapping.Wrap,
+//            FontSize = 14,
+//            VerticalAlignment = VerticalAlignment.Center,
+//            MaxWidth = 500,
+//            MinWidth = 220,
+//            Foreground = Brushes.Black
+//        };
+
+//        messageStack.Children.Add(iconText);
+//        messageStack.Children.Add(messageText);
+
+//        var buttonStack = new StackPanel
+//        {
+//            Orientation = Orientation.Horizontal,
+//            HorizontalAlignment = HorizontalAlignment.Center,
+//            Spacing = 15
+//        };
+
+//        Button defaultButton = null;
+
+//        // ========== СОЗДАНИЕ КНОПОК ==========
+//        switch (buttons)
+//        {
+//            case MessageBoxButton.OK:
+//                defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+//                buttonStack.Children.Add(defaultButton);
+//                break;
+//            case MessageBoxButton.OKCancel:
+//                var okBtn = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+//                var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
+//                buttonStack.Children.Add(okBtn);
+//                buttonStack.Children.Add(cancelBtn);
+//                defaultButton = okBtn;
+//                break;
+//            case MessageBoxButton.YesNo:
+//                var yesBtn = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
+//                var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
+//                buttonStack.Children.Add(yesBtn);
+//                buttonStack.Children.Add(noBtn);
+//                defaultButton = yesBtn;
+//                break;
+//            case MessageBoxButton.YesNoCancel:
+//                var yesButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
+//                var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
+//                var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
+//                buttonStack.Children.Add(yesButton);
+//                buttonStack.Children.Add(noButton);
+//                buttonStack.Children.Add(cancelButton);
+//                defaultButton = yesButton;
+//                break;
+//        }
+
+//        var contentStack = new StackPanel
+//        {
+//            Spacing = 25,
+//            VerticalAlignment = VerticalAlignment.Center,
+//            HorizontalAlignment = HorizontalAlignment.Center
+//        };
+//        contentStack.Children.Add(messageStack);
+//        contentStack.Children.Add(buttonStack);
+
+//        var contentGrid = new Grid
+//        {
+//            Margin = new Thickness(25, 45, 25, 25),
+//            Children = { contentStack }
+//        };
+
+//        var innerBorder = new Border
+//        {
+//            Background = Brushes.White,
+//            BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
+//            BorderThickness = new Thickness(1),
+//            CornerRadius = new CornerRadius(3),
+//            Margin = new Thickness(2),
+//            Child = new Grid
+//            {
+//                Children = { contentGrid, blueHeader }
+//            }
+//        };
+
+//        mainBorder.Child = innerBorder;
+//        mainWindow.Content = mainBorder;
+
+//        // ========== СОХРАНЯЕМ ССЫЛКУ НА КНОПКУ ==========
+//        var capturedDefaultButton = defaultButton;
+
+//        // ========== ФЛАГ ДЛЯ ПРЕДОТВРАЩЕНИЯ ГОНОК ==========
+//        bool isClosing = false;
+
+//        // ========== ОБРАБОТЧИК ОТКРЫТИЯ (исправленный) ==========
+//        EventHandler? openedHandler = null;
+//        openedHandler = async (s, e) =>
+//        {
+//            // Отписываемся сразу, чтобы не сработал повторно
+//            mainWindow.Opened -= openedHandler;
+
+//            await SetFocusSafelyAsync();
+
+//            async Task SetFocusSafelyAsync()
+//            {
+//                if (isClosing || !mainWindow.IsVisible) return;
+
+//                try
+//                {
+//                    // Задержка ДО InvokeAsync, а не внутри!
+//                    await Task.Delay(50);
+
+//                    if (isClosing || !mainWindow.IsVisible) return;
+
+//                    await Dispatcher.UIThread.InvokeAsync(() =>
+//                    {
+//                        if (isClosing || !mainWindow.IsVisible) return;
+
+//                        mainWindow.Activate();
+//                        mainWindow.Focus();
+
+//                        // Платформенно-безопасное восстановление фокуса
+//                        if (OperatingSystem.IsLinux())
+//                        {
+//                            mainWindow.Topmost = false;
+//                            mainWindow.Topmost = true;
+//                        }
+
+//                        capturedDefaultButton?.Focus();
+//                        mainWindow.Activate();
+//                    }, DispatcherPriority.Render);
+//                }
+//                catch (ObjectDisposedException)
+//                {
+//                    // Окно уже закрыто — это нормально
+//                }
+//                catch (Exception ex)
+//                {
+//                    System.Diagnostics.Debug.WriteLine($"[MessageBox.Opened] {ex.Message}");
+//                }
+//            }
+//        };
+//        mainWindow.Opened += openedHandler;
+
+//        // ========== ОБРАБОТЧИК ПОТЕРИ ФОКУСА (исправленный) ==========
+//        EventHandler? deactivatedHandler = null;
+
+//        deactivatedHandler = (s, e) =>
+//        {
+//            // Fire-and-forget с явным игнорированием
+//            _ = RestoreFocusSafelyAsync();
+
+//            async Task RestoreFocusSafelyAsync()
+//            {
+//                if (isClosing || !mainWindow.IsVisible) return;
+
+//                try
+//                {
+//                    // Задержка ДО InvokeAsync, а не внутри!
+//                    await Task.Delay(50);
+
+//                    if (isClosing || !mainWindow.IsVisible) return;
+
+//                    await Dispatcher.UIThread.InvokeAsync(() =>
+//                    {
+//                        if (isClosing || !mainWindow.IsVisible) return;
+
+//                        // Платформенно-безопасное восстановление фокуса
+//                        if (OperatingSystem.IsLinux())
+//                        {
+//                            // На Linux Topmost-трюки могут конфликтовать с WM
+//                            mainWindow.Activate();
+//                            capturedDefaultButton?.Focus();
+//                        }
+//                        else
+//                        {
+//                            // На Windows можно использовать Topmost для гарантии
+//                            mainWindow.Topmost = false;
+//                            mainWindow.Topmost = true;
+//                            mainWindow.Activate();
+//                            capturedDefaultButton?.Focus();
+//                        }
+//                    }, DispatcherPriority.Render);
+//                }
+//                catch (ObjectDisposedException)
+//                {
+//                    // Окно уже закрыто — это нормально
+//                }
+//                catch (Exception ex) when (OperatingSystem.IsLinux())
+//                {
+//                    // На Linux оконный менеджер может отказать в активации — не критично
+//                    System.Diagnostics.Debug.WriteLine($"[MessageBox.Deactivated] {ex.Message}");
+//                }
+//            }
+//        };
+
+//        mainWindow.Deactivated += deactivatedHandler;
+
+//        // ========== ОБРАБОТЧИК ЗАКРЫТИЯ ==========
+//        mainWindow.Closed += (s, e) =>
+//        {
+//            isClosing = true;  // ⚠️ Важно: ставим флаг ДО отписки
+
+//            // Отписываемся от событий для предотвращения утечек
+//            mainWindow.Deactivated -= deactivatedHandler;
+//            mainWindow.Opened -= openedHandler;
+
+//            if (!tcs.Task.IsCompleted)
+//                tcs.TrySetResult(MessageBoxResult.None);
+//        };
+
+//        // ========== КНОПКА ЗАКРЫТИЯ ==========
+//        if (blueHeader.Child is Grid headerGrid)
+//        {
+//            foreach (var child in headerGrid.Children)
+//            {
+//                if (child is Button closeButton && closeButton.Content as string == "✕")
+//                {
+//                    closeButton.Click += (s, e) =>
+//                    {
+//                        try
+//                        {
+//                            tcs.TrySetResult(MessageBoxResult.Cancel);
+//                            if (mainWindow.IsVisible)
+//                            {
+//                                mainWindow.Close();
+//                            }
+//                        }
+//                        catch (ObjectDisposedException)
+//                        {
+//                            System.Diagnostics.Debug.WriteLine("[CloseButton.Click] Window already disposed");
+//                        }
+//                    };
+//                    closeButton.PointerEntered += (s, e) =>
+//                    {
+//                        closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+//                    };
+//                    closeButton.PointerExited += (s, e) =>
+//                    {
+//                        closeButton.Background = Brushes.Transparent;
+//                    };
+//                }
+//            }
+//        }
+
+//        // ========== ОБРАБОТКА КЛАВИШ ==========
+//        EventHandler<KeyEventArgs>? keyDownHandler = null;
+//        keyDownHandler = (s, e) =>
+//        {
+//            if (e.Key == Key.Escape)
+//            {
+//                e.Handled = true;
+//                tcs.TrySetResult(MessageBoxResult.Cancel);
+//                if (mainWindow.IsVisible)
+//                {
+//                    mainWindow.Close();
+//                }
+//                return;
+//            }
+//            if (e.Key == Key.Enter && !isClosing)
+//            {
+//                e.Handled = true;
+//                if (capturedDefaultButton != null)
+//                {
+//                    tcs.TrySetResult((MessageBoxResult)capturedDefaultButton.Tag);
+//                    if (mainWindow.IsVisible)
+//                    {
+//                        mainWindow.Close();
+//                    }
+//                }
+//            }
+//        };
+//        mainWindow.KeyDown += keyDownHandler;
+
+//        // ========== ПОКАЗ ОКНА ==========
+//        try
+//        {
+//            if (ownerWindow != null)
+//            {
+//                await mainWindow.ShowDialog(ownerWindow);
+//            }
+//            else
+//            {
+//                mainWindow.Show();
+//                await tcs.Task;
+//            }
+//        }
+//        catch (Exception ex)
+//        {
+//            Console.WriteLine($"Ошибка MessageBox: {ex.Message}");
+//            return MessageBoxResult.None;
+//        }
+
+//        return await tcs.Task;
+//    }
+
+//    // ========== СОЗДАНИЕ КНОПКИ ==========
+//    private static Button CreateButton(string content, MessageBoxResult buttonResult,
+//                                       Window dialog, TaskCompletionSource<MessageBoxResult> tcs)
+//    {
+//        var normalBackground = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+//        var hoverBackground = new SolidColorBrush(Color.FromRgb(225, 225, 225));
+//        var pressedBackground = new SolidColorBrush(Color.FromRgb(210, 210, 210));
+//        var borderColor = new SolidColorBrush(Color.FromRgb(180, 180, 180));
+
+//        var button = new Button
+//        {
+//            Content = new TextBlock
+//            {
+//                Text = content,
+//                FontSize = 13,
+//                FontWeight = FontWeight.Medium,
+//                HorizontalAlignment = HorizontalAlignment.Center,
+//                VerticalAlignment = VerticalAlignment.Center,
+//                Foreground = Brushes.Black
+//            },
+//            MinWidth = 90,
+//            Height = 35,
+//            HorizontalAlignment = HorizontalAlignment.Center,
+//            Background = normalBackground,
+//            BorderBrush = borderColor,
+//            BorderThickness = new Thickness(1),
+//            Cursor = new Cursor(StandardCursorType.Hand),
+//            CornerRadius = new CornerRadius(3),
+//            Padding = new Thickness(20, 0, 20, 0),
+//            Tag = buttonResult
+//        };
+
+//        button.PointerEntered += (s, e) =>
+//        {
+//            button.Background = hoverBackground;
+//            button.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
+//        };
+
+//        button.PointerExited += (s, e) =>
+//        {
+//            button.Background = normalBackground;
+//            button.BorderBrush = borderColor;
+//        };
+
+//        button.PointerPressed += (s, e) =>
+//        {
+//            button.Background = pressedBackground;
+//        };
+
+//        button.PointerReleased += (s, e) =>
+//        {
+//            button.Background = hoverBackground;
+//        };
+
+//        button.Click += (s, e) =>
+//        {
+//            tcs.TrySetResult(buttonResult);
+//            dialog.Close();
+//        };
+
+//        return button;
+//    }
+
+//    private static IBrush GetIconColor(MessageBoxType type)
+//    {
+//        return type switch
+//        {
+//            MessageBoxType.Info => new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+//            MessageBoxType.Warning => new SolidColorBrush(Color.FromRgb(255, 140, 0)),
+//            MessageBoxType.Error => new SolidColorBrush(Color.FromRgb(220, 53, 69)),
+//            MessageBoxType.Question => new SolidColorBrush(Color.FromRgb(40, 167, 69)),
+//            _ => new SolidColorBrush(Color.FromRgb(0, 122, 204))
+//        };
+//    }
+
+//    private static string GetDefaultTitle(MessageBoxType type)
+//    {
+//        return type switch
+//        {
+//            MessageBoxType.Info => "Информация",
+//            MessageBoxType.Warning => "Предупреждение",
+//            MessageBoxType.Error => "Ошибка",
+//            MessageBoxType.Question => "Вопрос",
+//            _ => "Сообщение"
+//        };
+//    }
+
+//    //private static string GetIconEmoji(MessageBoxType type)
+//    //{
+//    //    return type switch
+//    //    {
+//    //        MessageBoxType.Info => "ℹ️",
+//    //        MessageBoxType.Warning => "⚠️",
+//    //        MessageBoxType.Error => "❌",
+//    //        MessageBoxType.Question => "❓",
+//    //        _ => "💬"
+//    //    };
+//    //}
+
+//    private static string GetIconEmoji(MessageBoxType type) => type switch
+//    {
+//        MessageBoxType.Info => "\u2139",  // ℹ
+//        MessageBoxType.Warning => "\u26A0",  // ⚠
+//        MessageBoxType.Error => "\u274C",  // ❌
+//        MessageBoxType.Question => "\u2753",  // ❓
+//        _ => "\u2022"   // • (BMP-символ вместо 💬)
+//    };   
+//}
+
+//// ========== УПРОЩЁННЫЙ HELPER ==========
+//public static class MessageBoxHelper
+//{
+//    public static async Task ActivateWindow(Window window)
+//    {
+//        if (window == null) return;
+
+//        await Task.Delay(50);
+
+//        await Dispatcher.UIThread.InvokeAsync(async () =>
+//        {
+//            window.Activate();
+//            window.Focus();
+
+//            if (OperatingSystem.IsLinux())
+//            {
+//                window.Topmost = false;
+//                window.Topmost = true;
+//            }
+
+//            await Task.Delay(100);
+
+//        }, DispatcherPriority.Render);
+//    }
+
+//    public static async Task Show(string message, string title = "", Window owner = null)
+//    {
+//        await MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxType.Info, owner);
+//        await ActivateWindow(owner);
+//    }
+
+//    public static async Task<MessageBoxResult> Show(string message, string title,
+//                                                     MessageBoxButton buttons,
+//                                                     MessageBoxType type = MessageBoxType.Info,
+//                                                     Window owner = null)
+//    {
+//        var result = await MessageBox.Show(message, title, buttons, type, owner);
+//        await ActivateWindow(owner);
+//        return result;
+//    }
+//}
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -1154,11 +2112,15 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Cash8Avalon;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
+// ============================================================================
 // ENUM ТИПОВ СООБЩЕНИЙ
+// ============================================================================
 public enum MessageBoxType
 {
     Info,
@@ -1167,7 +2129,9 @@ public enum MessageBoxType
     Question
 }
 
+// ============================================================================
 // ENUM КНОПОК
+// ============================================================================
 public enum MessageBoxButton
 {
     OK,
@@ -1176,7 +2140,9 @@ public enum MessageBoxButton
     YesNoCancel
 }
 
+// ============================================================================
 // ENUM РЕЗУЛЬТАТОВ
+// ============================================================================
 public enum MessageBoxResult
 {
     None,
@@ -1186,12 +2152,40 @@ public enum MessageBoxResult
     No
 }
 
-// КЛАСС MESSAGEBOX
+// ============================================================================
+// КЛАСС MESSAGEBOX (ФИНАЛЬНАЯ ВЕРСИЯ — БЕЗ SemaphoreFullException)
+// ============================================================================
 public static class MessageBox
 {
-    // ========== ПУБЛИЧНЫЕ МЕТОДЫ ==========
+    // ========================================================================
+    // СТАТИЧЕСКИЕ ПОЛЯ ДЛЯ КОНТРОЛЯ ЧАСТОТЫ ПОКАЗА
+    // ========================================================================
 
-    public static async Task Show(string message, string title = "", Window owner = null)
+    /// <summary>
+    /// Гарантирует, что только ОДИН MessageBox показывается в момент времени
+    /// </summary>
+    private static readonly SemaphoreSlim _showSemaphore = new SemaphoreSlim(1, 1);
+
+    /// <summary>
+    /// Минимальный интервал между показами MessageBox (защита от мерцания)
+    /// </summary>
+    private static readonly TimeSpan _minShowInterval = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>
+    /// Время последнего успешного показа
+    /// </summary>
+    private static DateTime _lastShowTime = DateTime.MinValue;
+
+    /// <summary>
+    /// Lock для потокобезопасного доступа к _lastShowTime
+    /// </summary>
+    private static readonly object _showTimeLock = new object();
+
+    // ------------------------------------------------------------------------
+    // ПУБЛИЧНЫЕ МЕТОДЫ
+    // ------------------------------------------------------------------------
+
+    public static async Task Show(string message, string title = "", Window? owner = null)
     {
         await ShowInternal(message, title, MessageBoxButton.OK, MessageBoxType.Info, owner);
     }
@@ -1199,623 +2193,272 @@ public static class MessageBox
     public static async Task<MessageBoxResult> Show(string message, string title,
                                                      MessageBoxButton buttons,
                                                      MessageBoxType type = MessageBoxType.Info,
-                                                     Window owner = null)
+                                                     Window? owner = null)
     {
         return await ShowInternal(message, title, buttons, type, owner);
     }
 
-    // ========== ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД ==========
-    //private static async Task<MessageBoxResult> ShowInternal(string message, string title,
-    //                                                         MessageBoxButton buttons,
-    //                                                         MessageBoxType type,
-    //                                                         Window explicitOwner)
-    //{
-    //    if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-    //    {
-    //        return MessageBoxResult.None;
-    //    }
-
-    //    var tcs = new TaskCompletionSource<MessageBoxResult>();
-
-    //    // ОПРЕДЕЛЕНИЕ РОДИТЕЛЬСКОГО ОКНА
-    //    Window ownerWindow = null;
-
-    //    if (explicitOwner != null && explicitOwner.IsVisible)
-    //    {
-    //        ownerWindow = explicitOwner;
-    //    }
-    //    else if (desktop.Windows.Count > 0)
-    //    {
-    //        ownerWindow = desktop.Windows.FirstOrDefault(w => w.IsActive) ??
-    //                      desktop.Windows.FirstOrDefault(w => w.IsVisible);
-    //    }
-    //    else if (desktop.MainWindow != null && desktop.MainWindow.IsVisible)
-    //    {
-    //        ownerWindow = desktop.MainWindow;
-    //    }
-
-    //    // СОЗДАЕМ ОКНО СРАЗУ С TOPMOST = TRUE
-    //    var mainWindow = new Window
-    //    {
-    //        Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-    //        MinWidth = 420,
-    //        MinHeight = 220,
-    //        MaxWidth = 800,
-    //        MaxHeight = 600,
-    //        WindowStartupLocation = ownerWindow != null
-    //            ? WindowStartupLocation.CenterOwner
-    //            : WindowStartupLocation.CenterScreen,
-    //        CanResize = false,
-    //        CanMinimize = false,
-    //        CanMaximize = false,
-    //        ShowInTaskbar = false,
-    //        SystemDecorations = SystemDecorations.None,
-    //        Topmost = true,  // ВАЖНО: сразу true
-    //        SizeToContent = SizeToContent.WidthAndHeight,
-    //        Background = Brushes.Transparent
-    //    };
-
-    //    // ========== СОЗДАНИЕ UI ==========
-
-    //    var mainBorder = new Border
-    //    {
-    //        Background = Brushes.White,
-    //        BorderBrush = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
-    //        BorderThickness = new Thickness(3),
-    //        CornerRadius = new CornerRadius(5)
-    //    };
-
-    //    var blueHeader = new Border
-    //    {
-    //        Height = 30,
-    //        Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
-    //        CornerRadius = new CornerRadius(5, 5, 0, 0),
-    //        HorizontalAlignment = HorizontalAlignment.Stretch,
-    //        VerticalAlignment = VerticalAlignment.Top,
-    //        Child = new Grid
-    //        {
-    //            Children =
-    //            {
-    //                new TextBlock
-    //                {
-    //                    Text = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-    //                    Foreground = Brushes.White,
-    //                    FontSize = 14,
-    //                    FontWeight = FontWeight.Bold,
-    //                    VerticalAlignment = VerticalAlignment.Center,
-    //                    HorizontalAlignment = HorizontalAlignment.Left,
-    //                    Margin = new Thickness(15, 0, 0, 0)
-    //                },
-    //                new Button
-    //                {
-    //                    Content = "✕",
-    //                    Width = 26,
-    //                    Height = 26,
-    //                    HorizontalAlignment = HorizontalAlignment.Right,
-    //                    VerticalAlignment = VerticalAlignment.Center,
-    //                    Margin = new Thickness(0, 0, 8, 0),
-    //                    FontSize = 14,
-    //                    FontWeight = FontWeight.Bold,
-    //                    Background = Brushes.Transparent,
-    //                    BorderThickness = new Thickness(0),
-    //                    Foreground = Brushes.White,
-    //                    Cursor = new Cursor(StandardCursorType.Hand)
-    //                }
-    //            }
-    //        }
-    //    };
-
-    //    var messageStack = new StackPanel
-    //    {
-    //        Orientation = Orientation.Horizontal,
-    //        Spacing = 20,
-    //        HorizontalAlignment = HorizontalAlignment.Center
-    //    };
-
-    //    var iconText = new TextBlock
-    //    {
-    //        Text = GetIconEmoji(type),
-    //        FontSize = 32,
-    //        VerticalAlignment = VerticalAlignment.Center,
-    //        Foreground = GetIconColor(type)
-    //    };
-
-    //    var messageText = new TextBlock
-    //    {
-    //        Text = message,
-    //        TextWrapping = TextWrapping.Wrap,
-    //        FontSize = 14,
-    //        VerticalAlignment = VerticalAlignment.Center,
-    //        MaxWidth = 500,
-    //        MinWidth = 220,
-    //        Foreground = Brushes.Black
-    //    };
-
-    //    messageStack.Children.Add(iconText);
-    //    messageStack.Children.Add(messageText);
-
-    //    var buttonStack = new StackPanel
-    //    {
-    //        Orientation = Orientation.Horizontal,
-    //        HorizontalAlignment = HorizontalAlignment.Center,
-    //        Spacing = 15
-    //    };
-
-    //    Button defaultButton = null;
-
-    //    // СОЗДАНИЕ КНОПОК
-    //    switch (buttons)
-    //    {
-    //        case MessageBoxButton.OK:
-    //            defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
-    //            buttonStack.Children.Add(defaultButton);
-    //            break;
-
-    //        case MessageBoxButton.OKCancel:
-    //            var okBtn = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
-    //            var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
-    //            buttonStack.Children.Add(okBtn);
-    //            buttonStack.Children.Add(cancelBtn);
-    //            defaultButton = okBtn;
-    //            break;
-
-    //        case MessageBoxButton.YesNo:
-    //            var yesBtn = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
-    //            var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
-    //            buttonStack.Children.Add(yesBtn);
-    //            buttonStack.Children.Add(noBtn);
-    //            defaultButton = yesBtn;
-    //            break;
-
-    //        case MessageBoxButton.YesNoCancel:
-    //            var yesButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
-    //            var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
-    //            var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
-    //            buttonStack.Children.Add(yesButton);
-    //            buttonStack.Children.Add(noButton);
-    //            buttonStack.Children.Add(cancelButton);
-    //            defaultButton = yesButton;
-    //            break;
-    //    }
-
-    //    var contentStack = new StackPanel
-    //    {
-    //        Spacing = 25,
-    //        VerticalAlignment = VerticalAlignment.Center,
-    //        HorizontalAlignment = HorizontalAlignment.Center
-    //    };
-
-    //    contentStack.Children.Add(messageStack);
-    //    contentStack.Children.Add(buttonStack);
-
-    //    var contentGrid = new Grid
-    //    {
-    //        Margin = new Thickness(25, 45, 25, 25),
-    //        Children = { contentStack }
-    //    };
-
-    //    var innerBorder = new Border
-    //    {
-    //        Background = Brushes.White,
-    //        BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
-    //        BorderThickness = new Thickness(1),
-    //        CornerRadius = new CornerRadius(3),
-    //        Margin = new Thickness(2),
-    //        Child = new Grid
-    //        {
-    //            Children = { contentGrid, blueHeader }
-    //        }
-    //    };
-
-    //    mainBorder.Child = innerBorder;
-    //    mainWindow.Content = mainBorder;
-
-    //    // ========== СОХРАНЯЕМ ССЫЛКУ НА КНОПКУ ==========
-    //    var capturedDefaultButton = defaultButton;
-
-    //    // ========== ЕДИНСТВЕННЫЙ ОБРАБОТЧИК ОТКРЫТИЯ ==========
-    //    mainWindow.Opened += async (s, e) =>
-    //    {
-    //        // ===== ГАРАНТИРОВАННЫЙ ФОКУС ДЛЯ LINUX =====
-    //        await Task.Delay(50); // Даём время оконному менеджеру
-
-    //        await Dispatcher.UIThread.InvokeAsync(async () =>
-    //        {
-    //            // 1. Активируем окно
-    //            mainWindow.Activate();
-    //            mainWindow.Focus();
-
-    //            // 2. Трюк с Topmost для Linux
-    //            mainWindow.Topmost = false;
-    //            mainWindow.Topmost = true;
-
-    //            // 3. Задержка для применения
-    //            await Task.Delay(100);
-
-    //            // 4. Фокус на кнопку
-    //            if (capturedDefaultButton != null)
-    //            {
-    //                capturedDefaultButton.Focus();
-    //            }
-
-    //            // 5. Финальная активация
-    //            mainWindow.Activate();
-
-    //        }, DispatcherPriority.Render);
-    //    };
-
-    //    // ========== ОБРАБОТЧИК ПОТЕРИ ФОКУСА ==========
-    //    mainWindow.Deactivated += async (s, e) =>
-    //    {           
-    //        // Если окно ещё видимо - возвращаем фокус
-    //        if (mainWindow.IsVisible)
-    //        {
-    //            await Dispatcher.UIThread.InvokeAsync(async () =>
-    //            {
-    //                await Task.Delay(50);
-
-    //                mainWindow.Topmost = false;
-    //                mainWindow.Topmost = true;
-    //                mainWindow.Activate();
-
-    //                if (capturedDefaultButton != null)
-    //                {
-    //                    capturedDefaultButton.Focus();
-    //                }
-
-    //            }, DispatcherPriority.Render);
-    //        }
-    //    };
-
-    //    // ========== ОБРАБОТЧИК ЗАКРЫТИЯ ==========
-    //    mainWindow.Closed += (s, e) =>
-    //    {
-    //        if (!tcs.Task.IsCompleted)
-    //            tcs.TrySetResult(MessageBoxResult.None);
-    //    };
-
-    //    // ========== КНОПКА ЗАКРЫТИЯ ==========
-    //    if (blueHeader.Child is Grid headerGrid)
-    //    {
-    //        foreach (var child in headerGrid.Children)
-    //        {
-    //            if (child is Button closeButton && closeButton.Content as string == "✕")
-    //            {
-    //                closeButton.Click += (s, e) =>
-    //                {
-    //                    tcs.TrySetResult(MessageBoxResult.Cancel);
-    //                    mainWindow.Close();
-    //                };
-
-    //                closeButton.PointerEntered += (s, e) =>
-    //                {
-    //                    closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-    //                };
-
-    //                closeButton.PointerExited += (s, e) =>
-    //                {
-    //                    closeButton.Background = Brushes.Transparent;
-    //                };
-    //            }
-    //        }
-    //    }
-
-    //    // ========== ОБРАБОТКА КЛАВИШ ==========
-    //    mainWindow.KeyDown += (s, e) =>
-    //    {
-    //        if (e.Key == Key.Escape)
-    //        {
-    //            e.Handled = true;
-    //            tcs.TrySetResult(MessageBoxResult.Cancel);
-    //            mainWindow.Close();
-    //            return;
-    //        }
-
-    //        if (e.Key == Key.Enter)
-    //        {
-    //            e.Handled = true;
-    //            if (capturedDefaultButton != null)
-    //            {
-    //                tcs.TrySetResult((MessageBoxResult)capturedDefaultButton.Tag);
-    //                mainWindow.Close();
-    //            }
-    //        }
-    //    };
-
-    //    // ========== ПОКАЗ ОКНА ==========
-    //    try
-    //    {
-    //        if (ownerWindow != null)
-    //        {
-    //            await mainWindow.ShowDialog(ownerWindow);
-    //        }
-    //        else
-    //        {
-    //            mainWindow.Show();
-    //            // Ждём результата
-    //            await tcs.Task;
-    //        }
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Console.WriteLine($"Ошибка MessageBox: {ex.Message}");
-    //        return MessageBoxResult.None;
-    //    }
-
-    //    return await tcs.Task;
-    //}
-
-    // ========== ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД ==========
+    // ------------------------------------------------------------------------
+    // ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД (МАКСИМАЛЬНО УПРОЩЁННЫЙ)
+    // ------------------------------------------------------------------------
     private static async Task<MessageBoxResult> ShowInternal(string message, string title,
                                                              MessageBoxButton buttons,
                                                              MessageBoxType type,
-                                                             Window explicitOwner)
+                                                             Window? explicitOwner)
     {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            return MessageBoxResult.None;
-        }
+        // 🔒 ЗАХВАТЫВАЕМ СЕМАФОР — ДЕРЖИМ ДО КОНЦА МЕТОДА
+        await _showSemaphore.WaitAsync();
 
-        var tcs = new TaskCompletionSource<MessageBoxResult>();
-
-        // ========== ОПРЕДЕЛЕНИЕ РОДИТЕЛЬСКОГО ОКНА ==========
-        Window ownerWindow = null;
-        if (explicitOwner != null && explicitOwner.IsVisible)
+        try
         {
-            ownerWindow = explicitOwner;
-        }
-        else if (desktop.Windows.Count > 0)
-        {
-            ownerWindow = desktop.Windows.FirstOrDefault(w => w.IsActive) ??
-                          desktop.Windows.FirstOrDefault(w => w.IsVisible);
-        }
-        else if (desktop.MainWindow != null && desktop.MainWindow.IsVisible)
-        {
-            ownerWindow = desktop.MainWindow;
-        }
-
-        // ========== СОЗДАЕМ ОКНО ==========
-        var mainWindow = new Window
-        {
-            Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-            MinWidth = 420,
-            MinHeight = 220,
-            MaxWidth = 800,
-            MaxHeight = 600,
-            WindowStartupLocation = ownerWindow != null
-                ? WindowStartupLocation.CenterOwner
-                : WindowStartupLocation.CenterScreen,
-            CanResize = false,
-            CanMinimize = false,
-            CanMaximize = false,
-            ShowInTaskbar = false,
-            SystemDecorations = SystemDecorations.None,
-            Topmost = true,
-            SizeToContent = SizeToContent.WidthAndHeight,
-            Background = Brushes.Transparent
-        };
-
-        // ========== СОЗДАНИЕ UI ==========
-        var mainBorder = new Border
-        {
-            Background = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
-            BorderThickness = new Thickness(3),
-            CornerRadius = new CornerRadius(5)
-        };
-
-        var blueHeader = new Border
-        {
-            Height = 30,
-            Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
-            CornerRadius = new CornerRadius(5, 5, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Top,
-            Child = new Grid
+            // ⏱️ DEBOUNCE: Просто ждём, НЕ освобождая семафор
+            // Это безопасно — задержка короткая (≤100 мс)
+            lock (_showTimeLock)
             {
-                Children =
-            {
-                new TextBlock
+                var elapsed = DateTime.UtcNow - _lastShowTime;
+                if (elapsed < _minShowInterval)
                 {
-                    Text = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
-                    Foreground = Brushes.White,
-                    FontSize = 14,
-                    FontWeight = FontWeight.Bold,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                    Margin = new Thickness(15, 0, 0, 0)
-                },
-                new Button
-                {
-                    Content = "✕",
-                    Width = 26,
-                    Height = 26,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 8, 0),
-                    FontSize = 14,
-                    FontWeight = FontWeight.Bold,
-                    Background = Brushes.Transparent,
-                    BorderThickness = new Thickness(0),
-                    Foreground = Brushes.White,
-                    Cursor = new Cursor(StandardCursorType.Hand)
+                    var delay = _minShowInterval - elapsed;
+                    Task.Delay(delay).Wait(); // Блокирующе, но кратко
                 }
             }
-            }
-        };
 
-        var messageStack = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 20,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-
-        var iconText = new TextBlock
-        {
-            Text = GetIconEmoji(type),
-            FontSize = 32,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = GetIconColor(type)
-        };
-
-        var messageText = new TextBlock
-        {
-            Text = message,
-            TextWrapping = TextWrapping.Wrap,
-            FontSize = 14,
-            VerticalAlignment = VerticalAlignment.Center,
-            MaxWidth = 500,
-            MinWidth = 220,
-            Foreground = Brushes.Black
-        };
-
-        messageStack.Children.Add(iconText);
-        messageStack.Children.Add(messageText);
-
-        var buttonStack = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Spacing = 15
-        };
-
-        Button defaultButton = null;
-
-        // ========== СОЗДАНИЕ КНОПОК ==========
-        switch (buttons)
-        {
-            case MessageBoxButton.OK:
-                defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
-                buttonStack.Children.Add(defaultButton);
-                break;
-            case MessageBoxButton.OKCancel:
-                var okBtn = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
-                var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
-                buttonStack.Children.Add(okBtn);
-                buttonStack.Children.Add(cancelBtn);
-                defaultButton = okBtn;
-                break;
-            case MessageBoxButton.YesNo:
-                var yesBtn = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
-                var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
-                buttonStack.Children.Add(yesBtn);
-                buttonStack.Children.Add(noBtn);
-                defaultButton = yesBtn;
-                break;
-            case MessageBoxButton.YesNoCancel:
-                var yesButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
-                var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
-                var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
-                buttonStack.Children.Add(yesButton);
-                buttonStack.Children.Add(noButton);
-                buttonStack.Children.Add(cancelButton);
-                defaultButton = yesButton;
-                break;
-        }
-
-        var contentStack = new StackPanel
-        {
-            Spacing = 25,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        contentStack.Children.Add(messageStack);
-        contentStack.Children.Add(buttonStack);
-
-        var contentGrid = new Grid
-        {
-            Margin = new Thickness(25, 45, 25, 25),
-            Children = { contentStack }
-        };
-
-        var innerBorder = new Border
-        {
-            Background = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(3),
-            Margin = new Thickness(2),
-            Child = new Grid
+            // Проверка жизненного цикла приложения
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             {
-                Children = { contentGrid, blueHeader }
+                return MessageBoxResult.None;
             }
-        };
 
-        mainBorder.Child = innerBorder;
-        mainWindow.Content = mainBorder;
+            var tcs = new TaskCompletionSource<MessageBoxResult>();
 
-        // ========== СОХРАНЯЕМ ССЫЛКУ НА КНОПКУ ==========
-        var capturedDefaultButton = defaultButton;
+            // ====================================================================
+            // ЛОГИКА ОПРЕДЕЛЕНИЯ ВЛАДЕЛЬЦА
+            // ====================================================================
+            Window? ownerWindow = null;
 
-        // ========== ФЛАГ ДЛЯ ПРЕДОТВРАЩЕНИЯ ГОНОК ==========
-        bool isClosing = false;
-
-        // ========== ОБРАБОТЧИК ОТКРЫТИЯ (исправленный) ==========
-        EventHandler? openedHandler = null;
-        openedHandler = async (s, e) =>
-        {
-            // Отписываемся сразу, чтобы не сработал повторно
-            mainWindow.Opened -= openedHandler;
-
-            await SetFocusSafelyAsync();
-
-            async Task SetFocusSafelyAsync()
+            if (explicitOwner != null && explicitOwner.IsVisible)
             {
-                if (isClosing || !mainWindow.IsVisible) return;
-
+                ownerWindow = explicitOwner;
+            }
+            else
+            {
                 try
                 {
-                    // Задержка ДО InvokeAsync, а не внутри!
-                    await Task.Delay(50);
+                    ownerWindow = MainStaticClass.MainWindow;
+                }
+                catch
+                {
+                    // Игнорируем ошибки доступа
+                }
 
-                    if (isClosing || !mainWindow.IsVisible) return;
+                if (ownerWindow == null && desktop.MainWindow != null && desktop.MainWindow.IsVisible)
+                {
+                    ownerWindow = desktop.MainWindow;
+                }
 
-                    await Dispatcher.UIThread.InvokeAsync(() =>
+                if (ownerWindow != null)
+                {
+                    const string warning = "!!! ВНИМАНИЕ: ДОБАВЛЕН ВЛАДЕЛЕЦ ПО УМОЛЧАНИЮ (MainStaticClass.MainWindow). ТАКОГО БЫТЬ НЕ ДОЛЖНО! НЕОБХОДИМО СРОЧНО ИСПРАВИТЬ ВЫЗОВ !!!";
+                    Console.WriteLine(warning);
+                    System.Diagnostics.Debug.WriteLine(warning);
+                }
+            }
+
+            // ====================================================================
+            // СОЗДАНИЕ ОКНА MESSAGEBOX
+            // ====================================================================
+            var mainWindow = new Window
+            {
+                Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+                MinWidth = 420,
+                MinHeight = 220,
+                MaxWidth = 800,
+                MaxHeight = 600,
+                WindowStartupLocation = ownerWindow != null
+                    ? WindowStartupLocation.CenterOwner
+                    : WindowStartupLocation.CenterScreen,
+                CanResize = false,
+                CanMinimize = false,
+                CanMaximize = false,
+                ShowInTaskbar = false,
+                SystemDecorations = SystemDecorations.None,
+                Topmost = true,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                Background = Brushes.Transparent
+            };
+
+            // ====================================================================
+            // СОЗДАНИЕ UI
+            // ====================================================================
+            var mainBorder = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+                BorderThickness = new Thickness(3),
+                CornerRadius = new CornerRadius(5)
+            };
+
+            var blueHeader = new Border
+            {
+                Height = 30,
+                Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+                CornerRadius = new CornerRadius(5, 5, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Top,
+                Child = new Grid
+                {
+                    Children =
                     {
-                        if (isClosing || !mainWindow.IsVisible) return;
-
-                        mainWindow.Activate();
-                        mainWindow.Focus();
-
-                        // Платформенно-безопасное восстановление фокуса
-                        if (OperatingSystem.IsLinux())
+                        new TextBlock
                         {
-                            mainWindow.Topmost = false;
-                            mainWindow.Topmost = true;
+                            Text = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
+                            Foreground = Brushes.White,
+                            FontSize = 14,
+                            FontWeight = FontWeight.Bold,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                            Margin = new Thickness(15, 0, 0, 0)
+                        },
+                        new Button
+                        {
+                            Content = "✕",
+                            Width = 26,
+                            Height = 26,
+                            HorizontalAlignment = HorizontalAlignment.Right,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Margin = new Thickness(0, 0, 8, 0),
+                            FontSize = 14,
+                            FontWeight = FontWeight.Bold,
+                            Background = Brushes.Transparent,
+                            BorderThickness = new Thickness(0),
+                            Foreground = Brushes.White,
+                            Cursor = new Cursor(StandardCursorType.Hand),
+                            Name = "CloseButton"
                         }
-
-                        capturedDefaultButton?.Focus();
-                        mainWindow.Activate();
-                    }, DispatcherPriority.Render);
+                    }
                 }
-                catch (ObjectDisposedException)
-                {
-                    // Окно уже закрыто — это нормально
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[MessageBox.Opened] {ex.Message}");
-                }
-            }
-        };
-        mainWindow.Opened += openedHandler;
+            };
 
-        // ========== ОБРАБОТЧИК ПОТЕРИ ФОКУСА (исправленный) ==========
-        EventHandler? deactivatedHandler = null;
-
-        deactivatedHandler = (s, e) =>
-        {
-            // Fire-and-forget с явным игнорированием
-            _ = RestoreFocusSafelyAsync();
-
-            async Task RestoreFocusSafelyAsync()
+            var messageStack = new StackPanel
             {
+                Orientation = Orientation.Horizontal,
+                Spacing = 20,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            var iconText = new TextBlock
+            {
+                Text = GetIconEmoji(type),
+                FontSize = 32,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = GetIconColor(type)
+            };
+
+            var messageText = new TextBlock
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 14,
+                VerticalAlignment = VerticalAlignment.Center,
+                MaxWidth = 500,
+                MinWidth = 220,
+                Foreground = Brushes.Black
+            };
+
+            messageStack.Children.Add(iconText);
+            messageStack.Children.Add(messageText);
+
+            var buttonStack = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 15
+            };
+
+            Button? defaultButton = null;
+
+            switch (buttons)
+            {
+                case MessageBoxButton.OK:
+                    defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+                    buttonStack.Children.Add(defaultButton);
+                    break;
+                case MessageBoxButton.OKCancel:
+                    var okBtn = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+                    var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
+                    buttonStack.Children.Add(okBtn);
+                    buttonStack.Children.Add(cancelBtn);
+                    defaultButton = okBtn;
+                    break;
+                case MessageBoxButton.YesNo:
+                    var yesBtn = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
+                    var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
+                    buttonStack.Children.Add(yesBtn);
+                    buttonStack.Children.Add(noBtn);
+                    defaultButton = yesBtn;
+                    break;
+                case MessageBoxButton.YesNoCancel:
+                    var yesButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
+                    var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
+                    var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
+                    buttonStack.Children.Add(yesButton);
+                    buttonStack.Children.Add(noButton);
+                    buttonStack.Children.Add(cancelButton);
+                    defaultButton = yesButton;
+                    break;
+            }
+
+            var contentStack = new StackPanel
+            {
+                Spacing = 25,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            contentStack.Children.Add(messageStack);
+            contentStack.Children.Add(buttonStack);
+
+            var contentGrid = new Grid
+            {
+                Margin = new Thickness(25, 45, 25, 25),
+                Children = { contentStack }
+            };
+
+            var innerBorder = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Margin = new Thickness(2),
+                Child = new Grid
+                {
+                    Children = { contentGrid, blueHeader }
+                }
+            };
+
+            mainBorder.Child = innerBorder;
+            mainWindow.Content = mainBorder;
+
+            // ====================================================================
+            // ПЕРЕМЕННЫЕ ДЛЯ ОБРАБОТЧИКОВ
+            // ====================================================================
+            var capturedDefaultButton = defaultButton;
+            bool isClosing = false;
+
+            EventHandler? openedHandler = null;
+            EventHandler? deactivatedHandler = null;
+
+            // ====================================================================
+            // ОБРАБОТЧИК: ОТКРЫТИЕ
+            // ====================================================================
+            openedHandler = async (s, e) =>
+            {
+                mainWindow.Opened -= openedHandler;
+
                 if (isClosing || !mainWindow.IsVisible) return;
 
                 try
                 {
-                    // Задержка ДО InvokeAsync, а не внутри!
                     await Task.Delay(50);
 
                     if (isClosing || !mainWindow.IsVisible) return;
@@ -1824,136 +2467,170 @@ public static class MessageBox
                     {
                         if (isClosing || !mainWindow.IsVisible) return;
 
-                        // Платформенно-безопасное восстановление фокуса
                         if (OperatingSystem.IsLinux())
                         {
-                            // На Linux Topmost-трюки могут конфликтовать с WM
                             mainWindow.Activate();
                             capturedDefaultButton?.Focus();
                         }
                         else
                         {
-                            // На Windows можно использовать Topmost для гарантии
-                            mainWindow.Topmost = false;
-                            mainWindow.Topmost = true;
                             mainWindow.Activate();
+                            mainWindow.Focus();
                             capturedDefaultButton?.Focus();
+                            mainWindow.Activate();
                         }
-                    }, DispatcherPriority.Render);
+
+                    }, DispatcherPriority.Background);
                 }
-                catch (ObjectDisposedException)
+                catch (Exception ex)
                 {
-                    // Окно уже закрыто — это нормально
+                    System.Diagnostics.Debug.WriteLine($"[MessageBox.Opened] Error: {ex.Message}");
                 }
-                catch (Exception ex) when (OperatingSystem.IsLinux())
-                {
-                    // На Linux оконный менеджер может отказать в активации — не критично
-                    System.Diagnostics.Debug.WriteLine($"[MessageBox.Deactivated] {ex.Message}");
-                }
-            }
-        };
+            };
+            mainWindow.Opened += openedHandler;
 
-        mainWindow.Deactivated += deactivatedHandler;
-
-        // ========== ОБРАБОТЧИК ЗАКРЫТИЯ ==========
-        mainWindow.Closed += (s, e) =>
-        {
-            isClosing = true;  // ⚠️ Важно: ставим флаг ДО отписки
-
-            // Отписываемся от событий для предотвращения утечек
-            mainWindow.Deactivated -= deactivatedHandler;
-            mainWindow.Opened -= openedHandler;
-
-            if (!tcs.Task.IsCompleted)
-                tcs.TrySetResult(MessageBoxResult.None);
-        };
-
-        // ========== КНОПКА ЗАКРЫТИЯ ==========
-        if (blueHeader.Child is Grid headerGrid)
-        {
-            foreach (var child in headerGrid.Children)
+            // ====================================================================
+            // ОБРАБОТЧИК: ПОТЕРЯ ФОКУСА (ТОЛЬКО WINDOWS)
+            // ====================================================================
+            if (!OperatingSystem.IsLinux())
             {
-                if (child is Button closeButton && closeButton.Content as string == "✕")
+                deactivatedHandler = async (s, e) =>
                 {
-                    closeButton.Click += (s, e) =>
+                    if (isClosing || !mainWindow.IsVisible) return;
+
+                    await Task.Delay(100);
+
+                    if (isClosing || !mainWindow.IsVisible) return;
+
+                    await Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        try
+                        if (isClosing || !mainWindow.IsVisible) return;
+                        mainWindow.Activate();
+                        capturedDefaultButton?.Focus();
+                    }, DispatcherPriority.Background);
+                };
+                mainWindow.Deactivated += deactivatedHandler;
+            }
+
+            // ====================================================================
+            // ОБРАБОТЧИК: ЗАКРЫТИЕ
+            // ====================================================================
+            mainWindow.Closed += (s, e) =>
+            {
+                isClosing = true;
+                mainWindow.Opened -= openedHandler;
+                if (deactivatedHandler != null)
+                {
+                    mainWindow.Deactivated -= deactivatedHandler;
+                }
+
+                if (!tcs.Task.IsCompleted)
+                    tcs.TrySetResult(MessageBoxResult.None);
+            };
+
+            // ====================================================================
+            // КНОПКА ЗАКРЫТИЯ
+            // ====================================================================
+            if (blueHeader.Child is Grid headerGrid)
+            {
+                foreach (var child in headerGrid.Children)
+                {
+                    if (child is Button closeButton && closeButton.Name == "CloseButton")
+                    {
+                        closeButton.Click += (s, e) =>
                         {
+                            if (isClosing) return;
                             tcs.TrySetResult(MessageBoxResult.Cancel);
-                            if (mainWindow.IsVisible)
-                            {
-                                mainWindow.Close();
-                            }
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            System.Diagnostics.Debug.WriteLine("[CloseButton.Click] Window already disposed");
-                        }
-                    };
-                    closeButton.PointerEntered += (s, e) =>
-                    {
-                        closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-                    };
-                    closeButton.PointerExited += (s, e) =>
-                    {
-                        closeButton.Background = Brushes.Transparent;
-                    };
-                }
-            }
-        }
-
-        // ========== ОБРАБОТКА КЛАВИШ ==========
-        EventHandler<KeyEventArgs>? keyDownHandler = null;
-        keyDownHandler = (s, e) =>
-        {
-            if (e.Key == Key.Escape)
-            {
-                e.Handled = true;
-                tcs.TrySetResult(MessageBoxResult.Cancel);
-                if (mainWindow.IsVisible)
-                {
-                    mainWindow.Close();
-                }
-                return;
-            }
-            if (e.Key == Key.Enter && !isClosing)
-            {
-                e.Handled = true;
-                if (capturedDefaultButton != null)
-                {
-                    tcs.TrySetResult((MessageBoxResult)capturedDefaultButton.Tag);
-                    if (mainWindow.IsVisible)
-                    {
-                        mainWindow.Close();
+                            if (mainWindow.IsVisible) mainWindow.Close();
+                        };
+                        closeButton.PointerEntered += (s, e) =>
+                            closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+                        closeButton.PointerExited += (s, e) =>
+                            closeButton.Background = Brushes.Transparent;
                     }
                 }
             }
-        };
-        mainWindow.KeyDown += keyDownHandler;
 
-        // ========== ПОКАЗ ОКНА ==========
-        try
-        {
-            if (ownerWindow != null)
+            // ====================================================================
+            // ОБРАБОТКА КЛАВИАТУРЫ
+            // ====================================================================
+            mainWindow.KeyDown += (s, e) =>
             {
-                await mainWindow.ShowDialog(ownerWindow);
-            }
-            else
-            {
-                mainWindow.Show();
-                await tcs.Task;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка MessageBox: {ex.Message}");
-            return MessageBoxResult.None;
-        }
+                if (e.Key == Key.Escape)
+                {
+                    e.Handled = true;
+                    if (isClosing) return;
 
-        return await tcs.Task;
+                    tcs.TrySetResult(MessageBoxResult.Cancel);
+                    if (mainWindow.IsVisible && !isClosing)
+                        mainWindow.Close();
+
+                    return;
+                }
+
+                if (e.Key == Key.Enter && !isClosing)
+                {
+                    e.Handled = true;
+                    if (capturedDefaultButton != null && capturedDefaultButton.Tag is MessageBoxResult result)
+                    {
+                        tcs.TrySetResult(result);
+                        if (mainWindow.IsVisible && !isClosing)
+                            mainWindow.Close();
+                    }
+                }
+            };
+
+            // ====================================================================
+            // ПОКАЗ ОКНА
+            // ====================================================================
+            try
+            {
+                if (ownerWindow != null)
+                {
+                    if (OperatingSystem.IsLinux())
+                    {
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            ownerWindow.Activate();
+                        }, DispatcherPriority.Background);
+                        await Task.Delay(20);
+                    }
+
+                    await mainWindow.ShowDialog(ownerWindow);
+                }
+                else
+                {
+                    mainWindow.Show();
+                    await tcs.Task;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ MessageBox error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ MessageBox error: {ex}");
+                return MessageBoxResult.None;
+            }
+
+            // ====================================================================
+            // ОБНОВЛЯЕМ ВРЕМЯ ПОСЛЕДНЕГО ПОКАЗА
+            // ====================================================================
+            lock (_showTimeLock)
+            {
+                _lastShowTime = DateTime.UtcNow;
+            }
+
+            return await tcs.Task;
+        }
+        finally
+        {
+            // 🔓 ОСВОБОЖДАЕМ СЕМАФОР — ВСЕГДА ОДИН РАЗ, БЕЗ УСЛОВИЙ
+            _showSemaphore.Release();
+        }
     }
 
-    // ========== СОЗДАНИЕ КНОПКИ ==========
+    // ------------------------------------------------------------------------
+    // СОЗДАНИЕ КНОПКИ
+    // ------------------------------------------------------------------------
     private static Button CreateButton(string content, MessageBoxResult buttonResult,
                                        Window dialog, TaskCompletionSource<MessageBoxResult> tcs)
     {
@@ -1997,110 +2674,96 @@ public static class MessageBox
             button.BorderBrush = borderColor;
         };
 
-        button.PointerPressed += (s, e) =>
-        {
-            button.Background = pressedBackground;
-        };
-
-        button.PointerReleased += (s, e) =>
-        {
-            button.Background = hoverBackground;
-        };
+        button.PointerPressed += (s, e) => button.Background = pressedBackground;
+        button.PointerReleased += (s, e) => button.Background = hoverBackground;
 
         button.Click += (s, e) =>
         {
             tcs.TrySetResult(buttonResult);
-            dialog.Close();
+            if (dialog.IsVisible) dialog.Close();
         };
 
         return button;
     }
 
-    private static IBrush GetIconColor(MessageBoxType type)
+    private static IBrush GetIconColor(MessageBoxType type) => type switch
     {
-        return type switch
-        {
-            MessageBoxType.Info => new SolidColorBrush(Color.FromRgb(0, 122, 204)),
-            MessageBoxType.Warning => new SolidColorBrush(Color.FromRgb(255, 140, 0)),
-            MessageBoxType.Error => new SolidColorBrush(Color.FromRgb(220, 53, 69)),
-            MessageBoxType.Question => new SolidColorBrush(Color.FromRgb(40, 167, 69)),
-            _ => new SolidColorBrush(Color.FromRgb(0, 122, 204))
-        };
-    }
+        MessageBoxType.Info => new SolidColorBrush(Color.FromRgb(0, 122, 204)),
+        MessageBoxType.Warning => new SolidColorBrush(Color.FromRgb(255, 140, 0)),
+        MessageBoxType.Error => new SolidColorBrush(Color.FromRgb(220, 53, 69)),
+        MessageBoxType.Question => new SolidColorBrush(Color.FromRgb(40, 167, 69)),
+        _ => new SolidColorBrush(Color.FromRgb(0, 122, 204))
+    };
 
-    private static string GetDefaultTitle(MessageBoxType type)
+    private static string GetDefaultTitle(MessageBoxType type) => type switch
     {
-        return type switch
-        {
-            MessageBoxType.Info => "Информация",
-            MessageBoxType.Warning => "Предупреждение",
-            MessageBoxType.Error => "Ошибка",
-            MessageBoxType.Question => "Вопрос",
-            _ => "Сообщение"
-        };
-    }
-
-    //private static string GetIconEmoji(MessageBoxType type)
-    //{
-    //    return type switch
-    //    {
-    //        MessageBoxType.Info => "ℹ️",
-    //        MessageBoxType.Warning => "⚠️",
-    //        MessageBoxType.Error => "❌",
-    //        MessageBoxType.Question => "❓",
-    //        _ => "💬"
-    //    };
-    //}
+        MessageBoxType.Info => "Информация",
+        MessageBoxType.Warning => "Предупреждение",
+        MessageBoxType.Error => "Ошибка",
+        MessageBoxType.Question => "Вопрос",
+        _ => "Сообщение"
+    };
 
     private static string GetIconEmoji(MessageBoxType type) => type switch
     {
-        MessageBoxType.Info => "\u2139",  // ℹ
-        MessageBoxType.Warning => "\u26A0",  // ⚠
-        MessageBoxType.Error => "\u274C",  // ❌
-        MessageBoxType.Question => "\u2753",  // ❓
-        _ => "\u2022"   // • (BMP-символ вместо 💬)
-    };   
+        MessageBoxType.Info => "\u2139",
+        MessageBoxType.Warning => "\u26A0",
+        MessageBoxType.Error => "\u274C",
+        MessageBoxType.Question => "\u2753",
+        _ => "\u2022"
+    };
 }
 
-// ========== УПРОЩЁННЫЙ HELPER ==========
+// ============================================================================
+// HELPER ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ (УСТАРЕВШИЙ)
+// ============================================================================
+
+/// <summary>
+/// ⚠️ УСТАРЕВШИЙ КЛАСС — используйте MessageBox напрямую
+/// </summary>
+[Obsolete("Используйте MessageBox.Show напрямую. Этот класс будет удалён в будущей версии.")]
 public static class MessageBoxHelper
 {
-    public static async Task ActivateWindow(Window window)
-    {
-        if (window == null) return;
-
-        await Task.Delay(50);
-
-        await Dispatcher.UIThread.InvokeAsync(async () =>
-        {
-            window.Activate();
-            window.Focus();
-
-            if (OperatingSystem.IsLinux())
-            {
-                window.Topmost = false;
-                window.Topmost = true;
-            }
-
-            await Task.Delay(100);
-
-        }, DispatcherPriority.Render);
-    }
-
-    public static async Task Show(string message, string title = "", Window owner = null)
+    /// <summary>
+    /// ⚠️ УСТАРЕВШИЙ МЕТОД — используйте MessageBox.Show напрямую
+    /// </summary>
+    [Obsolete("Используйте MessageBox.Show напрямую.")]
+    public static async Task Show(string message, string title = "", Window? owner = null)
     {
         await MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxType.Info, owner);
-        await ActivateWindow(owner);
     }
 
+    /// <summary>
+    /// ⚠️ УСТАРЕВШИЙ МЕТОД — используйте MessageBox.Show напрямую
+    /// </summary>
+    [Obsolete("Используйте MessageBox.Show напрямую.")]
     public static async Task<MessageBoxResult> Show(string message, string title,
                                                      MessageBoxButton buttons,
                                                      MessageBoxType type = MessageBoxType.Info,
-                                                     Window owner = null)
+                                                     Window? owner = null)
     {
-        var result = await MessageBox.Show(message, title, buttons, type, owner);
-        await ActivateWindow(owner);
-        return result;
+        return await MessageBox.Show(message, title, buttons, type, owner);
+    }
+
+    /// <summary>
+    /// ⚠️ УСТАРЕВШИЙ МЕТОД — выполняет только безопасную активацию
+    /// </summary>
+    [Obsolete("Метод устарел. Используйте напрямую window.Activate() при необходимости.")]
+    public static async Task ActivateWindow(Window? window)
+    {
+        if (window == null || !window.IsVisible)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (window.IsVisible)
+            {
+                window.Activate();
+                if (!OperatingSystem.IsLinux())
+                {
+                    window.Focus();
+                }
+            }
+        }, DispatcherPriority.Background);
     }
 }
-
