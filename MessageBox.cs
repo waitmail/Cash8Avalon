@@ -2153,37 +2153,14 @@ public enum MessageBoxResult
 }
 
 // ============================================================================
-// КЛАСС MESSAGEBOX (ФИНАЛЬНАЯ ВЕРСИЯ — БЕЗ SemaphoreFullException)
+// КЛАСС MESSAGEBOX (ИСПРАВЛЕННАЯ ВЕРСИЯ С FOCUS WATCHDOG)
 // ============================================================================
 public static class MessageBox
 {
-    // ========================================================================
-    // СТАТИЧЕСКИЕ ПОЛЯ ДЛЯ КОНТРОЛЯ ЧАСТОТЫ ПОКАЗА
-    // ========================================================================
-
-    /// <summary>
-    /// Гарантирует, что только ОДИН MessageBox показывается в момент времени
-    /// </summary>
     private static readonly SemaphoreSlim _showSemaphore = new SemaphoreSlim(1, 1);
-
-    /// <summary>
-    /// Минимальный интервал между показами MessageBox (защита от мерцания)
-    /// </summary>
     private static readonly TimeSpan _minShowInterval = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>
-    /// Время последнего успешного показа
-    /// </summary>
     private static DateTime _lastShowTime = DateTime.MinValue;
-
-    /// <summary>
-    /// Lock для потокобезопасного доступа к _lastShowTime
-    /// </summary>
     private static readonly object _showTimeLock = new object();
-
-    // ------------------------------------------------------------------------
-    // ПУБЛИЧНЫЕ МЕТОДЫ
-    // ------------------------------------------------------------------------
 
     public static async Task Show(string message, string title = "", Window? owner = null)
     {
@@ -2198,42 +2175,31 @@ public static class MessageBox
         return await ShowInternal(message, title, buttons, type, owner);
     }
 
-    // ------------------------------------------------------------------------
-    // ОСНОВНОЙ ВНУТРЕННИЙ МЕТОД (МАКСИМАЛЬНО УПРОЩЁННЫЙ)
-    // ------------------------------------------------------------------------
     private static async Task<MessageBoxResult> ShowInternal(string message, string title,
                                                              MessageBoxButton buttons,
                                                              MessageBoxType type,
                                                              Window? explicitOwner)
     {
-        // 🔒 ЗАХВАТЫВАЕМ СЕМАФОР — ДЕРЖИМ ДО КОНЦА МЕТОДА
         await _showSemaphore.WaitAsync();
 
         try
         {
-            // ⏱️ DEBOUNCE: Просто ждём, НЕ освобождая семафор
-            // Это безопасно — задержка короткая (≤100 мс)
             lock (_showTimeLock)
             {
                 var elapsed = DateTime.UtcNow - _lastShowTime;
                 if (elapsed < _minShowInterval)
                 {
                     var delay = _minShowInterval - elapsed;
-                    Task.Delay(delay).Wait(); // Блокирующе, но кратко
+                    Task.Delay(delay).Wait();
                 }
             }
 
-            // Проверка жизненного цикла приложения
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             {
                 return MessageBoxResult.None;
             }
 
             var tcs = new TaskCompletionSource<MessageBoxResult>();
-
-            // ====================================================================
-            // ЛОГИКА ОПРЕДЕЛЕНИЯ ВЛАДЕЛЬЦА
-            // ====================================================================
             Window? ownerWindow = null;
 
             if (explicitOwner != null && explicitOwner.IsVisible)
@@ -2242,31 +2208,14 @@ public static class MessageBox
             }
             else
             {
-                try
-                {
-                    ownerWindow = MainStaticClass.MainWindow;
-                }
-                catch
-                {
-                    // Игнорируем ошибки доступа
-                }
+                try { ownerWindow = MainStaticClass.MainWindow; } catch { }
 
                 if (ownerWindow == null && desktop.MainWindow != null && desktop.MainWindow.IsVisible)
                 {
                     ownerWindow = desktop.MainWindow;
                 }
-
-                if (ownerWindow != null)
-                {
-                    const string warning = "!!! ВНИМАНИЕ: ДОБАВЛЕН ВЛАДЕЛЕЦ ПО УМОЛЧАНИЮ (MainStaticClass.MainWindow). ТАКОГО БЫТЬ НЕ ДОЛЖНО! НЕОБХОДИМО СРОЧНО ИСПРАВИТЬ ВЫЗОВ !!!";
-                    Console.WriteLine(warning);
-                    System.Diagnostics.Debug.WriteLine(warning);
-                }
             }
 
-            // ====================================================================
-            // СОЗДАНИЕ ОКНА MESSAGEBOX
-            // ====================================================================
             var mainWindow = new Window
             {
                 Title = string.IsNullOrEmpty(title) ? GetDefaultTitle(type) : title,
@@ -2287,9 +2236,7 @@ public static class MessageBox
                 Background = Brushes.Transparent
             };
 
-            // ====================================================================
-            // СОЗДАНИЕ UI
-            // ====================================================================
+            // --- UI Creation (сокращено для читаемости, логика та же) ---
             var mainBorder = new Border
             {
                 Background = Brushes.White,
@@ -2346,35 +2293,13 @@ public static class MessageBox
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            var iconText = new TextBlock
-            {
-                Text = GetIconEmoji(type),
-                FontSize = 32,
-                VerticalAlignment = VerticalAlignment.Center,
-                Foreground = GetIconColor(type)
-            };
-
-            var messageText = new TextBlock
-            {
-                Text = message,
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 14,
-                VerticalAlignment = VerticalAlignment.Center,
-                MaxWidth = 500,
-                MinWidth = 220,
-                Foreground = Brushes.Black
-            };
+            var iconText = new TextBlock { Text = GetIconEmoji(type), FontSize = 32, VerticalAlignment = VerticalAlignment.Center, Foreground = GetIconColor(type) };
+            var messageText = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 500, MinWidth = 220, Foreground = Brushes.Black };
 
             messageStack.Children.Add(iconText);
             messageStack.Children.Add(messageText);
 
-            var buttonStack = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Spacing = 15
-            };
-
+            var buttonStack = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Spacing = 15 };
             Button? defaultButton = null;
 
             switch (buttons)
@@ -2408,20 +2333,11 @@ public static class MessageBox
                     break;
             }
 
-            var contentStack = new StackPanel
-            {
-                Spacing = 25,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
+            var contentStack = new StackPanel { Spacing = 25, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
             contentStack.Children.Add(messageStack);
             contentStack.Children.Add(buttonStack);
 
-            var contentGrid = new Grid
-            {
-                Margin = new Thickness(25, 45, 25, 25),
-                Children = { contentStack }
-            };
+            var contentGrid = new Grid { Margin = new Thickness(25, 45, 25, 25), Children = { contentStack } };
 
             var innerBorder = new Border
             {
@@ -2430,10 +2346,7 @@ public static class MessageBox
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(3),
                 Margin = new Thickness(2),
-                Child = new Grid
-                {
-                    Children = { contentGrid, blueHeader }
-                }
+                Child = new Grid { Children = { contentGrid, blueHeader } }
             };
 
             mainBorder.Child = innerBorder;
@@ -2445,85 +2358,55 @@ public static class MessageBox
             var capturedDefaultButton = defaultButton;
             bool isClosing = false;
 
-            EventHandler? openedHandler = null;
-            EventHandler? deactivatedHandler = null;
-
             // ====================================================================
-            // ОБРАБОТЧИК: ОТКРЫТИЕ
+            // ✅ ИСПРАВЛЕНИЕ: FOCUS WATCHDOG (Сторожевой таймер фокуса)
             // ====================================================================
-            openedHandler = async (s, e) =>
+            // На Linux X11 фокус может быть украден (например, Wine приложением).
+            // Этот таймер каждые 400мс проверяет, активен ли диалог.
+            // Если нет — принудительно возвращает фокус.
+            var focusWatchdog = new DispatcherTimer
             {
-                mainWindow.Opened -= openedHandler;
+                Interval = TimeSpan.FromMilliseconds(400)
+            };
 
-                if (isClosing || !mainWindow.IsVisible) return;
-
-                try
+            focusWatchdog.Tick += (s, e) =>
+            {
+                if (isClosing || !mainWindow.IsVisible)
                 {
-                    await Task.Delay(50);
-
-                    if (isClosing || !mainWindow.IsVisible) return;
-
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        if (isClosing || !mainWindow.IsVisible) return;
-
-                        if (OperatingSystem.IsLinux())
-                        {
-                            mainWindow.Activate();
-                            capturedDefaultButton?.Focus();
-                        }
-                        else
-                        {
-                            mainWindow.Activate();
-                            mainWindow.Focus();
-                            capturedDefaultButton?.Focus();
-                            mainWindow.Activate();
-                        }
-
-                    }, DispatcherPriority.Background);
+                    focusWatchdog.Stop();
+                    return;
                 }
-                catch (Exception ex)
+
+                // Если окно не активно, пытаемся захватить фокус
+                if (!mainWindow.IsActive)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[MessageBox.Opened] Error: {ex.Message}");
+                    Console.WriteLine("[MessageBox] Focus lost! Forcing activation...");
+                    mainWindow.Activate();
+                    mainWindow.Focus();
+                    capturedDefaultButton?.Focus();
+
+                    // На Linux иногда нужно "пнуть" Topmost
+                    if (OperatingSystem.IsLinux())
+                    {
+                        mainWindow.Topmost = false;
+                        mainWindow.Topmost = true;
+                    }
                 }
             };
-            mainWindow.Opened += openedHandler;
 
-            // ====================================================================
-            // ОБРАБОТЧИК: ПОТЕРЯ ФОКУСА (ТОЛЬКО WINDOWS)
-            // ====================================================================
-            if (!OperatingSystem.IsLinux())
+            // Запускаем таймер при открытии
+            mainWindow.Opened += (s, e) =>
             {
-                deactivatedHandler = async (s, e) =>
-                {
-                    if (isClosing || !mainWindow.IsVisible) return;
+                focusWatchdog.Start();
+                mainWindow.Activate();
+                capturedDefaultButton?.Focus();
+            };
 
-                    await Task.Delay(100);
-
-                    if (isClosing || !mainWindow.IsVisible) return;
-
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        if (isClosing || !mainWindow.IsVisible) return;
-                        mainWindow.Activate();
-                        capturedDefaultButton?.Focus();
-                    }, DispatcherPriority.Background);
-                };
-                mainWindow.Deactivated += deactivatedHandler;
-            }
-
-            // ====================================================================
-            // ОБРАБОТЧИК: ЗАКРЫТИЕ
-            // ====================================================================
+            // Останавливаем таймер при закрытии
             mainWindow.Closed += (s, e) =>
             {
                 isClosing = true;
-                mainWindow.Opened -= openedHandler;
-                if (deactivatedHandler != null)
-                {
-                    mainWindow.Deactivated -= deactivatedHandler;
-                }
-
+                focusWatchdog.Stop();
                 if (!tcs.Task.IsCompleted)
                     tcs.TrySetResult(MessageBoxResult.None);
             };
@@ -2543,10 +2426,6 @@ public static class MessageBox
                             tcs.TrySetResult(MessageBoxResult.Cancel);
                             if (mainWindow.IsVisible) mainWindow.Close();
                         };
-                        closeButton.PointerEntered += (s, e) =>
-                            closeButton.Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-                        closeButton.PointerExited += (s, e) =>
-                            closeButton.Background = Brushes.Transparent;
                     }
                 }
             }
@@ -2560,11 +2439,8 @@ public static class MessageBox
                 {
                     e.Handled = true;
                     if (isClosing) return;
-
                     tcs.TrySetResult(MessageBoxResult.Cancel);
-                    if (mainWindow.IsVisible && !isClosing)
-                        mainWindow.Close();
-
+                    if (mainWindow.IsVisible) mainWindow.Close();
                     return;
                 }
 
@@ -2574,8 +2450,7 @@ public static class MessageBox
                     if (capturedDefaultButton != null && capturedDefaultButton.Tag is MessageBoxResult result)
                     {
                         tcs.TrySetResult(result);
-                        if (mainWindow.IsVisible && !isClosing)
-                            mainWindow.Close();
+                        if (mainWindow.IsVisible) mainWindow.Close();
                     }
                 }
             };
@@ -2589,13 +2464,9 @@ public static class MessageBox
                 {
                     if (OperatingSystem.IsLinux())
                     {
-                        await Dispatcher.UIThread.InvokeAsync(() =>
-                        {
-                            ownerWindow.Activate();
-                        }, DispatcherPriority.Background);
+                        ownerWindow.Activate();
                         await Task.Delay(20);
                     }
-
                     await mainWindow.ShowDialog(ownerWindow);
                 }
                 else
@@ -2607,13 +2478,9 @@ public static class MessageBox
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ MessageBox error: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"❌ MessageBox error: {ex}");
                 return MessageBoxResult.None;
             }
 
-            // ====================================================================
-            // ОБНОВЛЯЕМ ВРЕМЯ ПОСЛЕДНЕГО ПОКАЗА
-            // ====================================================================
             lock (_showTimeLock)
             {
                 _lastShowTime = DateTime.UtcNow;
@@ -2623,16 +2490,11 @@ public static class MessageBox
         }
         finally
         {
-            // 🔓 ОСВОБОЖДАЕМ СЕМАФОР — ВСЕГДА ОДИН РАЗ, БЕЗ УСЛОВИЙ
             _showSemaphore.Release();
         }
     }
 
-    // ------------------------------------------------------------------------
-    // СОЗДАНИЕ КНОПКИ
-    // ------------------------------------------------------------------------
-    private static Button CreateButton(string content, MessageBoxResult buttonResult,
-                                       Window dialog, TaskCompletionSource<MessageBoxResult> tcs)
+    private static Button CreateButton(string content, MessageBoxResult buttonResult, Window dialog, TaskCompletionSource<MessageBoxResult> tcs)
     {
         var normalBackground = new SolidColorBrush(Color.FromRgb(240, 240, 240));
         var hoverBackground = new SolidColorBrush(Color.FromRgb(225, 225, 225));
@@ -2641,15 +2503,7 @@ public static class MessageBox
 
         var button = new Button
         {
-            Content = new TextBlock
-            {
-                Text = content,
-                FontSize = 13,
-                FontWeight = FontWeight.Medium,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Foreground = Brushes.Black
-            },
+            Content = new TextBlock { Text = content, FontSize = 13, FontWeight = FontWeight.Medium, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.Black },
             MinWidth = 90,
             Height = 35,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -2662,18 +2516,8 @@ public static class MessageBox
             Tag = buttonResult
         };
 
-        button.PointerEntered += (s, e) =>
-        {
-            button.Background = hoverBackground;
-            button.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
-        };
-
-        button.PointerExited += (s, e) =>
-        {
-            button.Background = normalBackground;
-            button.BorderBrush = borderColor;
-        };
-
+        button.PointerEntered += (s, e) => { button.Background = hoverBackground; button.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160)); };
+        button.PointerExited += (s, e) => { button.Background = normalBackground; button.BorderBrush = borderColor; };
         button.PointerPressed += (s, e) => button.Background = pressedBackground;
         button.PointerReleased += (s, e) => button.Background = hoverBackground;
 
@@ -2714,28 +2558,15 @@ public static class MessageBox
     };
 }
 
-// ============================================================================
-// HELPER ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ (УСТАРЕВШИЙ)
-// ============================================================================
-
-/// <summary>
-/// ⚠️ УСТАРЕВШИЙ КЛАСС — используйте MessageBox напрямую
-/// </summary>
-[Obsolete("Используйте MessageBox.Show напрямую. Этот класс будет удалён в будущей версии.")]
+[Obsolete("Используйте MessageBox.Show напрямую.")]
 public static class MessageBoxHelper
 {
-    /// <summary>
-    /// ⚠️ УСТАРЕВШИЙ МЕТОД — используйте MessageBox.Show напрямую
-    /// </summary>
     [Obsolete("Используйте MessageBox.Show напрямую.")]
     public static async Task Show(string message, string title = "", Window? owner = null)
     {
         await MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxType.Info, owner);
     }
 
-    /// <summary>
-    /// ⚠️ УСТАРЕВШИЙ МЕТОД — используйте MessageBox.Show напрямую
-    /// </summary>
     [Obsolete("Используйте MessageBox.Show напрямую.")]
     public static async Task<MessageBoxResult> Show(string message, string title,
                                                      MessageBoxButton buttons,
@@ -2745,25 +2576,10 @@ public static class MessageBoxHelper
         return await MessageBox.Show(message, title, buttons, type, owner);
     }
 
-    /// <summary>
-    /// ⚠️ УСТАРЕВШИЙ МЕТОД — выполняет только безопасную активацию
-    /// </summary>
-    [Obsolete("Метод устарел. Используйте напрямую window.Activate() при необходимости.")]
+    [Obsolete("Метод устарел.")]
     public static async Task ActivateWindow(Window? window)
     {
-        if (window == null || !window.IsVisible)
-            return;
-
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (window.IsVisible)
-            {
-                window.Activate();
-                if (!OperatingSystem.IsLinux())
-                {
-                    window.Focus();
-                }
-            }
-        }, DispatcherPriority.Background);
+        if (window == null || !window.IsVisible) return;
+        await Dispatcher.UIThread.InvokeAsync(() => { if (window.IsVisible) { window.Activate(); if (!OperatingSystem.IsLinux()) window.Focus(); } }, DispatcherPriority.Background);
     }
 }

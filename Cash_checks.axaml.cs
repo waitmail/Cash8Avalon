@@ -603,7 +603,7 @@ namespace Cash8Avalon
                 // Заголовок
                 var titleText = new TextBlock
                 {
-                    Text = "ЗАГРУЗКА БАЗЫ ДАННЫХ",
+                    Text = "ЗАГРУЗКА ИЗ БАЗЫ ДАННЫХ",
                     HorizontalAlignment = HorizontalAlignment.Center,
                     FontSize = 20,
                     FontWeight = FontWeight.Bold,
@@ -1802,12 +1802,200 @@ namespace Cash8Avalon
             }
         }
 
+        //private async void ProcessInsertKey()
+        //{
+        //    Console.WriteLine("Insert нажат - создание нового чека");
+
+        //    try
+        //    {               
+        //        // Проверка даты на компьютере
+        //        if (DateTime.Now <= MainStaticClass.GetMinDateWork)
+        //        {
+        //            await MessageBox.Show(
+        //                " У ВАС УСТАНОВЛЕНА НЕПРАВИЛЬНАЯ ДАТА НА КОМПЬЮТЕРЕ !!! ДАЛЬНЕЙШАЯ РАБОТА С ЧЕКАМИ НЕВОЗМОЖНА !!!",
+        //                "Проверка даты на компьютере",
+        //                MessageBoxButton.OK,
+        //                MessageBoxType.Error
+        //            );
+        //            return;
+        //        }
+
+        //        // Проверка версии ФН
+        //        if (MainStaticClass.CashDeskNumber != 9)
+        //        {
+        //            bool restart = false;
+        //            bool errors = false;
+        //            MainStaticClass.check_version_fn(ref restart, ref errors);
+
+        //            if (errors)
+        //            {
+        //                return;
+        //            }
+
+        //            if (restart)
+        //            {
+        //                await MessageBox.Show(
+        //                    "У вас неверно была установлена версия ФН, НЕОБХОДИМ ПЕРЕЗАПУСК КАССОВОЙ ПРОГРАММЫ !!!",
+        //                    "Проверка настройки ФН",
+        //                    MessageBoxButton.OK,
+        //                    MessageBoxType.Error
+        //                );
+        //                return;
+        //            }
+        //        }
+
+        //        // Проверка системы налогообложения
+        //        if (MainStaticClass.SystemTaxation == 0)
+        //        {
+        //            await MessageBox.Show(
+        //                "У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!"
+        //            );
+        //            return;
+        //        }
+
+        //        // Проверка на заполненность обязательных реквизитов
+        //        if (!await AllIsFilled())
+        //        {
+        //            return;
+        //        }
+
+        //        // Проверка кассира
+        //        var txtCashier = this.FindControl<TextBox>("txtB_cashier");
+        //        if (txtCashier == null || string.IsNullOrWhiteSpace(txtCashier.Text))
+        //        {
+        //            await MessageBox.Show("Не заполнен кассир");
+        //            return;
+        //        }
+
+        //        // Проверка времени с ФН
+        //        MainStaticClass.validate_date_time_with_fn(15,MainStaticClass.MainWindow);
+
+        //        // Создаем окно для нового чека
+        //        var checkWindow = new Cash_check();
+
+        //        // Настраиваем для нового чека
+        //        checkWindow.IsNewCheck = true;
+        //        checkWindow.cashier = txtCashier.Text;
+
+        //        // Дополнительная инициализация для нового чека
+        //        checkWindow.OnFormLoaded();
+
+        //        // Находим активное окно
+        //        Window parentWindow = null;
+
+        //        // Вариант 1: Через TopLevel
+        //        var topLevel = TopLevel.GetTopLevel(this);
+        //        if (topLevel is Window currentWindow)
+        //        {
+        //            parentWindow = currentWindow;
+        //        }
+
+        //        // Вариант 2: Через Application
+        //        if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        //        {
+        //            parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
+        //        }
+
+        //        // Настройка размеров окна чека
+        //        if (parentWindow != null)
+        //        {
+        //            // Получаем размеры главного окна
+        //            double mainWidth = parentWindow.Bounds.Width;
+        //            double mainHeight = parentWindow.Bounds.Height;
+
+        //            // Проверяем, есть ли у родительского окна системные декорации
+        //            bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
+        //            bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
+
+        //            // Примерная высота заголовка Windows
+        //            const double titleBarHeight = 35;
+
+        //            if (parentHasDecorations && !checkHasDecorations)
+        //            {
+        //                // Компенсируем разницу в высоте
+        //                checkWindow.Width = mainWidth;
+        //                checkWindow.Height = mainHeight + titleBarHeight;
+
+        //                Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
+        //            }
+        //            else
+        //            {
+        //                // Окна имеют одинаковый тип декораций
+        //                checkWindow.Width = mainWidth;
+        //                checkWindow.Height = mainHeight;
+        //            }
+
+        //            // Позиционируем по центру главного окна
+        //            checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        //        }
+        //        else
+        //        {
+        //            // Стандартные размеры если нет родительского окна
+        //            checkWindow.Width = 1200;
+        //            checkWindow.Height = 800;
+        //            checkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        //        }
+
+        //        // Настройка свойств окна
+        //        checkWindow.Title = "Новый чек";
+        //        checkWindow.CanResize = false;
+        //        checkWindow.CanMaximize = false;
+        //        checkWindow.CanMinimize = false;
+
+        //        // Подписываемся на событие закрытия окна
+        //        checkWindow.Closed += (s, e) =>
+        //        {
+        //            // Проверяем результат через Tag
+        //            bool? dialogResult = checkWindow.Tag as bool?;
+        //            if (dialogResult == true) // Чек успешно создан
+        //            {
+        //                LoadDocuments(); // Обновляем список после создания чека
+        //            }
+        //        };
+
+        //        // ВАЖНО: Добавляем обработчик события загрузки окна
+        //        checkWindow.Loaded += (s, e) =>
+        //        {
+        //            Console.WriteLine("Окно чека загружено и отображается");
+        //        };
+
+        //        // Показываем окно
+        //        if (parentWindow != null)
+        //        {
+        //            // Показываем как диалог (модальное окно)
+        //            //await checkWindow.ShowDialog(parentWindow);
+        //            await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
+        //        }
+        //        else
+        //        {
+        //            // Показываем как немодальное окно
+        //            checkWindow.Show();
+
+        //            // Если нужно ждать закрытия, можно использовать TaskCompletionSource
+        //            var tcs = new TaskCompletionSource<bool>();
+        //            checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
+        //            await tcs.Task;
+        //        }
+        //        checkWindow = null;
+        //        // Обновляем список документов
+        //        LoadDocuments();
+
+        //        Console.WriteLine("Окно чека закрыто, обновляем список документов");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка при создании нового чека: {ex.Message}");
+        //        Console.WriteLine(ex.StackTrace);
+        //        await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
+        //    }
+        //}
+
         private async void ProcessInsertKey()
         {
             Console.WriteLine("Insert нажат - создание нового чека");
 
             try
-            {               
+            {
                 // Проверка даты на компьютере
                 if (DateTime.Now <= MainStaticClass.GetMinDateWork)
                 {
@@ -1827,10 +2015,7 @@ namespace Cash8Avalon
                     bool errors = false;
                     MainStaticClass.check_version_fn(ref restart, ref errors);
 
-                    if (errors)
-                    {
-                        return;
-                    }
+                    if (errors) return;
 
                     if (restart)
                     {
@@ -1854,10 +2039,7 @@ namespace Cash8Avalon
                 }
 
                 // Проверка на заполненность обязательных реквизитов
-                if (!await AllIsFilled())
-                {
-                    return;
-                }
+                if (!await AllIsFilled()) return;
 
                 // Проверка кассира
                 var txtCashier = this.FindControl<TextBox>("txtB_cashier");
@@ -1868,29 +2050,19 @@ namespace Cash8Avalon
                 }
 
                 // Проверка времени с ФН
-                MainStaticClass.validate_date_time_with_fn(15,MainStaticClass.MainWindow);
+                MainStaticClass.validate_date_time_with_fn(15, MainStaticClass.MainWindow);
 
                 // Создаем окно для нового чека
                 var checkWindow = new Cash_check();
-
-                // Настраиваем для нового чека
                 checkWindow.IsNewCheck = true;
                 checkWindow.cashier = txtCashier.Text;
-
-                // Дополнительная инициализация для нового чека
                 checkWindow.OnFormLoaded();
 
                 // Находим активное окно
                 Window parentWindow = null;
-
-                // Вариант 1: Через TopLevel
                 var topLevel = TopLevel.GetTopLevel(this);
-                if (topLevel is Window currentWindow)
-                {
-                    parentWindow = currentWindow;
-                }
+                if (topLevel is Window currentWindow) parentWindow = currentWindow;
 
-                // Вариант 2: Через Application
                 if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
@@ -1899,88 +2071,77 @@ namespace Cash8Avalon
                 // Настройка размеров окна чека
                 if (parentWindow != null)
                 {
-                    // Получаем размеры главного окна
                     double mainWidth = parentWindow.Bounds.Width;
                     double mainHeight = parentWindow.Bounds.Height;
-
-                    // Проверяем, есть ли у родительского окна системные декорации
                     bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
                     bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
-
-                    // Примерная высота заголовка Windows
                     const double titleBarHeight = 35;
 
                     if (parentHasDecorations && !checkHasDecorations)
                     {
-                        // Компенсируем разницу в высоте
                         checkWindow.Width = mainWidth;
                         checkWindow.Height = mainHeight + titleBarHeight;
-
-                        Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
                     }
                     else
                     {
-                        // Окна имеют одинаковый тип декораций
                         checkWindow.Width = mainWidth;
                         checkWindow.Height = mainHeight;
                     }
-
-                    // Позиционируем по центру главного окна
                     checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                 }
                 else
                 {
-                    // Стандартные размеры если нет родительского окна
                     checkWindow.Width = 1200;
                     checkWindow.Height = 800;
                     checkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                 }
 
-                // Настройка свойств окна
                 checkWindow.Title = "Новый чек";
                 checkWindow.CanResize = false;
                 checkWindow.CanMaximize = false;
                 checkWindow.CanMinimize = false;
 
-                // Подписываемся на событие закрытия окна
-                checkWindow.Closed += (s, e) =>
-                {
-                    // Проверяем результат через Tag
-                    bool? dialogResult = checkWindow.Tag as bool?;
-                    if (dialogResult == true) // Чек успешно создан
-                    {
-                        LoadDocuments(); // Обновляем список после создания чека
-                    }
-                };
+                // ❌ Убран обработчик Closed, так как он срабатывает раньше времени и мешает фокусу.
+                // Обновление списка перенесено ниже после await.
 
-                // ВАЖНО: Добавляем обработчик события загрузки окна
-                checkWindow.Loaded += (s, e) =>
-                {
-                    Console.WriteLine("Окно чека загружено и отображается");
-                };
+                checkWindow.Loaded += (s, e) => Console.WriteLine("Окно чека загружено и отображается");
 
                 // Показываем окно
                 if (parentWindow != null)
                 {
-                    // Показываем как диалог (модальное окно)
-                    //await checkWindow.ShowDialog(parentWindow);
+                    // Используем исправленный вспомогательный метод
                     await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
                 }
                 else
                 {
-                    // Показываем как немодальное окно
                     checkWindow.Show();
-
-                    // Если нужно ждать закрытия, можно использовать TaskCompletionSource
                     var tcs = new TaskCompletionSource<bool>();
                     checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
                     await tcs.Task;
                 }
-                checkWindow = null;
-                // Обновляем список документов
-                LoadDocuments();
 
-                Console.WriteLine("Окно чека закрыто, обновляем список документов");
+                checkWindow = null;
+
+                // Обновляем список документов строго после закрытия окна
+                LoadDocuments();
+                Console.WriteLine("Окно чека закрыто, список обновлен");
+
+                // ✅ ДОПОЛНИТЕЛЬНО: Принудительный фокус на список для Linux XFCE
+                // Это страховка на случай, если система попытается увести фокус на второй монитор
+                await Task.Delay(50);
+                if (_scrollViewer != null)
+                {
+                    // Ищем DataGrid или ListBox внутри ScrollViewer
+                    var listControl = _scrollViewer.GetVisualDescendants()
+                        .OfType<Control>()
+                        .FirstOrDefault(c => c is DataGrid || c is ListBox);
+
+                    if (listControl != null)
+                    {
+                        listControl.Focus();
+                        Console.WriteLine($"Фокус принудительно возвращен на: {listControl.GetType().Name}");
+                    }
+                }
             }
             catch (Exception ex)
             {

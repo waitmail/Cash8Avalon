@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Newtonsoft.Json;
 using Npgsql;
 using System;
@@ -6187,26 +6188,117 @@ namespace Cash8Avalon
 
         #region Внутренняя реализация
 
+        //private static async Task ShowModalWindowInternal(
+        //    Window owner,
+        //    Window modalWindow,
+        //    Control elementToFocusAfterClose,
+        //    Control[] focusableElementsToDisable)
+        //{
+        //    // 1. Полное снятие фокуса с родителя
+        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        owner.FocusManager?.ClearFocus();
+        //        owner.IsHitTestVisible = false;
+
+        //        foreach (var element in focusableElementsToDisable)
+        //        {
+        //            if (element != null)
+        //                element.Focusable = false;
+        //        }
+        //    }, DispatcherPriority.Render);
+
+        //    // 2. Снимаем Topmost с родителя
+        //    owner.Topmost = false;
+        //    await Task.Delay(20);
+
+        //    // 3. Показать модальное окно
+        //    modalWindow.Topmost = true;
+        //    await modalWindow.ShowDialog(owner);
+
+        //    // 4. Восстановить родителя
+        //    owner.IsHitTestVisible = true;
+
+        //    foreach (var element in focusableElementsToDisable)
+        //    {
+        //        if (element != null)
+        //            element.Focusable = true;
+        //    }
+
+        //    owner.Activate();
+        //    owner.Focus();
+
+        //    // 5. Фокус на конкретный элемент
+        //    if (elementToFocusAfterClose != null)
+        //    {
+        //        elementToFocusAfterClose.Focus();
+        //    }
+        //}
+
+        //    private static async Task ShowModalWindowInternal(
+        //Window owner,
+        //Window modalWindow,
+        //Control elementToFocusAfterClose,
+        //Control[] focusableElementsToDisable)
+        //    {
+        //        // 1. Подготовка (снимаем фокус, блокируем элементы)
+        //        await Dispatcher.UIThread.InvokeAsync(() =>
+        //        {
+        //            owner.FocusManager?.ClearFocus();
+        //            owner.IsHitTestVisible = false;
+        //            if (focusableElementsToDisable != null)
+        //            {
+        //                foreach (var element in focusableElementsToDisable)
+        //                    if (element != null) element.Focusable = false;
+        //            }
+        //        }, DispatcherPriority.Render);
+
+        //        // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
+        //        owner.Topmost = false;
+        //        await Task.Delay(20); // ⏱ Только здесь!
+
+        //        // 3. Показать модальное окно
+        //        modalWindow.Topmost = true;
+        //        await modalWindow.ShowDialog(owner);
+
+        //        // 4. Восстановить родителя — СИНХРОННО, БЕЗ ЗАДЕРЖЕК
+        //        owner.IsHitTestVisible = true;
+        //        if (focusableElementsToDisable != null)
+        //        {
+        //            foreach (var element in focusableElementsToDisable)
+        //                if (element != null) element.Focusable = true;
+        //        }
+        //        owner.Activate();
+        //        owner.Focus();
+
+        //        // 5. Фокус на конкретный элемент — ПРЯМОЙ ВЫЗОВ
+        //        if (elementToFocusAfterClose != null)
+        //        {
+        //            elementToFocusAfterClose.Focus();
+        //        }
+        //    }
+
         private static async Task ShowModalWindowInternal(
-            Window owner,
-            Window modalWindow,
-            Control elementToFocusAfterClose,
-            Control[] focusableElementsToDisable)
+    Window owner,
+    Window modalWindow,
+    Control elementToFocusAfterClose,
+    Control[] focusableElementsToDisable)
         {
-            // 1. Полное снятие фокуса с родителя
+            // Сохраняем состояние "поверх всех", чтобы вернуть его после закрытия диалога
+            bool wasTopmost = owner.Topmost;
+
+            // 1. Подготовка (снимаем фокус, блокируем элементы)
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 owner.FocusManager?.ClearFocus();
                 owner.IsHitTestVisible = false;
-
-                foreach (var element in focusableElementsToDisable)
+                if (focusableElementsToDisable != null)
                 {
-                    if (element != null)
-                        element.Focusable = false;
+                    foreach (var element in focusableElementsToDisable)
+                        if (element != null) element.Focusable = false;
                 }
             }, DispatcherPriority.Render);
 
-            // 2. Снимаем Topmost с родителя
+            // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
             owner.Topmost = false;
             await Task.Delay(20);
 
@@ -6214,23 +6306,48 @@ namespace Cash8Avalon
             modalWindow.Topmost = true;
             await modalWindow.ShowDialog(owner);
 
-            // 4. Восстановить родителя
+            // 4. Восстановление родителя
+            // Сначала восстанавливаем Topmost, чтобы окно "всплыло" над другими приложениями
+            owner.Topmost = wasTopmost;
             owner.IsHitTestVisible = true;
 
-            foreach (var element in focusableElementsToDisable)
+            if (focusableElementsToDisable != null)
             {
-                if (element != null)
-                    element.Focusable = true;
+                foreach (var element in focusableElementsToDisable)
+                    if (element != null) element.Focusable = true;
             }
 
+            // Активируем окно (поднимаем его вверх)
             owner.Activate();
-            owner.Focus();
 
-            // 5. Фокус на конкретный элемент
-            if (elementToFocusAfterClose != null)
+            // 5. ВАЖНО ДЛЯ LINUX/XFCE: Отложенная установка фокуса
+            // На Linux/X11 фокус нельзя вернуть мгновенно синхронно.
+            // Используем Post с приоритетом ContextIdle, чтобы система успела обработать закрытие окна.
+            Dispatcher.UIThread.Post(() =>
             {
-                elementToFocusAfterClose.Focus();
-            }
+                owner.Focus();
+
+                if (elementToFocusAfterClose != null)
+                {
+                    // Если сам элемент (например, ScrollViewer) не может принять фокус,
+                    // ищем внутри него первый фокусируемый контрол (например, DataGrid)
+                    if (elementToFocusAfterClose.Focusable)
+                    {
+                        elementToFocusAfterClose.Focus();
+                    }
+                    else
+                    {
+                        var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
+                            .OfType<Control>()
+                            .FirstOrDefault(c => c.Focusable);
+
+                        if (focusableChild != null)
+                            focusableChild.Focus();
+                        else
+                            owner.Focus();
+                    }
+                }
+            }, DispatcherPriority.ContextIdle);
         }
         #endregion
     }
