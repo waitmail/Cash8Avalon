@@ -1759,7 +1759,7 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    await MessageBoxHelper.Show(
+                    await MessageBox.Show(
                         $"Ошибка терминала: HTTP {(int)response.StatusCode}",
                         "Оплата по терминалу",
                         MessageBoxButton.OK,
@@ -1773,7 +1773,7 @@ namespace Cash8Avalon
             }
             catch (TaskCanceledException)  // ✅ Таймаут (HttpClient)
             {
-                await MessageBoxHelper.Show(
+                await MessageBox.Show(
                     "Превышено время ожидания ответа от терминала",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
@@ -1786,7 +1786,7 @@ namespace Cash8Avalon
             }
             catch (HttpRequestException ex)  // ✅ HTTP ошибки (HttpClient)
             {
-                await MessageBoxHelper.Show(
+                await MessageBox.Show(
                     $"Ошибка подключения: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
@@ -1806,7 +1806,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                await MessageBoxHelper.Show(
+                await MessageBox.Show(
                     $"Ошибка: {ex.Message}",
                     "Оплата по терминалу",
                     MessageBoxButton.OK,
