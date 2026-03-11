@@ -1665,6 +1665,7 @@ namespace Cash8Avalon
                         await Task.Delay(150);
                         await MessageBoxHelper.Show("В этой бд нет таблицы constatnts, необходимо создать таблицы бд", "Проверка наличия таблицы", MessageBoxButton.OK, MessageBoxType.Error, this);
                     }
+                    await check_add_field();
 
                     _viewModel.OpenCashChecks();
                 }
@@ -1691,6 +1692,134 @@ namespace Cash8Avalon
                     if (t.IsFaulted) Console.WriteLine($"[TimeSync] Критическая ошибка: {t.Exception?.Message}");
                 });
             }
+        }
+
+        /// <summary>
+        /// Исправление старого типа колонки 'action_num_doc'
+        /// </summary>
+        private async Task<bool> check_correct_type_column()
+        {
+            bool update = false;
+
+            // 1. Используем using для гарантированного закрытия соединения
+            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
+            {
+                try
+                {
+                    await conn.OpenAsync();
+                }
+                catch (InvalidOperationException) { /* Игнорируем, если уже открыто */ }
+
+                try
+                {
+                    // 2. Транзакция убрана, так как это только чтение (SELECT)
+                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'checks_header' AND column_name = 'action_num_doc'";
+
+                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                    {
+                        // 3. ExecuteScalar быстрее и проще, если нужно получить одно значение (тип данных)
+                        // Если вернется null, значит колонки нет (но по логике проверяем тип)
+                        var result = await command.ExecuteScalarAsync();
+
+                        if (result != null && result.ToString() != "ARRAY")
+                        {
+                            update = true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка при чтении типа колонки: {ex.Message}");
+                    return false;
+                }
+            }
+            // Соединение закрыто здесь
+
+            // 4. Обновление запускаем ТОЛЬКО если чтение завершено и соединение освобождено
+            if (update)
+            {
+                SettingConnect sc = new SettingConnect();
+                await sc.AddField_Click(this);
+                this.Close();
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task<bool> check_exists_column()
+        {
+            using (var conn = MainStaticClass.NpgsqlConn())
+            {
+                try
+                {
+                    await conn.OpenAsync();
+                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'constants' AND column_name = 'piot_url');";
+
+                    using (var command = new NpgsqlCommand(query, conn))
+                    {
+                        var result = await command.ExecuteScalarAsync();
+
+                        if (result == null || !Convert.ToBoolean(result))
+                        {
+                            SettingConnect sc = new SettingConnect();
+                            await sc.AddField_Click(this);
+                            this.Close();
+                            return true; // ✅ Вызвали Close, возвращаем true
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                        MessageBox.Show(ex.Message, "check_exists_column", this));
+                }
+            }
+            return false; // ✅ Все нормально, возвращаем false
+        }
+
+        private async Task<bool> check_exists_table()
+        {
+            using (var conn = MainStaticClass.NpgsqlConn())
+            {
+                try
+                {
+                    await conn.OpenAsync();
+                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'open_close_shop');";
+
+                    using (var command = new NpgsqlCommand(query, conn))
+                    {
+                        var result = await command.ExecuteScalarAsync();
+
+                        if (result == null || !Convert.ToBoolean(result))
+                        {
+                            SettingConnect sc = new SettingConnect();
+                            await sc.AddField_Click(this);
+                            this.Close();
+                            return true; // ✅ Вызвали Close, возвращаем true
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                        MessageBox.Show(ex.Message, "check_exists_table", this));
+                }
+            }
+            return false; // ✅ Все нормально, возвращаем false
+        }
+
+
+        ///// <summary>
+        ///// Исправление старого типа автор
+        ///// в колонке
+        ///// </summary>
+        private async Task check_add_field()
+        {
+            // Если метод вернул true (нужно обновление/закрытие), прерываем выполнение
+            if (await check_correct_type_column()) return;
+            if (await check_exists_table()) return;
+            await check_exists_column();
         }
 
         private async Task InitializeTimeSyncAsync(CancellationToken token, int maxAttempts = 100, int timeoutSeconds = 15, int maxDelaySeconds = 600)

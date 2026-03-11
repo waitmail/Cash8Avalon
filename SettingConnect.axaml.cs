@@ -445,7 +445,7 @@ namespace Cash8Avalon
         private async void Button4_Click(object sender, RoutedEventArgs e)
         {
             await CreateDataTables();
-            AddField_Click(null, null);
+            await AddField_Click(this);
         }
 
         private async Task CreateDataTables()
@@ -536,7 +536,7 @@ namespace Cash8Avalon
             }
         }
 
-        public async void AddField_Click(object sender, RoutedEventArgs e)
+        public async Task AddField_Click(Window owner)
         {
             List<string> queries = new List<string>();
 
@@ -671,6 +671,7 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN kitchen_print character varying(50) COLLATE pg_catalog.default;COMMENT ON COLUMN public.constants.kitchen_print IS 'Адрес/имя кухонного принтера';");
             queries.Add("ALTER TABLE IF EXISTS public.checks_header ADD COLUMN kitchen_print boolean NOT NULL DEFAULT false;");
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN piot_url character varying(200) COLLATE pg_catalog.default;");
+            queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN IF NOT EXISTS include_piot boolean NOT NULL DEFAULT false;");
 
 
             //            Блок по созданию индексов для проверки кодов маркировки при офлайн проверке корректности кодов маркировки
@@ -685,7 +686,7 @@ namespace Cash8Avalon
             //            --Частичный индекс для активных чеков
             queries.Add("CREATE INDEX idx_active_checks ON checks_header(its_deleted, check_type, guid)WHERE its_deleted = 0;");
 
-            queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN IF NOT EXISTS include_piot boolean NOT NULL DEFAULT false;");
+            
 
             foreach (string str in queries)
             {
@@ -700,6 +701,13 @@ namespace Cash8Avalon
             //}
 
             await MessageBox.Show(" Дополнительные колонки добавлены ");
+        }
+
+        // Этот метод обрабатывает клик по кнопке ВНУТРИ окна настроек (из XAML)
+        private async void AddField_Button_Click(object? sender, RoutedEventArgs e)
+        {
+            // Вызываем основной метод, передавая this (текущее окно SettingConnect) как владельца
+            await AddField_Click(this);
         }
 
         private void append_column(string query)

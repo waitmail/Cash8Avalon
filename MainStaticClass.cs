@@ -6277,6 +6277,79 @@ namespace Cash8Avalon
         //        }
         //    }
 
+        //    private static async Task ShowModalWindowInternal(
+        //Window owner,
+        //Window modalWindow,
+        //Control elementToFocusAfterClose,
+        //Control[] focusableElementsToDisable)
+        //    {
+        //        // Сохраняем состояние "поверх всех", чтобы вернуть его после закрытия диалога
+        //        bool wasTopmost = owner.Topmost;
+
+        //        // 1. Подготовка (снимаем фокус, блокируем элементы)
+        //        await Dispatcher.UIThread.InvokeAsync(() =>
+        //        {
+        //            owner.FocusManager?.ClearFocus();
+        //            owner.IsHitTestVisible = false;
+        //            if (focusableElementsToDisable != null)
+        //            {
+        //                foreach (var element in focusableElementsToDisable)
+        //                    if (element != null) element.Focusable = false;
+        //            }
+        //        }, DispatcherPriority.Render);
+
+        //        // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
+        //        owner.Topmost = false;
+        //        await Task.Delay(20);
+
+        //        // 3. Показать модальное окно
+        //        modalWindow.Topmost = true;
+        //        await modalWindow.ShowDialog(owner);
+
+        //        // 4. Восстановление родителя
+        //        // Сначала восстанавливаем Topmost, чтобы окно "всплыло" над другими приложениями
+        //        owner.Topmost = wasTopmost;
+        //        owner.IsHitTestVisible = true;
+
+        //        if (focusableElementsToDisable != null)
+        //        {
+        //            foreach (var element in focusableElementsToDisable)
+        //                if (element != null) element.Focusable = true;
+        //        }
+
+        //        // Активируем окно (поднимаем его вверх)
+        //        owner.Activate();
+
+        //        // 5. ВАЖНО ДЛЯ LINUX/XFCE: Отложенная установка фокуса
+        //        // На Linux/X11 фокус нельзя вернуть мгновенно синхронно.
+        //        // Используем Post с приоритетом ContextIdle, чтобы система успела обработать закрытие окна.
+        //        Dispatcher.UIThread.Post(() =>
+        //        {
+        //            owner.Focus();
+
+        //            if (elementToFocusAfterClose != null)
+        //            {
+        //                // Если сам элемент (например, ScrollViewer) не может принять фокус,
+        //                // ищем внутри него первый фокусируемый контрол (например, DataGrid)
+        //                if (elementToFocusAfterClose.Focusable)
+        //                {
+        //                    elementToFocusAfterClose.Focus();
+        //                }
+        //                else
+        //                {
+        //                    var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
+        //                        .OfType<Control>()
+        //                        .FirstOrDefault(c => c.Focusable);
+
+        //                    if (focusableChild != null)
+        //                        focusableChild.Focus();
+        //                    else
+        //                        owner.Focus();
+        //                }
+        //            }
+        //        }, DispatcherPriority.ContextIdle);
+        //    }
+
         private static async Task ShowModalWindowInternal(
     Window owner,
     Window modalWindow,
@@ -6303,12 +6376,34 @@ namespace Cash8Avalon
             await Task.Delay(20);
 
             // 3. Показать модальное окно
-            modalWindow.Topmost = true;
+            // --- ИСПРАВЛЕНИЕ ДЛЯ ОТЛАДКИ ---
+            // Если дебаггер подключен, не делаем окно Topmost, чтобы Visual Studio была доступна.
+            // ShowDialog сам по себе поднимет окно над владельцем (owner), Topmost нужен только
+            // для того, чтобы перекрывать ДРУГИЕ приложения (например, проводник), что при отладке мешает.
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                modalWindow.Topmost = false;
+            }
+            else
+            {
+                modalWindow.Topmost = true;
+            }
+            // ------------------------------
+
             await modalWindow.ShowDialog(owner);
 
             // 4. Восстановление родителя
             // Сначала восстанавливаем Topmost, чтобы окно "всплыло" над другими приложениями
-            owner.Topmost = wasTopmost;
+
+            // --- ИСПРАВЛЕНИЕ ДЛЯ ОТЛАДКИ (часть 2) ---
+            // Если мы в отладке, лучше не возвращать owner.Topmost = true сразу,
+            // иначе при остановке на брейкпоинте главное окно перекроет студию.
+            if (!System.Diagnostics.Debugger.IsAttached)
+            {
+                owner.Topmost = wasTopmost;
+            }
+            // ----------------------------------------
+
             owner.IsHitTestVisible = true;
 
             if (focusableElementsToDisable != null)
@@ -6321,16 +6416,12 @@ namespace Cash8Avalon
             owner.Activate();
 
             // 5. ВАЖНО ДЛЯ LINUX/XFCE: Отложенная установка фокуса
-            // На Linux/X11 фокус нельзя вернуть мгновенно синхронно.
-            // Используем Post с приоритетом ContextIdle, чтобы система успела обработать закрытие окна.
             Dispatcher.UIThread.Post(() =>
             {
                 owner.Focus();
 
                 if (elementToFocusAfterClose != null)
                 {
-                    // Если сам элемент (например, ScrollViewer) не может принять фокус,
-                    // ищем внутри него первый фокусируемый контрол (например, DataGrid)
                     if (elementToFocusAfterClose.Focusable)
                     {
                         elementToFocusAfterClose.Focus();

@@ -182,7 +182,7 @@
                         x:Name="add_field"
                         Content="Добавить поля"
                         HorizontalAlignment="Stretch"
-                        Click="AddField_Click"/>
+                        Click="AddField_Button_Click"/>
                 
                 <!-- Правая сторона: Закрыть -->
                 <Button Grid.Column="2"

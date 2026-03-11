@@ -2106,11 +2106,46 @@ namespace Cash8Avalon
 
                 checkWindow.Loaded += (s, e) => Console.WriteLine("Окно чека загружено и отображается");
 
+                //// Показываем окно
+                //if (parentWindow != null)
+                //{
+                //    // Используем исправленный вспомогательный метод
+                //    await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
+                //    //checkWindow.Show();
+                //    //var tcs = new TaskCompletionSource<bool>();
+                //    //checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
+                //    //await tcs.Task;
+                //}
+                //else
+                //{
+                //    checkWindow.Show();
+                //    var tcs = new TaskCompletionSource<bool>();
+                //    checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
+                //    await tcs.Task;
+                //}
+
                 // Показываем окно
                 if (parentWindow != null)
                 {
-                    // Используем исправленный вспомогательный метод
+#if DEBUG
+                    // ВАРИАНТ ДЛЯ ОТЛАДКИ:
+                    // Делаем окно модальным, но снимаем Topmost, чтобы студия была доступна.
+                    // Либо делаем его не модальным, но Topmost, чтобы видеть его поверх студии.
+
+                    // Способ А (Модальное, но "вежливое"):
+                    checkWindow.Topmost = false;
                     await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
+
+                    // Способ Б (Не модальное, но "поверх всего" - если нужно тыкать в студию во время показа):
+                    // checkWindow.Topmost = true;
+                    // checkWindow.Show(); 
+                    // var tcs = new TaskCompletionSource<bool>();
+                    // checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
+                    // await tcs.Task;
+#else
+    // ВАРИАНТ ДЛЯ РЕЛИЗА:
+    await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
+#endif
                 }
                 else
                 {
