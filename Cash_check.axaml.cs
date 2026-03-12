@@ -1151,7 +1151,7 @@ namespace Cash8Avalon
                 numdoc = await get_new_number_document();
                 if (numdoc == 0)
                 {
-                    await MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа");
+                    await MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа", this);
                     MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
                     this.Close();
                 }
@@ -1212,7 +1212,7 @@ namespace Cash8Avalon
                     fptr.queryData();
                     if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
                     {
-                        await MessageBoxHelper.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены");
+                        await MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены",this);
                     }
                 }
             }
@@ -2845,7 +2845,7 @@ namespace Cash8Avalon
         {
             if (_productsData.Count == 0)
             {
-                await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ");
+                await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
                 return;
             }
 

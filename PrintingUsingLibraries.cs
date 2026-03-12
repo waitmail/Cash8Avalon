@@ -154,6 +154,40 @@ namespace Cash8Avalon
             return result;
         }
 
+        public DateTime[] getLicenseStatus(Window owner)
+        {
+            try
+            {
+                IFptr fptr = MainStaticClass.FPTR;
+                if (fptr == null)
+                    return new DateTime[] { DateTime.MinValue, DateTime.MinValue };
+
+                if (!fptr.isOpened())
+                    fptr.open();
+
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_LICENSE_ACTIVATED);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_LICENSE_NUMBER, 17);
+                fptr.queryData();
+
+                bool entered = fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_LICENSE_ENTERED);
+                DateTime dateFrom = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_LICENSE_VALID_FROM);
+                DateTime dateUntil = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_LICENSE_VALID_UNTIL);
+
+                if (!entered)
+                {
+                    dateFrom = DateTime.MinValue;
+                    dateUntil = DateTime.MinValue;
+                }
+
+                return new DateTime[] { dateFrom, dateUntil };
+            }
+            catch (Exception ex)
+            {
+                // Логирование ошибки (например, с использованием NLog или другого логгера)
+                // Log.Error(ex, "Ошибка при получении статуса лицензии");                
+                return new DateTime[] { DateTime.MinValue, DateTime.MinValue };
+            }
+        }
 
         public async Task getShiftStatus(Window owner)
         {

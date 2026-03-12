@@ -693,212 +693,228 @@ namespace Cash8Avalon
         {
             if (_certificates.Count > 0)
             {
+                bool allActive = true;
                 // Проверяем все сертификаты
                 foreach (var certificate in _certificates)
                 {
                     if (!await CheckSertificateActive(certificate.Barcode))
-                    {
-                        // Если хоть один не прошел проверку - закрываем без результата
-                        this.Close();
-                        return;
+                    {                        
+                        allActive = false;//Проверяем все чтобы понять 
                     }
                 }
+                if (!allActive)
+                {
+                    this.Activate();
+                    return;
+                }
             }
+            
 
             _closedNormally = true;
 
             // Возвращаем ТОЛЬКО список сертификатов
             this.Tag = _certificates.Select(c => c.Clone()).ToList();
-
             this.Close();
         }
 
         /// <summary>
-        /// Проверка активности сертификата с таймаутом
-        /// Аналог check_sertificate_active из WinForms
+        /// Проверка активности сертификата (упрощенная версия)
         /// </summary>
-        /// <param name="sertificateCode">Штрихкод сертификата</param>
-        /// <returns>True если сертификат активен</returns>
         private async Task<bool> CheckSertificateActive(string sertificateCode)
         {
-            bool result = true;
-            var cts = new CancellationTokenSource();
-
             try
             {
-                // Запускаем проверку с таймаутом
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
-                var checkTask = CheckSertificateActiveAsync(sertificateCode, cts.Token);
-
-                // Ожидаем завершения первой задачи
-                var completedTask = await Task.WhenAny(checkTask, timeoutTask);
-
-                if (completedTask == timeoutTask)
-                {
-                    // Таймаут
-                    MainStaticClass.write_event_in_log($"Таймаут при проверке сертификата {sertificateCode}",
-                        "Документ чек", "0");
-
-                    await MessageBox.Show("Внешний таймаут при проверке активности сертификата",
-                        "Проверка сертификата",
-                        MessageBoxButton.OK,
-                        MessageBoxType.Error);
-
-                    cts.Cancel();
-                    result = false;
-                }
-                else
-                {
-                    // Проверка завершена успешно
-                    result = await checkTask;
-
-                    if (result)
-                    {
-                        MainStaticClass.write_event_in_log($"Успешная проверка сертификата {sertificateCode}",
-                            "Документ чек", "0");
-                    }
-                    else
-                    {
-                        MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен",
-                            "Документ чек", "0");
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Задача была отменена
-                result = false;
-                MainStaticClass.write_event_in_log($"Проверка сертификата {sertificateCode} отменена",
-                    "Документ чек", "0");
-            }
-            catch (Exception ex)
-            {
-                // Обработка других исключений
-                result = false;
-                MainStaticClass.write_event_in_log($"Ошибка при проверке сертификата {sertificateCode}: {ex.Message}",
-                    "Документ чек", "0");
-
-                await MessageBox.Show($"Ошибка при проверке сертификата: {ex.Message}",
-                    "Ошибка проверки",
-                    MessageBoxButton.OK,
-                    MessageBoxType.Error);
-            }
-            finally
-            {
-                cts.Dispose();
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Асинхронная проверка активности сертификата
-        /// Аналог check_sertificate_active1 из WinForms
-        /// </summary>
-        private async Task<bool> CheckSertificateActiveAsync(string sertificateCode, CancellationToken cancellationToken)
-        {
-            try
-            {
-                // Проверка на отмену
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Получаем параметры для запроса
+                // 1. Подготовка данных
                 string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
                 if (string.IsNullOrEmpty(nickShop))
                 {
-                    await MessageBox.Show("Не удалось получить название магазина",
-                        "Ошибка",
-                        MessageBoxButton.OK,
-                        MessageBoxType.Error);
+                    await MessageBox.Show("Не удалось получить название магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
                     return false;
                 }
 
                 string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
                 if (string.IsNullOrEmpty(codeShop))
                 {
-                    await MessageBox.Show("Не удалось получить код магазина",
-                        "Ошибка",
-                        MessageBoxButton.OK,
-                        MessageBoxType.Error);
+                    await MessageBox.Show("Не удалось получить код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
                     return false;
                 }
 
                 string countDay = CryptorEngine.get_count_day();
                 string key = nickShop.Trim() + countDay.Trim() + codeShop.Trim();
-
                 string encryptData = CryptorEngine.Encrypt(sertificateCode, true, key);
 
-                // Используем веб-сервис для проверки
+                // 2. Настройка и вызов сервиса
                 DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 10000;
+                ds.Timeout = 10000; // Таймаут 10 секунд на уровне веб-сервиса
 
                 string status;
                 try
                 {
-                    // Асинхронный вызов веб-сервиса
+                    // Выполняем запрос в фоновом потоке, чтобы не морозить UI
                     status = await Task.Run(() =>
-                        ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString()),
-                        cancellationToken);
+                        ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString())
+                    );
                 }
                 catch (Exception ex)
                 {
+                    // Обработка ошибок сети/таймаута самого сервиса
                     await MessageBox.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
-                        "Проверка сертификата",
-                        MessageBoxButton.OK,
-                        MessageBoxType.Error);
-                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
-                        "Проверка активации сертификата");
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
+
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
                     return false;
                 }
 
+                // 3. Обработка результата
                 if (status == "-1")
                 {
                     await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
-                        "Проверка сертификата",
-                        MessageBoxButton.OK,
-                        MessageBoxType.Error);
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
+
                     MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами",
-                        "CheckSertificateActiveAsync", 0, MainStaticClass.CashDeskNumber,
-                        "Проверка активации сертификата");
+                        "CheckSertificateActive", 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
                     return false;
                 }
-                else
+
+                string decryptData = CryptorEngine.Decrypt(status, true, key);
+
+                switch (decryptData)
                 {
-                    string decryptData = CryptorEngine.Decrypt(status, true, key);
+                    case "1":
+                        // Все отлично, сертификат активен
+                        MainStaticClass.write_event_in_log($"Успешная проверка сертификата {sertificateCode}", "Документ чек", "0");
+                        return true;
 
-                    switch (decryptData)
-                    {
-                        case "1":
-                            // Сертификат не активирован, можно использовать
-                            return true;
+                    case "0":
+                        await MessageBox.Show($"Сертификат {sertificateCode} не активирован",
+                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
 
-                        case "0":
-                            await MessageBox.Show($"Сертификат {sertificateCode} уже активирован",
-                                "Проверка сертификата",
-                                MessageBoxButton.OK,
-                                MessageBoxType.Error);
-                            return false;
+                        MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
+                        return false;
 
-                        default:
-                            await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
-                                "Проверка сертификата",
-                                MessageBoxButton.OK,
-                                MessageBoxType.Error);
-                            return false;
-                    }
+                    default:
+                        await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
+                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error,this);
+                        return false;
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                throw; // Пробрасываем дальше
             }
             catch (Exception ex)
             {
-                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
-                    "Проверка активации сертификата");
-                throw;
+                // Глобальный перехват непредвиденных ошибок
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+                await MessageBox.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
+                return false;
             }
         }
+
+        ///// <summary>
+        ///// Асинхронная проверка активности сертификата
+        ///// Аналог check_sertificate_active1 из WinForms
+        ///// </summary>
+        //private async Task<bool> CheckSertificateActiveAsync(string sertificateCode, CancellationToken cancellationToken)
+        //{
+        //    try
+        //    {
+        //        // Проверка на отмену
+        //        cancellationToken.ThrowIfCancellationRequested();
+
+        //        // Получаем параметры для запроса
+        //        string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
+        //        if (string.IsNullOrEmpty(nickShop))
+        //        {
+        //            await MessageBox.Show("Не удалось получить название магазина",
+        //                "Ошибка",
+        //                MessageBoxButton.OK,
+        //                MessageBoxType.Error);
+        //            return false;
+        //        }
+
+        //        string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
+        //        if (string.IsNullOrEmpty(codeShop))
+        //        {
+        //            await MessageBox.Show("Не удалось получить код магазина",
+        //                "Ошибка",
+        //                MessageBoxButton.OK,
+        //                MessageBoxType.Error);
+        //            return false;
+        //        }
+
+        //        string countDay = CryptorEngine.get_count_day();
+        //        string key = nickShop.Trim() + countDay.Trim() + codeShop.Trim();
+
+        //        string encryptData = CryptorEngine.Encrypt(sertificateCode, true, key);
+
+        //        // Используем веб-сервис для проверки
+        //        DS ds = MainStaticClass.get_ds();
+        //        ds.Timeout = 10000;
+
+        //        string status;
+        //        try
+        //        {
+        //            // Асинхронный вызов веб-сервиса
+        //            status = await Task.Run(() =>
+        //                ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString()),
+        //                cancellationToken);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            await MessageBox.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
+        //                "Проверка сертификата",
+        //                MessageBoxButton.OK,
+        //                MessageBoxType.Error);
+        //            MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+        //                "Проверка активации сертификата");
+        //            return false;
+        //        }
+
+        //        if (status == "-1")
+        //        {
+        //            await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
+        //                "Проверка сертификата",
+        //                MessageBoxButton.OK,
+        //                MessageBoxType.Error);
+        //            MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами",
+        //                "CheckSertificateActiveAsync", 0, MainStaticClass.CashDeskNumber,
+        //                "Проверка активации сертификата");
+        //            return false;
+        //        }
+        //        else
+        //        {
+        //            string decryptData = CryptorEngine.Decrypt(status, true, key);
+
+        //            switch (decryptData)
+        //            {
+        //                case "1":
+        //                    // Сертификат активирован, можно использовать
+        //                    return true;
+
+        //                case "0":
+        //                    await MessageBox.Show($"Сертификат {sertificateCode} не активирован",
+        //                        "Проверка сертификата",
+        //                        MessageBoxButton.OK,
+        //                        MessageBoxType.Error);
+        //                    return false;
+
+        //                default:
+        //                    await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
+        //                        "Проверка сертификата",
+        //                        MessageBoxButton.OK,
+        //                        MessageBoxType.Error);
+        //                    return false;
+        //            }
+        //        }
+        //    }
+        //    catch (OperationCanceledException)
+        //    {
+        //        throw; // Пробрасываем дальше
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber,
+        //            "Проверка активации сертификата");
+        //        throw;
+        //    }
+        //}
 
         private void SelectRow(int rowIndex)
         {

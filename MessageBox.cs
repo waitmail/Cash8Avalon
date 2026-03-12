@@ -2153,7 +2153,7 @@ public enum MessageBoxResult
 }
 
 // ============================================================================
-// КЛАСС MESSAGEBOX (ИСПРАВЛЕННАЯ ВЕРСИЯ С FOCUS WATCHDOG)
+// КЛАСС MESSAGEBOX (ИСПРАВЛЕННАЯ ВЕРСИЯ С ГАРАНТИРОВАННЫМ ФОКУСОМ)
 // ============================================================================
 public static class MessageBox
 {
@@ -2233,10 +2233,11 @@ public static class MessageBox
                 SystemDecorations = SystemDecorations.None,
                 Topmost = true,
                 SizeToContent = SizeToContent.WidthAndHeight,
-                Background = Brushes.Transparent
+                Background = Brushes.Transparent,
+                Focusable = true // Важно: окно должно быть способно принимать фокус
             };
 
-            // --- UI Creation (сокращено для читаемости, логика та же) ---
+            // --- UI Creation (сокращено, логика прежняя) ---
             var mainBorder = new Border
             {
                 Background = Brushes.White,
@@ -2305,31 +2306,28 @@ public static class MessageBox
             switch (buttons)
             {
                 case MessageBoxButton.OK:
-                    defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
+                    defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs, true);
                     buttonStack.Children.Add(defaultButton);
                     break;
                 case MessageBoxButton.OKCancel:
-                    var okBtn = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs);
-                    var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
-                    buttonStack.Children.Add(okBtn);
+                    defaultButton = CreateButton("OK", MessageBoxResult.OK, mainWindow, tcs, true);
+                    var cancelBtn = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs, false);
+                    buttonStack.Children.Add(defaultButton);
                     buttonStack.Children.Add(cancelBtn);
-                    defaultButton = okBtn;
                     break;
                 case MessageBoxButton.YesNo:
-                    var yesBtn = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
-                    var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
-                    buttonStack.Children.Add(yesBtn);
+                    defaultButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs, true);
+                    var noBtn = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs, false);
+                    buttonStack.Children.Add(defaultButton);
                     buttonStack.Children.Add(noBtn);
-                    defaultButton = yesBtn;
                     break;
                 case MessageBoxButton.YesNoCancel:
-                    var yesButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs);
-                    var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs);
-                    var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs);
-                    buttonStack.Children.Add(yesButton);
+                    defaultButton = CreateButton("Да", MessageBoxResult.Yes, mainWindow, tcs, true);
+                    var noButton = CreateButton("Нет", MessageBoxResult.No, mainWindow, tcs, false);
+                    var cancelButton = CreateButton("Отмена", MessageBoxResult.Cancel, mainWindow, tcs, false);
+                    buttonStack.Children.Add(defaultButton);
                     buttonStack.Children.Add(noButton);
                     buttonStack.Children.Add(cancelButton);
-                    defaultButton = yesButton;
                     break;
             }
 
@@ -2359,11 +2357,8 @@ public static class MessageBox
             bool isClosing = false;
 
             // ====================================================================
-            // ✅ ИСПРАВЛЕНИЕ: FOCUS WATCHDOG (Сторожевой таймер фокуса)
+            // FOCUS WATCHDOG
             // ====================================================================
-            // На Linux X11 фокус может быть украден (например, Wine приложением).
-            // Этот таймер каждые 400мс проверяет, активен ли диалог.
-            // Если нет — принудительно возвращает фокус.
             var focusWatchdog = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(400)
@@ -2377,7 +2372,7 @@ public static class MessageBox
                     return;
                 }
 
-                // Если окно не активно, пытаемся захватить фокус
+                // Если окно не активно, принудительно возвращаем фокус
                 if (!mainWindow.IsActive)
                 {
                     Console.WriteLine("[MessageBox] Focus lost! Forcing activation...");
@@ -2385,7 +2380,6 @@ public static class MessageBox
                     mainWindow.Focus();
                     capturedDefaultButton?.Focus();
 
-                    // На Linux иногда нужно "пнуть" Topmost
                     if (OperatingSystem.IsLinux())
                     {
                         mainWindow.Topmost = false;
@@ -2394,15 +2388,40 @@ public static class MessageBox
                 }
             };
 
-            // Запускаем таймер при открытии
-            mainWindow.Opened += (s, e) =>
+            // ====================================================================
+            // ИСПРАВЛЕННЫЙ ОБРАБОТЧИК OPENED
+            // ====================================================================
+            mainWindow.Opened += async (s, e) =>
             {
+                // 1. Запускаем сторожевой таймер
                 focusWatchdog.Start();
-                mainWindow.Activate();
-                capturedDefaultButton?.Focus();
+
+                // 2. Даем время оконному менеджеру (особенно Linux/X11) "осознать" окно
+                await Task.Delay(100);
+
+                // 3. Выполняем установку фокуса в UI потоке с высоким приоритетом
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    // Активируем окно
+                    mainWindow.Activate();
+                    mainWindow.Focus();
+
+                    // Трюк для Linux: переключение Topmost пробивает защиту фокуса
+                    if (OperatingSystem.IsLinux())
+                    {
+                        mainWindow.Topmost = false;
+                        mainWindow.Topmost = true;
+                    }
+
+                    // Установка фокуса на кнопку
+                    capturedDefaultButton?.Focus();
+
+                    // Логирование для отладки (можно убрать в релизе)
+                    Console.WriteLine($"[MessageBox] Opened: IsActive={mainWindow.IsActive}, Focused={capturedDefaultButton?.IsFocused}");
+
+                }, DispatcherPriority.Render);
             };
 
-            // Останавливаем таймер при закрытии
             mainWindow.Closed += (s, e) =>
             {
                 isClosing = true;
@@ -2444,6 +2463,7 @@ public static class MessageBox
                     return;
                 }
 
+                // Enter обрабатывается либо кнопкой (IsDefault), либо здесь
                 if (e.Key == Key.Enter && !isClosing)
                 {
                     e.Handled = true;
@@ -2462,6 +2482,7 @@ public static class MessageBox
             {
                 if (ownerWindow != null)
                 {
+                    // На Linux перед показом диалога лучше активировать владельца
                     if (OperatingSystem.IsLinux())
                     {
                         ownerWindow.Activate();
@@ -2494,7 +2515,8 @@ public static class MessageBox
         }
     }
 
-    private static Button CreateButton(string content, MessageBoxResult buttonResult, Window dialog, TaskCompletionSource<MessageBoxResult> tcs)
+    // Обновленный метод создания кнопки с поддержкой IsDefault
+    private static Button CreateButton(string content, MessageBoxResult buttonResult, Window dialog, TaskCompletionSource<MessageBoxResult> tcs, bool isDefault)
     {
         var normalBackground = new SolidColorBrush(Color.FromRgb(240, 240, 240));
         var hoverBackground = new SolidColorBrush(Color.FromRgb(225, 225, 225));
@@ -2513,7 +2535,8 @@ public static class MessageBox
             Cursor = new Cursor(StandardCursorType.Hand),
             CornerRadius = new CornerRadius(3),
             Padding = new Thickness(20, 0, 20, 0),
-            Tag = buttonResult
+            Tag = buttonResult,
+            IsDefault = isDefault // ВАЖНО: позволяет нажимать Enter даже если фокус не на кнопке
         };
 
         button.PointerEntered += (s, e) => { button.Background = hoverBackground; button.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160)); };
