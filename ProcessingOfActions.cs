@@ -520,7 +520,7 @@ namespace Cash8Avalon
                     else if (tip_action == 6)
                     {           //Номер документа  //Сообщение о подарке //Сумма в данном случае шаг акции
                         //start_action = DateTime.Now;
-                        if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                        if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном расчёте она не будет участвовать
                         {
                             action_6_dt(num_doc, comment, sum, marker);
                         }
@@ -531,14 +531,14 @@ namespace Cash8Avalon
                         //start_action = DateTime.Now;
                         if (persent != 0)
                         {
-                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном расчёте она не будет участвовать
                             {
                                 await action_8_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
                             }
                         }
                         else
                         {
-                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном расчёте она не будет участвовать
                             {
                                 await action_8_dt(num_doc, comment, sum, marker);
                             }
@@ -951,7 +951,7 @@ namespace Cash8Avalon
         /// 2. С вызовом всех дополнительных окон, окончательный рассчет
         /// </summary>
         /// <param name="show_query_window_barcode"></param>
-        public void to_define_the_action_dt(string barcode)
+        public async void to_define_the_action_dt(string barcode)
         {
 
             if (!check_and_create_checks_table_temp())
@@ -1002,11 +1002,11 @@ namespace Cash8Avalon
                             //action_1_dt(num_doc, persent, comment);//Дать скидку на эту позицию  
                             if (LoadActionDataInMemory.AllActionData1 == null)
                             {
-                                action_1_dt(num_doc, persent, comment);
+                                await action_1_dt(num_doc, persent, comment);
                             }
                             else
                             {
-                                action_1_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData1);
+                                await action_1_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData1);
                             }
                         }
                         else
@@ -1017,11 +1017,11 @@ namespace Cash8Avalon
                             //}
                             if (LoadActionDataInMemory.AllActionData1 == null)
                             {
-                                action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
+                                await action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             }
                             else
                             {
-                                action_1_dt(num_doc, comment, marker, show_messages, LoadActionDataInMemory.AllActionData1); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
+                                await action_1_dt(num_doc, comment, marker, show_messages, LoadActionDataInMemory.AllActionData1); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             }
                         }
                         //write_time_execution(reader[1].ToString(), tip_action.ToString());
@@ -1034,11 +1034,11 @@ namespace Cash8Avalon
                         {
                             if (LoadActionDataInMemory.AllActionData2 == null)
                             {
-                                action_2_dt(num_doc, persent, comment);
+                                await action_2_dt(num_doc, persent, comment);
                             }
                             else
                             {
-                                action_2_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData2);
+                                await action_2_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData2);
                             }
                         }
                         else
@@ -1049,11 +1049,11 @@ namespace Cash8Avalon
                             //}
                             if (LoadActionDataInMemory.AllActionData2 == null)
                             {
-                                action_2_dt(num_doc, comment, show_messages);
+                                await action_2_dt(num_doc, comment, show_messages);
                             }
                             else
                             {
-                                action_2_dt(num_doc, comment, show_messages, LoadActionDataInMemory.AllActionData2);
+                                await action_2_dt(num_doc, comment, show_messages, LoadActionDataInMemory.AllActionData2);
                             }
                         }
                         //write_time_execution(reader[1].ToString(), tip_action.ToString());
@@ -1082,11 +1082,11 @@ namespace Cash8Avalon
                             //action_3_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
                             if (LoadActionDataInMemory.AllActionData1 == null)
                             {
-                                action_3_dt(num_doc, persent, sum, comment);
+                                await action_3_dt(num_doc, persent, sum, comment);
                             }
                             else
                             {
-                                action_3_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
+                                await action_3_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
                             }
                         }
                         else
@@ -1096,11 +1096,11 @@ namespace Cash8Avalon
                             //action_3_dt(num_doc, comment, sum, marker,show_messages); //Сообщить о подарке                           
                             if (LoadActionDataInMemory.AllActionData1 == null)
                             {
-                                action_3_dt(num_doc, comment, sum, marker, show_messages);
+                                await action_3_dt(num_doc, comment, sum, marker, show_messages);
                             }
                             else
                             {
-                                action_3_dt(num_doc, comment, sum, marker, show_messages, LoadActionDataInMemory.AllActionData1);
+                                await action_3_dt(num_doc, comment, sum, marker, show_messages, LoadActionDataInMemory.AllActionData1);
                             }
                             //}
                         }
@@ -1112,13 +1112,13 @@ namespace Cash8Avalon
 
                         if (persent != 0)
                         {
-                            action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                            await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
                         }
                         else
                         {
                             //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
                             //{                            
-                            action_4_dt(num_doc, comment, sum, show_messages);
+                            await action_4_dt(num_doc, comment, sum, show_messages);
                             //}
                         }
                         //write_time_execution(reader[1].ToString(), tip_action.ToString());
@@ -1126,6 +1126,25 @@ namespace Cash8Avalon
                     else if (tip_action == 5)
                     {
                         action_5_dt(num_doc, sum, comment);
+                    }
+                    else if (tip_action == 8)
+                    {
+                        //start_action = DateTime.Now;
+                        if (persent != 0)
+                        {
+                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном расчёте она не будет участвовать
+                            {
+                                await action_8_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                            }
+                        }
+                        else
+                        {
+                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном расчёте она не будет участвовать
+                            {
+                                await action_8_dt(num_doc, comment, sum, marker);
+                            }
+                        }
+                        //write_time_execution(reader[1].ToString(), tip_action.ToString());
                     }
                     else
                     {
