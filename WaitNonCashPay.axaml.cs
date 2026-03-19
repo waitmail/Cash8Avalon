@@ -67,6 +67,10 @@ namespace Cash8Avalon
         private bool _commandCompletedInvoked = false;
         private readonly TaskCompletionSource<bool> _windowClosedTcs = new();
 
+        // НОВОЕ: Свойство для кастомной операции (например, для Сбера)
+        // Принимает токен отмены, возвращает результат терминала
+        public Func<CancellationToken, Task<TerminalResult>> CustomOperation { get; set; }
+
         public WaitNonCashPay() : this(80) { }
 
         public WaitNonCashPay(int timeoutSeconds)
@@ -155,11 +159,38 @@ namespace Cash8Avalon
             catch (OperationCanceledException) { }
         }
 
+        public static async Task<TerminalResult> ShowCustomAndWaitAsync(Window owner, int timeoutSeconds, Func<CancellationToken, Task<TerminalResult>> operation, Cash_check cashCheck)
+        {
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            var dialog = new WaitNonCashPay(timeoutSeconds)
+            {
+                CustomOperation = operation, // Передаем нашу операцию
+                cc = cashCheck
+            };
+            await dialog.ShowDialog(owner);
+            return await dialog._tcs.Task;
+        }
+
         private async Task<TerminalResult> SendCommandAsync()
         {
             try
             {
-                var result = await SendRequestWithRetryAsync(_cts.Token).ConfigureAwait(false);
+                TerminalResult result;
+
+                // Если передана кастомная операция (Сбер), выполняем её
+                if (CustomOperation != null)
+                {
+                    // Обновляем статус
+                    Dispatcher.UIThread.Post(() => { if (StatusLabel != null) StatusLabel.Text = "Выполнение команды на терминале..."; });
+
+                    result = await CustomOperation(_cts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    // Иначе стандартная логика РНКБ (HTTP с ретраями)
+                    result = await SendRequestWithRetryAsync(_cts.Token).ConfigureAwait(false);
+                }
+
                 if (!_isClosed)
                 {
                     await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result));
@@ -175,7 +206,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                var result = TerminalResult.CreateError($"Ошибка сети: {ex.Message}");
+                var result = TerminalResult.CreateError($"Ошибка: {ex.Message}");
                 if (!_isClosed) { await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result)); await WaitForWindowCloseAsync(); }
                 return result;
             }

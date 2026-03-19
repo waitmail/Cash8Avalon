@@ -3441,9 +3441,10 @@ namespace Cash8Avalon
             public Organization organization { get; set; }
             public Device device { get; set; }
             public string modelName { get; set; }
+            public string license17Status { get; set; }
         }
 
-        private static string get_device_info_printing_libraries()
+        private static string get_device_info_printing_libraries(Window owner)
         {
             string result = "";
 
@@ -3526,6 +3527,9 @@ namespace Cash8Avalon
 
             deviseInfo.device = device;
 
+            PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+            deviseInfo.license17Status = "(" + printingUsingLibraries.getLicenseStatus(owner)[0].ToString("dd.MM.yyyy") + " - " + printingUsingLibraries.getLicenseStatus(owner)[1].ToString("dd.MM.yyyy") + ")";
+
             result = JsonConvert.SerializeObject(deviseInfo, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
             return result;
@@ -3556,7 +3560,7 @@ namespace Cash8Avalon
         //    }
         //}
 
-        public async static Task<bool> SendResultGetData()
+        public async static Task<bool> SendResultGetData(Window owner)
         {
             bool result = true;
 
@@ -3577,7 +3581,7 @@ namespace Cash8Avalon
             }
             else
             {
-                resultGetData.DeviceInfo = get_device_info_printing_libraries();
+                resultGetData.DeviceInfo = get_device_info_printing_libraries(owner);
             }
             resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries().ToString();
             //string vatin = get_registration_info();

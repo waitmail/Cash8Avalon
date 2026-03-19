@@ -16,6 +16,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using AtolConstants = Atol.Drivers10.Fptr.Constants;
@@ -70,7 +71,7 @@ namespace Cash8Avalon
 
             if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != ""))
             {
-                if (MainStaticClass.GetAcquiringBank == 1)//РНКБ
+                if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
                 {
                     checkBox_payment_by_sbp.Opacity = 1;
                     checkBox_payment_by_sbp.IsHitTestVisible = true;
@@ -504,7 +505,7 @@ namespace Cash8Avalon
                     {
                         string money = CalculateMoneyInKopecks(this.non_cash_sum.Text.Trim(), non_cash_sum_kop.Text.Trim());
 
-                        if (MainStaticClass.GetAcquiringBank == 1) //РНКБ
+                        if (MainStaticClass.GetAcquiringBank == 1) //ВТБ
                         {
                             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
 
@@ -530,7 +531,7 @@ namespace Cash8Avalon
                             }
                             else
                             {
-                                #region Оплата СБП (РНКБ)
+                                #region Оплата СБП (ВТБ)
                                 string _str_sale_sbp = str_sale_sbp.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("guid", cc.guid);
 
                                 MainStaticClass.write_event_in_log($"Оплата СБП (Init): {money} коп.", "Terminal", cc?.numdoc.ToString() ?? "0");
@@ -558,7 +559,52 @@ namespace Cash8Avalon
                                 #endregion
                             }
                         }
-                        // else if (СБЕР) ...
+                        else if (MainStaticClass.GetAcquiringBank == 2) // СБЕР
+                        {
+                            var sberService = new SberPaymentService();
+                            if (int.TryParse(money, out int amountKopecks))
+                            {
+                                // Определяем тип оплаты
+                                //bool isSbpPayment = checkBox_payment_by_sbp.IsChecked == true;
+
+                                Func<CancellationToken, Task<TerminalResult>> sberp = async (ct) =>
+                                {
+                                    // ВАЖНО: Здесь передаем все 5 параметров по порядку:
+                                    // 1. Сумма
+                                    // 2. Команда (1)
+                                    // 3. RRN (null)
+                                    // 4. isSbpPayment (bool) -> ЭТОТ ПАРАМЕТР БЫЛ ПРОПУЩЕН В ВАШЕМ КОДЕ
+                                    // 5. ct (CancellationToken)
+
+                                    var res = await sberService.PayAsync(amountKopecks, 1, null, ct);
+
+                                    return new TerminalResult
+                                    {
+                                        IsSuccess = res.IsSuccess,
+                                        ErrorMessage = res.ErrorMessage,
+                                        AuthorizationCode = res.AuthorizationCode,
+                                        ReferenceNumber = res.ReferenceNumber,
+                                        RechargeNote = res.SlipContent,
+                                        CodeResponse = res.IsSuccess ? "1" : "0"
+                                    };
+                                };
+
+                                var result = await WaitNonCashPay.ShowCustomAndWaitAsync(this, 80, sberp, this.cc);
+
+                                if (!result.IsSuccess)
+                                {
+                                    CalculateChange();
+                                    await MessageBoxHelper.Show(result.ErrorMessage, "Ошибка оплаты Сбер", MessageBoxButton.OK, MessageBoxType.Error, this);
+                                    return;
+                                }
+
+                                cc.code_authorization_terminal = result.AuthorizationCode;
+                                cc.id_transaction_terminal = result.ReferenceNumber;
+                                if (!string.IsNullOrEmpty(result.RechargeNote)) cc.recharge_note = result.RechargeNote;
+                                
+                            }
+                        }
+
                     }
                 }
 
@@ -652,11 +698,51 @@ namespace Cash8Avalon
                                 #endregion
                             }
                         }
+                        else if (MainStaticClass.GetAcquiringBank == 2) // СБЕР (ВОЗВРАТ)
+                        {
+                            // Определяем, был ли исходный чек оплачен по СБП
+                            bool isSbpReturn = checkBox_payment_by_sbp.IsChecked == true;
+
+                            var sberService = new SberPaymentService();
+                            if (int.TryParse(money, out int amountKopecks))
+                            {
+                                Func<CancellationToken, Task<TerminalResult>> sberOp = async (ct) =>
+                                {
+                                    // ИСПРАВЛЕНО: Добавлен параметр isSbpReturn перед ct
+                                    var res = await sberService.PayAsync(amountKopecks, 3, cc.sale_id_transaction_terminal, ct);
+
+                                    return new TerminalResult
+                                    {
+                                        IsSuccess = res.IsSuccess,
+                                        ErrorMessage = res.ErrorMessage,
+                                        AuthorizationCode = res.AuthorizationCode,
+                                        ReferenceNumber = res.ReferenceNumber,
+                                        RechargeNote = res.SlipContent,
+                                        CodeResponse = res.IsSuccess ? "1" : "0"
+                                    };
+                                };
+
+                                var result = await WaitNonCashPay.ShowCustomAndWaitAsync(this, 80, sberOp, this.cc);
+
+                                if (!result.IsSuccess)
+                                {
+                                    CalculateChange();
+                                    await MessageBoxHelper.Show(result.ErrorMessage, "Ошибка возврата Сбер", MessageBoxButton.OK, MessageBoxType.Error, this);
+                                    return;
+                                }
+
+                                cc.code_authorization_terminal = result.AuthorizationCode;
+                                cc.id_transaction_terminal = result.ReferenceNumber;
+                                if (!string.IsNullOrEmpty(result.RechargeNote)) cc.recharge_note = result.RechargeNote;
+
+                                complete = true;
+                            }
+                        }
                     }
+                    cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
+                    cc.closing = false;
+                    this.Close();
                 }
-                cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-                cc.closing = false;
-                this.Close();
             }
         }
 

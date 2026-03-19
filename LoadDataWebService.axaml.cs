@@ -2224,7 +2224,7 @@ namespace Cash8Avalon
                 // Отправка подтверждения
                 try
                 {
-                    if (!await MainStaticClass.SendResultGetData())
+                    if (!await MainStaticClass.SendResultGetData(this))
                     {
                         Console.WriteLine("WARNING: Не удалось отправить информацию об успешной загрузке");
                     }

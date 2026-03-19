@@ -3272,7 +3272,7 @@ namespace Cash8Avalon
                 command.Parameters.AddWithValue("id_sale", id_sale.ToString());
                 command.Parameters.AddWithValue("requisite", 0);
                 command.Parameters.AddWithValue("bonuses_it_is_counted", Convert.ToDecimal(bonuses_it_is_counted));
-                command.Parameters.AddWithValue("id_transaction_terminal", id_transaction_terminal);
+                command.Parameters.AddWithValue("id_transaction_terminal", this.id_transaction_terminal);
                 command.Parameters.AddWithValue("system_taxation", MainStaticClass.SystemTaxation);
                 command.Parameters.AddWithValue("code_authorization_terminal", code_authorization_terminal);
                 command.Parameters.AddWithValue("cash_money1", Convert.ToDecimal(sum1[0]));
