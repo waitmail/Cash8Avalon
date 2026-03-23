@@ -392,7 +392,7 @@ namespace Cash8Avalon
                 await MessageBox.Show("Порт весов не выбран!", "Ошибка",MessageBoxButton.OK,MessageBoxType.Error, this);
                 return;
             }
-            double weight = MainStaticClass.GetWeight();
+            double weight = await MainStaticClass.GetWeight();
             string formattedWeight = weight.ToString("F3");
             await MessageBox.Show($"Вес получен с порта {selectedPort}\nВес: {formattedWeight} кг", "Вес",this);
         }

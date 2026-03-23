@@ -4721,11 +4721,77 @@ namespace Cash8Avalon
 
 
                 // ✅ Диалог количества для весового товара
+                //if (productItem.IsFractional)
+                //{
+                //    double? result = await ShowQuantityDialog(
+                //        productItem.Tovar,
+                //        0.001,
+                //        productItem.IsFractional,
+                //        0);
+
+                //    if (result != null)
+                //    {
+                //        productItem.Quantity = Convert.ToDecimal(result);
+                //    }
+                //    else
+                //    {
+                //        await ShowTovarNotFoundWindow(this);
+                //        return;
+                //    }
+                //}
+
+                // ✅ Диалог количества для весового товара
                 if (productItem.IsFractional)
                 {
+                    double initialQuantity = 0.001; // Значение по умолчанию
+
+                    // === НОВАЯ ЛОГИКА ВЕСОВ ===
+                    try
+                    {
+                        // Проверяем настройку (предполагаем, что метод GetWeightAutomatically есть в MainStaticClass)
+                        // Если его нет, просто закомментируйте эту проверку или замените на свою переменную
+                        if (await MainStaticClass.GetWeightAutomaticallyAsync() == 1)
+                        {
+                            // Спрашиваем пользователя
+                            var dialogResult = await MessageBoxHelper.Show(
+                                "Ввод веса будет из весов?",
+                                "Источник веса",
+                                MessageBoxButton.YesNo,
+                                MessageBoxType.Question,
+                                this);
+
+                            if (dialogResult == MessageBoxResult.Yes)
+                            {
+                                // Получаем вес (предполагаем, что метод GetWeight есть в MainStaticClass)
+                                double weightFromScales = await MainStaticClass.GetWeight();
+
+                                if (weightFromScales > 0)
+                                {
+                                    initialQuantity = weightFromScales;
+                                    Console.WriteLine($"✓ Получен вес с весов: {initialQuantity}");
+                                }
+                                else
+                                {
+                                    await MessageBoxHelper.Show(
+                                        "Не удалось получить стабильный вес с весов (вес = 0). Введите вручную.",
+                                        "Внимание",
+                                        MessageBoxButton.OK,
+                                        MessageBoxType.Warning,
+                                        this);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"✗ Ошибка при опросе весов: {ex.Message}");
+                        // Если произошла ошибка связи с весами, просто пропускаем и открываем диалог с 0.001
+                    }
+                    // ==========================
+
                     double? result = await ShowQuantityDialog(
                         productItem.Tovar,
-                        0.001,
+                        initialQuantity, // Передаем полученный вес или 0.001
                         productItem.IsFractional,
                         0);
 
@@ -8624,21 +8690,33 @@ namespace Cash8Avalon
 
                 if (isDot)
                 {
+                    // 1. Проверяем, нет ли уже разделителя
                     if (currentText.Contains(".") || currentText.Contains(","))
                     {
-                        Console.WriteLine($"  Блокируем вторую точку");
-                        e.Handled = true;
-                        return;
-                    }
-                    if (string.IsNullOrEmpty(currentText))
-                    {
-                        Console.WriteLine($"  Блокируем точку в начале");
-                        ShowErrorToolTip(numericUpDown, "Введите 0 перед точкой");
+                        Console.WriteLine($"  Блокируем второй разделитель");
+                        ShowErrorToolTip(numericUpDown, "Разделитель уже есть");
                         StartErrorAnimation(inputBorder, numericUpDown);
                         e.Handled = true;
                         return;
                     }
-                    Console.WriteLine($"  Точка разрешена");
+
+                    // 2. Убираем блокировку пустой строки, чтобы точка вела себя так же, как запятая 
+                    // (обычно NumericUpDown сам преобразует "," в "0,")
+
+                    // 3. Блокируем стандартную обработку точки
+                    e.Handled = true;
+
+                    // 4. Вставляем запятую программно
+                    if (innerTextBox != null)
+                    {
+                        // SelectedText заменит выделенный текст или вставит запятую на место курсора
+                        innerTextBox.SelectedText = ",";
+
+                        // Обновляем цвет рамки (валидация)
+                        UpdateBorderColor(numericUpDown, inputBorder);
+
+                        Console.WriteLine($"  Точка заменена на запятую. Текст: {innerTextBox.Text}");
+                    }
                     return;
                 }
 

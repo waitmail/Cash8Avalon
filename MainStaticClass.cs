@@ -931,40 +931,85 @@ namespace Cash8Avalon
         }
 
 
-        public static int GetWeightAutomatically
+        //public static int GetWeightAutomatically
+        //{
+        //    get
+        //    {
+        //        if (get_weight_automatically == -1)
+        //        {
+        //            NpgsqlConnection conn = null;
+        //            NpgsqlCommand command = null;
+        //            conn = MainStaticClass.NpgsqlConn();
+        //            try
+        //            {
+        //                conn.Open();
+        //                string query = "SELECT get_weight_automatically FROM constants";
+        //                command = new NpgsqlCommand(query, conn);
+        //                get_weight_automatically = (Convert.ToBoolean(command.ExecuteScalar()) ? 1 : 0);
+        //            }                   
+        //            catch (Exception ex)
+        //            {
+        //                MessageBox.Show("Ошибка при чтении get_weight_automatically" + ex.ToString(), "Ошибка при получении веса", MainStaticClass.MainWindow);
+        //            }
+        //            finally
+        //            {
+        //                if (conn.State == ConnectionState.Open)
+        //                {
+        //                    conn.Close();
+        //                }
+        //            }
+        //        }
+        //        return get_weight_automatically;
+        //    }
+        //}
+
+        //private static int get_weight_automatically = -1;
+
+        // Рекомендуем сделать метод асинхронным
+        public static async Task<int> GetWeightAutomaticallyAsync()
         {
-            get
+            // Если значение уже закэшировано, возвращаем сразу
+            if (get_weight_automatically != -1)
             {
-                if (get_weight_automatically == -1)
-                {
-                    NpgsqlConnection conn = null;
-                    NpgsqlCommand command = null;
-                    conn = MainStaticClass.NpgsqlConn();
-                    try
-                    {
-                        conn.Open();
-                        string query = "SELECT get_weight_automatically FROM constants";
-                        command = new NpgsqlCommand(query, conn);
-                        get_weight_automatically = (Convert.ToBoolean(command.ExecuteScalar()) ? 1 : 0);
-                    }
-                    catch (NpgsqlException ex)
-                    {
-                        MessageBox.Show("Ошибка при чтении get_weight_automatically" + ex.ToString());
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Ошибка при чтении get_weight_automatically" + ex.ToString());
-                    }
-                    finally
-                    {
-                        if (conn.State == ConnectionState.Open)
-                        {
-                            conn.Close();
-                        }
-                    }
-                }
                 return get_weight_automatically;
             }
+
+            // Используем using для корректного закрытия соединения
+            using (var conn = MainStaticClass.NpgsqlConn())
+            {
+                try
+                {
+                    await conn.OpenAsync(); // Асинхронное открытие
+                    string query = "SELECT get_weight_automatically FROM constants";
+
+                    using (var command = new NpgsqlCommand(query, conn))
+                    {
+                        var result = await command.ExecuteScalarAsync();
+                        // Конвертируем результат: true -> 1, false -> 0
+                        get_weight_automatically = (Convert.ToBoolean(result) ? 1 : 0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Вывод ошибки через ваш новый класс
+                    // Получаем главное окно приложения, чтобы передать его владельцем
+                    //var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                    await MessageBoxHelper.Show(
+                        "Ошибка при чтении get_weight_automatically: " + ex.Message,
+                        "Ошибка при получении веса",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        MainStaticClass.MainWindow // Передаем владельца
+                    );
+
+                    // В случае ошибки можно сбросить флаг, чтобы при следующем вызове была попытка прочитать снова,
+                    // или установить дефолтное значение (например, 0)
+                    get_weight_automatically = 0;
+                }
+            }
+
+            return get_weight_automatically;
         }
 
         public static string ScaleSerialPort
@@ -1163,7 +1208,7 @@ namespace Cash8Avalon
         }
 
 
-        public static double GetWeight()
+        public static async Task<double> GetWeight()
         {
             Dictionary<double, int> frequencyMap = new Dictionary<double, int>();
             double weigt = 0;
@@ -1171,7 +1216,7 @@ namespace Cash8Avalon
             while (num < 7)
             {
                 num++;
-                weigt = MainStaticClass.TryGetWeight();
+                weigt = await MainStaticClass.TryGetWeight();
                 if (frequencyMap.ContainsKey(weigt))
                 {
                     frequencyMap[weigt]++;
@@ -1222,72 +1267,73 @@ namespace Cash8Avalon
             return result;
         }
 
-        private static double TryGetWeight()
+        private static async Task<double> TryGetWeight()
         {
             //error = false;
             double result = 0;
-            //string portName = MainStaticClass.ScaleSerialPort;
-            //int baudRate = 9600;
+            string portName = MainStaticClass.ScaleSerialPort;
+            int baudRate = 9600;
 
-            //using (SerialPort serialPort = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One))
-            //{
-            //    try
-            //    {
-            //        Thread.Sleep(100);
-            //        serialPort.Open();
-            //        //Console.WriteLine("Порт открыт успешно.");
+            using (SerialPort serialPort = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One))
+            {
+                try
+                {
+                    Thread.Sleep(100);
+                    serialPort.Open();
+                    //Console.WriteLine("Порт открыт успешно.");
 
-            //        byte[] data = { 0x02, 0x05, 0x3A, 0x30, 0x30, 0x33, 0x30, 0x3C }; // команда весам
-            //        serialPort.Write(data, 0, data.Length); // отправляем команду весам
+                    byte[] data = { 0x02, 0x05, 0x3A, 0x30, 0x30, 0x33, 0x30, 0x3C }; // команда весам
+                    serialPort.Write(data, 0, data.Length); // отправляем команду весам
 
-            //        serialPort.ReadTimeout = 1000; // ждем 1 секунду для получения ответа
+                    serialPort.ReadTimeout = 1000; // ждем 1 секунду для получения ответа
 
-            //        byte[] buffer = new byte[15];
-            //        int bytesRead = serialPort.Read(buffer, 0, buffer.Length); // читаем ответ
+                    byte[] buffer = new byte[15];
+                    int bytesRead = serialPort.Read(buffer, 0, buffer.Length); // читаем ответ
 
-            //        if (bytesRead == 15)
-            //        {
-            //            // используем BitConverter для выделения нужных байт из ответного сообщения
-            //            int b = BitConverter.ToInt32(buffer, 7);
-            //            //result = b / 10000.0; // Перевод в килограммы
-            //            double constant_conversion_to_kilograms = get_constant_conversion_to_kilograms();
-            //            if (constant_conversion_to_kilograms == 0)
-            //            {
-            //                result = b / 10000.0; // Перевод в килограммы
-            //            }
-            //            else
-            //            {
-            //                result = b / constant_conversion_to_kilograms; // Перевод в килограммы
-            //            }
-            //        }
-            //        //else
-            //        //{
-            //        //    error = true;
-            //        //}
-            //    }
-            //    catch (TimeoutException)
-            //    {
-            //        MessageBox.Show("Время ожидания истекло.");
-            //        //    Console.WriteLine("Время ожидания истекло.");
-            //        result = -1;
-            //        //error = true;
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        MessageBox.Show("Ошибка " + ex.Message);
-            //        //Console.WriteLine($"Ошибка: {ex.Message}");
-            //        result = -1;
-            //        //error = true;
-            //    }
-            //    finally
-            //    {
-            //        if (serialPort.IsOpen)
-            //        {
-            //            serialPort.Close();
-            //            //Console.WriteLine("Порт закрыт.");
-            //        }
-            //    }
-            //}
+                    if (bytesRead == 15)
+                    {
+                        // используем BitConverter для выделения нужных байт из ответного сообщения
+                        int b = BitConverter.ToInt32(buffer, 7);
+                        //result = b / 10000.0; // Перевод в килограммы
+                        double constant_conversion_to_kilograms = get_constant_conversion_to_kilograms();
+                        if (constant_conversion_to_kilograms == 0)
+                        {
+                            result = b / 10000.0; // Перевод в килограммы
+                        }
+                        else
+                        {
+                            result = b / constant_conversion_to_kilograms; // Перевод в килограммы
+                        }
+                    }
+                    //else
+                    //{
+                    //    error = true;
+                    //}
+                }
+                catch (TimeoutException)
+                {
+                    await MessageBox.Show("Время ожидания истекло.","Получение веса",MainStaticClass.MainWindow);
+                    //    Console.WriteLine("Время ожидания истекло.");
+                    result = -1;
+                    //error = true;
+                }
+                catch (Exception ex)
+                {
+                    //MessageBox.Show("Ошибка " + ex.Message);
+                    await MessageBox.Show("Ошибка " + ex.Message, "Получение веса", MainStaticClass.MainWindow);
+                    //Console.WriteLine($"Ошибка: {ex.Message}");
+                    result = -1;
+                    //error = true;
+                }
+                finally
+                {
+                    if (serialPort.IsOpen)
+                    {
+                        serialPort.Close();
+                        //Console.WriteLine("Порт закрыт.");
+                    }
+                }
+            }
             return result;
         }
 
