@@ -267,9 +267,7 @@ namespace Cash8Avalon
             await Dispatcher.UIThread.InvokeAsync(Cleanup);
         }
 
-        /// <summary>
-        /// ✅ Гарантированная очистка ресурсов
-        /// </summary>
+       
         /// <summary>
         /// ✅ Гарантированная очистка ресурсов
         /// </summary>
@@ -1575,49 +1573,51 @@ namespace Cash8Avalon
 
 
 
-        // Новый глобальный обработчик для всей формы
-        private void OnGlobalKeyDownForForm(object sender, KeyEventArgs e)
+        // ВАЖНО: async void допустим ТОЛЬКО для обработчиков событий
+        private async void OnGlobalKeyDownForForm(object sender, KeyEventArgs e)
         {
             try
             {
-                // Можно добавить и другие глобальные горячие клавиши
                 switch (e.Key)
                 {
                     case Key.F5:
-                        // Вместо перехода в поле - открываем диалог
                         if ((IsNewCheck) && (CheckType.SelectedIndex == 0))
                         {
-                            ShowQueryWindowBarcode(1, 0, 0);
+                            // Используем await, так как метод возвращает Task<bool?>
+                            await ShowQueryWindowBarcode(1, 0, 0);
                         }
                         e.Handled = true;
-                        break; 
-                        
+                        break;
+
                     case Key.F6:
-                        // Вместо перехода в поле - открываем диалог
                         if ((IsNewCheck) && (CheckType.SelectedIndex == 0))
                         {
+                            // Если этот метод async void, await не нужен, но если он Task - нужен await
+                            // Судя по прошлому коду, он async void, поэтому просто вызываем
                             ShowSimpleClientDialog();
                         }
                         e.Handled = true;
                         break;
 
                     case Key.F7:
-                        // Обновить данные
+                        // Просто возврат фокуса
                         e.Handled = true;
                         InputSearchProduct.Focus();
                         break;
 
                     case Key.Escape:
                         e.Handled = true;
-                        if ((_productsData.Count == 0)||(!IsNewCheck))
+                        if ((_productsData.Count == 0) || (!IsNewCheck))
                         {
                             this.Close();
                         }
                         break;
 
                     case Key.F8:
+                        // Pay_Click - это async void, поэтому await не нужен (и невозможен)
+                        // Но мы вызываем его напрямую.
                         this.Pay_Click(null, null);
-                        e.Handled = true;                    
+                        e.Handled = true;
                         break;
 
                     case Key.F9:
@@ -1629,7 +1629,8 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
+                // Ваш код обработки ошибок
+                await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     await MessageBoxHelper.Show($"✗ Ошибка в OnGlobalKeyDownForForm: {ex.Message}", "OnGlobalKeyDownForForm",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
@@ -4838,43 +4839,73 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Надёжно восстанавливает фокус на таблице товаров
-        /// Специально для Linux с агрессивным управлением фокусом
+        /// Надёжно восстанавливает фокус на поле поиска.
+        /// Решает проблему "F8 не работает" и "Сканер не печатает" в Linux.
         /// </summary>
         private async Task RestoreFocusLinux_productsScrollViewerAsync()
         {
-            // Даём время UI отрисоваться и оконному менеджеру обработать изменения
+            // 1. Пауза, чтобы Linux WM "отпустил" предыдущее окно/диалог
             await Task.Delay(50);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                // Активируем окно
+                if (!this.IsVisible) return;
+
+                // 2. Принудительно делаем окно активным (иначе F8 не дойдет до обработчика)
                 this.Activate();
                 this.Focus();
 
-                // Для Linux - трюк с Topmost
+                // 3. "Ядерный трюк" для Linux (X11/Wayland):
+                // Дергаем Topmost, чтобы оконный менеджер пересчитал слои и передал фокус
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     this.Topmost = true;
-                    this.Topmost = false;
+                    // Сбрасываем в Idle, чтобы не мигало
+                    Dispatcher.UIThread.Post(() => { this.Topmost = false; }, DispatcherPriority.ApplicationIdle);
                 }
 
-                // Устанавливаем фокус на ScrollViewer
-                _productsScrollViewer?.Focus();
+                // 4. Находим поле поиска (ОБЯЗАТЕЛЬНО TextBox, не ScrollViewer!)
+                var targetControl = this.InputSearchProduct;
 
-                // Дополнительная попытка через Dispatcher с высоким приоритетом
+                if (targetControl != null)
+                {
+                    // 5. Устанавливаем фокус
+                    targetControl.Focus();
+
+                    // 6. Если это TextBox - ставим курсор в конец (для сканера)
+                    if (targetControl is TextBox textBox)
+                    {
+                        textBox.CaretIndex = textBox.Text?.Length ?? 0;
+                        textBox.SelectionStart = textBox.CaretIndex;
+                        textBox.SelectionEnd = textBox.CaretIndex;
+                    }
+                }
+                else
+                {
+                    // Фолбэк на ScrollViewer, если поле поиска исчезло
+                    _productsScrollViewer?.Focus();
+                }
+
+                // 7. Финальный "пинок" с низким приоритетом (ContextIdle)
+                // Это гарантирует, что фокус встанет ПОСЛЕ всех анимаций и отрисовки
                 Dispatcher.UIThread.Post(() =>
                 {
-                    _productsScrollViewer?.Focus();
-                    Console.WriteLine("[Focus] Фокус восстановлен после добавления товара");
-                }, DispatcherPriority.Input);
-            }, DispatcherPriority.Render);
+                    if (this.IsVisible)
+                    {
+                        // Повторная проверка и установка
+                        if (targetControl != null && !targetControl.IsFocused)
+                        {
+                            targetControl.Focus();
+                        }
+                        else if (targetControl == null)
+                        {
+                            _productsScrollViewer?.Focus();
+                        }
+                        Console.WriteLine("[Focus] Фокус восстановлен (Target: InputSearchProduct)");
+                    }
+                }, DispatcherPriority.ContextIdle);
 
-            // Финальная задержка для Linux WM
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                await Task.Delay(100);
-            }
+            }, DispatcherPriority.Render);
         }
 
 
@@ -5653,7 +5684,8 @@ namespace Cash8Avalon
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                     Background = Brushes.White,
                     Focusable = true,
-                    Content = _productsTableGrid
+                    IsTabStop = true,              // ✅ Для Linux важно
+                    Content = _productsTableGrid                    
                 };
                 _productsScrollViewer.PointerPressed += OnProductsScrollViewerPointerPressed;
 

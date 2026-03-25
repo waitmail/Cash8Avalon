@@ -780,7 +780,7 @@ namespace Cash8Avalon
             }
 
             DS ds = MainStaticClass.get_ds();
-            ds.Timeout = 30000;
+            ds.Timeout = 20000;
 
             ////Получить параметра для запроса на сервер 
             //nick_shop = MainStaticClass.Nick_Shop.Trim();

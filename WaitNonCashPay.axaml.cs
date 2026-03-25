@@ -23,8 +23,8 @@ namespace Cash8Avalon
         public bool IsSuccess { get; set; }
         public string CodeResponse { get; set; } // Поле 39
         public string CodeResponse15 { get; set; } // Поле 15 (для СБП статусов)
-        public string AuthorizationCode { get; set; } // Поле 13
-        public string ReferenceNumber { get; set; } // Поле 14
+        public string AuthorizationCode { get; set; } = string.Empty; // Поле 13
+        public string ReferenceNumber { get; set; } = string.Empty; // Поле 14
         public string RechargeNote { get; set; } // Поле 90
         public string ErrorMessage { get; set; }
 
@@ -444,7 +444,8 @@ namespace Cash8Avalon
                             break;
                         case "13":
                             // Безопасное присвоение. Если поле пустое, будет null, а не краш.
-                            result.AuthorizationCode = field.Text?.Trim();
+                            //result.AuthorizationCode = field.Text?.Trim();
+                            result.AuthorizationCode = field.Text?.Trim() ?? string.Empty; // Не null
                             break;
                         case "14":
                             result.ReferenceNumber = textValue;

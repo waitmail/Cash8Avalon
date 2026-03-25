@@ -1208,6 +1208,8 @@ namespace Cash8Avalon
         private bool _isDisposed = false;
 
         private CancellationTokenSource _lifetimeCts;
+        // ✅ ДОБАВЬТЕ ЭТО ПОЛЕ для защиты от повторного запуска
+        private bool _isClosingInProgress = false;
 
         public MainWindow()
         {
@@ -1241,16 +1243,23 @@ namespace Cash8Avalon
 
         private async void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
         {
+            // ✅ 1. Защита от повторного нажатия (Решает проблему "цикла")
+            if (_isClosingInProgress)
+            {
+                e.Cancel = true; // Отменяем попытку закрыть повторно, пока идет процесс
+                return;
+            }
+
             if (_isReallyClosing) return;
 
-            // ❌ НЕ устанавливаем _isDisposed здесь!
-            // ❌ НЕ отменяем _lifetimeCts здесь!
-            // ❌ НЕ обнуляем MainWindow здесь!
-
+            // ✅ 2. Устанавливаем флаг и блокируем интерфейс сразу
+            _isClosingInProgress = true;
             e.Cancel = true;
+            this.IsEnabled = false; // Блокируем главное окно, чтобы пользователь не кликал по нему
+
             _unloadingTimer?.Stop();
 
-            // 1. СНАЧАЛА создаем окно ожидания
+            // 3. Создаем окно ожидания
             var waitWindow = new Window
             {
                 Title = "Завершение работы",
@@ -1263,7 +1272,10 @@ namespace Cash8Avalon
 
             var stackPanel = new StackPanel { Margin = new Thickness(30), Spacing = 15, HorizontalAlignment = HorizontalAlignment.Center };
             var titleText = new TextBlock { Text = "Завершение работы...", FontSize = 18, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center };
-            var messageText = new TextBlock { Text = "Идёт отправка данных на сервер.", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
+
+            // ✅ Изменил текст, чтобы не пугать пользователя, если сеть отвалится
+            var messageText = new TextBlock { Text = "Идёт отправка данных на сервер.\nПожалуйста, подождите...", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
+
             var timerText = new TextBlock { Text = "⏱ 0 сек", FontSize = 16, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#2196F3")), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 5) };
             var progressBar = new ProgressBar { Width = 300, Height = 8, IsIndeterminate = true, Foreground = new SolidColorBrush(Color.Parse("#2196F3")), Background = new SolidColorBrush(Color.Parse("#E3F2FD")), Margin = new Thickness(0, 5, 0, 5), HorizontalAlignment = HorizontalAlignment.Center };
             var dotsPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Spacing = 5 };
@@ -1277,7 +1289,9 @@ namespace Cash8Avalon
             stackPanel.Children.Add(progressBar);
             stackPanel.Children.Add(dotsPanel);
             waitWindow.Content = stackPanel;
-            waitWindow.Show();
+
+            // ✅ Показываем окно ожидания поверх заблокированного главного окна
+            waitWindow.Show(this);
 
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -1303,42 +1317,78 @@ namespace Cash8Avalon
             };
             uiTimer.Start();
 
+            // ✅ Закрываем остальные окна (Cash_check и т.д.)
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
                 {
+                    // Закрываем все окна, кроме главного и окна ожидания
                     var windowsToClose = desktopLifetime.Windows.Where(w => w != this && w != waitWindow && w.IsVisible).ToList();
                     foreach (var win in windowsToClose) { try { win.Close(); } catch { } }
                 }
             }, DispatcherPriority.Background);
 
+            // Даем время на закрытие дочерних окон
             await Task.Delay(100);
 
-            // 2. ВЫГРУЗКА ДАННЫХ (пока все ресурсы ещё активны!)
+            // 4. ВЫГРУЗКА ДАННЫХ (с жестким таймаутом)
             try
             {
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Начало выгрузки...");
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                await PerformUnloadAsync(cts.Token);
-                Console.WriteLine($"✓ Выгрузка завершена за {stopwatch.Elapsed.TotalSeconds:F1} сек");
-            }
-            catch (OperationCanceledException)
-            {
-                MainStaticClass.WriteRecordErrorLog("Таймаут выгрузки при закрытии", "MainWindow_Closing", 0, MainStaticClass.CashDeskNumber, "CancellationToken");
-                Console.WriteLine($"⚠ Таймаут выгрузки через {stopwatch.Elapsed.TotalSeconds:F1} сек");
+
+                // ✅ Запускаем задачу выгрузки, НЕ ожидая её (нет await).
+                // Используем _lifetimeCts.Token, чтобы можно было послать сигнал отмены.
+                var unloadTask = PerformUnloadAsync(_lifetimeCts.Token);
+
+                // ✅ Запускаем таймер "нетерпения" (25 секунд)
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(25));
+
+                // ✅ Ждем: кто закончится первым? Задача или Таймер?
+                var completedTask = await Task.WhenAny(unloadTask, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    // Сработал таймер! Прошло 25 секунд.
+                    Console.WriteLine($"⚠ Таймаут! Выгрузка не успела завершиться за 25 сек. Принудительное закрытие.");
+                    MainStaticClass.WriteRecordErrorLog("Таймаут выгрузки (25 сек). Приложение закрыто принудительно.", "MainWindow_Closing", 0, MainStaticClass.CashDeskNumber, "Timeout");
+
+                    // Просим задачу остановиться (если она умеет слушать токен)
+                    if (_lifetimeCts != null && !_lifetimeCts.IsCancellationRequested)
+                    {
+                        _lifetimeCts.Cancel();
+                    }
+
+                    // ВАЖНО: Мы НЕ пишем await unloadTask здесь!
+                    // Мы просто идем дальше на закрытие окна. 
+                    // "Брошенная" задача в фоне умрет при закрытии процесса.
+                }
+                else
+                {
+                    // Задача завершилась РАНЬШЕ таймера (успех или ошибка внутри задачи)
+                    // Теперь проверяем, не упала ли она с ошибкой
+                    try
+                    {
+                        await unloadTask; // Получаем результат (или исключение)
+                        Console.WriteLine($"✓ Выгрузка завершена успешно за {stopwatch.Elapsed.TotalSeconds:F1} сек");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"✗ Ошибка выгрузки: {ex.Message}");
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка выгрузки при закрытии приложения");
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Ошибка выгрузки: {ex.Message}");
-                Console.WriteLine($"✗ StackTrace: {ex.StackTrace}");
-                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка выгрузки при закрытии приложения");
+                // Общая ошибка (например, при создании задач)
+                Console.WriteLine($"✗ Критическая ошибка в блоке закрытия: {ex.Message}");
             }
-
-            // 3. ТОЛЬКО ПОСЛЕ ВЫГРУЗКИ - очистка ресурсов
             finally
             {
+                // 5. Финальная очистка
                 uiTimer.Stop();
                 stopwatch.Stop();
+
                 if (waitWindow.IsVisible) waitWindow.Close();
 
                 if (_unloadingTimer != null)
@@ -1346,24 +1396,22 @@ namespace Cash8Avalon
                     _unloadingTimer.Tick -= UnloadingTimer_Tick;
                 }
 
-                // ✅ ТЕПЕРЬ отменяем токен
                 if (_lifetimeCts != null && !_lifetimeCts.IsCancellationRequested)
                 {
                     _lifetimeCts.Cancel();
                 }
 
-                // ✅ ТЕПЕРЬ обнуляем ссылку
                 if (MainStaticClass.MainWindow == this)
                 {
                     MainStaticClass.MainWindow = null;
                 }
 
-                // ✅ ТЕПЕРЬ устанавливаем флаг
                 _isDisposed = true;
 
                 _lifetimeCts?.Dispose();
             }
 
+            // ✅ Снимаем обработчик и закрываем окно
             _isReallyClosing = true;
             this.Closing -= MainWindow_Closing;
             this.Close();
@@ -2135,6 +2183,7 @@ namespace Cash8Avalon
             if (closeShops.Count > 0)
             {
                 DS ds = MainStaticClass.get_ds();
+                ds.Timeout = 20000;
                 string nick_shop = MainStaticClass.Nick_Shop.Trim();
                 if (nick_shop.Trim().Length == 0) return;
                 string code_shop = MainStaticClass.Code_Shop.Trim();
@@ -2253,7 +2302,7 @@ namespace Cash8Avalon
                 if (logs.ListCdnLog.Count > 0)
                 {
                     DS ds = MainStaticClass.get_ds();
-                    ds.Timeout = 180000;
+                    ds.Timeout = 20000;
                     string nick_shop = MainStaticClass.Nick_Shop.Trim();
                     if (nick_shop.Trim().Length == 0) return;
                     string code_shop = MainStaticClass.Code_Shop.Trim();
@@ -2431,7 +2480,7 @@ namespace Cash8Avalon
             string data_crypt = CryptorEngine.Encrypt(data, true, key);
 
             DS ds = MainStaticClass.get_ds();
-            ds.Timeout = 18000;
+            ds.Timeout = 20000;
             try { return ds.UploadErrorLogPortionJson(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString()); }
             catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "не удалось передать информацию об ошибках в программе"); return false; }
         }

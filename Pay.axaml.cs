@@ -739,10 +739,13 @@ namespace Cash8Avalon
                             }
                         }
                     }
-                    cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-                    cc.closing = false;
-                    this.Close();
+                    //cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
+                    //cc.closing = false;
+                    //this.Close();
                 }
+                cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
+                cc.closing = false;
+                this.Close();
             }
         }
 
