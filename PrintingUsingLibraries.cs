@@ -1051,7 +1051,7 @@ namespace Cash8Avalon
             {
                 MainStaticClass.its_print(check.numdoc.ToString());
                 check.closing = false;
-                check.Close();
+                //check.Close();
             }
             else
             {

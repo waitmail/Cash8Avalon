@@ -260,6 +260,12 @@ namespace Cash8Avalon
         private static int included_piot = -1;
         private static string piot_url = "0";
 
+        // === ПОЛЯ ДЛЯ КЭШИРОВАНИЯ РАБОЧЕГО АДРЕСА ===
+        private static string _lastWorkingServiceUrl = null;
+        private static DateTime _lastWorkingUrlTimestamp = DateTime.MinValue;
+        private static readonly object _urlLock = new object();
+        private static readonly TimeSpan URL_CACHE_DURATION = TimeSpan.FromMinutes(5);
+
         //private static Dictionary<int, Cash8.ProductData> dictionaryProductData = new Dictionary<int, Cash8.ProductData>();
 
 
@@ -3717,85 +3723,41 @@ namespace Cash8Avalon
             return sBuilder.ToString();
         }
 
-        public static int check_new_shema_autenticate()
-        {
-            int result = 0;
+        //public static int check_new_shema_autenticate()
+        //{
+        //    int result = 0;
 
-            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-            try
-            {
-                conn.Open();
-                string query = "SELECT COUNT(*)FROM information_schema.columns where table_name='users' and column_name='rights'";
-                NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                result = Convert.ToInt16(command.ExecuteScalar());
-                conn.Close();
-                command.Dispose();
-            }
-            catch (NpgsqlException ex)
-            {
-                MessageBox.Show(" Ошика при определении схемы " + ex.Message);
-                result = -1;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(" Ошика при определении схемы " + ex.Message);
-                result = -1;
-            }
-            finally
-            {
-                if (conn.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                }
-            }
+        //    NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+        //    try
+        //    {
+        //        conn.Open();
+        //        string query = "SELECT COUNT(*)FROM information_schema.columns where table_name='users' and column_name='rights'";
+        //        NpgsqlCommand command = new NpgsqlCommand(query, conn);
+        //        result = Convert.ToInt16(command.ExecuteScalar());
+        //        conn.Close();
+        //        command.Dispose();
+        //    }
+        //    catch (NpgsqlException ex)
+        //    {
+        //        MessageBox.Show(" Ошика при определении схемы " + ex.Message);
+        //        result = -1;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show(" Ошика при определении схемы " + ex.Message);
+        //        result = -1;
+        //    }
+        //    finally
+        //    {
+        //        if (conn.State == ConnectionState.Open)
+        //        {
+        //            conn.Close();
+        //        }
+        //    }
 
-            return result;
+        //    return result;
 
-        }
-
-
-
-        /// <summary>
-        /// получение признака ведения учета в 2 валютах
-        /// </summary>
-        /// <returns></returns>
-        public static bool get_account_two_currencies()
-        {
-            bool result = false;
-
-
-            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-            try
-            {
-                conn.Open();
-                string query = "SELECT two_currencies  FROM constants;";
-                NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                result = Convert.ToBoolean(command.ExecuteScalar());
-                conn.Close();
-
-            }
-            catch (NpgsqlException ex)
-            {
-                //MyMessageBox mmb = new MyMessageBox("Ошибка при получении валюты", "Ошибка при получении валюты");
-                //mmb.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                //MyMessageBox mmb = new MyMessageBox("Ошибка при получении валюты", "Ошибка при получении валюты");
-                //mmb.ShowDialog();
-            }
-            finally
-            {
-                if (conn.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                }
-            }
-
-            return result;
-
-        }
-
+        //}
 
         public static IWebProxy CreateWebProxyWithCredentials(String sUrl, string ProxyUserName, string ProxyUserPassword, string sAuthType, string ProxyUserDomain)
         {
@@ -3831,20 +3793,120 @@ namespace Cash8Avalon
         }
 
 
+        /// <summary>
+        /// Создает объект DS, выбирая лучший доступный адрес из списка.
+        /// </summary>
         public static DS get_ds()
         {
-            DS ds = null;
-            ds = new DS();
+            DS ds = new DS();
+
+            // 1. Проверяем кэш (может уже знаем рабочий адрес)
+            lock (_urlLock)
+            {
+                if (!string.IsNullOrWhiteSpace(_lastWorkingServiceUrl) &&
+                    DateTime.Now - _lastWorkingUrlTimestamp < URL_CACHE_DURATION)
+                {
+                    try
+                    {
+                        // Быстрая проверка, жив ли еще кэшированный адрес
+                        if (IsUrlAccessibleAsync(_lastWorkingServiceUrl, 1000).GetAwaiter().GetResult())
+                        {
+                            ds.Url = _lastWorkingServiceUrl;
+                            return ds;
+                        }
+                    }
+                    catch
+                    {
+                        // Кэш протух, идем дальше
+                        _lastWorkingServiceUrl = null;
+                    }
+                }
+            }
+
+            // 2. Получаем список всех адресов
+            List<string> urlsToTry = new List<string>(PathForWebService);
+
+            // Если список пуст, добавляем фолбэк
+            if (urlsToTry.Count == 0)
+            {
+                urlsToTry.Add("http://8.8.8.8/DiscountSystem/Ds.asmx");
+            }
+
+            // 3. Рандомизация (Load Balancing)
+            // Перемешиваем список, чтобы кассы не долбили первый адрес одновременно
+            var shuffled = urlsToTry.OrderBy(x => Guid.NewGuid()).ToList();
+
+            // 4. Перебор и поиск живого
+            foreach (var url in shuffled)
+            {
+                try
+                {
+                    // Проверяем доступность (HEAD/GET запрос)
+                    if (IsUrlAccessibleAsync(url, 1500).GetAwaiter().GetResult())
+                    {
+                        // Успех! Сохраняем в кэш
+                        lock (_urlLock)
+                        {
+                            _lastWorkingServiceUrl = url;
+                            _lastWorkingUrlTimestamp = DateTime.Now;
+                        }
+
+                        ds.Url = url;
+                        Console.WriteLine($"[WebService] ✓ Подключено к: {url}");
+                        return ds;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WebService] ✗ Ошибка {url}: {ex.Message}");
+                }
+            }
+
+            // 5. Фолбэк: если ВСЕ недоступны
+            ds.Url = urlsToTry.FirstOrDefault();
+            Console.WriteLine($"[WebService] ⚠ Все адреса недоступны. Попытка использовать: {ds.Url}");
+            return ds;
+        }
+
+        /// <summary>
+        /// Асинхронная проверка доступности URL
+        /// </summary>
+        private static async Task<bool> IsUrlAccessibleAsync(string url, int timeoutMs)
+        {
             try
             {
-                ds.Url = MainStaticClass.PathForWebService;//.get_path_for_web_service();
+                // Игнорируем ошибки SSL
+                var handler = new System.Net.Http.HttpClientHandler();
+                handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+                handler.AllowAutoRedirect = true;
+
+                using (var client = new System.Net.Http.HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromMilliseconds(timeoutMs);
+
+                    try
+                    {
+                        // Пробуем HEAD (быстро)
+                        var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, url);
+                        await client.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                        return true;
+                    }
+                    catch (System.Net.Http.HttpRequestException)
+                    {
+                        // Если HEAD не поддерживается, пробуем GET
+                        using (var fallbackClient = new System.Net.Http.HttpClient(handler))
+                        {
+                            fallbackClient.Timeout = TimeSpan.FromMilliseconds(timeoutMs);
+                            await fallbackClient.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                            return true;
+                        }
+                    }
+                }
             }
             catch
             {
-                ds.Url = "http://8.8.8.8/DiscountSystem/Ds.asmx";//.get_path_for_web_service();
+                return false;
             }
-
-            return ds;
         }
 
 
@@ -4051,67 +4113,65 @@ namespace Cash8Avalon
 
             return result;
         }
-        
-        public static string PathForWebService
+
+        // Backing field для хранения списка адресов
+        private static string[] _pathForWebServiceUrls = null;
+
+        /// <summary>
+        /// Возвращает массив адресов веб-сервиса из базы.
+        /// </summary>
+        public static string[] PathForWebService
         {
             get
             {
-
-                if (path_for_web_service == "")
+                // Если массив еще не загружен, грузим из БД
+                if (_pathForWebServiceUrls == null)
                 {
-                    path_for_web_service = get_path_for_web_service();
+                    _pathForWebServiceUrls = get_path_for_web_service();
                 }
-                return path_for_web_service;
+                return _pathForWebServiceUrls;
             }
-
         }
 
         /// <summary>
-        /// Возвращает путь к веб сервису дисконта
+        /// Читает массив адресов из PostgreSQL (тип text[])
         /// </summary>
-        /// <returns></returns>
-        private static string get_path_for_web_service()
+        private static string[] get_path_for_web_service()
         {
-            string result = "";
+            // Дефолтное значение, если в базе пусто
+            string[] defaultUrls = new string[] { "http://8.8.8.8/DiscountSystem/Ds.asmx" };
 
-            NpgsqlConnection conn = null;
-
-            try
+            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
             {
-                conn = MainStaticClass.NpgsqlConn();
-                conn.Open();
-                string query = " SELECT path_for_web_service  FROM constants ";
-                NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                NpgsqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
+                try
                 {
-                    result = reader[0].ToString();
+                    conn.Open();
+                    string query = "SELECT path_for_web_service FROM constants LIMIT 1";
+
+                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            if (reader[0] != DBNull.Value)
+                            {
+                                // Npgsql автоматически мапит Postgres text[] в C# string[]
+                                var result = (string[])reader[0];
+
+                                // Если массив не пустой, возвращаем его
+                                if (result != null && result.Length > 0)
+                                    return result;
+                            }
+                        }
+                    }
                 }
-                reader.Close();
-                reader.Dispose();
-                command.Dispose();
-                conn.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                //MyMessageBox mmb = new MyMessageBox(ex.Message, "Получение пути веб сервиса дисконта");
-                //mmb.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                //MyMessageBox mmb = new MyMessageBox(ex.Message, "Получение пути веб сервиса дисконта");
-                //mmb.ShowDialog();
-            }
-            finally
-            {
-                if (conn.State == ConnectionState.Open)
+                catch (Exception ex)
                 {
-                    conn.Close();
+                    Console.WriteLine($"Ошибка чтения path_for_web_service: {ex.Message}");
                 }
             }
 
-
-            return result;
+            return defaultUrls;
         }
 
 

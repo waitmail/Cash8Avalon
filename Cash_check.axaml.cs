@@ -170,6 +170,121 @@ namespace Cash8Avalon
         // В классе Cash_check добавьте константу
         private const int PRODUCT_FONT_SIZE = 18; // Единый размер шрифта для всех товаров
 
+
+        // Таймер удержания фокуса
+        private DispatcherTimer _focusKeeperTimer;
+
+        // Для дебанса (защиты от частых срабатываний)
+        private DateTime _lastFocusRestore = DateTime.MinValue;
+        private const int FOCUS_RESTORE_COOLDOWN_MS = 300; // Минимальная пауза между восстановлениями
+
+
+        /// <summary>
+        /// Запускает таймер проверки фокуса (для Linux)
+        /// </summary>
+        private void StartFocusKeeper()
+        {
+            if (_focusKeeperTimer == null)
+            {
+                _focusKeeperTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(700) // Проверка раз в 700мс
+                };
+                _focusKeeperTimer.Tick += FocusKeeper_Tick;
+            }
+
+            // Запускаем только если окно видимо, это новый чек и таймер не работает
+            if (this.IsVisible && IsNewCheck && !_focusKeeperTimer.IsEnabled)
+            {
+                _lastFocusRestore = DateTime.MinValue; // Сброс времени при старте
+                _focusKeeperTimer.Start();
+                Console.WriteLine("✓ Таймер фокуса запущен");
+            }
+        }
+
+        /// <summary>
+        /// Останавливает таймер проверки фокуса
+        /// </summary>
+        private void StopFocusKeeper()
+        {
+            if (_focusKeeperTimer != null && _focusKeeperTimer.IsEnabled)
+            {
+                _focusKeeperTimer.Stop();
+                Console.WriteLine("■ Таймер фокуса остановлен");
+            }
+        }
+
+        /// <summary>
+        /// Проверяет, находится ли фокус на важных контролах, где его нельзя трогать
+        /// </summary>
+        private bool IsFocusOnImportantControl()
+        {
+            return (Comment?.IsFocused == true) ||
+                   (ClientBarcodeOrPhone?.IsFocused == true) ||
+                   (txtB_inn?.IsFocused == true) ||
+                   (txtB_name?.IsFocused == true) ||
+                   (Client?.IsFocused == true) ||
+                   (InputSearchProduct?.IsFocused == true); // Тоже считаем важным, чтобы не дергать лишний раз
+        }
+
+        /// <summary>
+        /// Логика проверки и восстановления фокуса с дебансом
+        /// </summary>
+        private void FocusKeeper_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                // 1. Базовые проверки
+                if (_isDisposed || !this.IsVisible) return;
+
+                // ВАЖНО: Если окно отключено (открыто модальное диалоговое окно, например, Оплата) - НЕ ДЕЛАЕМ НИЧЕГО.
+                // Это предотвращает конфликты фокуса и "исчезновение" окон.
+                if (!this.IsEnabled) return;
+
+                // Если окно НЕ активно (свёрнуто или в фоне) — не мешаем системе
+                if (!this.IsActive) return;
+
+                // 2. Проверяем, где сейчас фокус
+
+                // Если фокус на таблице товаров — ОТЛИЧНО! Ничего не делаем, даем работать +/-
+                if (_productsScrollViewer != null && _productsScrollViewer.IsFocused) return;
+
+                // Если фокус на поле поиска — тоже отлично
+                if (InputSearchProduct != null && InputSearchProduct.IsFocused) return;
+
+                // Если фокус на других важных полях ввода — не мешаем кассиру печатать
+                if (IsFocusOnImportantControl()) return;
+
+                // === ДЕБАНС: Защита от слишком частых срабатываний ===
+                if ((DateTime.Now - _lastFocusRestore).TotalMilliseconds < FOCUS_RESTORE_COOLDOWN_MS)
+                    return;
+
+                // 3. Если мы здесь, значит фокус "потерян" (упал на фон, заголовок или пустое место)
+                Console.WriteLine("⚠ [FocusKeeper] Фокус потерян (в никуда)! Восстановление...");
+
+                _lastFocusRestore = DateTime.Now;
+
+                // === "Ядерный" трюк для Linux ===
+                this.Activate();
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    this.Topmost = true;
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        try { if (this.IsVisible) this.Topmost = false; } catch { }
+                    }, DispatcherPriority.ApplicationIdle);
+                }
+
+                // Возвращаем фокус на поле поиска (как безопасное место по умолчанию)
+                InputSearchProduct?.Focus();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Ошибка в FocusKeeper_Tick: {ex.Message}");
+            }
+        }
+
+
         // Классы данных для товаров
         public class ProductItem
         {
@@ -372,6 +487,8 @@ namespace Cash8Avalon
         protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
         {
             base.OnDetachedFromVisualTree(e);
+            // Сначала останавливаем таймер, чтобы он не сработал во время очистки
+            StopFocusKeeper();
             Cleanup();
         }
 
@@ -387,7 +504,10 @@ namespace Cash8Avalon
             if (IsNewCheck)
             {
                 await SetFocusToSearchBox();
-            }          
+            }
+
+            // ЗАПУСК ТАЙМЕРА при открытии окна
+            StartFocusKeeper();
         }
 
 
@@ -2564,6 +2684,11 @@ namespace Cash8Avalon
 
         private async void show_pay_form()
         {
+            // ==========================================
+            // ВАЖНО: Отключаем таймер перед открытием модального окна
+            // ==========================================
+            StopFocusKeeper();
+
             if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
             {
                 InputSearchProduct.Focus();
@@ -2709,6 +2834,13 @@ namespace Cash8Avalon
             //await ModalWindowHelper.ShowModalWindow(this, pay_form, _productsScrollViewer);
             await ModalWindowHelper.ShowModalWindow(this, pay_form, InputSearchProduct);
 
+            // ==========================================
+            // ВАЖНО: Включаем таймер ПОСЛЕ закрытия диалога
+            // ==========================================
+            // Даем небольшую паузу, чтобы WM успел вернуть управление окну
+            await Task.Delay(100);
+            StartFocusKeeper();
+
             if (Convert.ToBoolean(pay_form.Tag) == true)
             {
                 this.Close();
@@ -2732,7 +2864,9 @@ namespace Cash8Avalon
         public async void cancel_action()
         {
             this.Focus();
-            
+
+            // Перезапускаем таймер на всякий случай
+            StartFocusKeeper();
 
             if (check_type.SelectedIndex != 0)
             {
@@ -2901,7 +3035,7 @@ namespace Cash8Avalon
                 if (MainStaticClass.Use_Fiscall_Print)
                 {
                     MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
-                    fiscall_print_pay(pay);
+                    await fiscall_print_pay(pay);
                 }
             }
 
@@ -4839,8 +4973,8 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Надёжно восстанавливает фокус на поле поиска.
-        /// Решает проблему "F8 не работает" и "Сканер не печатает" в Linux.
+        /// Надёжно восстанавливает фокус на таблицу товаров (Grid).
+        /// Вызывается после добавления товара, чтобы работали +/-.
         /// </summary>
         private async Task RestoreFocusLinux_productsScrollViewerAsync()
         {
@@ -4851,60 +4985,28 @@ namespace Cash8Avalon
             {
                 if (!this.IsVisible) return;
 
-                // 2. Принудительно делаем окно активным (иначе F8 не дойдет до обработчика)
+                // 2. Принудительно делаем окно активным
                 this.Activate();
                 this.Focus();
 
-                // 3. "Ядерный трюк" для Linux (X11/Wayland):
-                // Дергаем Topmost, чтобы оконный менеджер пересчитал слои и передал фокус
+                // 3. "Ядерный трюк" для Linux
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     this.Topmost = true;
-                    // Сбрасываем в Idle, чтобы не мигало
                     Dispatcher.UIThread.Post(() => { this.Topmost = false; }, DispatcherPriority.ApplicationIdle);
                 }
 
-                // 4. Находим поле поиска (ОБЯЗАТЕЛЬНО TextBox, не ScrollViewer!)
-                var targetControl = this.InputSearchProduct;
-
-                if (targetControl != null)
+                // 4. Устанавливаем фокус ИМЕННО НА ТАБЛИЦУ (ScrollViewer), чтобы работали +/- 
+                if (_productsScrollViewer != null)
                 {
-                    // 5. Устанавливаем фокус
-                    targetControl.Focus();
-
-                    // 6. Если это TextBox - ставим курсор в конец (для сканера)
-                    if (targetControl is TextBox textBox)
-                    {
-                        textBox.CaretIndex = textBox.Text?.Length ?? 0;
-                        textBox.SelectionStart = textBox.CaretIndex;
-                        textBox.SelectionEnd = textBox.CaretIndex;
-                    }
+                    _productsScrollViewer.Focus();
+                    Console.WriteLine("[Focus] Фокус установлен на таблицу товаров (ScrollViewer)");
                 }
                 else
                 {
-                    // Фолбэк на ScrollViewer, если поле поиска исчезло
-                    _productsScrollViewer?.Focus();
+                    // Фолбэк, если таблицы нет
+                    InputSearchProduct?.Focus();
                 }
-
-                // 7. Финальный "пинок" с низким приоритетом (ContextIdle)
-                // Это гарантирует, что фокус встанет ПОСЛЕ всех анимаций и отрисовки
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (this.IsVisible)
-                    {
-                        // Повторная проверка и установка
-                        if (targetControl != null && !targetControl.IsFocused)
-                        {
-                            targetControl.Focus();
-                        }
-                        else if (targetControl == null)
-                        {
-                            _productsScrollViewer?.Focus();
-                        }
-                        Console.WriteLine("[Focus] Фокус восстановлен (Target: InputSearchProduct)");
-                    }
-                }, DispatcherPriority.ContextIdle);
-
             }, DispatcherPriority.Render);
         }
 

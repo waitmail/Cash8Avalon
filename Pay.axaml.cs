@@ -396,16 +396,29 @@ namespace Cash8Avalon
 
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
-            if (!this.button_pay.IsEnabled == true) return;
+            if (!this.button_pay.IsEnabled) return;
             if (!await copFilledCorrectly()) { CalculateChange(); return; }
 
-            await Dispatcher.UIThread.InvokeAsync(() => { this.button_pay.IsEnabled = false; }, DispatcherPriority.Render);
+            // Вспомогательная функция ТОЛЬКО для строк из TextBox
+            double ParseUiText(string text)
+            {
+                if (string.IsNullOrWhiteSpace(text)) return 0.0;
+                // Пробуем распарсить как есть (с учетом текущей культуры системы)
+                if (double.TryParse(text, out double res)) return res;
+                // Если не вышло, пробуем инвариантную культуру (точки)
+                if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
+                return 0.0;
+            }
 
-            double cash_money = Math.Round(Convert.ToDouble(txtB_cash_sum.Text.Replace(".", ",")), 2);
-            double non_cash_money = Math.Round(Convert.ToDouble(get_non_cash_sum()), 2);
-            double sertificate_money = Math.Round(Convert.ToDouble(sertificates_sum.Text), 2);
-            double bonus_money = Math.Round(Convert.ToDouble(pay_bonus_many.Text.Replace(".", ",")), 2);
-            double sum_on_document = Math.Round(Convert.ToDouble(pay_sum.Text.Replace(".", ",")), 2);
+            // 1. Числа из TextBox парсим через функцию
+            double cash_money = Math.Round(ParseUiText(txtB_cash_sum.Text), 2);
+            double sertificate_money = Math.Round(ParseUiText(sertificates_sum.Text), 2);
+            double bonus_money = Math.Round(ParseUiText(pay_bonus_many.Text), 2);
+            double sum_on_document = Math.Round(ParseUiText(pay_sum.Text), 2);
+
+            // 2. Числа из методов берем напрямую (они уже double)
+            double non_cash_money = Math.Round(get_non_cash_sum(), 2);
+
             double all_cash_non_cash = cash_money + non_cash_money + sertificate_money + bonus_money;
 
             if (Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2) < 0)
@@ -415,17 +428,19 @@ namespace Cash8Avalon
             }
 
             TextBox Remainder = this.FindControl<TextBox>("remainder");
-            if (Convert.ToDouble(Remainder.Text.Trim()) > 0 && cc.check_type.SelectedIndex != 0)
+            double remainderVal = ParseUiText(Remainder?.Text);
+
+            if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
             {
                 await MessageBoxHelper.Show(" Сумма возврата должна быть равно сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return;
             }
 
-            if (Convert.ToDouble(pay_bonus_many.Text) != 0) bonus_on_document.Text = "0";
+            if (bonus_money != 0) bonus_on_document.Text = "0";
 
-            if (Convert.ToDouble(pay_bonus_many.Text) > 0)
+            if (bonus_money > 0)
             {
-                if (Convert.ToDouble(non_cash_sum.Text) + Convert.ToDouble(sertificates_sum.Text) + Convert.ToDouble(pay_bonus_many.Text) > Convert.ToDouble(pay_sum.Text))
+                if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
                 {
                     await MessageBoxHelper.Show("Сумма сертификатов + сумма по карте оплаты + сумма по бонусам превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                     return;
@@ -433,7 +448,7 @@ namespace Cash8Avalon
             }
             else
             {
-                if (Convert.ToDouble(non_cash_sum.Text) + Convert.ToDouble(sertificates_sum.Text) > Convert.ToDouble(pay_sum.Text))
+                if (non_cash_money + sertificate_money > sum_on_document)
                 {
                     await MessageBoxHelper.Show(" Сумма сертификатов + сумма по карте оплаты превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                     return;
@@ -443,10 +458,12 @@ namespace Cash8Avalon
             cc.SetCertificatesFromPay(_certificatesList);
             MainStaticClass.write_event_in_log("Окно оплаты перед записью и закрытием документа ", "Документ чек", cc.numdoc.ToString());
 
-            Double _cash_summ_ = Convert.ToDouble(txtB_cash_sum.Text) - Convert.ToDouble(remainder.Text);
-            Double _non_cash_summ_ = Math.Round(Convert.ToDouble(get_non_cash_sum()), 2);
-            Double _sertificates_sum_ = Convert.ToDouble(sertificates_sum.Text);
-            Double _pay_bonus_many_ = Convert.ToDouble(pay_bonus_many.Text);
+            Double _cash_summ_ = cash_money - remainderVal;
+            Double _non_cash_summ_ = non_cash_money;
+            Double _sertificates_sum_ = sertificate_money;
+            Double _pay_bonus_many_ = bonus_money;
+
+            // decimal приводим к double
             Double sum_of_the_document = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
 
             if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))

@@ -438,12 +438,12 @@ namespace Cash8Avalon
             }
 
             // Проверка схемы авторизации
-            if (MainStaticClass.check_new_shema_autenticate() != 1)
-            {
-                await MessageBox.Show("Из-за произошедших ошибок авторизация невозможна");
-                ShowErrorMessage("Ошибка системы авторизации");
-                return;
-            }
+            //if (MainStaticClass.check_new_shema_autenticate() != 1)
+            //{
+            //    await MessageBox.Show("Из-за произошедших ошибок авторизация невозможна");
+            //    ShowErrorMessage("Ошибка системы авторизации");
+            //    return;
+            //}
 
             result = await find_user_role_new(inputBarcode.Text);
 

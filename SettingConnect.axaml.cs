@@ -686,7 +686,48 @@ namespace Cash8Avalon
             //            --Частичный индекс для активных чеков
             queries.Add("CREATE INDEX idx_active_checks ON checks_header(its_deleted, check_type, guid)WHERE its_deleted = 0;");
 
-            
+            // Формируем один большой запрос с логикой внутри
+            string migrationQuery = @"
+                DO $$ BEGIN
+                    -- 1. Проверяем: если колонка существует и её тип НЕ ARRAY (значит старая версия)
+                    IF EXISTS (
+                        SELECT 1 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'constants' 
+                        AND column_name = 'path_for_web_service' 
+                        AND data_type != 'ARRAY'
+                    ) THEN
+                        -- Удаляем старую колонку
+                        EXECUTE 'ALTER TABLE constants DROP COLUMN path_for_web_service';
+                    END IF;
+
+                    -- 2. Проверяем: если колонки нет (удалили или никогда не было)
+                    IF NOT EXISTS (
+                        SELECT 1 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'constants' 
+                        AND column_name = 'path_for_web_service'
+                    ) THEN
+                        -- Создаем новую колонку типа TEXT[]
+                        EXECUTE 'ALTER TABLE constants ADD COLUMN path_for_web_service TEXT[]';
+                    END IF;
+
+                    -- 3. Если данные в колонке пустые (NULL), заполняем дефолтными адресами
+                    -- Это безопасно: если адреса уже есть, они не перезапишутся
+                    UPDATE constants 
+                    SET path_for_web_service = ARRAY[
+                        'http://ch1.sd2.com.ru/DiscountSystem/ds.asmx',
+                        'http://ch2.sd2.com.ru/DiscountSystem/ds.asmx',
+                        'http://ch3.sd2.com.ru/DiscountSystem/ds.asmx'
+                    ]
+                    WHERE path_for_web_service IS NULL;
+
+                END $$;
+                ";
+
+            // Добавляем в ваш список запросов
+            queries.Add(migrationQuery);
+
 
             foreach (string str in queries)
             {

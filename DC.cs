@@ -33,19 +33,19 @@ namespace Cash8Avalon
             set => _timeout = value;
         }
 
-        public static DS get_ds()
-        {
-            DS ds = new DS();
-            try
-            {
-                ds.Url = MainStaticClass.PathForWebService;
-            }
-            catch
-            {
-                ds.Url = "http://8.8.8.8/DiscountSystem/Ds.asmx";
-            }
-            return ds;
-        }
+        //public static DS get_ds()
+        //{
+        //    DS ds = new DS();
+        //    try
+        //    {
+        //        ds.Url = MainStaticClass.PathForWebService[0];
+        //    }
+        //    catch
+        //    {
+        //        ds.Url = "http://8.8.8.8/DiscountSystem/Ds.asmx";
+        //    }
+        //    return ds;
+        //}
 
         private string ExecuteSoapRequest(string soapEnvelope, string operationName)
         {

@@ -1761,7 +1761,7 @@ namespace Cash8Avalon
                 try
                 {
                     // 2. Транзакция убрана, так как это только чтение (SELECT)
-                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'checks_header' AND column_name = 'action_num_doc'";
+                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'constants' AND column_name = 'path_for_web_service'";
 
                     using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
                     {
