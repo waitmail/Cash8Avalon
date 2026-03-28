@@ -514,6 +514,44 @@ namespace Cash8Avalon
                     return;
                 }
 
+                // === ПОДГОТОВКА ДАННЫХ ДЛЯ ЗАПИСИ ===
+                string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
+                string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
+                string sertificate_money_str = Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".");
+                string bonus_money_str = (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim());
+                string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
+                string remainder_str = remainder.Text.Replace(",", ".");
+
+                // === ШАГ 1: Предварительная запись в БД (до терминала!) ===
+                bool writeResult = await cc.write_new_document(
+                    txtB_cash_sum.Text,
+                    sum_doc_str,
+                    remainder_str,
+                    bonus_money_str,
+                    false, // last_rewrite = false → its_deleted = 2 ("в процессе")
+                    sum_cash_pay,
+                    non_sum_cash_pay,
+                    sertificate_money_str,
+                    "2",   // its_deleted (переопределяется через last_rewrite)
+                    true   // sendToScreen
+                );
+
+                if (!writeResult)
+                {
+                    await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    return; // ❌ Терминал НЕ трогаем!
+                }
+
+
+
+                //string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
+                //string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
+
+                //if (!await cc.it_is_paid(txtB_cash_sum.Text, cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), remainder.Text.Replace(",", "."), (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim()), false, sum_cash_pay, non_sum_cash_pay, Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".")))
+                //{
+                //    return;
+                //}
+
                 double notCashSum = Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100;
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
@@ -625,8 +663,8 @@ namespace Cash8Avalon
                     }
                 }
 
-                string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
-                string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
+                //string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
+                //string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
                 cc.print_to_button = 0;
 
                 if (await cc.it_is_paid(txtB_cash_sum.Text, cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), remainder.Text.Replace(",", "."), (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim()), true, sum_cash_pay, non_sum_cash_pay, Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".")))
@@ -636,8 +674,34 @@ namespace Cash8Avalon
             }
             else // ВОЗВРАТ
             {
+                // === ПОДГОТОВКА ДАННЫХ ДЛЯ ЗАПИСИ ===
                 string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
                 string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
+                string sertificate_money_str = Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".");
+                string bonus_money_str = (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim());
+                string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
+                string remainder_str = remainder.Text.Replace(",", ".");
+
+                // === ШАГ 1: Предварительная запись в БД (до терминала!) ===
+                bool writeResult = await cc.write_new_document(
+                    txtB_cash_sum.Text,
+                    sum_doc_str,
+                    remainder_str,
+                    bonus_money_str,
+                    false, // last_rewrite = false → its_deleted = 2 ("в процессе")
+                    sum_cash_pay,
+                    non_sum_cash_pay,
+                    sertificate_money_str,
+                    "2",   // its_deleted (переопределяется через last_rewrite)
+                    true   // sendToScreen
+                );
+
+                if (!writeResult)
+                {
+                    await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    return; // ❌ Терминал НЕ трогаем!
+                }
+
                 if (cc.check_type.SelectedIndex == 1 && get_non_cash_sum() < 1)
                 {
                     sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text) + Convert.ToDecimal(get_non_cash_sum())).ToString().Replace(",", ".");

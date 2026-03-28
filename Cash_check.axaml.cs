@@ -3546,39 +3546,7 @@ namespace Cash8Avalon
                 MainStaticClass.Last_Write_Check = DateTime.Now;
             }
             return result;
-        }
-
-        /// <summary>
-        /// Надёжно устанавливает фокус на поле поиска (с учётом особенностей Linux)
-        /// </summary>
-        //private async Task RestoreSearchFocusInputSearchProductAsync()
-        //{
-        //    if (InputSearchProduct == null)
-        //    {
-        //        InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
-        //        if (InputSearchProduct == null) return;
-        //    }
-
-        //    // Для Linux: активируем окно и делаем задержки
-        //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        //    {
-        //        this.Activate();
-        //        await Task.Delay(30);
-        //    }
-
-        //    // Три попытки установить фокус с разными приоритетами
-        //    InputSearchProduct.Focus();
-
-        //    Dispatcher.UIThread.Post(() => InputSearchProduct.Focus(), DispatcherPriority.Input);
-
-        //    await Task.Delay(10);
-
-        //    Dispatcher.UIThread.Post(() =>
-        //    {
-        //        InputSearchProduct?.Focus();
-        //        InputSearchProduct?.CaretIndex = InputSearchProduct.Text?.Length ?? 0;
-        //    }, DispatcherPriority.Render);
-        //}
+        }       
 
         public class CustomerScreen
         {

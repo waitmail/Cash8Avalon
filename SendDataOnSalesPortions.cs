@@ -729,7 +729,7 @@ namespace Cash8Avalon
                 return;
             }
 
-            int documents_out_of_the_range_of_dates = MainStaticClass.get_documents_out_of_the_range_of_dates();
+            int documents_out_of_the_range_of_dates = await MainStaticClass.get_documents_out_of_the_range_of_dates_async();
 
             if (documents_out_of_the_range_of_dates > 0 || documents_out_of_the_range_of_dates < 0)
             {

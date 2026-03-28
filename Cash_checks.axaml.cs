@@ -346,8 +346,14 @@ namespace Cash8Avalon
                 // ✅ ДОБАВЛЕНО: Небольшая задержка для отрисовки макета перед загрузкой
                 await Task.Delay(50);
 
+                // 1. СНАЧАЛА загружаем таблицу (с Background приоритетом, как у вас уже есть)
                 await LoadDocumentsAsync();
                 Console.WriteLine("✓ Данные загружены асинхронно");
+
+                // 2. ПОТОМ запускаем обновление статуса в фоне
+                // Это гарантирует, что таблица уже нарисована и ресурсы свободны
+                _ = Task.Run(() => GetStatusSendDocument());
+                Console.WriteLine("✓ Запущено обновление статуса");
             }
             catch (Exception ex)
             {
@@ -1481,9 +1487,9 @@ namespace Cash8Avalon
                 if (_isDisposed) return;
 
                 // Тяжелые операции — в фоне
-                int documentsNotOut = MainStaticClass.get_documents_not_out();
+                int documentsNotOut = await MainStaticClass.get_documents_not_out_async();
                 string documents_not_out = documentsNotOut.ToString();
-                int documents_out_of_the_range_of_dates = MainStaticClass.get_documents_out_of_the_range_of_dates();
+                int documents_out_of_the_range_of_dates = await MainStaticClass.get_documents_out_of_the_range_of_dates_async();
 
                 string result = "";
                 if (documents_not_out == "-1")
@@ -1628,24 +1634,24 @@ namespace Cash8Avalon
 
                     Console.WriteLine($"✓ Таймер статуса инициализирован с интервалом {unloadInterval} мин.");
 
-                    // ✅ Запуск с обработкой ошибок
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            if (!_isDisposed)
-                            {
-                                GetStatusSendDocument();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            if (!_isDisposed)
-                            {
-                                Console.WriteLine($"✗ Ошибка в начальном обновлении статуса: {ex.Message}");
-                            }
-                        }
-                    });
+                    //// ✅ Запуск с обработкой ошибок
+                    //_ = Task.Run(async () =>
+                    //{
+                    //    try
+                    //    {
+                    //        if (!_isDisposed)
+                    //        {
+                    //            GetStatusSendDocument();
+                    //        }
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        if (!_isDisposed)
+                    //        {
+                    //            Console.WriteLine($"✗ Ошибка в начальном обновлении статуса: {ex.Message}");
+                    //        }
+                    //    }
+                    //});
                 }
                 else
                 {
@@ -2579,7 +2585,7 @@ namespace Cash8Avalon
                         Console.WriteLine($"✗ Ошибка при обновлении таблицы: {ex.Message}");
                         Console.WriteLine(ex.StackTrace);
                     }
-                });
+                }, DispatcherPriority.Background);
 
                 Console.WriteLine($"✓ Асинхронная загрузка завершена: {checkItems.Count} записей");
                 RestoreFocusAfterLoad();

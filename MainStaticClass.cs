@@ -91,6 +91,60 @@ namespace Cash8Avalon
             }
         }
 
+        // Добавьте SemaphoreSlim для асинхронной блокировки
+        private static readonly SemaphoreSlim _asyncLock = new SemaphoreSlim(1, 1);
+
+        // Основной асинхронный метод
+        public static async Task<DateTime> GetServerTimeAsync()
+        {
+            // 1. Быстрая проверка кэша без блокировок (если кэш свежий)
+            // Используем локальные переменные, чтобы избежать race condition при чтении
+            var localCachedTime = _cachedServerTime;
+            var localLastFetch = _lastSuccessfulFetch;
+
+            if (localCachedTime != DateTime.MinValue && (DateTime.Now - localLastFetch) < _cacheDuration)
+            {
+                TimeSpan elapsed = DateTime.Now - localLastFetch;
+                return localCachedTime.Add(elapsed);
+            }
+
+            // 2. Если кэш устарел, входим в секцию ожидания
+            await _asyncLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                // Double-Check: пока ждали, другой поток мог уже обновить кэш
+                if (_cachedServerTime != DateTime.MinValue && (DateTime.Now - _lastSuccessfulFetch) < _cacheDuration)
+                {
+                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+                    return _cachedServerTime.Add(elapsed);
+                }
+
+                // 3. Запускаем синхронный запрос к веб-сервису в фоновом потоке
+                // Используем Task.Run, чтобы не блокировать текущий поток
+                bool fetched = await Task.Run(() => TryFetchServerTime()).ConfigureAwait(false);
+
+                if (fetched)
+                {
+                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+                    return _cachedServerTime.Add(elapsed);
+                }
+
+                // 4. Если не удалось получить, возвращаем кэш (даже старый) или локальное время
+                if (_cachedServerTime != DateTime.MinValue)
+                {
+                    Console.WriteLine($"[TimeSync] Ошибка обновления, используем старый кэш");
+                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+                    return _cachedServerTime.Add(elapsed);
+                }
+
+                return DateTime.Now;
+            }
+            finally
+            {
+                _asyncLock.Release();
+            }
+        }
+
         public static void SetInitialTime(DateTime serverTime)
         {
             lock (_timeLock)
@@ -3942,41 +3996,27 @@ namespace Cash8Avalon
         //}
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public static int get_documents_not_out()
+        public static async Task<int> get_documents_not_out_async()
         {
             int result = 0;
-            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-
-            try
+            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
             {
-                conn.Open();
-                string query = "SELECT COUNT(*) FROM checks_header WHERE is_sent = 0";
-                NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                result = Convert.ToInt32(command.ExecuteScalar());
-                conn.Close();
-            }
-            catch (NpgsqlException)
-            {
-                result = -1;
-            }
-            catch (Exception)
-            {
-                result = -1;
-            }
-            finally
-            {
-                if (conn.State == ConnectionState.Open)
+                try
                 {
-                    conn.Close();
+                    await conn.OpenAsync(); // Асинхронное открытие
+                    string query = "SELECT COUNT(*) FROM checks_header WHERE is_sent = 0";
+                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                    {
+                        var res = await command.ExecuteScalarAsync(); // Асинхронный запрос
+                        result = Convert.ToInt32(res);
+                    }
+                }
+                catch
+                {
+                    result = -1;
                 }
             }
-
             return result;
-
         }
 
 
@@ -4031,25 +4071,34 @@ namespace Cash8Avalon
         //    return result;
         //}
 
-        public static int get_documents_out_of_the_range_of_dates()
+        public static async Task<int> get_documents_out_of_the_range_of_dates_async()
         {
             int result = 0;
 
-            DateTime serverTime = TimeSync.GetServerTime();
+            // 1. Получаем время.
+            // Если TimeSync.GetServerTime() делает HTTP/DB запрос, он тоже должен быть async.
+            // Если он синхронный, запускаем в фоне.
+            //DateTime serverTime = await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
+            // Было (блокирующее):
+            // DateTime serverTime = await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
 
-            // Проверяем, что время получено
+            // Стало (чисто асинхронное):
+            DateTime serverTime = await TimeSync.GetServerTimeAsync().ConfigureAwait(false);
+            //DateTime serverTime = DateTime.Now;// await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
+
             if (serverTime == DateTime.MinValue)
             {
                 return -1;
             }
 
+            // 2. Используем using и await
             using (var conn = MainStaticClass.NpgsqlConn())
             {
                 try
                 {
-                    conn.Open();
+                    // Асинхронное открытие
+                    await conn.OpenAsync().ConfigureAwait(false);
 
-                    // Используем серверное время для расчета границ
                     string query = "SELECT COUNT(*) FROM checks_header WHERE (date_time_write < @start_data OR date_time_write > @current_data) AND is_sent = 0";
 
                     using (var command = new NpgsqlCommand(query, conn))
@@ -4057,7 +4106,9 @@ namespace Cash8Avalon
                         command.Parameters.AddWithValue("@start_data", serverTime.AddDays(-31));
                         command.Parameters.AddWithValue("@current_data", serverTime.AddHours(2));
 
-                        result = Convert.ToInt32(command.ExecuteScalar());
+                        // Асинхронное выполнение
+                        var scalarResult = await command.ExecuteScalarAsync().ConfigureAwait(false);
+                        result = Convert.ToInt32(scalarResult);
                     }
 
                     return result;
@@ -4070,11 +4121,7 @@ namespace Cash8Avalon
                 {
                     return -2;
                 }
-                finally
-                {
-                    if (conn.State == ConnectionState.Open)
-                        conn.Close();
-                }
+                // conn.Close() не нужен, using делает Dispose, который закрывает соединение
             }
         }
 
