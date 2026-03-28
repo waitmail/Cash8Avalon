@@ -108,7 +108,7 @@ namespace Cash8Avalon
             try
             {
                 DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 15000;
+                ds.Timeout = 10000;
 
                 DateTime serverTime = ds.GetDateTimeServer();
 
@@ -260,11 +260,11 @@ namespace Cash8Avalon
         private static int included_piot = -1;
         private static string piot_url = "0";
 
-        // === ПОЛЯ ДЛЯ КЭШИРОВАНИЯ РАБОЧЕГО АДРЕСА ===
+        // === ПОЛЯ ДЛЯ КЭШИРОВАНИЯ ===
         private static string _lastWorkingServiceUrl = null;
         private static DateTime _lastWorkingUrlTimestamp = DateTime.MinValue;
         private static readonly object _urlLock = new object();
-        private static readonly TimeSpan URL_CACHE_DURATION = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan URL_CACHE_DURATION = TimeSpan.FromMinutes(15);
 
         //private static Dictionary<int, Cash8.ProductData> dictionaryProductData = new Dictionary<int, Cash8.ProductData>();
 
@@ -3792,6 +3792,14 @@ namespace Cash8Avalon
             return proxyObject;
         }
 
+        public static void ResetDsCache()
+        {
+            lock (_urlLock)
+            {
+                _lastWorkingServiceUrl = null;
+            }
+        }
+
 
         /// <summary>
         /// Создает объект DS, выбирая лучший доступный адрес из списка.
@@ -3800,51 +3808,40 @@ namespace Cash8Avalon
         {
             DS ds = new DS();
 
-            // 1. Проверяем кэш (может уже знаем рабочий адрес)
+            // 1. Проверяем кэш (Слепое доверие)
             lock (_urlLock)
             {
+                // Если адрес есть и он не протух (5 минут) - берем его сразу, НЕ проверяя пинг.
+                // Это убирает задержку в 1.5 сек на каждый вызов.
                 if (!string.IsNullOrWhiteSpace(_lastWorkingServiceUrl) &&
                     DateTime.Now - _lastWorkingUrlTimestamp < URL_CACHE_DURATION)
                 {
-                    try
-                    {
-                        // Быстрая проверка, жив ли еще кэшированный адрес
-                        if (IsUrlAccessibleAsync(_lastWorkingServiceUrl, 1000).GetAwaiter().GetResult())
-                        {
-                            ds.Url = _lastWorkingServiceUrl;
-                            return ds;
-                        }
-                    }
-                    catch
-                    {
-                        // Кэш протух, идем дальше
-                        _lastWorkingServiceUrl = null;
-                    }
+                    ds.Url = _lastWorkingServiceUrl;
+                    return ds;
                 }
             }
 
-            // 2. Получаем список всех адресов
-            List<string> urlsToTry = new List<string>(PathForWebService);
+            // Если мы здесь - кэша нет или он протух. Ищем адрес.
 
-            // Если список пуст, добавляем фолбэк
+            // 2. Получаем список адресов
+            List<string> urlsToTry = new List<string>(PathForWebService);
             if (urlsToTry.Count == 0)
             {
                 urlsToTry.Add("http://8.8.8.8/DiscountSystem/Ds.asmx");
             }
 
             // 3. Рандомизация (Load Balancing)
-            // Перемешиваем список, чтобы кассы не долбили первый адрес одновременно
             var shuffled = urlsToTry.OrderBy(x => Guid.NewGuid()).ToList();
 
-            // 4. Перебор и поиск живого
+            // 4. Перебор
             foreach (var url in shuffled)
             {
                 try
                 {
-                    // Проверяем доступность (HEAD/GET запрос)
-                    if (IsUrlAccessibleAsync(url, 1500).GetAwaiter().GetResult())
+                    // Синхронная проверка доступности (Надежно для Linux)
+                    // Таймаут 1500 мс
+                    if (IsUrlAccessible(url, 1500))
                     {
-                        // Успех! Сохраняем в кэш
                         lock (_urlLock)
                         {
                             _lastWorkingServiceUrl = url;
@@ -3858,54 +3855,63 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[WebService] ✗ Ошибка {url}: {ex.Message}");
+                    Console.WriteLine($"[WebService] ✗ Ошибка проверки {url}: {ex.Message}");
                 }
             }
 
-            // 5. Фолбэк: если ВСЕ недоступны
+            // 5. Фолбэк
             ds.Url = urlsToTry.FirstOrDefault();
-            Console.WriteLine($"[WebService] ⚠ Все адреса недоступны. Попытка использовать: {ds.Url}");
+            Console.WriteLine($"[WebService] ⚠ Все адреса недоступны. Фолбэк: {ds.Url}");
             return ds;
         }
 
         /// <summary>
-        /// Асинхронная проверка доступности URL
+        /// СИНХРОННАЯ проверка доступности URL для Linux и .NET 4.0+
+        /// Использует HttpWebRequest, который надежно обрабатывает таймауты.
         /// </summary>
-        private static async Task<bool> IsUrlAccessibleAsync(string url, int timeoutMs)
+        private static bool IsUrlAccessible(string url, int timeoutMs)
         {
+            HttpWebRequest request = null;
+            HttpWebResponse response = null;
+
             try
             {
-                // Игнорируем ошибки SSL
-                var handler = new System.Net.Http.HttpClientHandler();
-                handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
-                handler.AllowAutoRedirect = true;
+                request = (HttpWebRequest)WebRequest.Create(url);
+                request.Timeout = timeoutMs; // Строгий таймаут
+                request.Method = "HEAD"; // Самый легкий метод
+                request.AllowAutoRedirect = true;
+                request.ReadWriteTimeout = timeoutMs;
 
-                using (var client = new System.Net.Http.HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromMilliseconds(timeoutMs);
+                // Игнорируем ошибки SSL сертификатов (если нужно)
+                // В .NET 4.0/Standard это делается через делегат
+                request.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
 
-                    try
-                    {
-                        // Пробуем HEAD (быстро)
-                        var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, url);
-                        await client.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
-                        return true;
-                    }
-                    catch (System.Net.Http.HttpRequestException)
-                    {
-                        // Если HEAD не поддерживается, пробуем GET
-                        using (var fallbackClient = new System.Net.Http.HttpClient(handler))
-                        {
-                            fallbackClient.Timeout = TimeSpan.FromMilliseconds(timeoutMs);
-                            await fallbackClient.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
-                            return true;
-                        }
-                    }
-                }
+                // Выполняем запрос (блокирующий вызов, но с таймаутом)
+                response = (HttpWebResponse)request.GetResponse();
+
+                // Если дошли сюда - сервер ответил
+                return true;
             }
-            catch
+            catch (WebException ex)
+            {
+                // WebExceptionStatus.ProtocolError означает, что сервер ответил (например 404, 500).
+                // Это значит сервер ЖИВ, просто вернул ошибку. Для наших целей это успех.
+                if (ex.Status == WebExceptionStatus.ProtocolError)
+                {
+                    return true;
+                }
+
+                // Остальные ошибки (Timeout, ConnectFailure, NameResolutionFailure) - сервер недоступен
+                return false;
+            }
+            catch (Exception)
             {
                 return false;
+            }
+            finally
+            {
+                if (response != null)
+                    response.Close();
             }
         }
 
@@ -4095,6 +4101,58 @@ namespace Cash8Avalon
             return result;
         }
 
+        public static async Task MeasureWebServiceOverhead()
+        {
+            var ds = MainStaticClass.get_ds();
+            ds.Timeout = 30000;
+
+            // Замеряем локальное время с высокой точностью
+            var swTotal = System.Diagnostics.Stopwatch.StartNew();
+
+            // Запоминаем время отправки (UTC важно для синхронизации)
+            DateTime clientSendTime = DateTime.Now;
+
+            // Вызываем метод сервера
+            DateTime serverTime = ds.GetDateTimeServer();
+
+            // Запоминаем время приема
+            DateTime clientReceiveTime = DateTime.Now;
+            swTotal.Stop();
+
+            // Вычисляем
+            double roundTripMs = swTotal.Elapsed.TotalMilliseconds;
+
+            // Предполагаем симметричную задержку (туда и обратно одинаково)
+            double networkLatencyMs = roundTripMs / 2;
+
+            // Если часы синхронизированы, можем попробовать вычислить разницу (Skew)
+            TimeSpan clockDiff = clientSendTime - serverTime; // Грубая оценка разницы часов
+            double estimatedRequestTime = (serverTime - clientSendTime).TotalMilliseconds;
+            double estimatedResponseTime = (clientReceiveTime - serverTime).TotalMilliseconds;
+
+            // Если estimate отрицательные -> часы рассинхронизированы
+            string diagnosis = "Часы синхронизированы";
+            if (Math.Abs(estimatedRequestTime) > roundTripMs || estimatedRequestTime < 0)
+            {
+                diagnosis = "⚠ Часы клиента и сервера НЕ синхронизированы!";
+            }
+
+            string message = $"=== Замер производительности ===\n" +
+                             $"Общее время (RTT): {roundTripMs:F0} мс\n" +
+                             $"Пинг (ICMP): ~2 мс\n" +
+                             $"Накладные расходы (XML+HTTP+TLS): ~{roundTripMs - 2:F0} мс\n" +
+                             $"------------------------------\n" +
+                             $"Время 'Туда' (оценка): {estimatedRequestTime:F0} мс\n" +
+                             $"Время 'Обратно' (оценка): {estimatedResponseTime:F0} мс\n" +
+                             $"------------------------------\n" +
+                             $"{diagnosis}";
+
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await MessageBoxHelper.Show(message, "Диагностика WS", MessageBoxButton.OK, MessageBoxType.Info, MainStaticClass.MainWindow);
+            });
+        }
+
         public static bool service_is_worker()
         {
             bool result = true;
@@ -4113,6 +4171,9 @@ namespace Cash8Avalon
 
             return result;
         }
+
+
+
 
         // Backing field для хранения списка адресов
         private static string[] _pathForWebServiceUrls = null;
@@ -5757,15 +5818,33 @@ namespace Cash8Avalon
         }
 
 
-        public static bool CheckNewVersionProgramm()
+        public static async Task<bool> CheckNewVersionProgramm()
         {
             bool result = false;
+            // Создаем и запускаем секундомер
+            var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            if (!MainStaticClass.service_is_worker())
+            // Выполняем проверку
+            bool isWorker = MainStaticClass.service_is_worker();
+
+            // Останавливаем секундомер
+            sw.Stop();
+
+            // Выводим результат
+            //await MessageBoxHelper.Show(
+            //    $"Проверка service_is_worker заняла: {sw.Elapsed.TotalMilliseconds:F2} мс\nРезультат: {isWorker}",
+            //    "Замер времени",
+            //    MessageBoxButton.OK,
+            //    MessageBoxType.Info,
+            //    MainStaticClass.MainWindow
+            //);
+
+            // Возвращаем результат как в оригинале
+            if (!isWorker)
                 return false;
 
             var ds = MainStaticClass.get_ds();
-            ds.Timeout = 100000;
+            ds.Timeout = 20000;
 
             string nick_shop = MainStaticClass.Nick_Shop.Trim();
             string code_shop = MainStaticClass.Code_Shop.Trim();

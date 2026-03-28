@@ -1473,7 +1473,7 @@ namespace Cash8Avalon
         /// <summary>
         /// Получение статуса отправки документов
         /// </summary>
-        private void GetStatusSendDocument()
+        private async void GetStatusSendDocument()
         {
             try
             {
@@ -1532,7 +1532,7 @@ namespace Cash8Avalon
                 });
 
                 // ✅ Проверка версии — тоже с защитой
-                bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
+                bool hasNewVersion = await MainStaticClass.CheckNewVersionProgramm();
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
@@ -1571,41 +1571,41 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Проверка наличия новой версии программы
-        /// </summary>
-        private void CheckNewVersion()
-        {
-            try
-            {
-                bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
+        ///// <summary>
+        ///// Проверка наличия новой версии программы
+        ///// </summary>
+        //private void CheckNewVersion()
+        //{
+        //    try
+        //    {
+        //        bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
 
-                Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
-                        if (pictureBox != null)
-                        {
-                            pictureBox.IsVisible = hasNewVersion;
+        //        Dispatcher.UIThread.InvokeAsync(() =>
+        //        {
+        //            try
+        //            {
+        //                var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
+        //                if (pictureBox != null)
+        //                {
+        //                    pictureBox.IsVisible = hasNewVersion;
 
-                            if (hasNewVersion)
-                            {
-                                Console.WriteLine("✓ Обнаружена новая версия программы");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"✗ Ошибка при обновлении UI: {ex.Message}");
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
-            }
-        }
+        //                    if (hasNewVersion)
+        //                    {
+        //                        Console.WriteLine("✓ Обнаружена новая версия программы");
+        //                    }
+        //                }
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Console.WriteLine($"✗ Ошибка при обновлении UI: {ex.Message}");
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
+        //    }
+        //}
 
         /// <summary>
         /// Инициализация таймера для обновления статуса

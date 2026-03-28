@@ -718,13 +718,13 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Проверка активности сертификата (упрощенная версия)
+        /// Проверка активности сертификата
         /// </summary>
         private async Task<bool> CheckSertificateActive(string sertificateCode)
         {
             try
             {
-                // 1. Подготовка данных
+                // 1. Подготовка данных (это быстро, можно в UI потоке)
                 string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
                 if (string.IsNullOrEmpty(nickShop))
                 {
@@ -743,21 +743,21 @@ namespace Cash8Avalon
                 string key = nickShop.Trim() + countDay.Trim() + codeShop.Trim();
                 string encryptData = CryptorEngine.Encrypt(sertificateCode, true, key);
 
-                // 2. Настройка и вызов сервиса
-                DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 10000; // Таймаут 10 секунд на уровне веб-сервиса
-
+                // 2. Получение DS и вызов сервиса (это долго, выносим в Task.Run)
                 string status;
                 try
                 {
-                    // Выполняем запрос в фоновом потоке, чтобы не морозить UI
+                    // ВАЖНО: Весь код получения DS и вызова сервиса выполняем в фоновом потоке
                     status = await Task.Run(() =>
-                        ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString())
-                    );
+                    {
+                        // get_ds() сам проверит адреса и найдет рабочий, это может занять время
+                        DS ds = MainStaticClass.get_ds();
+                        ds.Timeout = 10000; // Таймаут 10 секунд
+                        return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString());
+                    });
                 }
                 catch (Exception ex)
                 {
-                    // Обработка ошибок сети/таймаута самого сервиса
                     await MessageBox.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
                         "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
 
@@ -765,7 +765,7 @@ namespace Cash8Avalon
                     return false;
                 }
 
-                // 3. Обработка результата
+                // 3. Обработка результата (возвращаемся в UI поток автоматически через await)
                 if (status == "-1")
                 {
                     await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
@@ -781,7 +781,6 @@ namespace Cash8Avalon
                 switch (decryptData)
                 {
                     case "1":
-                        // Все отлично, сертификат активен
                         MainStaticClass.write_event_in_log($"Успешная проверка сертификата {sertificateCode}", "Документ чек", "0");
                         return true;
 
@@ -794,15 +793,14 @@ namespace Cash8Avalon
 
                     default:
                         await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
-                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error,this);
+                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
                         return false;
                 }
             }
             catch (Exception ex)
             {
-                // Глобальный перехват непредвиденных ошибок
                 MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
-                await MessageBox.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
+                await MessageBox.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return false;
             }
         }

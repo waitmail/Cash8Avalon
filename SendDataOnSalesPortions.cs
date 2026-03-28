@@ -740,9 +740,34 @@ namespace Cash8Avalon
             {
                 return;
             }
-            //gaa
-            if (!its_sent_sertificate()) //не удалось отправить данные по сертификатам, отправка основных данных прервана 
+
+            // ✅ ИСПРАВЛЕНИЕ: Оборачиваем отправку сертификатов в try-catch
+            try
             {
+                //gaa
+                if (!its_sent_sertificate()) //не удалось отправить данные по сертификатам, отправка основных данных прервана 
+                {
+                    return;
+                }
+            }
+            catch (System.Net.WebException ex)
+            {
+                // Если таймаут или сервер недоступен при отправке сертификатов
+                if (ex.Status == System.Net.WebExceptionStatus.Timeout ||
+                    ex.Status == System.Net.WebExceptionStatus.ConnectFailure)
+                {
+                    Console.WriteLine($"[WebService] Ошибка сети при отправке сертификатов ({ex.Status})! Сброс кэша...");
+                    MainStaticClass.ResetDsCache();
+                }
+                else
+                {
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "its_sent_sertificate (WebException)");
+                }
+                return; // Прерываем выполнение, так как сертификаты не ушли
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "its_sent_sertificate (General)");
                 return;
             }
 
@@ -764,7 +789,7 @@ namespace Cash8Avalon
             salesPortions.Version = MainStaticClass.version().Replace(".", "");
 
             get_data_on_sales();
-            //check_sum_header_and_table();
+
             if (were_mistakes)//Произошли какие то ошибки при выгрузке
             {
                 return;
@@ -782,108 +807,45 @@ namespace Cash8Avalon
             DS ds = MainStaticClass.get_ds();
             ds.Timeout = 20000;
 
-            ////Получить параметра для запроса на сервер 
-            //nick_shop = MainStaticClass.Nick_Shop.Trim();
-            //if (nick_shop.Trim().Length == 0)
-            //{
-            //    return;
-            //}
-            //string code_shop = MainStaticClass.Code_Shop.Trim();
-            //if (code_shop.Trim().Length == 0)
-            //{
-            //    return;
-            //}
             string count_day = CryptorEngine.get_count_day();
-            //salesPortions = new SalesPortions();
-            //salesPortions.Shop = nick_shop;
-            //salesPortions.Guid = code_shop;
-            //salesPortions.Version = MainStaticClass.version().Replace(".", "");
-            //if (dt == null)
-            //{
-            //    dt = new DataTable();
 
-            //    DataColumn guid = new DataColumn();
-            //    guid.DataType = System.Type.GetType("System.String");
-            //    guid.ColumnName = "guid";
-            //    dt.Columns.Add(guid);
-
-            //    DataColumn sum_header = new DataColumn();
-            //    sum_header.DataType = System.Type.GetType("System.Double");
-            //    sum_header.ColumnName = "sum_header";
-            //    dt.Columns.Add(sum_header);
-
-            //    DataColumn sum_table = new DataColumn();
-            //    sum_table.DataType = System.Type.GetType("System.Double");
-            //    sum_table.ColumnName = "sum_table";
-            //    dt.Columns.Add(sum_table);
-            //}
-            //else
-            //{
-            //    dt.Rows.Clear();
-            //}
-
-            //get_data_on_sales();
-            ////check_sum_header_and_table();
-            //if (were_mistakes)//Произошли какие то ошибки при выгрузке
-            //{
-            //    return;
-            //}
-            //if ((salesPortions.ListSalesPortionsHeader.Count == 0) || (salesPortions.ListSalesPortionsTable.Count == 0))
-            //{
-            //    return;
-            //}
             string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
             bool result_web_quey = false;
             string data = JsonConvert.SerializeObject(salesPortions, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             string data_crypt = CryptorEngine.Encrypt(data, true, key);
+
+            // ✅ Здесь всё было верно и осталось без изменений
             try
             {
                 result_web_quey = ds.UploadDataOnSalesPortionJasonAvalon(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString());
             }
+            catch (System.Net.WebException ex)
+            {
+                // Если таймаут или сервер недоступен - сбрасываем кэш, чтобы в следующий раз поискать другой адрес
+                if (ex.Status == System.Net.WebExceptionStatus.Timeout ||
+                    ex.Status == System.Net.WebExceptionStatus.ConnectFailure)
+                {
+                    Console.WriteLine($"[WebService] Ошибка сети ({ex.Status})! Сброс кэша адресов...");
+                    MainStaticClass.ResetDsCache();
+                }
+                else
+                {
+                    // Другие сетевые ошибки тоже логируем
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "send_sales_data_Click (WebException)");
+                }
+            }
+            // 2. Ловим остальные ошибки (JSON, БД при записи и т.д.)
             catch (Exception ex)
             {
-                write_error(ex.Message);
+                // Кэш веб-сервиса НЕ сбрасываем, так как проблема скорее всего не в сети
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "send_sales_data_Click");
             }
 
             if (result_web_quey)
             {
-                update_status_is_sent();                
+                update_status_is_sent();
                 MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
             }
-        }
-
-        private void write_error(string error)
-        {
-            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-            try
-            {
-                conn.Open();
-                string query = "INSERT INTO errors_on_send_portions(" +
-                    "time_event," +
-                    "errors_text," +
-                    ")VALUES('" +
-                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "','" +
-                    error + "')";
-                NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                command.ExecuteNonQuery();
-                conn.Close();
-            }
-            catch
-            {
-
-            }
-            finally
-            {
-                if (conn.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                }
-            }
-        }
-
-        //private void _close__Click(object sender, EventArgs e)
-        //{
-        //    this.Close();
-        //}
+        }       
     }
 }
