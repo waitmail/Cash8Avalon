@@ -353,43 +353,84 @@ public partial class FPTK22 : Window
 
     private async void btn_query_summary_report_Click(object sender, RoutedEventArgs e)
     {
-        string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
-        string _str_command_ = @"<?xml version=""1.0"" encoding=""utf-8""?><request><field id=""25"">63</field><field id=""27"">id_terminal</field><field id=""65"">20</field></request>";
-        _str_command_ = _str_command_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
-        recharge_note = "";
-        AnswerTerminal answerTerminal = new AnswerTerminal();
-        answerTerminal = send_command_acquiring_terminal(url, _str_command_);
-        if (answerTerminal.IsSuccess)
+        if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
         {
-            if (recharge_note != "")
+            string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
+            string _str_command_ = @"<?xml version=""1.0"" encoding=""utf-8""?><request><field id=""25"">63</field><field id=""27"">id_terminal</field><field id=""65"">20</field></request>";
+            _str_command_ = _str_command_.Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
+            recharge_note = "";
+            AnswerTerminal answerTerminal = new AnswerTerminal();
+            answerTerminal = send_command_acquiring_terminal(url, _str_command_);
+            if (answerTerminal.IsSuccess)
             {
-                IFptr fptr = MainStaticClass.FPTR;
-                if (!fptr.isOpened())
+                if (recharge_note != "")
                 {
-                    fptr.open();
+                    IFptr fptr = MainStaticClass.FPTR;
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
+                    fptr.beginNonfiscalDocument();
+                    string s = recharge_note.Replace("0xDF^^", "");
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                    fptr.printText();
+                    fptr.endNonfiscalDocument();
+                    recharge_note = "";
                 }
-                fptr.beginNonfiscalDocument();
-                string s = recharge_note.Replace("0xDF^^", "");
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
-                fptr.printText();
-                fptr.endNonfiscalDocument();
-                recharge_note = "";
+            }
+            else
+            {
+                string errorMsg = !string.IsNullOrEmpty(answerTerminal.ErrorMessage)
+                    ? answerTerminal.ErrorMessage
+                    : "Произошла неизвестная ошибка";
+
+                await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции", this);
             }
         }
-        else
+        else if (MainStaticClass.GetAcquiringBank == 2) //СБЕР
         {
-            string errorMsg = !string.IsNullOrEmpty(answerTerminal.ErrorMessage)
-                ? answerTerminal.ErrorMessage
-                : "Произошла неизвестная ошибка";
+            try
+            {
+                var sberService = new SberPaymentService();
+                var result = await sberService.GetShortReportAsync();
 
-            await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции",this);
+                if (result.IsSuccess && !string.IsNullOrEmpty(result.SlipContent))
+                {
+                    string s = Regex.Replace(result.SlipContent, @"~S\u0001", "").Trim();
+                    IFptr fptr = MainStaticClass.FPTR;
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
+                    fptr.beginNonfiscalDocument();
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                    fptr.printText();
+                    fptr.endNonfiscalDocument();
+                }
+                else
+                {
+                    // Если пилот не смог напечатать отчет (например, нет несверенных операций или ошибка связи)
+                    string errorMsg = !string.IsNullOrEmpty(result.ErrorMessage)
+                        ? result.ErrorMessage
+                        : "Произошла неизвестная ошибка при получении полного отчета";
+
+                    await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибки при полном отчете  " + ex.Message);
+            }
+
         }
     }
 
     private async void btn_query_full_report_Click(object sender, RoutedEventArgs e)
     {
-        if (MainStaticClass.GetAcquiringBank == 1)
+        if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
         {
             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
             string _str_command_ = @"<?xml version=""1.0"" encoding=""utf-8""?><request><field id=""25"">63</field><field id=""27"">id_terminal</field><field id=""65"">21</field></request>";
@@ -424,9 +465,42 @@ public partial class FPTK22 : Window
                 await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции", this);
             }
         }
-        else if (MainStaticClass.GetAcquiringBank == 2)
+        else if (MainStaticClass.GetAcquiringBank == 2) //СБЕР
         {
-            await MessageBox.Show("Сбербанк пока что не работает ","Проверка заглушки",this);
+            try
+            {
+                var sberService = new SberPaymentService();
+                var result = await sberService.GetFullReportAsync();
+
+                if (result.IsSuccess && !string.IsNullOrEmpty(result.SlipContent))
+                {
+                    string s = Regex.Replace(result.SlipContent, @"~S\u0001", "").Trim();
+                    IFptr fptr = MainStaticClass.FPTR;
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
+                    fptr.beginNonfiscalDocument();
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                    fptr.printText();
+                    fptr.endNonfiscalDocument();
+                }
+                else
+                {
+                    // Если пилот не смог напечатать отчет (например, нет несверенных операций или ошибка связи)
+                    string errorMsg = !string.IsNullOrEmpty(result.ErrorMessage)
+                        ? result.ErrorMessage
+                        : "Произошла неизвестная ошибка при получении полного отчета";
+
+                    await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибки при полном отчете  " + ex.Message);
+            }
         }
         else
         {
@@ -436,7 +510,7 @@ public partial class FPTK22 : Window
 
     private async void btn_reconciliation_of_totals_Click(object sender, RoutedEventArgs e)
     {
-        if (MainStaticClass.GetAcquiringBank == 1)
+        if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
         {
             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
             string _str_command_ = @"<?xml version=""1.0"" encoding=""utf-8""?><request><field id=""25"">59</field><field id=""27"">id_terminal</field></request>";
@@ -471,9 +545,48 @@ public partial class FPTK22 : Window
                 await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции", this);
             }
         }
-        else if (MainStaticClass.GetAcquiringBank == 2)
+        else if (MainStaticClass.GetAcquiringBank == 2)//Сбер
         {
-            await MessageBox.Show("Сбербанк пока что не работает ");
+            try
+            {
+                var sberService = new SberPaymentService();
+                var result = await sberService.CloseShiftAsync();
+
+                if (result.IsSuccess)
+                {
+                    // 1. Очищаем строку ТОЧНО так же, как это делалось в старой программе
+                    string s = Regex.Replace(result.SlipContent, @"~S\u0001", "").Trim();
+
+                    IFptr fptr = MainStaticClass.FPTR;
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
+
+                    fptr.beginNonfiscalDocument();
+
+                    // 2. Устанавливаем параметры печати в точности по старому шаблону
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DEFER, AtolConstants.LIBFPTR_DEFER_POST);
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_ALIGNMENT, AtolConstants.LIBFPTR_ALIGNMENT_CENTER);
+                    fptr.printText();
+                    fptr.endNonfiscalDocument();
+                }
+                else
+                {
+                    // Если Сбербанк вернул ошибку (result.IsSuccess == false)
+                    string errorMsg = !string.IsNullOrEmpty(result.ErrorMessage)
+                        ? result.ErrorMessage
+                        : "Произошла неизвестная ошибка при сверке итогов Сбербанка";
+
+                    await MessageBox.Show($"Ошибка: {errorMsg}", "Ошибка операции", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Обработка исключений в точности как в старом коде
+                MessageBox.Show("Ошибки при сверке итогов " + ex.Message);
+            }
         }
         else
         {

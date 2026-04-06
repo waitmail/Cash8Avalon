@@ -244,6 +244,10 @@ namespace Cash8Avalon
                 // Если окно НЕ активно (свёрнуто или в фоне) — не мешаем системе
                 if (!this.IsActive) return;
 
+                // === НОВАЯ ПРОВЕРКА: Отключаем для возвратов и коррекций ===
+                if (CheckType != null && CheckType.SelectedIndex != 0)
+                    return;
+
                 // 2. Проверяем, где сейчас фокус
 
                 // Если фокус на таблице товаров — ОТЛИЧНО! Ничего не делаем, даем работать +/-
@@ -2978,46 +2982,119 @@ namespace Cash8Avalon
         /// <param name="e"></param>
         public async void sale_cancellation_Click(string cash_money, string non_cash_money)
         {
-            if (_productsData.Count == 0)
+            try
             {
-                await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
-                return;
-            }
+                if (_productsData.Count == 0)
+                {
+                    await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
+                    return;
+                }
 
-            if (MainStaticClass.Use_Fiscall_Print)
+                if (MainStaticClass.Use_Fiscall_Print)
+                {
+                    fiscall_print_disburse(cash_money, non_cash_money);
+                }
+            }
+            catch (Exception ex)
             {
-                fiscall_print_disburse(cash_money, non_cash_money);
+                Console.WriteLine($"✗ Ошибка в sale_cancellation_Click: {ex.Message}");
+                // Если произошла ошибка до вызова печати, нужно разблокировать интерфейс
+                try { this.Close(); } catch { }
             }
         }
+        //public async void sale_cancellation_Click(string cash_money, string non_cash_money)
+        //{
+        //    if (_productsData.Count == 0)
+        //    {
+        //        await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
+        //        return;
+        //    }
+
+        //    if (MainStaticClass.Use_Fiscall_Print)
+        //    {
+        //        fiscall_print_disburse(cash_money, non_cash_money);
+        //    }
+        //}
+
+        //private async void fiscall_print_disburse(string cash_money, string non_cash_money)
+        //{           
+        //    if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+        //    {
+        //        string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+        //        if (IsNewCheck)
+        //        {
+        //            await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+        //        }
+        //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+        //        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+        //        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+        //        this.Close();
+        //    }
+        //    else
+        //    {              
+        //        string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+        //        if (IsNewCheck)
+        //        {
+        //            await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+        //        }
+
+        //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+        //        await printingUsingLibraries.print_sell_2_or_return_sell(this);                
+        //        this.Close();                
+        //    }
+        //}
 
         private async void fiscall_print_disburse(string cash_money, string non_cash_money)
-        {           
-            if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+        {
+            try
             {
-                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
-                if (IsNewCheck)
+                if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
                 {
-                    await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                    string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                    if (IsNewCheck)
+                    {
+                        await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                    }
+                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+
+                    // Безопасное закрытие окна
+                    this.Close();
                 }
-                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
-                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
-                this.Close();
+                else
+                {
+                    string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                    if (IsNewCheck)
+                    {
+                        await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                    }
+                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                    await printingUsingLibraries.print_sell_2_or_return_sell(this);
+
+                    // Безопасное закрытие окна
+                    this.Close();
+                }
             }
-            else
-            {              
-                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
-                if (IsNewCheck)
+            catch (Exception ex)
+            {
+                // Ловим ошибку, чтобы не уронить программу
+                Console.WriteLine($"✗ КРИТИЧЕСКАЯ ОШИБКА в fiscall_print_disburse: {ex.Message}");
+
+                // Пытаемся показать сообщение, если окно еще живо
+                if (!_isDisposed && this.IsVisible)
                 {
-                    await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}",
+                            "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    });
                 }
-                
-                PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                await printingUsingLibraries.print_sell_2_or_return_sell(this);                
-                this.Close();                
+
+                // Все равно пытаемся закрыть окно чека, чтобы разблокировать интерфейс
+                try { this.Close(); } catch { }
             }
         }
-
 
         public async Task<bool> it_is_paid(string pay, string sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
         {
@@ -3151,7 +3228,7 @@ namespace Cash8Avalon
                 foreach (var product in _productsData)
                 {
                     // Проверка длины маркировки (> 13 символов)
-                    if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 13)
+                    if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 14)
                     {
                         sum_print += (double)product.Sum;
                     }
@@ -4035,7 +4112,7 @@ namespace Cash8Avalon
                 // 3. Основная логика
                 int length = search_param.Length;
 
-                if (length > 13) // Это может быть код маркировки
+                if (length > 14) // Это может быть код маркировки
                 {
                     // Очищаем код от служебных символов сканера
                     search_param = CleanQrCodeString(search_param);
@@ -5574,6 +5651,11 @@ namespace Cash8Avalon
                     // Делаем CheckType недоступным
                     CheckType.IsEnabled = false;
                     Console.WriteLine("✓ CheckType отключен (IsEnabled = false)");
+
+                    // === ДОБАВИТЬ ЭТО: ОСТАНАВЛИВАЕМ ТАЙМЕР ФОКУСА ===
+                    StopFocusKeeper();
+                    Console.WriteLine("✓ Таймер фокуса остановлен (режим возврата/коррекции)");
+
                     if (IsNewCheck)
                     {
                         // Делаем NumSales видимым
@@ -7370,7 +7452,7 @@ namespace Cash8Avalon
 
                         // 6. Удаляем товар из данных
                         bool reloadKM = false;
-                        if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 13)
+                        if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 14)
                         {
                             reloadKM = true;
                         }
@@ -9945,7 +10027,7 @@ namespace Cash8Avalon
 
                 foreach (ProductItem productItem in _productsData)
                 {
-                    if (productItem.Mark.Trim().Length > 13)
+                    if (productItem.Mark.Trim().Length > 14)
                     {
                         _checkBox_to_print_repeatedly_p_ = 1;//Здесь путаница, печатать не маркировку 
                     }

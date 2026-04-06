@@ -35,12 +35,60 @@ namespace Cash8Avalon
         /// <summary>
         /// Запуск оплаты или возврата через sb_pilot
         /// </summary>
-        /// <param name="amountInKopecks">Сумма в копейках</param>
-        /// <param name="command">1=Оплата, 3=Возврат</param>
-        /// <param name="rrn">RRN исходной транзакции (для возврата)</param>
-        /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns></returns>
         public async Task<PaymentResult> PayAsync(int amountInKopecks, int command = 1, string rrn = null, CancellationToken cancellationToken = default)
+        {
+            string args = $"{command} {amountInKopecks} 0";
+            if (!string.IsNullOrEmpty(rrn))
+            {
+                args += $" QSELECT {rrn.Trim()}";
+            }
+
+            return await ExecuteCommandAsync(args, cancellationToken);
+        }
+
+        /// <summary>
+        /// Печать краткого отчета (Контрольная лента). Команда 9, тип 0 (краткий)
+        /// </summary>
+        public async Task<PaymentResult> GetShortReportAsync(CancellationToken cancellationToken = default)
+        {
+            // По документации: 9 0 0 (9 - команда, 0 - обязательный параметр, 0 - краткий отчет)
+            string args = "9 0 0";
+
+            MainStaticClass.write_event_in_log($"Запуск краткого отчета: {args}", "Terminal", "0");
+
+            return await ExecuteCommandAsync(args, cancellationToken);
+        }
+
+        /// <summary>
+        /// Печать полного отчета (Контрольная лента). Команда 9, тип 1 (полный)
+        /// </summary>
+        public async Task<PaymentResult> GetFullReportAsync(CancellationToken cancellationToken = default)
+        {
+            // По документации: 9 0 1 (9 - команда, 0 - обязательный параметр, 1 - полный отчет)
+            string args = "9 0 1";
+
+            MainStaticClass.write_event_in_log($"Запуск полного отчета: {args}", "Terminal", "0");
+
+            return await ExecuteCommandAsync(args, cancellationToken);
+        }
+
+        /// <summary>
+        /// Сверка итогов / Закрытие дня (Аналог старого CloseDay). Команда 7 без параметров.
+        /// </summary>
+        public async Task<PaymentResult> CloseShiftAsync(CancellationToken cancellationToken = default)
+        {
+            // Строго как было в старой программе - просто "7"
+            string args = "7";
+
+            MainStaticClass.write_event_in_log($"Запуск сверки итогов (CloseDay): {args}", "Terminal", "0");
+
+            return await ExecuteCommandAsync(args, cancellationToken);
+        }
+
+        /// <summary>
+        /// Общий метод для выполнения любой команды sb_pilot
+        /// </summary>
+        private async Task<PaymentResult> ExecuteCommandAsync(string args, CancellationToken cancellationToken)
         {
             var result = new PaymentResult();
 
@@ -68,18 +116,6 @@ namespace Cash8Avalon
             Process process = null;
             try
             {
-                // ======================================================
-                // ФОРМИРОВАНИЕ АРГУМЕНТОВ
-                // ======================================================
-                string args = $"{command} {amountInKopecks} 0";
-                if (!string.IsNullOrEmpty(rrn))
-                {
-                    args += $" QSELECT {rrn.Trim()}";
-                }
-
-                // ======================================================
-                // НАСТРОЙКА ПРОЦЕССА
-                // ======================================================
                 var startInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = _sberPath,
@@ -87,20 +123,13 @@ namespace Cash8Avalon
                     WindowStyle = ProcessWindowStyle.Hidden
                 };
 
-                // === СПЕЦИАЛЬНАЯ ЛОГИКА ДЛЯ LINUX ===
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    // Запуск через x-terminal-emulator
-                    // --minimize пытается свернуть окно, -e выполняет команду
                     startInfo.FileName = "x-terminal-emulator";
                     startInfo.Arguments = $"--minimize -e \"{exeFullPath} {args}\"";
-
-                    // НЕ перенаправляем потоки, так как процесс запущен в отдельном терминале
                     startInfo.CreateNoWindow = true;
                     startInfo.RedirectStandardOutput = false;
                     startInfo.RedirectStandardError = false;
-
-                    //MainStaticClass.write_event_in_log($"Linux Run (Terminal): {startInfo.FileName} {startInfo.Arguments}", "Terminal", "0");
                 }
                 else // WINDOWS
                 {
@@ -118,28 +147,18 @@ namespace Cash8Avalon
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    // В Linux терминал может работать в отдельном процессе.
-                    // Мы ждем появления файла результата, так как сам процесс x-terminal-emulator может завершиться быстро
-                    // или работать независимо.
-
-                    // Таймаут ожидания (например, 2 минуты)
                     int timeoutMs = 120000;
                     int elapsed = 0;
 
                     while (!File.Exists(fileE) && elapsed < timeoutMs)
                     {
-                        // Проверяем отмену операции
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
+                        if (cancellationToken.IsCancellationRequested) break;
                         await Task.Delay(500, cancellationToken);
                         elapsed += 500;
                     }
                 }
                 else
                 {
-                    // Windows стандартное ожидание
                     var stdOutTask = process.StandardOutput.ReadToEndAsync();
                     var stdErrTask = process.StandardError.ReadToEndAsync();
                     await process.WaitForExitAsync(cancellationToken);
@@ -153,11 +172,7 @@ namespace Cash8Avalon
                     result.ExitCode = process.ExitCode;
                 }
 
-                // ======================================================
-                // ОБРАБОТКА РЕЗУЛЬТАТА
-                // ======================================================
-
-                // Небольшая пауза перед проверкой файла (на случай задержки записи)
+                // Пауза перед чтением файла
                 if (!File.Exists(fileE))
                 {
                     await Task.Delay(200);
@@ -234,10 +249,9 @@ namespace Cash8Avalon
                         result.IsSuccess = true;
                         result.ErrorMessage = parts.Length > 1 ? parts[1].Trim() : "Успешно";
 
-                        // Парсинг данных согласно спецификации файла 'e'
                         if (lines.Length > 3) result.AuthorizationCode = lines[3].Trim();
                         if (lines.Length > 7) result.TerminalId = lines[7].Trim();
-                        if (lines.Length > 9) result.ReferenceNumber = lines[9].Trim(); // RRN
+                        if (lines.Length > 9) result.ReferenceNumber = lines[9].Trim();
                     }
                     else
                     {
@@ -270,18 +284,18 @@ namespace Cash8Avalon
         }
     }
 
-    // Класс-модель для возврата результата
     public class PaymentResult
     {
         public bool IsSuccess { get; set; }
         public string ErrorMessage { get; set; }
         public int ErrorCode { get; set; }
         public int ExitCode { get; set; }
-        public string SlipContent { get; set; } // Содержимое файла 'p'
 
-        // Данные из файла 'e'
-        public string AuthorizationCode { get; set; } // Строка 4 (индекс 3)
-        public string TerminalId { get; set; }        // Строка 8 (индекс 7)
-        public string ReferenceNumber { get; set; }   // Строка 10 (индекс 9) -> Это RRN для возврата
+        // При сверке итогов здесь будет текст Z-отчета (контрольной ленты)
+        public string SlipContent { get; set; }
+
+        public string AuthorizationCode { get; set; }
+        public string TerminalId { get; set; }
+        public string ReferenceNumber { get; set; }
     }
 }

@@ -394,93 +394,215 @@ namespace Cash8Avalon
             return true;
         }
 
+        //private async void button2_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (!this.button_pay.IsEnabled) return;
+        //    if (!await copFilledCorrectly()) { CalculateChange(); return; }
+
+        //    // Вспомогательная функция ТОЛЬКО для строк из TextBox
+        //    double ParseUiText(string text)
+        //    {
+        //        if (string.IsNullOrWhiteSpace(text)) return 0.0;
+        //        // Пробуем распарсить как есть (с учетом текущей культуры системы)
+        //        if (double.TryParse(text, out double res)) return res;
+        //        // Если не вышло, пробуем инвариантную культуру (точки)
+        //        if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
+        //        return 0.0;
+        //    }
+
+        //    // 1. Числа из TextBox парсим через функцию
+        //    double cash_money = Math.Round(ParseUiText(txtB_cash_sum.Text), 2);
+        //    double sertificate_money = Math.Round(ParseUiText(sertificates_sum.Text), 2);
+        //    double bonus_money = Math.Round(ParseUiText(pay_bonus_many.Text), 2);
+        //    double sum_on_document = Math.Round(ParseUiText(pay_sum.Text), 2);
+
+        //    // 2. Числа из методов берем напрямую (они уже double)
+        //    double non_cash_money = Math.Round(get_non_cash_sum(), 2);
+
+        //    double all_cash_non_cash = cash_money + non_cash_money + sertificate_money + bonus_money;
+
+        //    if (Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2) < 0)
+        //    {
+        //        await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        return;
+        //    }
+
+        //    TextBox Remainder = this.FindControl<TextBox>("remainder");
+        //    double remainderVal = ParseUiText(Remainder?.Text);
+
+        //    if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
+        //    {
+        //        await MessageBoxHelper.Show(" Сумма возврата должна быть равно сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        return;
+        //    }
+
+        //    if (bonus_money != 0) bonus_on_document.Text = "0";
+
+        //    if (bonus_money > 0)
+        //    {
+        //        if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
+        //        {
+        //            await MessageBoxHelper.Show("Сумма сертификатов + сумма по карте оплаты + сумма по бонусам превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            return;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        if (non_cash_money + sertificate_money > sum_on_document)
+        //        {
+        //            await MessageBoxHelper.Show(" Сумма сертификатов + сумма по карте оплаты превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            return;
+        //        }
+        //    }
+
+        //    cc.SetCertificatesFromPay(_certificatesList);
+        //    MainStaticClass.write_event_in_log("Окно оплаты перед записью и закрытием документа ", "Документ чек", cc.numdoc.ToString());
+
+        //    Double _cash_summ_ = cash_money - remainderVal;
+        //    Double _non_cash_summ_ = non_cash_money;
+        //    Double _sertificates_sum_ = sertificate_money;
+        //    Double _pay_bonus_many_ = bonus_money;
+
+        //    // decimal приводим к double
+        //    Double sum_of_the_document = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
+
+        //    if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
+        //    {
+        //        if (Math.Round(sum_of_the_document, 2) != Math.Round((_cash_summ_ + _non_cash_summ_ + _sertificates_sum_ + _pay_bonus_many_), 2))
+        //        {
+        //            await MessageBoxHelper.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            return;
+        //        }
+        //    }
+
+        //    if (cc.check_type.SelectedIndex == 1)
+        //    {
+        //        if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, _cash_summ_, _non_cash_summ_)) return;
+        //    }
+
+        //    await it_is_paid();
+        //}
+
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
-            if (!this.button_pay.IsEnabled) return;
-            if (!await copFilledCorrectly()) { CalculateChange(); return; }
+            // ==========================================
+            // 1. ГЛАВНАЯ ЗАЩИТА ОТ ПАДЕНИЯ (CRITICAL FIX)
+            // ==========================================
+            try
+            {
+                if (!this.button_pay.IsEnabled) return;
 
-            // Вспомогательная функция ТОЛЬКО для строк из TextBox
-            double ParseUiText(string text)
+                // Проверка ввода копеек
+                if (!await copFilledCorrectly()) { CalculateChange(); return; }
+
+                // 2. Проверки бизнес-логики (вынесены в отдельный метод)
+                if (!await ValidateInputs()) return;
+
+                // 3. Подготовка данных
+                cc.SetCertificatesFromPay(_certificatesList);
+                MainStaticClass.write_event_in_log("Окно оплаты: переход к оплате", "Документ чек", cc.numdoc.ToString());
+
+                // 4. Запуск процесса оплаты
+                await it_is_paid();
+            }
+            catch (Exception ex)
+            {
+                // Ловим ЛЮБУЮ ошибку (сеть, парсинг, null reference) и показываем вместо краша
+                MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+
+                await MessageBoxHelper.Show(
+                    $"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.",
+                    "Сбой программы",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this
+                );
+
+                CalculateChange(); // Восстанавливаем состояние
+            }
+        }
+
+        /// <summary>
+        /// Проверяет все условия оплаты перед отправкой на терминал и в БД.
+        /// </summary>
+        private async Task<bool> ValidateInputs()
+        {
+            // Вспомогательная функция безопасного парсинга
+            double Parse(string text)
             {
                 if (string.IsNullOrWhiteSpace(text)) return 0.0;
-                // Пробуем распарсить как есть (с учетом текущей культуры системы)
                 if (double.TryParse(text, out double res)) return res;
-                // Если не вышло, пробуем инвариантную культуру (точки)
                 if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
                 return 0.0;
             }
 
-            // 1. Числа из TextBox парсим через функцию
-            double cash_money = Math.Round(ParseUiText(txtB_cash_sum.Text), 2);
-            double sertificate_money = Math.Round(ParseUiText(sertificates_sum.Text), 2);
-            double bonus_money = Math.Round(ParseUiText(pay_bonus_many.Text), 2);
-            double sum_on_document = Math.Round(ParseUiText(pay_sum.Text), 2);
-
-            // 2. Числа из методов берем напрямую (они уже double)
+            // Парсим значения один раз
+            double cash_money = Math.Round(Parse(txtB_cash_sum.Text), 2);
             double non_cash_money = Math.Round(get_non_cash_sum(), 2);
+            double sertificate_money = Math.Round(Parse(sertificates_sum.Text), 2);
+            double bonus_money = Math.Round(Parse(pay_bonus_many.Text), 2);
+            double sum_on_document = Math.Round(Parse(pay_sum.Text), 2);
+            double remainderVal = Parse(remainder.Text);
 
-            double all_cash_non_cash = cash_money + non_cash_money + sertificate_money + bonus_money;
+            double total_paid = cash_money + non_cash_money + sertificate_money + bonus_money;
 
-            if (Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2) < 0)
+            // 1. Проверка общей суммы
+            if (total_paid < sum_on_document)
             {
                 await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                return;
+                return false;
             }
 
-            TextBox Remainder = this.FindControl<TextBox>("remainder");
-            double remainderVal = ParseUiText(Remainder?.Text);
-
+            // 2. Проверка сдачи при возврате
             if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
             {
-                await MessageBoxHelper.Show(" Сумма возврата должна быть равно сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                return;
+                await MessageBoxHelper.Show(" Сумма возврата должна быть равна сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                return false;
             }
 
-            if (bonus_money != 0) bonus_on_document.Text = "0";
-
+            // 3. Логика бонусов
             if (bonus_money > 0)
             {
+                bonus_on_document.Text = "0";
                 if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
                 {
-                    await MessageBoxHelper.Show("Сумма сертификатов + сумма по карте оплаты + сумма по бонусам превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return;
+                    await MessageBoxHelper.Show("Сумма сертификатов + карта + бонусы превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    return false;
                 }
             }
             else
             {
                 if (non_cash_money + sertificate_money > sum_on_document)
                 {
-                    await MessageBoxHelper.Show(" Сумма сертификатов + сумма по карте оплаты превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return;
+                    await MessageBoxHelper.Show(" Сумма сертификатов + карта превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    return false;
                 }
             }
 
-            cc.SetCertificatesFromPay(_certificatesList);
-            MainStaticClass.write_event_in_log("Окно оплаты перед записью и закрытием документа ", "Документ чек", cc.numdoc.ToString());
-
-            Double _cash_summ_ = cash_money - remainderVal;
-            Double _non_cash_summ_ = non_cash_money;
-            Double _sertificates_sum_ = sertificate_money;
-            Double _pay_bonus_many_ = bonus_money;
-
-            // decimal приводим к double
-            Double sum_of_the_document = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
-
+            // 4. Проверка схождения сумм (для определенных схем работы)
             if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
             {
-                if (Math.Round(sum_of_the_document, 2) != Math.Round((_cash_summ_ + _non_cash_summ_ + _sertificates_sum_ + _pay_bonus_many_), 2))
+                double cash_final = cash_money - remainderVal;
+                double sum_doc_calc = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
+
+                if (Math.Round(sum_doc_calc, 2) != Math.Round((cash_final + non_cash_money + sertificate_money + bonus_money), 2))
                 {
                     await MessageBoxHelper.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return;
+                    return false;
                 }
             }
 
+            // 5. Проверка возврата (сумма не больше продажи)
             if (cc.check_type.SelectedIndex == 1)
             {
-                if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, _cash_summ_, _non_cash_summ_)) return;
+                double cash_final = cash_money - remainderVal;
+                if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, cash_final, non_cash_money))
+                {
+                    return false; // Сообщение уже показано внутри метода validate
+                }
             }
 
-            await it_is_paid();
+            return true;
         }
 
         private string CalculateMoneyInKopecks(string rublesText, string kopecksText)
@@ -533,7 +655,7 @@ namespace Cash8Avalon
                     non_sum_cash_pay,
                     sertificate_money_str,
                     "2",   // its_deleted (переопределяется через last_rewrite)
-                    true   // sendToScreen
+                    false   // sendToScreen
                 );
 
                 if (!writeResult)
@@ -693,7 +815,7 @@ namespace Cash8Avalon
                     non_sum_cash_pay,
                     sertificate_money_str,
                     "2",   // its_deleted (переопределяется через last_rewrite)
-                    true   // sendToScreen
+                    false   // sendToScreen
                 );
 
                 if (!writeResult)

@@ -25,7 +25,7 @@ namespace Cash8Avalon
         public string CodeResponse15 { get; set; } // Поле 15 (для СБП статусов)
         public string AuthorizationCode { get; set; } = string.Empty; // Поле 13
         public string ReferenceNumber { get; set; } = string.Empty; // Поле 14
-        public string RechargeNote { get; set; } // Поле 90
+        public string RechargeNote { get; set; } = string.Empty; // Поле 90
         public string ErrorMessage { get; set; }
 
         // Информация о попытках
@@ -420,6 +420,16 @@ namespace Cash8Avalon
             var result = new TerminalResult();
             try
             {
+                // ==========================================
+                // ПАТЧ: Логируем сырой ответ от банка
+                // ==========================================
+                MainStaticClass.write_event_in_log(
+                    $"Сырой ответ терминала: {(xml ?? "NULL")}",
+                    "TerminalResponse",
+                    "0"
+                );
+                // ==========================================
+
                 if (string.IsNullOrWhiteSpace(xml) || xml.Trim().Length < 10)
                     return TerminalResult.CreateError("Терминал вернул пустой ответ.");
 
@@ -454,7 +464,7 @@ namespace Cash8Avalon
                             result.CodeResponse15 = textValue;
                             break;
                         case "90":
-                            result.RechargeNote = CleanRechargeNote(textValue);
+                        result.RechargeNote = CleanRechargeNote(textValue);                                                 
                             break;
                     }
                 }
@@ -471,15 +481,7 @@ namespace Cash8Avalon
                 return TerminalResult.CreateError($"Ошибка разбора XML: {ex.Message}");
             }
             return result;
-        }
-
-        //// Также обновите метод CleanRechargeNote, чтобы он не падал на null
-        //private static string CleanRechargeNote(string note)
-        //{
-        //    if (string.IsNullOrEmpty(note)) return note;
-        //    int pos = note.IndexOf("(КАССИР)");
-        //    return pos > 0 ? note.Substring(0, pos + 8) : note;
-        //}
+        }        
 
         private void UpdateLocalCommandResult(TerminalResult result)
         {
@@ -500,8 +502,11 @@ namespace Cash8Avalon
 
         private static string CleanRechargeNote(string note)
         {
-            if (string.IsNullOrEmpty(note)) return note;
+            // Если null или пусто — возвращаем string.Empty (как в конструкторе TerminalResult)
+            if (string.IsNullOrEmpty(note)) return string.Empty;
+
             int pos = note.IndexOf("(КАССИР)");
+            // Если нашли "КАССИР" - обрезаем, если нет - возвращаем как есть (но не null!)
             return pos > 0 ? note.Substring(0, pos + 8) : note;
         }
 

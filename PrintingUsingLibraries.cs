@@ -584,7 +584,7 @@ namespace Cash8Avalon
                 check.cdn_markers_result_check.Clear();//если мы здесь предыдущие проверки очищаем
                 foreach (ProductItem productItem in check._productsData)
                 {
-                    if (productItem.Mark.Trim().Length > 13)
+                    if (productItem.Mark.Trim().Length > 14)
                     {
 
                         string marking_code = productItem.Mark.Trim().Replace("vasya2021", "'");                                                
@@ -718,7 +718,7 @@ namespace Cash8Avalon
             {
                 if (MainStaticClass.its_excise(productItem.Code.ToString().Trim()) == 0)
                 {
-                    if (productItem.Mark.Trim().Length <= 13)//код маркировки не заполнен
+                    if (productItem.Mark.Trim().Length <= 14)//код маркировки не заполнен
                     {
                         fptr.setParam(1212, 32);
                     }
@@ -1133,7 +1133,7 @@ namespace Cash8Avalon
                 int count_string = 0;
                 foreach (ProductItem productItem in check._productsData)
                 {
-                    if (productItem.Mark.Trim().Length <= 13)
+                    if (productItem.Mark.Trim().Length <= 14)
                     {
                         count_string++;
                     }
@@ -1153,7 +1153,7 @@ namespace Cash8Avalon
                 int count_string = 0;
                 foreach (ProductItem productItem in check._productsData)
                 {
-                    if (productItem.Mark.Trim().Length > 13)
+                    if (productItem.Mark.Trim().Length > 14)
                     {
                         count_string++;
                     }
@@ -1174,7 +1174,7 @@ namespace Cash8Avalon
                     check.cdn_markers_result_check.Clear();//если мы здесь предыдущие проверки очищаем
                     foreach (ProductItem productItem in check._productsData)
                     {
-                        if (productItem.Mark.Trim().Length > 13)
+                        if (productItem.Mark.Trim().Length > 14)
                         {
                             string marking_code = productItem.Mark.Trim().Replace("vasya2021", "'");
                             string tovarCode = productItem.Code.ToString().Trim();
@@ -1352,7 +1352,7 @@ namespace Cash8Avalon
 
                 if (variant == 0)
                 {
-                    if (productItem.Mark.Trim().Length > 13)
+                    if (productItem.Mark.Trim().Length > 14)
                     {
                         continue;
                     }
@@ -1367,7 +1367,7 @@ namespace Cash8Avalon
 
                 if (MainStaticClass.its_excise(productItem.Code.ToString().Trim()) == 0)
                 {
-                    if (productItem.Mark.Trim().Length <= 13)//код маркировки не заполнен
+                    if (productItem.Mark.Trim().Length <= 14)//код маркировки не заполнен
                     {
                         fptr.setParam(1212, 32);
                     }

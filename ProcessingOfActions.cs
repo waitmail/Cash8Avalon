@@ -565,14 +565,14 @@ namespace Cash8Avalon
                         }
                         //write_time_execution(reader[1].ToString(), tip_action.ToString());
                     }
-                    //else if (tip_action == 10)
-                    //{
-                    //    if (sum <= calculation_of_the_sum_of_the_document_dt())
-                    //    {
-                    //        //MessageBox.Show(reader[3].ToString());
-                    //        action_num_doc = num_doc; //Convert.ToInt32(reader["num_doc"].ToString());
-                    //    }
-                    //}
+                    else if (tip_action == 10)
+                    {
+                        //if (sum <= calculation_of_the_sum_of_the_document_dt())
+                        //{
+                        //    //MessageBox.Show(reader[3].ToString());
+                        //    //action_num_doc = num_doc; //Convert.ToInt32(reader["num_doc"].ToString());
+                        //}
+                    }
                     else if (tip_action == 12)
                     {
 
@@ -605,6 +605,7 @@ namespace Cash8Avalon
                     command = new NpgsqlCommand(query, conn);
                     reader = command.ExecuteReader();
 
+                    
                     while (reader.Read())
                     {
                         decimal divisor = await action_10_dt(Convert.ToInt32(reader["num_doc"]));

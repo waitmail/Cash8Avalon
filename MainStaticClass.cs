@@ -46,50 +46,50 @@ namespace Cash8Avalon
         private static bool _hasValidTime = false;
 
         // Максимальный возраст кэша, который мы считаем приемлемым
-        private static readonly TimeSpan _maxCacheAge = TimeSpan.FromHours(24);
+        //private static readonly TimeSpan _maxCacheAge = TimeSpan.FromHours(24);
 
-        public static DateTime GetServerTime()
-        {
-            lock (_timeLock)
-            {
-                // Если есть свежий кэш - используем его с коррекцией
-                if (_cachedServerTime != DateTime.MinValue &&
-                    DateTime.Now - _lastSuccessfulFetch < _cacheDuration)
-                {
-                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
-                    return _cachedServerTime.Add(elapsed);
-                }
+        //public static DateTime GetServerTime()
+        //{
+        //    lock (_timeLock)
+        //    {
+        //        // Если есть свежий кэш - используем его с коррекцией
+        //        if (_cachedServerTime != DateTime.MinValue &&
+        //            DateTime.Now - _lastSuccessfulFetch < _cacheDuration)
+        //        {
+        //            TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+        //            return _cachedServerTime.Add(elapsed);
+        //        }
 
-                // Пробуем обновить кэш
-                bool fetched = TryFetchServerTime();
+        //        // Пробуем обновить кэш
+        //        bool fetched = TryFetchServerTime();
 
-                if (fetched)
-                {
-                    // Успешно обновили
-                    TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
-                    return _cachedServerTime.Add(elapsed);
-                }
+        //        if (fetched)
+        //        {
+        //            // Успешно обновили
+        //            TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+        //            return _cachedServerTime.Add(elapsed);
+        //        }
 
-                // Не удалось обновить, но есть старый кэш
-                if (_cachedServerTime != DateTime.MinValue)
-                {
-                    TimeSpan cacheAge = DateTime.Now - _lastSuccessfulFetch;
+        //        // Не удалось обновить, но есть старый кэш
+        //        if (_cachedServerTime != DateTime.MinValue)
+        //        {
+        //            TimeSpan cacheAge = DateTime.Now - _lastSuccessfulFetch;
 
-                    // Если кэш не слишком старый - используем его
-                    if (cacheAge < _maxCacheAge)
-                    {
-                        Console.WriteLine($"[TimeSync] Внимание: используем кэш возрастом {cacheAge.TotalHours:F1} часов");
+        //            // Если кэш не слишком старый - используем его
+        //            if (cacheAge < _maxCacheAge)
+        //            {
+        //                Console.WriteLine($"[TimeSync] Внимание: используем кэш возрастом {cacheAge.TotalHours:F1} часов");
 
-                        TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
-                        return _cachedServerTime.Add(elapsed);
-                    }
-                }
+        //                TimeSpan elapsed = DateTime.Now - _lastSuccessfulFetch;
+        //                return _cachedServerTime.Add(elapsed);
+        //            }
+        //        }
 
-                // Совсем нет данных - возвращаем локальное время с пометкой
-                Console.WriteLine($"[TimeSync] Критично: нет данных о времени сервера");
-                return DateTime.Now; // или new DateTime(1,1,1) если нужен признак ошибки
-            }
-        }
+        //        // Совсем нет данных - возвращаем локальное время с пометкой
+        //        Console.WriteLine($"[TimeSync] Критично: нет данных о времени сервера");
+        //        return DateTime.Now; // или new DateTime(1,1,1) если нужен признак ошибки
+        //    }
+        //}
 
         // Добавьте SemaphoreSlim для асинхронной блокировки
         private static readonly SemaphoreSlim _asyncLock = new SemaphoreSlim(1, 1);
