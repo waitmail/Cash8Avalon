@@ -2639,8 +2639,8 @@ namespace Cash8Avalon
                     await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
                 }
                 PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
                 await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);                
                 this.Close();              
             }
             else
@@ -3055,9 +3055,9 @@ namespace Cash8Avalon
                     {
                         await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
                     }
-                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();                    
                     await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
 
                     // Безопасное закрытие окна
                     this.Close();
@@ -9390,18 +9390,18 @@ namespace Cash8Avalon
                     await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
                 }
                 else if (print_to_button == 1)
-                {
-                    if (this.checkBox_to_print_repeatedly.IsChecked==true)
-                    {
-                        //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
-                        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
-                    }
+                {                    
                     if (this.checkBox_to_print_repeatedly_p.IsChecked==true)
                     {
                         //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 1);
                         PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
                         await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                    }
+                    if (this.checkBox_to_print_repeatedly.IsChecked == true)
+                    {
+                        //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
+                        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
                     }
                 }
                 closing = false;

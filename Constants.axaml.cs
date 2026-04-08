@@ -99,7 +99,7 @@ namespace Cash8Avalon
             {
                 comboBoxAcquiringBank.Items.Clear();
                 comboBoxAcquiringBank.Items.Add("ме бшапюмн");
-                comboBoxAcquiringBank.Items.Add("пмйа");
+                comboBoxAcquiringBank.Items.Add("бра");
                 comboBoxAcquiringBank.Items.Add("яаеп");
                 comboBoxAcquiringBank.SelectedIndex = 0;
             }

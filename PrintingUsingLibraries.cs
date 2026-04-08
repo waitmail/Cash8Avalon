@@ -1142,6 +1142,8 @@ namespace Cash8Avalon
                 {
                     //здесь необходимо поставить флаг распечатан
                     check.its_print_p(variant);
+                    check.closing = false; 
+                    //check.Close();//0 так получилось печатается последним ь.е. без маркировки и тогда если нет таких позиций чек надо закрыть 
                     return;
                 }
 
@@ -1645,9 +1647,10 @@ namespace Cash8Avalon
             {
 
                 check.its_print_p(variant);
-                if (variant == 1)
+                if (variant == 0)
                 {
-                    check.Close();
+                    //check.Close();//0 так получилось печатается последним
+                    check.closing = false;
                 }
             }
             else

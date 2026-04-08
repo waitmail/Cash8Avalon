@@ -809,7 +809,7 @@ namespace Cash8Avalon
             {
                 token.ThrowIfCancellationRequested();
                 DS ds = MainStaticClass.get_ds();
-                ds.Timeout = 10000;
+                ds.Timeout = 20000;
                 string nick_shop = MainStaticClass.Nick_Shop.Trim();
 
                 if (nick_shop.Length == 0)
