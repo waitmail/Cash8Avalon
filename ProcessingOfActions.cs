@@ -1193,7 +1193,7 @@ namespace Cash8Avalon
                     string query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"].ToString() + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query, conn);
                     Int16 result = Convert.ToInt16(command.ExecuteScalar());
-                    if (result == 1)
+                    if (result > 0)
                     {
                         row["action2"] = num_doc.ToString();
                         if (dt.Columns.Contains("promo_description"))

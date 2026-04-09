@@ -5888,7 +5888,10 @@ namespace Cash8Avalon
 
             // Возвращаем результат как в оригинале
             if (!isWorker)
+            {
+                MainStaticClass.ResetDsCache();
                 return false;
+            }
 
             var ds = MainStaticClass.get_ds();
             ds.Timeout = 20000;
@@ -5929,6 +5932,7 @@ namespace Cash8Avalon
             {
                 // Логируем ошибку при необходимости
                 // Console.WriteLine($"[Update] Check error: {ex.Message}");
+                MainStaticClass.ResetDsCache();
             }
 
             return result;

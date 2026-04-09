@@ -1437,7 +1437,7 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    fptr.setParam(1212, 2);//подакцизеый товар
+                    fptr.setParam(1212, 2);//подакцизный товар
                 }
 
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_COMMODITY_NAME, productItem.Code.ToString().Trim() + " " + productItem.Tovar.Trim());

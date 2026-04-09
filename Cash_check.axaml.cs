@@ -230,61 +230,117 @@ namespace Cash8Avalon
         /// <summary>
         /// Логика проверки и восстановления фокуса с дебансом
         /// </summary>
+        //private void FocusKeeper_Tick(object sender, EventArgs e)
+        //{
+        //    try
+        //    {
+        //        // 1. Базовые проверки
+        //        if (_isDisposed || !this.IsVisible) return;
+
+        //        // ВАЖНО: Если окно отключено (открыто модальное диалоговое окно, например, Оплата) - НЕ ДЕЛАЕМ НИЧЕГО.
+        //        // Это предотвращает конфликты фокуса и "исчезновение" окон.
+        //        if (!this.IsEnabled) return;
+
+        //        // Если окно НЕ активно (свёрнуто или в фоне) — не мешаем системе
+        //        if (!this.IsActive) return;
+
+        //        // === НОВАЯ ПРОВЕРКА: Отключаем для возвратов и коррекций ===
+        //        if (CheckType != null && CheckType.SelectedIndex != 0)
+        //            return;
+
+        //        // 2. Проверяем, где сейчас фокус
+
+        //        // Если фокус на таблице товаров — ОТЛИЧНО! Ничего не делаем, даем работать +/-
+        //        if (_productsScrollViewer != null && _productsScrollViewer.IsFocused) return;
+
+        //        // Если фокус на поле поиска — тоже отлично
+        //        if (InputSearchProduct != null && InputSearchProduct.IsFocused) return;
+
+        //        // Если фокус на других важных полях ввода — не мешаем кассиру печатать
+        //        if (IsFocusOnImportantControl()) return;
+
+        //        // === ДЕБАНС: Защита от слишком частых срабатываний ===
+        //        if ((DateTime.Now - _lastFocusRestore).TotalMilliseconds < FOCUS_RESTORE_COOLDOWN_MS)
+        //            return;
+
+        //        // 3. Если мы здесь, значит фокус "потерян" (упал на фон, заголовок или пустое место)
+        //        Console.WriteLine("⚠ [FocusKeeper] Фокус потерян (в никуда)! Восстановление...");
+
+        //        _lastFocusRestore = DateTime.Now;
+
+        //        // === "Ядерный" трюк для Linux ===
+        //        this.Activate();
+        //        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //        {
+        //            this.Topmost = true;
+        //            Dispatcher.UIThread.Post(() =>
+        //            {
+        //                try { if (this.IsVisible) this.Topmost = false; } catch { }
+        //            }, DispatcherPriority.ApplicationIdle);
+        //        }
+
+        //        // Возвращаем фокус на поле поиска (как безопасное место по умолчанию)
+        //        InputSearchProduct?.Focus();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка в FocusKeeper_Tick: {ex.Message}");
+        //    }
+        //}
+
         private void FocusKeeper_Tick(object sender, EventArgs e)
         {
             try
             {
-                // 1. Базовые проверки
-                if (_isDisposed || !this.IsVisible) return;
-
-                // ВАЖНО: Если окно отключено (открыто модальное диалоговое окно, например, Оплата) - НЕ ДЕЛАЕМ НИЧЕГО.
-                // Это предотвращает конфликты фокуса и "исчезновение" окон.
-                if (!this.IsEnabled) return;
-
-                // Если окно НЕ активно (свёрнуто или в фоне) — не мешаем системе
-                if (!this.IsActive) return;
-
-                // === НОВАЯ ПРОВЕРКА: Отключаем для возвратов и коррекций ===
-                if (CheckType != null && CheckType.SelectedIndex != 0)
-                    return;
-
-                // 2. Проверяем, где сейчас фокус
-
-                // Если фокус на таблице товаров — ОТЛИЧНО! Ничего не делаем, даем работать +/-
-                if (_productsScrollViewer != null && _productsScrollViewer.IsFocused) return;
-
-                // Если фокус на поле поиска — тоже отлично
-                if (InputSearchProduct != null && InputSearchProduct.IsFocused) return;
-
-                // Если фокус на других важных полях ввода — не мешаем кассиру печатать
-                if (IsFocusOnImportantControl()) return;
-
-                // === ДЕБАНС: Защита от слишком частых срабатываний ===
-                if ((DateTime.Now - _lastFocusRestore).TotalMilliseconds < FOCUS_RESTORE_COOLDOWN_MS)
-                    return;
-
-                // 3. Если мы здесь, значит фокус "потерян" (упал на фон, заголовок или пустое место)
-                Console.WriteLine("⚠ [FocusKeeper] Фокус потерян (в никуда)! Восстановление...");
-
-                _lastFocusRestore = DateTime.Now;
-
-                // === "Ядерный" трюк для Linux ===
-                this.Activate();
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                // 1. Если окно уже помечено на удаление - экстренно останавливаем таймер
+                if (_isDisposed)
                 {
-                    this.Topmost = true;
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        try { if (this.IsVisible) this.Topmost = false; } catch { }
-                    }, DispatcherPriority.ApplicationIdle);
+                    StopFocusKeeper();
+                    return;
                 }
 
-                // Возвращаем фокус на поле поиска (как безопасное место по умолчанию)
+                // 2. БЕЗОПАСНАЯ ПРОВЕРКА: На Linux при закрытии окна свойства могут бросить исключение
+                bool isVisible = false;
+                bool isEnabled = false;
+                bool isActive = false;
+
+                try { isVisible = this.IsVisible; } catch { StopFocusKeeper(); return; }
+                if (!isVisible) return;
+
+                try { isEnabled = this.IsEnabled; } catch { StopFocusKeeper(); return; }
+                if (!isEnabled) return;
+
+                try { isActive = this.IsActive; } catch { StopFocusKeeper(); return; }
+                if (!isActive) return;
+
+                if (CheckType != null && CheckType.SelectedIndex != 0) return;
+                if (_productsScrollViewer != null && _productsScrollViewer.IsFocused) return;
+                if (InputSearchProduct != null && InputSearchProduct.IsFocused) return;
+                if (IsFocusOnImportantControl()) return;
+
+                if ((DateTime.Now - _lastFocusRestore).TotalMilliseconds < FOCUS_RESTORE_COOLDOWN_MS) return;
+
+                Console.WriteLine("⚠ [FocusKeeper] Фокус потерян! Восстановление...");
+                _lastFocusRestore = DateTime.Now;
+
+                // 3. Безопасная активация
+                try
+                {
+                    this.Activate();
+                }
+                catch
+                {
+                    // Если Activate упал (окно уже закрывается), убиваем таймер и выходим
+                    StopFocusKeeper();
+                    return;
+                }
+
                 InputSearchProduct?.Focus();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Ошибка в FocusKeeper_Tick: {ex.Message}");
+                Console.WriteLine($"✗ Критическая ошибка таймера фокуса (окно вероятно закрывается): {ex.Message}");
+                StopFocusKeeper(); // Обязательно останавливаем при любой ошибке
             }
         }
 
@@ -376,8 +432,18 @@ namespace Cash8Avalon
             UpdateWindowTitle();
             this.Opened += OnOpened;
             this.Closed += OnClosed;
+            this.Closing += OnWindowClosing; 
 
             Console.WriteLine("=== Конструктор Cash_check завершен ===");
+        }
+
+        /// <summary>
+        /// Срабатывает ДО закрытия окна - гарантированно останавливает таймер
+        /// </summary>
+        private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+        {
+            _isDisposed = true;
+            StopFocusKeeper();
         }
 
         private async void OnClosed(object? sender, EventArgs e)
@@ -493,7 +559,7 @@ namespace Cash8Avalon
             base.OnDetachedFromVisualTree(e);
             // Сначала останавливаем таймер, чтобы он не сработал во время очистки
             StopFocusKeeper();
-            Cleanup();
+            //Cleanup();
         }
 
         private async void OnOpened(object sender, EventArgs e)
@@ -2841,12 +2907,12 @@ namespace Cash8Avalon
             // ==========================================
             // ВАЖНО: Включаем таймер ПОСЛЕ закрытия диалога
             // ==========================================
-            // Даем небольшую паузу, чтобы WM успел вернуть управление окну
-            await Task.Delay(100);
-            StartFocusKeeper();
+           
+            
 
             if (Convert.ToBoolean(pay_form.Tag) == true)
             {
+                //await Task.Delay(500);
                 this.Close();
             }
             else
@@ -2855,7 +2921,10 @@ namespace Cash8Avalon
                 //if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
                 //{
                 //    InputSearchProduct.Focus();
-                //}
+                //}\
+                // Даем небольшую паузу, чтобы WM успел вернуть управление окну
+                await Task.Delay(100);
+                StartFocusKeeper();
                 pay_form = new Pay();
                 //await ActivateWindow(this);
             }
@@ -4890,9 +4959,16 @@ namespace Cash8Avalon
                     Action2 = 0,
 
                     // ИСПРАВЛЕНИЕ: Приоритет для сертификатов, иначе маркировка, иначе "0"
+                    //Mark = productData.isCertificate()
+                    //    ? barcode
+                    //    : (!string.IsNullOrEmpty(marking_code) ? marking_code : "0"),
+
+                    //Если сертификат тогда присваиваем штрихкод, если маркировка то присваиваем код маркировки иначе 0 даже когда товар не маркированный то все равно может быть код маркировки 
                     Mark = productData.isCertificate()
                         ? barcode
-                        : (!string.IsNullOrEmpty(marking_code) ? marking_code : "0"),
+                        : (productData.IsMarked()
+                        ? (!string.IsNullOrEmpty(marking_code) ? marking_code : "0")
+                        : "0"),
 
                     IsSertificate = productData.isCertificate(),
                     IsFractional = productData.IsFractional(),
