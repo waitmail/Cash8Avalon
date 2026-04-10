@@ -904,7 +904,7 @@ namespace Cash8Avalon
                         else if (MainStaticClass.GetAcquiringBank == 2) // СБЕР (ВОЗВРАТ)
                         {
                             // Определяем, был ли исходный чек оплачен по СБП
-                            bool isSbpReturn = checkBox_payment_by_sbp.IsChecked == true;
+                            //bool isSbpReturn = checkBox_payment_by_sbp.IsChecked == true;
 
                             var sberService = new SberPaymentService();
                             if (int.TryParse(money, out int amountKopecks))
@@ -946,9 +946,21 @@ namespace Cash8Avalon
                     //cc.closing = false;
                     //this.Close();
                 }
-                cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-                cc.closing = false;
-                this.Close();
+                //cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
+                //cc.closing = false;
+                //this.Close();
+                bool printSuccess = await cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
+
+                if (printSuccess)
+                {
+                    cc.closing = false;
+                    this.Close(); // Закрываем окно оплаты ТОЛЬКО при успехе
+                }
+                else
+                {
+                    // Печать упала. Окно оплаты остается открытым, кассир видит ошибку от принтера
+                    // и может нажать "Отмена" или попробовать еще раз.
+                }
             }
         }
 

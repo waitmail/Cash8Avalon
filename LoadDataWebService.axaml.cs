@@ -1927,13 +1927,10 @@ namespace Cash8Avalon
             try
             {
                 // 0. Устанавливаем владельца для InventoryManager
-                // Это простое присваивание статического поля, не требует UI потока
                 InventoryManager.SetOwnerWindow(this);
 
                 // 1. Очищаем кэш в памяти
                 await UpdateProgressAsync("Очистка кэша в памяти...", 85);
-
-                // ClearDictionaryProductData тоже не требует UI потока (простая работа с коллекциями)
                 InventoryManager.ClearDictionaryProductData();
 
                 // 2. Ждем немного для стабилизации
@@ -1943,7 +1940,6 @@ namespace Cash8Avalon
                 await UpdateProgressAsync("Загрузка товаров в память...", 90);
                 try
                 {
-                    // Передаем текущее окно как владельца для MessageBox
                     await InventoryManager.FillDictionaryProductDataAsync(this);
                 }
                 catch (Exception ex)
@@ -1951,15 +1947,15 @@ namespace Cash8Avalon
                     return (false, $"Ошибка при загрузке товаров в память: {ex.Message}");
                 }
 
-                // 4. Загружаем акции (в фоне)
-                await UpdateProgressAsync("Загрузка данных об акциях...", 95);
+                // 4. Загружаем цены подарков (в фоне, не блокируя UI)
+                await UpdateProgressAsync("Загрузка цен подарков...", 93);
                 try
                 {
-                    // DictionaryPriceGiftAction - это свойство, вызываем его для инициализации
                     _ = Task.Run(() =>
                     {
                         try
                         {
+                            // УБРАЛИ var _ = (нам не нужен результат, только сам факт вызова)
                             var _ = InventoryManager.DictionaryPriceGiftAction;
                         }
                         catch (Exception ex)
@@ -1970,17 +1966,46 @@ namespace Cash8Avalon
                 }
                 catch (Exception ex)
                 {
-                    // Это не критическая ошибка, только логируем
-                    Console.WriteLine($"Предупреждение при загрузке акций: {ex.Message}");
+                    Console.WriteLine($"Предупреждение при фоновой загрузке цен: {ex.Message}");
                 }
 
-                // 5. Проверяем, что кэш загружен
+                // 5. Проверяем, что основной кэш товаров загружен
                 await Task.Delay(200, cancellationToken);
-
-                // Сначала проверяем валидность словаря
                 if (!InventoryManager.IsDictionaryValid)
                 {
                     return (false, "Кэш товаров не был успешно загружен");
+                }
+
+                // 6. Принудительная безопасная загрузка условий акций (в фоне)
+                await UpdateProgressAsync("Загрузка условий акций...", 96);
+                try
+                {
+                    await Task.Run(() =>
+                    {
+                        try
+                        {
+                            // 1. Поднимаем "заградительный конус". 
+                            LoadActionDataInMemory.StartRefresh();
+
+                            // 2. Заставляем свойства сходить в базу и подтянуть свежие данные
+                            // УБРАЛИ var _ = (вызываем свойства напрямую, чтобы не было конфликта имен)
+                            _ = LoadActionDataInMemory.AllActionData1;
+                            _ = LoadActionDataInMemory.AllActionData2;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Предупреждение: не удалось загрузить условия акций: {ex.Message}");
+                        }
+                        finally
+                        {
+                            // 3. Убираем "заградительный конус" в ЛЮБОМ случае
+                            LoadActionDataInMemory.FinishRefresh();
+                        }
+                    }, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Предупреждение при фоновой загрузке условий акций: {ex.Message}");
                 }
 
                 await UpdateProgressAsync("Кэш памяти обновлен", 100);

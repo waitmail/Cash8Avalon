@@ -394,7 +394,7 @@ namespace Cash8Avalon
                         if (persent != 0)
                         {
                             //action_1_dt(num_doc, persent, comment);//Дать скидку на эту позицию  
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_1_dt(num_doc, persent, comment);
                             }
@@ -409,7 +409,7 @@ namespace Cash8Avalon
                             //{
                             // action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             //}
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             }
@@ -426,7 +426,7 @@ namespace Cash8Avalon
 
                         if (persent != 0)
                         {
-                            if (LoadActionDataInMemory.AllActionData2 == null)
+                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
                             {
                                 await action_2_dt(num_doc, persent, comment);
                             }
@@ -441,7 +441,7 @@ namespace Cash8Avalon
                             //{
                             //action_2_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             //}
-                            if (LoadActionDataInMemory.AllActionData2 == null)
+                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
                             {
                                 await action_2_dt(num_doc, comment, show_messages);
                             }
@@ -459,7 +459,7 @@ namespace Cash8Avalon
                         if (persent != 0)
                         {
                             //action_3_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_3_dt(num_doc, persent, sum, comment);
                             }
@@ -473,7 +473,7 @@ namespace Cash8Avalon
                             //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
                             //{
                             //action_3_dt(num_doc, comment, sum, marker,show_messages); //Сообщить о подарке                           
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_3_dt(num_doc, comment, sum, marker, show_messages);
                             }
@@ -492,7 +492,7 @@ namespace Cash8Avalon
 
                         if (persent != 0)
                         {
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
                             }
@@ -505,7 +505,7 @@ namespace Cash8Avalon
                         {
                             if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
                             {
-                                if (LoadActionDataInMemory.AllActionData1 == null)
+                                if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                                 {
                                     await action_4_dt(num_doc, comment, sum, show_messages);
                                 }
@@ -554,15 +554,27 @@ namespace Cash8Avalon
                             continue;
                         }
 
-                        //if (reader.GetDecimal(2) != 0)
                         if (persent != 0)
                         {
-                            await action_1_dt(num_doc, persent, comment);
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
+                            {
+                                await action_1_dt(num_doc, persent, comment);
+                            }
+                            else
+                            {
+                                await action_1_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData1);
+                            }
                         }
-                        else
-                        {
-                            //action_1_dt(reader.GetInt32(1), reader.GetString(3), reader.GetInt16(7), reader.GetInt32(4)); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
-                        }
+
+                        //if (reader.GetDecimal(2) != 0)
+                        //if (persent != 0)
+                        //{
+                        //    await action_1_dt(num_doc, persent, comment);
+                        //}
+                        //else
+                        //{
+                        //    //action_1_dt(reader.GetInt32(1), reader.GetString(3), reader.GetInt16(7), reader.GetInt32(4)); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
+                        //}
                         //write_time_execution(reader[1].ToString(), tip_action.ToString());
                     }
                     else if (tip_action == 10)
@@ -716,7 +728,7 @@ namespace Cash8Avalon
                         if (persent != 0)
                         {
                             //action_1_dt(num_doc, persent, comment);//Дать скидку на эту позицию  
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_1_dt(num_doc, persent, comment);
                             }
@@ -731,7 +743,7 @@ namespace Cash8Avalon
                             //{
                             // action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             //}
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             }
@@ -748,7 +760,7 @@ namespace Cash8Avalon
 
                         if (persent != 0)
                         {
-                            if (LoadActionDataInMemory.AllActionData2 == null)
+                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
                             {
                                 await action_2_dt(num_doc, persent, comment);
                             }
@@ -763,7 +775,7 @@ namespace Cash8Avalon
                             //{                         
                             //action_2_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок                          
                             //}
-                            if (LoadActionDataInMemory.AllActionData2 == null)
+                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
                             {
                                 await action_2_dt(num_doc, comment, show_messages);
                             }
@@ -780,34 +792,56 @@ namespace Cash8Avalon
                         //start_action = DateTime.Now;
 
                         //action_2(reader.GetInt32(1));
+                        //if (persent != 0)
+                        //{
+                        //    await action_3_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                        //}
+                        //else
+                        //{
+                        //    //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                        //    //{                                
+                        //    await action_3_dt(num_doc, comment, sum, marker, show_messages); //Сообщить о подарке                           
+                        //    //}
+                        //}
+                        //write_time_execution(reader[1].ToString(), tip_action.ToString());
                         if (persent != 0)
                         {
-                            await action_3_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
+                            {
+                                await action_3_dt(num_doc, persent, sum, comment);
+                            }
+                            else
+                            {
+                                await action_3_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
+                            }
                         }
-                        else
-                        {
-                            //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
-                            //{                                
-                            await action_3_dt(num_doc, comment, sum, marker, show_messages); //Сообщить о подарке                           
-                            //}
-                        }
-                        //write_time_execution(reader[1].ToString(), tip_action.ToString());
 
                     }
                     else if (tip_action == 4)
                     {
                         //start_action = DateTime.Now;
 
+                        //if (persent != 0)
+                        //{
+                        //    await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                        //}
+                        //else
+                        //{
+                        //    //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                        //    //{                            
+                        //    await action_4_dt(num_doc, comment, sum, show_messages);
+                        //    //}
+                        //}
                         if (persent != 0)
                         {
-                            await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
-                        }
-                        else
-                        {
-                            //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
-                            //{                            
-                            await action_4_dt(num_doc, comment, sum, show_messages);
-                            //}
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
+                            {
+                                await action_4_dt(num_doc, persent, sum, comment);
+                            }
+                            else
+                            {
+                                await action_4_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
+                            }
                         }
                     }
                     else
@@ -1001,7 +1035,7 @@ namespace Cash8Avalon
                         if (persent != 0)
                         {
                             //action_1_dt(num_doc, persent, comment);//Дать скидку на эту позицию  
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_1_dt(num_doc, persent, comment);
                             }
@@ -1016,7 +1050,7 @@ namespace Cash8Avalon
                             //{
                             // action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             //}
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_1_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             }
@@ -1033,7 +1067,7 @@ namespace Cash8Avalon
 
                         if (persent != 0)
                         {
-                            if (LoadActionDataInMemory.AllActionData2 == null)
+                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
                             {
                                 await action_2_dt(num_doc, persent, comment);
                             }
@@ -1048,7 +1082,7 @@ namespace Cash8Avalon
                             //{                         
                             //action_2_dt(num_doc, comment, marker, show_messages); //Сообщить о подарке, а так же добавить товар в подарок если указан код товара                          
                             //}
-                            if (LoadActionDataInMemory.AllActionData2 == null)
+                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
                             {
                                 await action_2_dt(num_doc, comment, show_messages);
                             }
@@ -1081,7 +1115,7 @@ namespace Cash8Avalon
                         if (persent != 0)
                         {
                             //action_3_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_3_dt(num_doc, persent, sum, comment);
                             }
@@ -1095,7 +1129,7 @@ namespace Cash8Avalon
                             //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
                             //{
                             //action_3_dt(num_doc, comment, sum, marker,show_messages); //Сообщить о подарке                           
-                            if (LoadActionDataInMemory.AllActionData1 == null)
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
                                 await action_3_dt(num_doc, comment, sum, marker, show_messages);
                             }
@@ -1111,18 +1145,29 @@ namespace Cash8Avalon
                     {
                         //start_action = DateTime.Now;
 
+                        //if (persent != 0)
+                        //{
+                        //    await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                        //}
+                        //else
+                        //{
+                        //    //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                        //    //{                            
+                        //    await action_4_dt(num_doc, comment, sum, show_messages);
+                        //    //}
+                        //}
+                        //write_time_execution(reader[1].ToString(), tip_action.ToString());
                         if (persent != 0)
                         {
-                            await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
+                            if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
+                            {
+                                await action_4_dt(num_doc, persent, sum, comment);
+                            }
+                            else
+                            {
+                                await action_4_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
+                            }
                         }
-                        else
-                        {
-                            //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
-                            //{                            
-                            await action_4_dt(num_doc, comment, sum, show_messages);
-                            //}
-                        }
-                        //write_time_execution(reader[1].ToString(), tip_action.ToString());
                     }
                     else if (tip_action == 5)
                     {
@@ -1700,7 +1745,7 @@ namespace Cash8Avalon
                     row["characteristic_name"] = "";
                     row["quantity"] = count;//Количество
                     row["price"] = reader.GetDecimal(2);//Цена
-                    string retail_price = GetGiftPrice(num_doc);
+                    string retail_price = InventoryManager.GetGiftPrice(num_doc);
                     if (retail_price != "")
                     {
                         //row["price_at_discount"] = reader.GetDecimal(2);//Цена со скидкой    
@@ -1993,11 +2038,34 @@ namespace Cash8Avalon
                 // Создаем копию DataTable перед началом обработки
                 dtCopy = dt.Copy();
 
+                //// Проверяем, есть ли данные для текущего документа
+                //if (!actionPricesByDoc.ContainsKey(num_doc))
+                //{
+                //    await MessageBoxHelper.Show($"Данные для документа {num_doc} не найдены.", "Обработка акций 1 типа");
+                //    MainStaticClass.WriteRecordErrorLog($"Данные для документа {num_doc} не найдены.", "action_1_dt", num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 1 типа скидка чтение с диска, номер документа здесь это номер ак. док.");
+                //    return;
+                //}
+
                 // Проверяем, есть ли данные для текущего документа
                 if (!actionPricesByDoc.ContainsKey(num_doc))
                 {
-                    await MessageBoxHelper.Show($"Данные для документа {num_doc} не найдены.", "Обработка акций 1 типа");
-                    MainStaticClass.WriteRecordErrorLog($"Данные для документа {num_doc} не найдены.", "action_1_dt", num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 1 типа скидка чтение с диска, номер документа здесь это номер ак. док.");
+                    // Собираем диагностическую информацию
+                    string errorMessage = $"Данные для документа {num_doc} не найдены.\n" +
+                                          $"Размер словаря акций: {actionPricesByDoc.Count} шт.";
+
+                    // Если словарь не пустой, покажем, какие документы в нём есть (первые 5)
+                    if (actionPricesByDoc.Count > 0)
+                    {
+                        string existingDocs = string.Join(", ", actionPricesByDoc.Keys.Take(5));
+                        errorMessage += $"\nИмеющиеся документы: {existingDocs}...";
+                    }
+                    else
+                    {
+                        errorMessage += "\nСловарь абсолютно пуст!";
+                    }
+
+                    await MessageBoxHelper.Show(errorMessage, "Обработка акций 1 типа");
+                    MainStaticClass.WriteRecordErrorLog(errorMessage, "action_1_dt", num_doc, MainStaticClass.CashDeskNumber, "Обработка акций 1 типа скидка чтение с диска, номер документа здесь это номер ак. док.");
                     return;
                 }
 
@@ -2736,7 +2804,7 @@ namespace Cash8Avalon
                 }
 
                 // Помечаем товары, участвовавшие в акции (работаем с копией)
-                if (LoadActionDataInMemory.AllActionData1 == null)
+                if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                 {
                     marked_action_tovar_dt(dtCopy, num_doc, comment);
                 }
@@ -3658,84 +3726,84 @@ namespace Cash8Avalon
         }
 
 
-        /// <summary>
-        /// Возвращает цену подарка для указанного номера документа акции.
-        /// </summary>
-        /// <param name="numDoc">Номер документа акции.</param>
-        /// <returns>Цена подарка или 0, если не найдена.</returns>
-        private string GetGiftPrice(int numDoc)
-        {
-            // 1. Проверка кэша
-            if (TryGetCachedPrice(numDoc, out double cachedPrice))
-            {
-                return cachedPrice.ToString();
-            }
+        ///// <summary>
+        ///// Возвращает цену подарка для указанного номера документа акции.
+        ///// </summary>
+        ///// <param name="numDoc">Номер документа акции.</param>
+        ///// <returns>Цена подарка или 0, если не найдена.</returns>
+        //private string GetGiftPrice(int numDoc)
+        //{
+        //    // 1. Проверка кэша
+        //    if (TryGetCachedPrice(numDoc, out double cachedPrice))
+        //    {
+        //        return cachedPrice.ToString();
+        //    }
 
-            // 2. Запрос к базе данных
-            try
-            {
-                using (var connection = MainStaticClass.NpgsqlConn())
-                {
-                    return QueryDatabase(connection, numDoc).ToString();
-                }
-            }
-            catch (Exception ex) when (ex is NpgsqlException || ex is InvalidOperationException)
-            {
-                LogError(ex, numDoc);
-                return "1";
-            }
-        }
+        //    // 2. Запрос к базе данных
+        //    try
+        //    {
+        //        using (var connection = MainStaticClass.NpgsqlConn())
+        //        {
+        //            return QueryDatabase(connection, numDoc).ToString();
+        //        }
+        //    }
+        //    catch (Exception ex) when (ex is NpgsqlException || ex is InvalidOperationException)
+        //    {
+        //        LogError(ex, numDoc);
+        //        return "1";
+        //    }
+        //}
 
-        //-------------------------------------------------------
-        // Вспомогательные методы
-        //-------------------------------------------------------
+        ////-------------------------------------------------------
+        //// Вспомогательные методы
+        ////-------------------------------------------------------
 
-        /// <summary>
-        /// Пытается получить цену из кэша.
-        /// </summary>
-        private bool TryGetCachedPrice(int numDoc, out double price)
-        {
-            price = 0;
+        ///// <summary>
+        ///// Пытается получить цену из кэша.
+        ///// </summary>
+        //private bool TryGetCachedPrice(int numDoc, out double price)
+        //{
+        //    price = 0;
 
-            // DictionaryPriceGiftAction сам управляет своей инициализацией и состоянием
-            return InventoryManager.DictionaryPriceGiftAction.TryGetValue(numDoc, out price);
-        }
+        //    // DictionaryPriceGiftAction сам управляет своей инициализацией и состоянием
+        //    return InventoryManager.DictionaryPriceGiftAction.TryGetValue(numDoc, out price);
+        //}
 
-        /// <summary>
-        /// Выполняет запрос к базе данных.
-        /// </summary>
-        private decimal QueryDatabase(NpgsqlConnection connection, int numDoc)
-        {
-            const string query = @"
-        SELECT gift_price 
-        FROM action_header 
-        WHERE num_doc = @numDoc 
-          AND tip IN (1,2,3,4,5,6,8)";
+        ///// <summary>
+        ///// Выполняет запрос к базе данных.
+        ///// </summary>
+        //private decimal QueryDatabase(NpgsqlConnection connection, int numDoc)
+        //{
+        //    const string query = @"
+        //SELECT gift_price 
+        //FROM action_header 
+        //WHERE num_doc = @numDoc 
+        //  AND tip IN (1,2,3,4,5,6,8)";
 
-            using (var command = new NpgsqlCommand(query, connection))
-            {
-                command.Parameters.AddWithValue("@numDoc", numDoc);
-                connection.Open();
+        //    using (var command = new NpgsqlCommand(query, connection))
+        //    {
+        //        command.Parameters.AddWithValue("@numDoc", numDoc);
+        //        connection.Open();
 
-                var result = command.ExecuteScalar();
-                return Convert.ToDecimal(result ?? 0m);
-            }
-        }
+        //        var result = command.ExecuteScalar();
+        //        return Convert.ToDecimal(result ?? 0m);
+        //    }
+        //}
 
-        /// <summary>
-        /// Логирует ошибки.
-        /// </summary>
-        private void LogError(Exception ex, int numDoc)
-        {
-            string errorContext = $"Ошибка при получении цены для документа {numDoc}";
-            MainStaticClass.WriteRecordErrorLog(
-                ex,
-                numDoc,
-                MainStaticClass.CashDeskNumber,
-                errorContext
-            );
-            MessageBoxHelper.Show(errorContext);
-        }
+        ///// <summary>
+        ///// Логирует ошибки.
+        ///// </summary>
+        //private void LogError(Exception ex, int numDoc)
+        //{
+        //    string errorContext = $"Ошибка при получении цены для документа {numDoc}";
+        //    MainStaticClass.WriteRecordErrorLog(
+        //        ex,
+        //        numDoc,
+        //        MainStaticClass.CashDeskNumber,
+        //        errorContext
+        //    );
+        //    MessageBoxHelper.Show(errorContext);
+        //}
 
 
 
@@ -3915,7 +3983,7 @@ namespace Cash8Avalon
                         if (isGift)
                         {
                             // ЭТО ПОДАРОК - ИСПОЛЬЗУЕМ АКЦИОННУЮ ЦЕНУ
-                            decimal giftPrice = Convert.ToDecimal(GetGiftPrice(num_doc));
+                            decimal giftPrice = Convert.ToDecimal(InventoryManager.GetGiftPrice(num_doc));
                             row["price_at_discount"] = giftPrice;
                             row["sum_full"] = retailPrice;
                             row["sum_at_discount"] = giftPrice;
@@ -4177,7 +4245,7 @@ namespace Cash8Avalon
                 }
 
                 decimal price = isGift
-                    ? Convert.ToDecimal(GetGiftPrice(num_doc))
+                    ? Convert.ToDecimal(InventoryManager.GetGiftPrice(num_doc))
                     : Convert.ToDecimal(item.Price);
 
                 // ЕСЛИ ТОВАР МАРКИРОВАН - ОН НИКОГДА НЕ ГРУППИРУЕТСЯ

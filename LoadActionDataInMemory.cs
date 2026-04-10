@@ -13,6 +13,31 @@ namespace Cash8Avalon
         private static Dictionary<int, ActionDataContainer> allActionData2 = null;
         private static Dictionary<int, Dictionary<long, decimal>> allActionData1 = null;
 
+        
+        private static bool data1LoadFailed = false;
+        private static bool data2LoadFailed = false;
+
+        private static volatile bool _isRefreshing = false;
+                
+        public static void ResetCache()
+        {
+            allActionData1 = null;
+            allActionData2 = null;
+            data1LoadFailed = false;
+            data2LoadFailed = false;
+        }
+
+        public static void StartRefresh()
+        {
+            _isRefreshing = true;
+            ResetCache(); // Обнуляем внутри флага
+        }
+
+        public static void FinishRefresh()
+        {
+            _isRefreshing = false;
+        }
+
         public class ActionDataContainer
         {
             public Dictionary<int, List<long>> ListItems { get; set; } = new Dictionary<int, List<long>>();
@@ -37,7 +62,12 @@ namespace Cash8Avalon
         /// <returns>Словарь, где ключ - номер документа, значение - словарь с товарами и их ценами.</returns>
         private static Dictionary<int, Dictionary<long, decimal>> LoadAllActionData1()
         {
-            //var actionPricesByDoc = new Dictionary<int, Dictionary<long, decimal>>();
+            if (_isRefreshing)
+                return new Dictionary<int, Dictionary<long, decimal>>();
+
+            if (data1LoadFailed)
+                return allActionData1;
+                        
             if (allActionData1 != null)
             {
                 return allActionData1;
@@ -80,7 +110,9 @@ namespace Cash8Avalon
             }
             catch //(Exception ex)
             {
-                allActionData1 = null;
+                //allActionData1 = null;
+                allActionData1 = new Dictionary<int, Dictionary<long, decimal>>();
+                data1LoadFailed = true; // Запретить дальнейшие попытки
             }
 
             return allActionData1;
@@ -88,15 +120,21 @@ namespace Cash8Avalon
 
         private static Dictionary<int, ActionDataContainer> LoadAllActionData2()
         {
+            if (_isRefreshing)
+                return new Dictionary<int, ActionDataContainer>();
+
+            if (data2LoadFailed)
+                return allActionData2;
+
+            if (allActionData2 != null)
+            {
+                return allActionData2;
+            }
+
+            allActionData2 = new Dictionary<int, ActionDataContainer>();
+
             try
             {
-                //Int64 count_minutes = Convert.ToInt64((DateTime.Now - DateTime.Now.Date).TotalMinutes);
-                if (allActionData2 != null)
-                {
-                    return allActionData2;
-                }
-
-                allActionData2 = new Dictionary<int, ActionDataContainer>();
 
                 using (var conn = MainStaticClass.NpgsqlConn())
                 {
@@ -143,7 +181,10 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                allActionData2 = null;
+                //allActionData2 = null;
+                // ПРАВИЛЬНО: Возвращаем пустую коллекцию
+                allActionData2 = new Dictionary<int, ActionDataContainer>();
+                data2LoadFailed = true; // Запретить дальнейшие попытки
             }
 
             return allActionData2;

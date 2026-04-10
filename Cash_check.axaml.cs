@@ -3049,71 +3049,108 @@ namespace Cash8Avalon
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public async void sale_cancellation_Click(string cash_money, string non_cash_money)
+        public async Task<bool> sale_cancellation_Click(string cash_money, string non_cash_money)
         {
             try
             {
                 if (_productsData.Count == 0)
                 {
                     await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
-                    return;
+                    return false;
                 }
 
                 if (MainStaticClass.Use_Fiscall_Print)
                 {
-                    fiscall_print_disburse(cash_money, non_cash_money);
+                    // Теперь мы ждем результат от печати
+                    return await fiscall_print_disburse(cash_money, non_cash_money);
                 }
+
+                return true; // Если фискальный принтер не используется, считаем успехом
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка в sale_cancellation_Click: {ex.Message}");
-                // Если произошла ошибка до вызова печати, нужно разблокировать интерфейс
-                try { this.Close(); } catch { }
+                // Если нужно, здесь можно показать ошибку, но fiscall_print_disburse уже показывает
+                return false;
             }
         }
         //public async void sale_cancellation_Click(string cash_money, string non_cash_money)
         //{
-        //    if (_productsData.Count == 0)
+        //    try
         //    {
-        //        await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
-        //        return;
-        //    }
+        //        if (_productsData.Count == 0)
+        //        {
+        //            await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
+        //            return;
+        //        }
 
-        //    if (MainStaticClass.Use_Fiscall_Print)
+        //        if (MainStaticClass.Use_Fiscall_Print)
+        //        {
+        //            fiscall_print_disburse(cash_money, non_cash_money);
+        //        }
+        //    }
+        //    catch (Exception ex)
         //    {
-        //        fiscall_print_disburse(cash_money, non_cash_money);
+        //        Console.WriteLine($"✗ Ошибка в sale_cancellation_Click: {ex.Message}");
+        //        // Если произошла ошибка до вызова печати, нужно разблокировать интерфейс
+        //        try { this.Close(); } catch { }
         //    }
         //}
+
 
         //private async void fiscall_print_disburse(string cash_money, string non_cash_money)
-        //{           
-        //    if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+        //{
+        //    try
         //    {
-        //        string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
-        //        if (IsNewCheck)
+        //        if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
         //        {
-        //            await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+        //            string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+        //            if (IsNewCheck)
+        //            {
+        //                await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+        //            }
+        //            PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();                    
+        //            await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+        //            await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+
+        //            // Безопасное закрытие окна
+        //            this.Close();
         //        }
-        //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-        //        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
-        //        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
-        //        this.Close();
-        //    }
-        //    else
-        //    {              
-        //        string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
-        //        if (IsNewCheck)
+        //        else
         //        {
-        //            await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+        //            string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+        //            if (IsNewCheck)
+        //            {
+        //                await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+        //            }
+        //            PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+        //            await printingUsingLibraries.print_sell_2_or_return_sell(this);
+
+        //            // Безопасное закрытие окна
+        //            this.Close();
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Ловим ошибку, чтобы не уронить программу
+        //        Console.WriteLine($"✗ КРИТИЧЕСКАЯ ОШИБКА в fiscall_print_disburse: {ex.Message}");
+
+        //        // Пытаемся показать сообщение, если окно еще живо
+        //        if (!_isDisposed && this.IsVisible)
+        //        {
+        //            await Dispatcher.UIThread.InvokeAsync(async () =>
+        //            {
+        //                await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}",
+        //                    "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            });
         //        }
 
-        //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-        //        await printingUsingLibraries.print_sell_2_or_return_sell(this);                
-        //        this.Close();                
+        //        // Все равно пытаемся закрыть окно чека, чтобы разблокировать интерфейс
+        //        try { this.Close(); } catch { }
         //    }
         //}
 
-        private async void fiscall_print_disburse(string cash_money, string non_cash_money)
+        private async Task<bool> fiscall_print_disburse(string cash_money, string non_cash_money)
         {
             try
             {
@@ -3122,46 +3159,54 @@ namespace Cash8Avalon
                     string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
                     if (IsNewCheck)
                     {
-                        await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                        if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
+                            return false; // Ошибка записи в БД
                     }
-                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();                    
-                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
-                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
 
-                    // Безопасное закрытие окна
-                    this.Close();
+                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                    bool result1 = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                    if (!result1) return false; // Если первый чек не напечатался, второй не пытаемся
+
+                    bool result2 = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                    if (!result2) return false;
+
+                    this.Close(); // Закрываем ТОЛЬКО если всё прошло успешно
+                    return true;
                 }
                 else
                 {
                     string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
                     if (IsNewCheck)
                     {
-                        await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
+                        if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
+                            return false;
                     }
-                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                    await printingUsingLibraries.print_sell_2_or_return_sell(this);
 
-                    // Безопасное закрытие окна
-                    this.Close();
+                    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                    bool printResult = await printingUsingLibraries.print_sell_2_or_return_sell(this);
+
+                    if (printResult)
+                    {
+                        this.Close(); // Закрываем ТОЛЬКО если всё прошло успешно
+                    }
+                    return printResult;
                 }
             }
             catch (Exception ex)
             {
-                // Ловим ошибку, чтобы не уронить программу
                 Console.WriteLine($"✗ КРИТИЧЕСКАЯ ОШИБКА в fiscall_print_disburse: {ex.Message}");
 
-                // Пытаемся показать сообщение, если окно еще живо
                 if (!_isDisposed && this.IsVisible)
                 {
                     await Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}",
-                            "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}", "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
                     });
                 }
 
-                // Все равно пытаемся закрыть окно чека, чтобы разблокировать интерфейс
-                try { this.Close(); } catch { }
+                // ВАЖНО: Мы НЕ вызываем this.Close() здесь! 
+                // Если упала исключительная ошибка, окно чека должно остаться открытым.
+                return false;
             }
         }
 
@@ -3181,7 +3226,7 @@ namespace Cash8Avalon
                 if (MainStaticClass.Use_Fiscall_Print)
                 {
                     MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
-                    await fiscall_print_pay(pay);
+                    result = await fiscall_print_pay(pay);
                 }
             }
 
@@ -9429,12 +9474,15 @@ namespace Cash8Avalon
         /// регистрация продажного чека
         /// </summary>
         /// <param name="pay"></param>
-        private async Task fiscall_print_pay(string pay)
+        private async Task <bool> fiscall_print_pay(string pay)
         {
+
+            bool result = true;
+
             if (MainStaticClass.SystemTaxation == 0)
             {
                 await MessageBoxHelper.Show("В константах не определена система налогообложения, печать чеков невозможна");
-                return;
+                return false;
             }
 
             if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
@@ -9452,37 +9500,73 @@ namespace Cash8Avalon
                     }
                     else
                     {
-                        await printingUsingLibraries.print_sell_2_or_return_sell(this);
+                        result = await printingUsingLibraries.print_sell_2_or_return_sell(this);
                     }
                 }
             }
             else
             {
+                //if (print_to_button == 0)
+                //{
+
+                //    PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                //    result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);//Если первый печатать без маркировки то очищается буфер в проверенных
+                //    result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                //}
+                //else if (print_to_button == 1)
+                //{                    
+                //    if (this.checkBox_to_print_repeatedly_p.IsChecked==true)
+                //    {
+                //        //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 1);
+                //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                //        result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                //    }
+                //    if (this.checkBox_to_print_repeatedly.IsChecked == true)
+                //    {
+                //        //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
+                //        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                //        result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                //    }
+                //}
                 if (print_to_button == 0)
                 {
-
                     PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);//Если первый печатать без маркировки то очищается буфер в проверенных
-                    await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+
+                    // Печатаем чек с маркировкой (1)
+                    result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+
+                    // Если чек с маркировкой упал — ВТОРОЙ НЕ ПЕЧАТАЕМ и сразу выходим
+                    if (!result) return false;
+
+                    // Печатаем чек без маркировки (0) только если первый успех
+                    result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
                 }
                 else if (print_to_button == 1)
-                {                    
-                    if (this.checkBox_to_print_repeatedly_p.IsChecked==true)
+                {
+                    if (this.checkBox_to_print_repeatedly_p.IsChecked == true)
                     {
-                        //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 1);
                         PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+                        result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+
+                        // Если не удалось напечатать повторно чек с маркировкой — выходим
+                        if (!result) return false;
                     }
-                    if (this.checkBox_to_print_repeatedly.IsChecked == true)
+
+                    // ВАЖНО: Проверяем, что предыдущая печать была успешна (или её не было)
+                    if (result)
                     {
-                        //await new PrintingUsingLibraries().print_sell_2_3_or_return_sell(this, 0);
-                        PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-                        await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                        if (this.checkBox_to_print_repeatedly.IsChecked == true)
+                        {
+                            PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+                            result = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+                        }
                     }
                 }
                 closing = false;
                 //this.Close();
             }
+
+            return result;
         }
 
         /// <summary>
