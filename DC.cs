@@ -12,8 +12,7 @@ namespace Cash8Avalon
     {
         private string _url;
         private int _timeout = 100000; // 100 секунд по умолчанию
-        //private WebClient _webClient;
-
+        
 
         public DS()
         {
@@ -63,6 +62,13 @@ namespace Cash8Avalon
                 request.ContentType = "text/xml; charset=utf-8";
                 request.Headers.Add("SOAPAction", "http://tempuri.org/" + operationName);
                 request.Timeout = _timeout;
+
+                // ==========================================
+                // ВОТ ЭТИ ТРИ СТРОКИ СПАСУТ ПЕРВЫЙ ЗАПРОС:
+                // ==========================================
+                request.Proxy = WebRequest.GetSystemWebProxy();
+                request.Credentials = CredentialCache.DefaultNetworkCredentials;
+                request.PreAuthenticate = true;
 
                 // Записываем SOAP envelope
                 byte[] data = Encoding.UTF8.GetBytes(soapEnvelope);
@@ -117,7 +123,7 @@ namespace Cash8Avalon
                 request.ContentType = "text/xml; charset=utf-8";
                 request.Headers.Add("SOAPAction", "http://tempuri.org/" + operationName);
                 request.Timeout = _timeout;
-
+                
                 byte[] data = Encoding.UTF8.GetBytes(soapEnvelope);
                 request.ContentLength = data.Length;
 
@@ -414,7 +420,12 @@ namespace Cash8Avalon
             </soap:Body>
         </soap:Envelope>";
 
-            string response = await ExecuteSoapRequestAsync(soapEnvelope, "ExistsUpdateProrgamAvalon");
+            // МАГИЯ: Вызываем старый синхронный метод в фоновом потоке.
+            // UI не зависает, а запрос уходит через рабочий HttpWebRequest!
+            string response = await Task.Run(() =>
+                ExecuteSoapRequest(soapEnvelope, "ExistsUpdateProrgamAvalon")
+            ).ConfigureAwait(false);
+
             return ParseSoapResponse<string>(response, "ExistsUpdateProrgamAvalon");
         }
 

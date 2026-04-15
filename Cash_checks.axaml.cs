@@ -1538,7 +1538,7 @@ namespace Cash8Avalon
                 });
 
                 // ✅ Проверка версии — тоже с защитой
-                bool hasNewVersion = await MainStaticClass.CheckNewVersionProgramm();
+                bool hasNewVersion = await MainStaticClass.CheckNewVersionProgrammAsync();
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try

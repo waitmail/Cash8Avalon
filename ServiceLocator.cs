@@ -16,7 +16,14 @@ namespace Cash8Avalon
         // Меняем lock на SemaphoreSlim для асинхронной блокировки
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-        private static readonly HttpClient _httpClient = new HttpClient()
+        // Добавьте using System.Net; в самом верху файла, если его нет!
+        private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler
+        {
+            Proxy = System.Net.WebRequest.DefaultWebProxy,
+            UseProxy = true,
+            DefaultProxyCredentials = System.Net.CredentialCache.DefaultNetworkCredentials,
+            PreAuthenticate = true
+        })
         {
             Timeout = TimeSpan.FromMilliseconds(5000)
         };
@@ -66,6 +73,20 @@ namespace Cash8Avalon
 
                             resultDs.Url = successfulUrl;
                             Console.WriteLine($"[WebService] ✓ Подключено к: {successfulUrl}");
+
+                            // ==========================================
+                            // МОСТ: Прогреваем HttpWebRequest для будущего SOAP-запроса
+                            // ==========================================
+                            try
+                            {
+                                var warmupReq = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(successfulUrl + "?w=1");
+                                warmupReq.Proxy = System.Net.WebRequest.DefaultWebProxy;
+                                warmupReq.Timeout = 3000; // Ждем максимум 3 секунды
+                                warmupReq.GetResponse()?.Close(); // Отправили и сразу закрыли
+                            }
+                            catch { /* Игнорируем ошибки прогрева */ }
+                            // ==========================================
+
                             return resultDs;
                         }
                     }

@@ -331,18 +331,17 @@ namespace Cash8Avalon
             }
         }
 
+        // Хелпер для привязки жизненного цикла (чтобы фантомы не висели в панели задач)
+        private static void SetWindowOwner(Window target, Window owner)
+        {
+            typeof(WindowBase).GetProperty(nameof(WindowBase.Owner))?.SetValue(target, owner);
+        }
+
         protected override async void OnOpened(EventArgs e)
         {
-            //    if (!System.Diagnostics.Debugger.IsAttached)
-            //    {
-            //        System.Diagnostics.Debugger.Launch();
-            //    }
-            //System.Diagnostics.Debugger.Break();
-            //System.Net.ServicePointManager.Expect100Continue = false;
             MainStaticClass.MainWindow = this;
             await Task.Delay(50);
 
-            // ✅ 2. Настройка размеров (особенно для Linux)
             if (OperatingSystem.IsLinux())
             {
                 this.WindowState = WindowState.Maximized;
@@ -362,13 +361,11 @@ namespace Cash8Avalon
                 this.WindowState = WindowState.Maximized;
             }
 
-            // ✅ 3. Проверка конфигурации
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
             if (!File.Exists(configPath))
             {
                 CreateDefaultSettingsFile(configPath);
                 if (_isDisposed) return;
-
                 await ShowSafeMessage($"Не обнаружен файл Setting.gaa...", "Проверка файлов настроек", MessageBoxButton.OK, MessageBoxType.Error);
                 await Task.Delay(100);
             }
@@ -378,47 +375,14 @@ namespace Cash8Avalon
             base.OnOpened(e);
             UpdateMenuVisibility(0);
 
-            //_ = Task.Run(() => GetUsers(_lifetimeCts.Token));
-
-            //await GetUsers(_lifetimeCts.Token);
-            // 1. Даем ОС 500 миллисекунд на "пробуждение" сетевого стека и DNS
-            //await Task.Delay(5000);
-
-            // 2. Защита от двойного срабатывания OnOpened в Avalonia
-            //if (!_isGetUsersStarted)
-            //{
-            //    _isGetUsersStarted = true;
-
-            //    // 3. ПРАВИЛЬНЫЙ ВЫЗОВ: 
-            //    // Task.Run здесь вообще не нужен! Так как внутри GetUsers 
-            //    // стоит ConfigureAwait(false), он САМ уйдет в фоновый поток 
-            //    // и не заморозит UI.
-            //    //_ = GetUsers(_lifetimeCts.Token);
-            //    _ = Task.Run(() => GetUsers(_lifetimeCts.Token));
-            //}
-
-            //_ = Task.Run(async () =>
-            //{
-            //    try
-            //    {
-            //        await GetUsers(_lifetimeCts.Token);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        // Теперь мы УВИДИМ любую ошибку, которая убивает GetUsers
-            //        Console.WriteLine($"[FATAL ERROR in GetUsers]: {ex.Message}");
-            //        Console.WriteLine($"[STACK TRACE]: {ex.StackTrace}");
-            //    }
-            //});
-            
-
             await Task.Delay(50);
 
-            // ==========================================
-            // ЭТАП 1: ПРОВЕРКА ОБНОВЛЕНИЙ (свой try-finally)
-            // ==========================================
+            string usersSyncStatus = "Статус синхронизации неизвестен";
+            bool hasUpdate = false;
 
-            // Создаем элементы UI
+            // ==========================================
+            // БЛОК 1: ПРОВЕРКА ОБНОВЛЕНИЙ
+            // ==========================================
             var checkUpdateWindow = new Window
             {
                 Title = "Проверка обновлений",
@@ -429,116 +393,172 @@ namespace Cash8Avalon
                 Topmost = true
             };
 
-            var stackPanel = new StackPanel { Margin = new Thickness(30), Spacing = 15, HorizontalAlignment = HorizontalAlignment.Center };
-            var titleText = new TextBlock { Text = "Проверка обновлений", FontSize = 18, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center };
-            var messageText = new TextBlock { Text = "Идёт проверка наличия обновлений на сервере.", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
-            var timerText = new TextBlock { Text = "⏱ 0 сек", FontSize = 16, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 5) };
-            var progressBar = new ProgressBar { Width = 300, Height = 8, IsIndeterminate = true, Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), Background = new SolidColorBrush(Color.Parse("#E8F5E9")), Margin = new Thickness(0, 5, 0, 5), HorizontalAlignment = HorizontalAlignment.Center };
-            var dotsPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Spacing = 5 };
-            for (int i = 0; i < 3; i++) dotsPanel.Children.Add(new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.Parse("#4CAF50")), Opacity = 0.3 });
+            var stackPanel1 = new StackPanel { Margin = new Thickness(30), Spacing = 15, HorizontalAlignment = HorizontalAlignment.Center };
+            stackPanel1.Children.Add(new TextBlock { Text = "Проверка обновлений", FontSize = 18, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center });
+            var updateMessageText = new TextBlock { Text = "Идёт проверка наличия обновлений на сервере.", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
+            var timerText1 = new TextBlock { Text = "⏱ 0 сек", FontSize = 16, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 5) };
+            var progressBar1 = new ProgressBar { Width = 300, Height = 8, IsIndeterminate = true, Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), Background = new SolidColorBrush(Color.Parse("#E8F5E9")), Margin = new Thickness(0, 5, 0, 5), HorizontalAlignment = HorizontalAlignment.Center };
+            var dotsPanel1 = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Spacing = 5 };
+            for (int i = 0; i < 3; i++) dotsPanel1.Children.Add(new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.Parse("#4CAF50")), Opacity = 0.3 });
 
-            stackPanel.Children.Add(titleText);
-            stackPanel.Children.Add(messageText);
-            stackPanel.Children.Add(timerText);
-            stackPanel.Children.Add(progressBar);
-            stackPanel.Children.Add(dotsPanel);
-            checkUpdateWindow.Content = stackPanel;
+            stackPanel1.Children.Add(updateMessageText);
+            stackPanel1.Children.Add(timerText1);
+            stackPanel1.Children.Add(progressBar1);
+            stackPanel1.Children.Add(dotsPanel1);
+            checkUpdateWindow.Content = stackPanel1;
+            SetWindowOwner(checkUpdateWindow, this); // Защита от фантомов
 
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-            DispatcherTimer uiTimer = null;
-            int dotAnimationStep = 0;
-            bool hasUpdate = false;
+            var stopwatch1 = Stopwatch.StartNew();
+            DispatcherTimer uiTimer1 = null;
+            int dotAnimationStep1 = 0;
 
             try
             {
-                uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-                uiTimer.Tick += (s, ev) =>
+                uiTimer1 = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                uiTimer1.Tick += (s, ev) =>
                 {
-                    if (stopwatch.IsRunning)
+                    if (stopwatch1.IsRunning)
                     {
-                        var elapsed = stopwatch.Elapsed;
-                        timerText.Text = $"⏱ {elapsed.Seconds}.{elapsed.Milliseconds / 100} сек";
-                        dotAnimationStep++;
-                        for (int i = 0; i < dotsPanel.Children.Count; i++)
+                        var elapsed = stopwatch1.Elapsed;
+                        timerText1.Text = $"⏱ {elapsed.Seconds}.{elapsed.Milliseconds / 100} сек";
+                        dotAnimationStep1++;
+                        for (int i = 0; i < dotsPanel1.Children.Count; i++)
                         {
-                            if (dotsPanel.Children[i] is Border dot)
-                            {
-                                double opacity = 0.3 + 0.7 * Math.Sin(dotAnimationStep * 0.1 + i * 2);
-                                dot.Opacity = Math.Max(0.2, Math.Min(1.0, opacity));
-                            }
+                            if (dotsPanel1.Children[i] is Border dot)
+                                dot.Opacity = Math.Max(0.2, Math.Min(1.0, 0.3 + 0.7 * Math.Sin(dotAnimationStep1 * 0.1 + i * 2)));
                         }
                     }
                 };
 
                 checkUpdateWindow.Show();
-                uiTimer.Start();
-
-                // ✅ ИСПРАВЛЕНО: Правильный вызов async метода через Task.Run
-                // Используем Func<Task<bool>>, чтобы Task.Run правильно распаковал результат
-
-                //hasUpdate = await Task.Run(new Func<Task<bool>>(async () =>
-                //{
-                //    return await MainStaticClass.CheckNewVersionProgramm();
-                //}));
+                uiTimer1.Start();
 
                 try
                 {
-                    // ✅ ИДЕАЛЬНО: Просто вызываем асинхронный метод. 
-                    // UI не зависает, метод сам планирует себя, не нужны Task.Run.
-                    //hasUpdate = await MainStaticClass.CheckNewVersionProgramm();
-                    hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+                    hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgrammAsync());
+                    updateMessageText.Text = hasUpdate ? "Доступно обновление!" : "Для вашей версии обновлений нет.";
+                }
+                catch
+                {
+                    updateMessageText.Text = "Не удалось проверить обновления.";
                 }
                 finally
                 {
-                    // ✅ ГАРАНТИЯ: Этот блок выполнится в любом случае: 
-                    //成功 ли, с ошибкой ли, или даже если мы отменили задачу.
-
-                    // Останавливаем анимацию/секундомер
-                    uiTimer.Stop();
-
-                    // Закрываем окно проверки
+                    progressBar1.IsIndeterminate = false;
+                    timerText1.Text = "Готово";
+                    uiTimer1.Stop();
+                    stopwatch1.Stop();
+                    await Task.Delay(2000); // Даем прочитать результат
                     checkUpdateWindow.Close();
+                    await Task.Delay(150);   // Даем панели задач Windows обновиться
                 }
+            }
+            catch (Exception ex) { Console.WriteLine($"Ошибка обновлений: {ex.Message}"); }
 
-                if (_isDisposed) return;
-                
-                if (hasUpdate)
+            if (_isDisposed) return;
+            if (hasUpdate)
+            {
+                bool updateSuccess = await ShowUpdateWindowModalAsync(false);
+                if (updateSuccess) { this.Close(); return; }
+            }
+
+            // ==========================================
+            // БЛОК 2: ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
+            // ==========================================
+            var loadUsersWindow = new Window
+            {
+                Title = "Синхронизация",
+                SizeToContent = SizeToContent.WidthAndHeight,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                CanResize = false,
+                SystemDecorations = SystemDecorations.BorderOnly,
+                Topmost = true
+            };
+
+            var stackPanel2 = new StackPanel { Margin = new Thickness(30), Spacing = 15, HorizontalAlignment = HorizontalAlignment.Center };
+            stackPanel2.Children.Add(new TextBlock { Text = "Синхронизация", FontSize = 18, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center });
+            var usersMessageText = new TextBlock { Text = "Идёт загрузка списка пользователей...", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
+            var timerText2 = new TextBlock { Text = "⏱ 0 сек", FontSize = 16, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 5, 0, 5) };
+            var progressBar2 = new ProgressBar { Width = 300, Height = 8, IsIndeterminate = true, Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), Background = new SolidColorBrush(Color.Parse("#E8F5E9")), Margin = new Thickness(0, 5, 0, 5), HorizontalAlignment = HorizontalAlignment.Center };
+            var dotsPanel2 = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Spacing = 5 };
+            for (int i = 0; i < 3; i++) dotsPanel2.Children.Add(new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.Parse("#4CAF50")), Opacity = 0.3 });
+
+            stackPanel2.Children.Add(usersMessageText);
+            stackPanel2.Children.Add(timerText2);
+            stackPanel2.Children.Add(progressBar2);
+            stackPanel2.Children.Add(dotsPanel2);
+            loadUsersWindow.Content = stackPanel2;
+            SetWindowOwner(loadUsersWindow, this); // Защита от фантомов
+
+            var stopwatch2 = Stopwatch.StartNew();
+            DispatcherTimer uiTimer2 = null;
+            int dotAnimationStep2 = 0;
+
+            try
+            {
+                uiTimer2 = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                uiTimer2.Tick += (s, ev) =>
                 {
-                    bool updateSuccess = await ShowUpdateWindowModalAsync(false);
-                    if (updateSuccess)
+                    if (stopwatch2.IsRunning)
                     {
-                        Console.WriteLine("✓ Обновление успешно, программа будет перезапущена");
-                        return;
+                        var elapsed = stopwatch2.Elapsed;
+                        timerText2.Text = $"⏱ {elapsed.Seconds}.{elapsed.Milliseconds / 100} сек";
+                        dotAnimationStep2++;
+                        for (int i = 0; i < dotsPanel2.Children.Count; i++)
+                        {
+                            if (dotsPanel2.Children[i] is Border dot)
+                                dot.Opacity = Math.Max(0.2, Math.Min(1.0, 0.3 + 0.7 * Math.Sin(dotAnimationStep2 * 0.1 + i * 2)));
+                        }
                     }
-                    await Task.Delay(100);
+                };
+
+                loadUsersWindow.Show();
+                uiTimer2.Start();
+
+                try
+                {
+                    // GetUsers вызывается в фоне, UI не зависает, точки крутятся
+                    await Task.Run(() => GetUsers(_lifetimeCts.Token));
+                    usersSyncStatus = "Пользователи синхронизированы";
+                    usersMessageText.Text = "Список пользователей успешно загружен!";
+                }
+                catch
+                {
+                    usersSyncStatus = "Ошибка обновления пользователей";
+                    usersMessageText.Text = "Не удалось загрузить пользователей.";
+                }
+                finally
+                {
+                    progressBar2.IsIndeterminate = false;
+                    timerText2.Text = "Готово";
+                    uiTimer2.Stop();
+                    stopwatch2.Stop();
+                    await Task.Delay(2000); // Даем прочитать
+                    loadUsersWindow.Close();
+                    await Task.Delay(150);   // Пауза для панели задач
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при проверке обновлений: {ex.Message}");
-            }
-            finally
-            {
-                // Гарантированно закрываем окно проверки ОБНОВЛЕНИЙ перед входом в авторизацию
-                if (uiTimer != null) uiTimer.Stop();
-                stopwatch.Stop();
-                if (checkUpdateWindow.IsVisible) checkUpdateWindow.Close();
-            }
-
-            // ==========================================
-            // ЭТАП 2: АВТОРИЗАЦИЯ И СТАРТ (выполняется только после закрытия спиннера)
-            // ==========================================
-
-            var loginWindow = new Interface_switching();
-            bool loginSuccess = false;
-            loginWindow.AuthorizationSuccess += (s, password) => { loginSuccess = true; loginWindow.Close(); };
-            loginWindow.AuthorizationCancel += (s, args) => { loginSuccess = false; loginWindow.Close(); };
-            await loginWindow.ShowDialog(this);
+            catch (Exception ex) { Console.WriteLine($"Ошибка пользователей: {ex.Message}"); }
 
             if (_isDisposed) return;
 
-            if (loginSuccess)
+            // ==========================================
+            // ЭТАП 2: АВТОРИЗАЦИЯ
+            // ==========================================
+            var loginWindow = new Interface_switching();
+
+            // Статус из Блока 2 попадает в заголовок окна логина
+            loginWindow.Title = usersSyncStatus;
+
+            bool loginSuccess = false;
+            loginWindow.AuthorizationSuccess += (s, password) => { loginSuccess = true; loginWindow.Close(); };
+            loginWindow.AuthorizationCancel += (s, args) => { loginSuccess = false; loginWindow.Close(); };
+
+            await loginWindow.ShowDialog(this); // Теперь фокус перехватится корректно!
+
+            if (_isDisposed) return;            
+
+                if (loginSuccess)
             {
                 try
                 {
@@ -971,6 +991,7 @@ namespace Cash8Avalon
                             }
                         }
                         trans.Commit();
+                        Console.WriteLine("Пользователи успешно обновлены.");
                     }
                     catch (NpgsqlException ex)
                     {

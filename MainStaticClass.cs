@@ -5963,14 +5963,14 @@ namespace Cash8Avalon
         //    return result;
         //}
 
-        public static async Task<bool> CheckNewVersionProgramm()
+        public static async Task<bool> CheckNewVersionProgrammAsync()
         {
             bool result = false;
             Console.WriteLine("[Update] 1. Старт проверки...");
 
             try
             {
-                var ds = await ServiceLocator.DsAsync().ConfigureAwait(false);
+                var ds = await ServiceLocator.DsAsync().ConfigureAwait(false);                
                 Console.WriteLine($"[Update] 2. URL получен: {ds.Url}");
 
                 // ВАЖНО: У старого SoapHttpClientProtocol есть это свойство. 
