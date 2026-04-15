@@ -35,6 +35,8 @@ namespace Cash8Avalon
         // ✅ ДОБАВЬТЕ ЭТО ПОЛЕ для защиты от повторного запуска
         private bool _isClosingInProgress = false;
 
+        private bool _isGetUsersStarted = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -331,6 +333,12 @@ namespace Cash8Avalon
 
         protected override async void OnOpened(EventArgs e)
         {
+            //    if (!System.Diagnostics.Debugger.IsAttached)
+            //    {
+            //        System.Diagnostics.Debugger.Launch();
+            //    }
+            //System.Diagnostics.Debugger.Break();
+            //System.Net.ServicePointManager.Expect100Continue = false;
             MainStaticClass.MainWindow = this;
             await Task.Delay(50);
 
@@ -369,7 +377,40 @@ namespace Cash8Avalon
             MainStaticClass.loadConfig(configPath);
             base.OnOpened(e);
             UpdateMenuVisibility(0);
-            _ = Task.Run(() => GetUsers(_lifetimeCts.Token));
+
+            //_ = Task.Run(() => GetUsers(_lifetimeCts.Token));
+
+            //await GetUsers(_lifetimeCts.Token);
+            // 1. Даем ОС 500 миллисекунд на "пробуждение" сетевого стека и DNS
+            //await Task.Delay(5000);
+
+            // 2. Защита от двойного срабатывания OnOpened в Avalonia
+            //if (!_isGetUsersStarted)
+            //{
+            //    _isGetUsersStarted = true;
+
+            //    // 3. ПРАВИЛЬНЫЙ ВЫЗОВ: 
+            //    // Task.Run здесь вообще не нужен! Так как внутри GetUsers 
+            //    // стоит ConfigureAwait(false), он САМ уйдет в фоновый поток 
+            //    // и не заморозит UI.
+            //    //_ = GetUsers(_lifetimeCts.Token);
+            //    _ = Task.Run(() => GetUsers(_lifetimeCts.Token));
+            //}
+
+            //_ = Task.Run(async () =>
+            //{
+            //    try
+            //    {
+            //        await GetUsers(_lifetimeCts.Token);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        // Теперь мы УВИДИМ любую ошибку, которая убивает GetUsers
+            //        Console.WriteLine($"[FATAL ERROR in GetUsers]: {ex.Message}");
+            //        Console.WriteLine($"[STACK TRACE]: {ex.StackTrace}");
+            //    }
+            //});
+            
 
             await Task.Delay(50);
 
@@ -435,13 +476,33 @@ namespace Cash8Avalon
 
                 // ✅ ИСПРАВЛЕНО: Правильный вызов async метода через Task.Run
                 // Используем Func<Task<bool>>, чтобы Task.Run правильно распаковал результат
-                hasUpdate = await Task.Run(new Func<Task<bool>>(async () =>
+
+                //hasUpdate = await Task.Run(new Func<Task<bool>>(async () =>
+                //{
+                //    return await MainStaticClass.CheckNewVersionProgramm();
+                //}));
+
+                try
                 {
-                    return await MainStaticClass.CheckNewVersionProgramm();
-                }));
+                    // ✅ ИДЕАЛЬНО: Просто вызываем асинхронный метод. 
+                    // UI не зависает, метод сам планирует себя, не нужны Task.Run.
+                    //hasUpdate = await MainStaticClass.CheckNewVersionProgramm();
+                    hasUpdate = await Task.Run(() => MainStaticClass.CheckNewVersionProgramm());
+                }
+                finally
+                {
+                    // ✅ ГАРАНТИЯ: Этот блок выполнится в любом случае: 
+                    //成功 ли, с ошибкой ли, или даже если мы отменили задачу.
+
+                    // Останавливаем анимацию/секундомер
+                    uiTimer.Stop();
+
+                    // Закрываем окно проверки
+                    checkUpdateWindow.Close();
+                }
 
                 if (_isDisposed) return;
-
+                
                 if (hasUpdate)
                 {
                     bool updateSuccess = await ShowUpdateWindowModalAsync(false);
@@ -807,8 +868,11 @@ namespace Cash8Avalon
         {
             try
             {
+                //System.Diagnostics.Debugger.Break();
                 token.ThrowIfCancellationRequested();
-                DS ds = MainStaticClass.get_ds();
+                //DS ds = MainStaticClass.get_ds();
+                DS ds = await ServiceLocator.DsAsync();
+
                 ds.Timeout = 20000;
                 string nick_shop = MainStaticClass.Nick_Shop.Trim();
 
@@ -834,8 +898,7 @@ namespace Cash8Avalon
                 {
                     token.ThrowIfCancellationRequested();
                     answer = ds.GetUsers(MainStaticClass.Nick_Shop, encrypt_string, "4");
-                }
-                // ✅ ИСПРАВЛЕНО: Используем централизованный метод
+                }                
                 catch (System.Net.WebException ex)
                 {
                     HandleWebException(ex, "GetUsers");

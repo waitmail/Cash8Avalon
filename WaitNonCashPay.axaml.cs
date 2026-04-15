@@ -298,6 +298,34 @@ namespace Cash8Avalon
         /// </summary>
         public static async Task<TerminalResult> SendRequestAsync(string url, string data, int timeoutSeconds = 80)
         {
+            System.Diagnostics.Debugger.Break();
+
+            //string mockXmlResponse = @"<?xml version=""1.0"" encoding=""windows-1251"" standalone=""no""?>
+            //<response>
+            //    <field id=""0"">25800</field>
+            //    <field id=""4"">643</field>
+            //    <field id=""6"">20260414155022</field>
+            //    <field id=""9"">0</field>
+            //    <field id=""10"">************6199</field>
+            //    <field id=""13"">244171</field>
+            //    <field id=""14"">114658723171</field>
+            //    <field id=""15"">001</field>
+            //    <field id=""19"">ОДОБРЕНО</field>
+            //    <field id=""21"">20260414155020</field>
+            //    <field id=""23"">0</field>
+            //    <field id=""25"">1</field>
+            //    <field id=""26"">0</field>
+            //    <field id=""27"">W0260144</field>
+            //    <field id=""28"">00000000</field>
+            //    <field id=""39"">1</field>
+            //    <field hex=""true"" id=""86"">EE38D10436313939D22845423638344138413137323334454344383238413344443230314136384242433230354442454237D306323230303033</field>
+            //    <field id=""90"">0x4F^^A0000006581010~0x95^^95058080008000~0xDD^^ /~0xDE^^МИР КРЕДИТ PIX 1010~</field>
+            //</response>";
+
+            //MainStaticClass.write_event_in_log("ВНИМАНИЕ: Используется ЗАГЛУШКА терминала (MOCK)", "Terminal", "0");
+            //return ParseResponse(mockXmlResponse);
+
+
             try
             {
                 using var client = new HttpClient();

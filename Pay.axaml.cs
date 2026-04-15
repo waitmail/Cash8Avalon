@@ -616,6 +616,8 @@ namespace Cash8Avalon
 
         private async Task it_is_paid()
         {
+            System.Diagnostics.Debugger.Break();
+
             if (cc.check_type.SelectedIndex == 0) // ОПЛАТА
             {
                 if ((Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)) < 0)

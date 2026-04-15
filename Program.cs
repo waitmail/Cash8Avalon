@@ -24,6 +24,7 @@ namespace Cash8Avalon
 
             try
             {
+                System.Net.ServicePointManager.Expect100Continue = false;
                 BuildAvaloniaApp()
                     .StartWithClassicDesktopLifetime(args);
             }

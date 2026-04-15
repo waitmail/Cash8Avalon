@@ -5865,74 +5865,161 @@ namespace Cash8Avalon
         }
 
 
+        //public static async Task<bool> CheckNewVersionProgramm()
+        //{
+        //    bool result = false;
+        //    // Создаем и запускаем секундомер
+        //    //var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        //    //// Выполняем проверку
+        //    //bool isWorker = MainStaticClass.service_is_worker();
+
+        //    //// Останавливаем секундомер
+        //    //sw.Stop();
+
+        //    // Выводим результат
+        //    //await MessageBoxHelper.Show(
+        //    //    $"Проверка service_is_worker заняла: {sw.Elapsed.TotalMilliseconds:F2} мс\nРезультат: {isWorker}",
+        //    //    "Замер времени",
+        //    //    MessageBoxButton.OK,
+        //    //    MessageBoxType.Info,
+        //    //    MainStaticClass.MainWindow
+        //    //);
+
+        //    // Возвращаем результат как в оригинале
+        //    //if (!isWorker)
+        //    //{
+        //    //    MainStaticClass.ResetDsCache();
+        //    //    return false;
+        //    //}
+
+        //    //var ds = MainStaticClass.get_ds();
+        //    //System.Diagnostics.Debugger.Break();
+        //    var ds = await ServiceLocator.DsAsync().ConfigureAwait(false);
+        //    //System.Diagnostics.Debugger.Break();
+        //    ds.Timeout = 20000;
+
+
+
+        //    //// Проверяем, чтобы не получить NullReferenceException
+        //    //if (ds.Endpoint != null && ds.Endpoint.Binding != null)
+        //    //{
+        //    //    ds.Endpoint.Binding.SendTimeout = TimeSpan.FromMilliseconds(20000);
+        //    //}
+
+        //    string nick_shop = MainStaticClass.Nick_Shop.Trim();
+        //    string code_shop = MainStaticClass.Code_Shop.Trim();
+
+        //    if (string.IsNullOrEmpty(nick_shop) || string.IsNullOrEmpty(code_shop))
+        //        return false;
+
+        //    string count_day = CryptorEngine.get_count_day();
+        //    string key = nick_shop + count_day + code_shop;
+        //    string local_version = MainStaticClass.version();
+        //    string data = code_shop + "|" + local_version + "|" + code_shop;
+
+        //    try
+        //    {
+        //        string encrypted_data = CryptorEngine.Encrypt(data, true, key);
+
+        //        // ✅ Прямой синхронный вызов веб-сервиса (без async/await)
+        //        //string encrypted_response = ds.ExistsUpdateProrgamAvalon(
+        //        //    nick_shop,
+        //        //    encrypted_data,
+        //        //    MainStaticClass.GetWorkSchema.ToString());
+
+        //        ////string encrypted_response = await ds.ExistsUpdateProrgamAvalonAsync(
+        //        ////    nick_shop,
+        //        ////    encrypted_data,
+        //        ////    MainStaticClass.GetWorkSchema.ToString()).ConfigureAwait(false);
+
+        //        string encrypted_response = await Task.Run(async () =>
+        //        {
+        //            return await ds.ExistsUpdateProrgamAvalonAsync(
+        //                nick_shop,
+        //                encrypted_data,
+        //                MainStaticClass.GetWorkSchema.ToString());
+        //        }).ConfigureAwait(false);
+
+        //        if (string.IsNullOrEmpty(encrypted_response))
+        //            return result;
+
+        //        string server_version = CryptorEngine.Decrypt(encrypted_response, true, key);
+
+        //        if (long.TryParse(local_version, out var local_ver) &&
+        //            long.TryParse(server_version, out var server_ver))
+        //        {
+        //            result = server_ver > local_ver;
+        //        }
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        // Логируем ошибку при необходимости
+        //        Console.WriteLine($"[Update] Check error: {ex.Message}");
+        //        //MainStaticClass.ResetDsCache();
+        //        await ServiceLocator.ResetDsCacheAsync();
+        //    }
+
+        //    return result;
+        //}
+
         public static async Task<bool> CheckNewVersionProgramm()
         {
             bool result = false;
-            // Создаем и запускаем секундомер
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-
-            // Выполняем проверку
-            bool isWorker = MainStaticClass.service_is_worker();
-
-            // Останавливаем секундомер
-            sw.Stop();
-
-            // Выводим результат
-            //await MessageBoxHelper.Show(
-            //    $"Проверка service_is_worker заняла: {sw.Elapsed.TotalMilliseconds:F2} мс\nРезультат: {isWorker}",
-            //    "Замер времени",
-            //    MessageBoxButton.OK,
-            //    MessageBoxType.Info,
-            //    MainStaticClass.MainWindow
-            //);
-
-            // Возвращаем результат как в оригинале
-            if (!isWorker)
-            {
-                MainStaticClass.ResetDsCache();
-                return false;
-            }
-
-            var ds = MainStaticClass.get_ds();
-            ds.Timeout = 20000;
-
-            string nick_shop = MainStaticClass.Nick_Shop.Trim();
-            string code_shop = MainStaticClass.Code_Shop.Trim();
-
-            if (string.IsNullOrEmpty(nick_shop) || string.IsNullOrEmpty(code_shop))
-                return false;
-
-            string count_day = CryptorEngine.get_count_day();
-            string key = nick_shop + count_day + code_shop;
-            string local_version = MainStaticClass.version();
-            string data = code_shop + "|" + local_version + "|" + code_shop;
+            Console.WriteLine("[Update] 1. Старт проверки...");
 
             try
             {
-                string encrypted_data = CryptorEngine.Encrypt(data, true, key);
+                var ds = await ServiceLocator.DsAsync().ConfigureAwait(false);
+                Console.WriteLine($"[Update] 2. URL получен: {ds.Url}");
 
-                // ✅ Прямой синхронный вызов веб-сервиса (без async/await)
+                // ВАЖНО: У старого SoapHttpClientProtocol есть это свойство. 
+                // ОНО ОБЯЗАТЕЛЬНО, иначе при сбое сети запрос зависнет навсегда!
+                ds.Timeout = 15000; // 15 секунд максимум на запрос
+
+                string nick_shop = MainStaticClass.Nick_Shop.Trim();
+                string code_shop = MainStaticClass.Code_Shop.Trim();
+                Console.WriteLine($"[Update] 3. Магазин: {nick_shop}");
+
+                if (string.IsNullOrEmpty(nick_shop) || string.IsNullOrEmpty(code_shop))
+                    return false;
+
+                string count_day = CryptorEngine.get_count_day();
+                string key = nick_shop + count_day + code_shop;
+                string local_version = MainStaticClass.version();
+                string data = code_shop + "|" + local_version + "|" + code_shop;
+
+                Console.WriteLine("[Update] 4. Начинаем шифрование...");
+                string encrypted_data = CryptorEngine.Encrypt(data, true, key);
+                Console.WriteLine("[Update] 5. Отправляем SOAP-запрос...");
+
+                // Вызываем синхронный метод напрямую. Нам не нужен здесь Task.Run, 
+                // потому что весь этот метод УЖЕ выполняется в фоновом потоке 
+                // благодаря Task.Run в OnOpened.
                 string encrypted_response = ds.ExistsUpdateProrgamAvalon(
                     nick_shop,
                     encrypted_data,
                     MainStaticClass.GetWorkSchema.ToString());
 
+                Console.WriteLine($"[Update] 6. Ответ получен от сервера. Длина: {encrypted_response?.Length ?? 0}");
+
                 if (string.IsNullOrEmpty(encrypted_response))
                     return result;
 
                 string server_version = CryptorEngine.Decrypt(encrypted_response, true, key);
+                Console.WriteLine($"[Update] 7. Расшифровка успешна. Версия сервера: {server_version}");
 
                 if (long.TryParse(local_version, out var local_ver) &&
                     long.TryParse(server_version, out var server_ver))
                 {
                     result = server_ver > local_ver;
                 }
+                Console.WriteLine($"[Update] 8. Результат: {result}");
             }
-            catch
+            catch (Exception ex)
             {
-                // Логируем ошибку при необходимости
-                // Console.WriteLine($"[Update] Check error: {ex.Message}");
-                MainStaticClass.ResetDsCache();
+                Console.WriteLine($"[Update] !!! ОШИБКА: {ex.Message}");
+                await ServiceLocator.ResetDsCacheAsync().ConfigureAwait(false);
             }
 
             return result;

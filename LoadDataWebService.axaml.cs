@@ -2117,71 +2117,142 @@ namespace Cash8Avalon
             }
         }
 
+        //private async Task<(bool success, LoadPacketData data, string errorMessage)> GetDataFromServerAsync(CancellationToken cancellationToken)
+        //{
+        //    return await Task.Run(() =>
+        //    {
+        //        try
+        //        {
+        //            string nick_shop = MainStaticClass.Nick_Shop?.Trim();
+        //            if (string.IsNullOrEmpty(nick_shop))
+        //            {
+        //                return (false, null, "Не удалось получить название магазина");
+        //            }
+
+        //            string code_shop = MainStaticClass.Code_Shop?.Trim();
+        //            if (string.IsNullOrEmpty(code_shop))
+        //            {
+        //                return (false, null, "Не удалось получить код магазина");
+        //            }
+
+        //            string count_day = CryptorEngine.get_count_day();
+        //            string key = nick_shop + count_day + code_shop;
+
+        //            using (var queryPacketData = new QueryPacketData())
+        //            {
+        //                queryPacketData.NickShop = nick_shop;
+        //                queryPacketData.CodeShop = code_shop;
+        //                queryPacketData.LastDateDownloadTovar = last_date_download_tovars().ToString("dd-MM-yyyy");
+        //                queryPacketData.NumCash = MainStaticClass.CashDeskNumber.ToString();
+        //                queryPacketData.Version = MainStaticClass.version().Replace(".", "");
+
+        //                string data = JsonConvert.SerializeObject(queryPacketData,
+        //                    Formatting.Indented,
+        //                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+
+        //                string data_encrypt = CryptorEngine.Encrypt(data, true, key);
+
+        //                cancellationToken.ThrowIfCancellationRequested();
+
+        //                var loadPacketData = await getLoadPacketDataFullAsync(nick_shop, data_encrypt, key);
+
+        //                if (loadPacketData == null)
+        //                {
+        //                    return (false, null, "Не удалось получить данные с сервера (null результат)");
+        //                }
+
+        //                if (!loadPacketData.PacketIsFull)
+        //                {
+        //                    string errorMsg = "Пакет данных не полный";
+        //                    if (!string.IsNullOrEmpty(loadPacketData.Exception))
+        //                        errorMsg += $": {loadPacketData.Exception}";
+        //                    return (false, null, errorMsg);
+        //                }
+
+        //                if (loadPacketData.Exchange)
+        //                {
+        //                    return (false, null, "Пакет данных получен во время обновления данных на сервере");
+        //                }
+
+        //                return (true, loadPacketData, "");
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return (false, null, $"Ошибка при получении данных с сервера: {ex.Message}");
+        //        }
+        //    }, cancellationToken);
+        //}
+
         private async Task<(bool success, LoadPacketData data, string errorMessage)> GetDataFromServerAsync(CancellationToken cancellationToken)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                string nick_shop = MainStaticClass.Nick_Shop?.Trim();
+                if (string.IsNullOrEmpty(nick_shop))
                 {
-                    string nick_shop = MainStaticClass.Nick_Shop?.Trim();
-                    if (string.IsNullOrEmpty(nick_shop))
-                    {
-                        return (false, null, "Не удалось получить название магазина");
-                    }
-
-                    string code_shop = MainStaticClass.Code_Shop?.Trim();
-                    if (string.IsNullOrEmpty(code_shop))
-                    {
-                        return (false, null, "Не удалось получить код магазина");
-                    }
-
-                    string count_day = CryptorEngine.get_count_day();
-                    string key = nick_shop + count_day + code_shop;
-
-                    using (var queryPacketData = new QueryPacketData())
-                    {
-                        queryPacketData.NickShop = nick_shop;
-                        queryPacketData.CodeShop = code_shop;
-                        queryPacketData.LastDateDownloadTovar = last_date_download_tovars().ToString("dd-MM-yyyy");
-                        queryPacketData.NumCash = MainStaticClass.CashDeskNumber.ToString();
-                        queryPacketData.Version = MainStaticClass.version().Replace(".", "");
-
-                        string data = JsonConvert.SerializeObject(queryPacketData,
-                            Formatting.Indented,
-                            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-
-                        string data_encrypt = CryptorEngine.Encrypt(data, true, key);
-
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        var loadPacketData = getLoadPacketDataFull(nick_shop, data_encrypt, key);
-
-                        if (loadPacketData == null)
-                        {
-                            return (false, null, "Не удалось получить данные с сервера (null результат)");
-                        }
-
-                        if (!loadPacketData.PacketIsFull)
-                        {
-                            string errorMsg = "Пакет данных не полный";
-                            if (!string.IsNullOrEmpty(loadPacketData.Exception))
-                                errorMsg += $": {loadPacketData.Exception}";
-                            return (false, null, errorMsg);
-                        }
-
-                        if (loadPacketData.Exchange)
-                        {
-                            return (false, null, "Пакет данных получен во время обновления данных на сервере");
-                        }
-
-                        return (true, loadPacketData, "");
-                    }
+                    return (false, null, "Не удалось получить название магазина");
                 }
-                catch (Exception ex)
+
+                string code_shop = MainStaticClass.Code_Shop?.Trim();
+                if (string.IsNullOrEmpty(code_shop))
                 {
-                    return (false, null, $"Ошибка при получении данных с сервера: {ex.Message}");
+                    return (false, null, "Не удалось получить код магазина");
                 }
-            }, cancellationToken);
+
+                string count_day = CryptorEngine.get_count_day();
+                string key = nick_shop + count_day + code_shop;
+
+                using (var queryPacketData = new QueryPacketData())
+                {
+                    queryPacketData.NickShop = nick_shop;
+                    queryPacketData.CodeShop = code_shop;
+                    queryPacketData.LastDateDownloadTovar = last_date_download_tovars().ToString("dd-MM-yyyy");
+                    queryPacketData.NumCash = MainStaticClass.CashDeskNumber.ToString();
+                    queryPacketData.Version = MainStaticClass.version().Replace(".", "");
+
+                    string data = JsonConvert.SerializeObject(queryPacketData,
+                        Formatting.Indented,
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+
+                    string data_encrypt = CryptorEngine.Encrypt(data, true, key);
+
+                    // Проверяем отмену
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Вызываем чистый асинхронный метод напрямую, без Task.Run!
+                    var loadPacketData = await getLoadPacketDataFullAsync(nick_shop, data_encrypt, key);
+
+                    if (loadPacketData == null)
+                    {
+                        return (false, null, "Не удалось получить данные с сервера (null результат)");
+                    }
+
+                    if (!loadPacketData.PacketIsFull)
+                    {
+                        string errorMsg = "Пакет данных не полный";
+                        if (!string.IsNullOrEmpty(loadPacketData.Exception))
+                            errorMsg += $": {loadPacketData.Exception}";
+                        return (false, null, errorMsg);
+                    }
+
+                    if (loadPacketData.Exchange)
+                    {
+                        return (false, null, "Пакет данных получен во время обновления данных на сервере");
+                    }
+
+                    return (true, loadPacketData, "");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Корректная обработка отмены задачи (если нажали "Отмена")
+                return (false, null, "Операция отменена пользователем");
+            }
+            catch (Exception ex)
+            {
+                return (false, null, $"Ошибка при получении данных с сервера: {ex.Message}");
+            }
         }
 
         // Новая перегрузка метода с поддержкой прогресса
@@ -2732,29 +2803,68 @@ namespace Cash8Avalon
             }
         }
 
-        private LoadPacketData getLoadPacketDataFull(string nick_shop, string data_encrypt, string key)
+        //private LoadPacketData getLoadPacketDataFull(string nick_shop, string data_encrypt, string key)
+        //{
+        //    LoadPacketData loadPacketData = new LoadPacketData();
+        //    loadPacketData.PacketIsFull = false;
+
+        //    string result_query = "";
+        //    string decrypt_data = "";
+        //    try
+        //    {
+        //        //using (
+        //        DS ds = MainStaticClass.get_ds();//)
+        //        //{
+        //            ds.Timeout = 60000;
+        //            byte[] result_query_byte = ds.GetDataForCasheV8JasonAvalon(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
+        //            result_query = DecompressString(result_query_byte);
+        //            decrypt_data = CryptorEngine.Decrypt(result_query, true, key);
+        //            loadPacketData = JsonConvert.DeserializeObject<LoadPacketData>(decrypt_data);
+        //        //}
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        loadPacketData.Exception = ex.Message;
+        //        loadPacketData.PacketIsFull = false;
+        //    }
+        //    return loadPacketData;
+        //}
+
+        private async Task<LoadPacketData> getLoadPacketDataFullAsync(string nick_shop, string data_encrypt, string key)
         {
             LoadPacketData loadPacketData = new LoadPacketData();
             loadPacketData.PacketIsFull = false;
 
             string result_query = "";
             string decrypt_data = "";
+
             try
             {
-                using (DS ds = MainStaticClass.get_ds())
-                {
-                    ds.Timeout = 60000;
-                    byte[] result_query_byte = ds.GetDataForCasheV8JasonAvalon(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
+
+                DS ds = await ServiceLocator.DsAsync();
+                
+                    ds.Timeout = 60000; // 60 секунд на скачивание большого пакета
+
+                    // Ждем скачивания байтов (UI в это время не виснет!)
+                    byte[] result_query_byte = await ds.GetDataForCasheV8JasonAvalonAsync(
+                        nick_shop,
+                        data_encrypt,
+                        MainStaticClass.GetWorkSchema.ToString());
+
                     result_query = DecompressString(result_query_byte);
                     decrypt_data = CryptorEngine.Decrypt(result_query, true, key);
                     loadPacketData = JsonConvert.DeserializeObject<LoadPacketData>(decrypt_data);
-                }
+                
             }
             catch (Exception ex)
             {
+                // ВАЖНО: При падении скачивания сбрасываем кэш адреса!
+                await ServiceLocator.ResetDsCacheAsync();
+
                 loadPacketData.Exception = ex.Message;
                 loadPacketData.PacketIsFull = false;
             }
+
             return loadPacketData;
         }
 

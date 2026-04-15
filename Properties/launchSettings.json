@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Cash8Avalon": {
+      "commandName": "Project",
+      "nativeDebugging": false,
+      "hotReloadEnabled": false
+    }
+  }
+}

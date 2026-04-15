@@ -3,22 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml;
 
 namespace Cash8Avalon
 {
-    public class DS : IDisposable
+    public class DS //: IDisposable
     {
         private string _url;
         private int _timeout = 100000; // 100 секунд по умолчанию
-        private WebClient _webClient;
+        //private WebClient _webClient;
 
 
         public DS()
         {
-            _webClient = new WebClient();
-            _webClient.Headers.Add("Content-Type", "text/xml; charset=utf-8");
-            _webClient.Headers.Add("SOAPAction", "http://tempuri.org/");
+            //_webClient = new WebClient();
+            //_webClient.Headers.Add("Content-Type", "text/xml; charset=utf-8");
+            //_webClient.Headers.Add("SOAPAction", "http://tempuri.org/");
         }
 
         public string Url
@@ -78,6 +79,60 @@ namespace Cash8Avalon
                     using (StreamReader reader = new StreamReader(response.GetResponseStream()))
                     {
                         return reader.ReadToEnd();
+                    }
+                }
+            }
+            catch (WebException ex)
+            {
+                if (ex.Response != null)
+                {
+                    using (HttpWebResponse response = (HttpWebResponse)ex.Response)
+                    using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                    {
+                        string errorContent = reader.ReadToEnd();
+                        throw new InvalidOperationException($"SOAP request failed: {response.StatusCode}. Content: {errorContent}", ex);
+                    }
+                }
+                throw new InvalidOperationException($"SOAP request failed: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error executing SOAP request {operationName}: {ex.Message}", ex);
+            }
+        }
+
+        // Добавьте этот метод в класс DS (рядом со старым синхронным ExecuteSoapRequest)
+
+        private async Task<string> ExecuteSoapRequestAsync(string soapEnvelope, string operationName)
+        {
+            if (string.IsNullOrEmpty(_url))
+            {
+                throw new InvalidOperationException("URL не установлен.");
+            }
+
+            try
+            {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(_url);
+                request.Method = "POST";
+                request.ContentType = "text/xml; charset=utf-8";
+                request.Headers.Add("SOAPAction", "http://tempuri.org/" + operationName);
+                request.Timeout = _timeout;
+
+                byte[] data = Encoding.UTF8.GetBytes(soapEnvelope);
+                request.ContentLength = data.Length;
+
+                // Асинхронная запись запроса
+                using (Stream stream = await request.GetRequestStreamAsync())
+                {
+                    await stream.WriteAsync(data, 0, data.Length);
+                }
+
+                // Асинхронное чтение ответа
+                using (HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync())
+                {
+                    using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                    {
+                        return await reader.ReadToEndAsync();
                     }
                 }
             }
@@ -344,6 +399,25 @@ namespace Cash8Avalon
             return ParseSoapResponse<string>(response, "ExistsUpdateProrgamAvalon");
         }
 
+        // Добавьте этот метод в класс DS
+
+        public async Task<string> ExistsUpdateProrgamAvalonAsync(string nick_shop, string data, string scheme)
+        {
+            string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+        <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+            <soap:Body>
+                <ExistsUpdateProrgamAvalon xmlns=""http://tempuri.org/"">
+                    <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
+                    <data>{SecurityHelper.EscapeXml(data)}</data>
+                    <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
+                </ExistsUpdateProrgamAvalon>
+            </soap:Body>
+        </soap:Envelope>";
+
+            string response = await ExecuteSoapRequestAsync(soapEnvelope, "ExistsUpdateProrgamAvalon");
+            return ParseSoapResponse<string>(response, "ExistsUpdateProrgamAvalon");
+        }
+
         public string GetUpdateProgramAvalon(string nick_shop, string data, string scheme)
         {
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
@@ -514,6 +588,23 @@ namespace Cash8Avalon
             return ParseSoapResponse<byte[]>(response, "GetDataForCasheV8JasonAvalon");
         }
 
+        public async Task<byte[]> GetDataForCasheV8JasonAvalonAsync(string nick_shop, string data, string scheme)
+        {
+            string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+            <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+                <soap:Body>
+                    <GetDataForCasheV8JasonAvalon xmlns=""http://tempuri.org/"">
+                        <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
+                        <data>{SecurityHelper.EscapeXml(data)}</data>
+                        <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
+                    </GetDataForCasheV8JasonAvalon>
+                </soap:Body>
+            </soap:Envelope>";
+
+            string response = await ExecuteSoapRequestAsync(soapEnvelope, "GetDataForCasheV8JasonAvalon");
+            return ParseSoapResponse<byte[]>(response, "GetDataForCasheV8JasonAvalon");
+        }
+
         public bool UploadOpeningClosingShops(string nick_shop, string data, string scheme)
         {
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
@@ -650,10 +741,10 @@ namespace Cash8Avalon
             return ParseSoapResponse<bool>(response, "UploadDataOnSalesPortionJasonAvalon");
         }
 
-        public void Dispose()
-        {
-            _webClient?.Dispose();
-        }
+        //public void Dispose()
+        //{
+        //    //_webClient?.Dispose();
+        //}
     }
 
     internal static class SecurityHelper

@@ -77,7 +77,7 @@ namespace Cash8Avalon
             try
             {
                 if (!show_phone)
-                    await check_new_version_programm();
+                    await CheckNewVersionProgramm();
             }
             catch (Exception ex)
             {
@@ -98,7 +98,7 @@ namespace Cash8Avalon
 
         #region Проверка версии
 
-        public async Task check_new_version_programm()
+        public async Task CheckNewVersionProgramm()
         {
             if (_isUpdating || _isClosed) return;
 
@@ -110,7 +110,7 @@ namespace Cash8Avalon
             }
 
             var ds = MainStaticClass.get_ds();
-            ds.Timeout = 100000;
+            ds.Timeout = 10000;
 
             string nick_shop = MainStaticClass.Nick_Shop.Trim();
             if (string.IsNullOrEmpty(nick_shop))
