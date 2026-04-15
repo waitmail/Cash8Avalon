@@ -389,8 +389,19 @@ namespace Cash8Avalon
                 SizeToContent = SizeToContent.WidthAndHeight,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 CanResize = false,
-                SystemDecorations = SystemDecorations.BorderOnly,
-                Topmost = true
+                SystemDecorations = SystemDecorations.None,
+                Topmost = true,
+                Background = null
+            };
+
+            var shadowWrapper1 = new Border
+            {
+                Background = Brushes.White,
+                Margin = new Thickness(8),
+                CornerRadius = new CornerRadius(4),
+                BoxShadow = new BoxShadows(new BoxShadow { Blur = 25.0, OffsetY = 5.0, Spread = 0, Color = Color.FromArgb(150, 33, 150, 243) }),
+                BorderBrush = new SolidColorBrush(Color.Parse("#2196F3")),
+                BorderThickness = new Thickness(1)
             };
 
             var stackPanel1 = new StackPanel { Margin = new Thickness(30), Spacing = 15, HorizontalAlignment = HorizontalAlignment.Center };
@@ -405,8 +416,11 @@ namespace Cash8Avalon
             stackPanel1.Children.Add(timerText1);
             stackPanel1.Children.Add(progressBar1);
             stackPanel1.Children.Add(dotsPanel1);
-            checkUpdateWindow.Content = stackPanel1;
-            SetWindowOwner(checkUpdateWindow, this); // Защита от фантомов
+
+            // СВЯЗЫВАЕМ ВСЁ ВМЕСТЕ:
+            shadowWrapper1.Child = stackPanel1;       // 1. Кладем точки внутрь рамки
+            checkUpdateWindow.Content = shadowWrapper1; // 2. Кладем рамку в окно
+            SetWindowOwner(checkUpdateWindow, this);   // 3. Привязываем жизненный цикл
 
             var stopwatch1 = Stopwatch.StartNew();
             DispatcherTimer uiTimer1 = null;
@@ -471,8 +485,19 @@ namespace Cash8Avalon
                 SizeToContent = SizeToContent.WidthAndHeight,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 CanResize = false,
-                SystemDecorations = SystemDecorations.BorderOnly,
-                Topmost = true
+                SystemDecorations = SystemDecorations.None,
+                Topmost = true,
+                Background = null
+            };
+
+            var shadowWrapper2 = new Border
+            {
+                Background = Brushes.White,
+                Margin = new Thickness(8),
+                CornerRadius = new CornerRadius(4),
+                BoxShadow = new BoxShadows(new BoxShadow { Blur = 25.0, OffsetY = 5.0, Spread = 0, Color = Color.FromArgb(150, 33, 150, 243) }),
+                BorderBrush = new SolidColorBrush(Color.Parse("#2196F3")),
+                BorderThickness = new Thickness(1)
             };
 
             var stackPanel2 = new StackPanel { Margin = new Thickness(30), Spacing = 15, HorizontalAlignment = HorizontalAlignment.Center };
@@ -487,8 +512,11 @@ namespace Cash8Avalon
             stackPanel2.Children.Add(timerText2);
             stackPanel2.Children.Add(progressBar2);
             stackPanel2.Children.Add(dotsPanel2);
-            loadUsersWindow.Content = stackPanel2;
-            SetWindowOwner(loadUsersWindow, this); // Защита от фантомов
+
+            // СВЯЗЫВАЕМ ВСЁ ВМЕСТЕ:
+            shadowWrapper2.Child = stackPanel2;        // 1. Кладем точки внутрь рамки
+            loadUsersWindow.Content = shadowWrapper2;  // 2. Кладем рамку в окно
+            SetWindowOwner(loadUsersWindow, this);    // 3. Привязываем жизненный цикл
 
             var stopwatch2 = Stopwatch.StartNew();
             DispatcherTimer uiTimer2 = null;

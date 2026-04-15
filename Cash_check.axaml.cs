@@ -3255,6 +3255,7 @@ namespace Cash8Avalon
         /// </summary>
         private async Task<double[]> get_cash_on_type_payment_3_new(double sum_cash, double sum_non_cashe, double sum_sertificate)
         {
+            System.Diagnostics.Debugger.Break();
             double[] result = new double[3];
             result[0] = sum_cash;
             result[1] = sum_non_cashe;
@@ -3425,6 +3426,7 @@ namespace Cash8Avalon
                                                   bool last_rewrite, string cash_money, string non_cash_money,
                                                   string sertificate_money, string its_deleted, bool sendToScreen = true)
         {
+            System.Diagnostics.Debugger.Break();
             if ((sum_doc == "") || (sum_doc == "0"))
             {
                 sum_doc = calculation_of_the_sum_of_the_document().ToString();
