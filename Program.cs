@@ -15,6 +15,7 @@ namespace Cash8Avalon
         [STAThread]
         public static void Main(string[] args)
         {
+           
             if (!TryAcquireLock())
             {
                 // Приложение уже запущено - показываем уведомление
@@ -22,9 +23,26 @@ namespace Cash8Avalon
                 return;
             }
 
+            // ВСТАВИТЬ ЭТО СРАЗУ ПОСЛЕ ОТКРЫТИЯ СКОБКИ:
+            AppDomain.CurrentDomain.FirstChanceException += (sender, e) =>
+            {
+                var ex = e.Exception;
+                if (ex.Message.Contains("WebException") || ex.Message.Contains("CanceledException"))
+                {
+                    // Выводим прямо в окно "Вывод" (Output) Visual Studio
+                    System.Diagnostics.Debug.WriteLine($"!!!! СЮДА ПАДАЕТ: {ex.GetType().Name} - {ex.Message}");
+
+                    // ИЛИ ВЫВОДИМ НА ЭКРАН В КОНСОЛИ:
+                    Console.WriteLine($"!!!! СЮДА ПАДАЕТ: {ex.GetType().Name} - {ex.Message}");
+
+                    // Останавливаем отладчик (это сработает даже если красные точки сломаны)
+                    System.Diagnostics.Debugger.Launch();
+                }
+            };
+
             try
             {
-                System.Net.ServicePointManager.Expect100Continue = false;
+                //System.Net.ServicePointManager.Expect100Continue = false;
                 BuildAvaloniaApp()
                     .StartWithClassicDesktopLifetime(args);
             }

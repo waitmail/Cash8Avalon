@@ -3,7 +3,9 @@
 //using Avalonia.Input;
 //using Avalonia.Markup.Xaml;
 //using Avalonia.Media;
+//using Avalonia.Threading;
 //using System;
+//using System.Threading.Tasks;
 //using System.Timers;
 
 //namespace Cash8Avalon
@@ -19,8 +21,9 @@
 //            SetupControls();
 //            SetupTimer();
 
-//            // ВАЖНО: Фокус должен быть на окне для получения событий клавиш
-//            this.Activated += OnWindowActivated;
+//            // ГЛАВНОЕ: Opened для Linux
+//            this.Opened += OnWindowOpened;
+//            this.Deactivated += OnWindowDeactivated;
 //        }
 
 //        private void InitializeComponent()
@@ -46,27 +49,68 @@
 //            _timer.Start();
 //        }
 
-//        private void OnWindowActivated(object sender, EventArgs e)
+//        // ===== КЛЮЧЕВОЙ МЕТОД ДЛЯ LINUX =====
+//        private async void OnWindowOpened(object sender, EventArgs e)
 //        {
-//            // Устанавливаем фокус на окно для получения событий клавиш
-//            this.Focus();
+//            await Task.Delay(50); // Даём время оконному менеджеру
+
+//            await Dispatcher.UIThread.InvokeAsync(async () =>
+//            {
+//                // 1. Активируем окно
+//                this.Activate();
+//                this.Focus();
+
+//                // 2. Трюк с Topmost для Linux
+//                this.Topmost = false;
+//                this.Topmost = true;
+
+//                // 3. Задержка для применения
+//                await Task.Delay(100);
+
+//                // 4. Ещё раз фокус
+//                this.Focus();
+
+//                // 5. Финальная активация
+//                this.Activate();
+
+//            }, DispatcherPriority.Render);
+//        }
+
+//        // Если окно потеряло фокус - возвращаем
+//        private async void OnWindowDeactivated(object sender, EventArgs e)
+//        {
+//            if (this.IsVisible)
+//            {
+//                await Dispatcher.UIThread.InvokeAsync(async () =>
+//                {
+//                    await Task.Delay(50);
+
+//                    this.Topmost = false;
+//                    this.Topmost = true;
+//                    this.Activate();
+//                    this.Focus();
+
+//                }, DispatcherPriority.Render);
+//            }
 //        }
 
 //        // Обработка нажатия клавиш
-//        protected override void OnKeyDown(KeyEventArgs e)
+//        protected override async void OnKeyDown(KeyEventArgs e)
 //        {
-//            base.OnKeyDown(e);
-
 //            if (e.Key == Key.Escape)
-//            {
+//            {                
+//                e.Handled = true; // ВАЖНО: помечаем как обработанное
 //                _timer?.Stop();
 //                this.Close();
+//                return;
 //            }
+
+//            base.OnKeyDown(e);
 //        }
 
 //        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
 //        {
-//            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+//            Dispatcher.UIThread.InvokeAsync(() =>
 //            {
 //                SetShowTovarNotFound();
 //            });
@@ -88,7 +132,6 @@
 //            }
 //        }
 
-//        // Свойства для доступа к элементам
 //        public string TextBoxText
 //        {
 //            get
@@ -119,13 +162,12 @@
 //            }
 //        }
 
-//        // Очистка ресурсов
 //        protected override void OnClosed(EventArgs e)
 //        {
 //            base.OnClosed(e);
 
-//            // Отписываемся от событий
-//            this.Activated -= OnWindowActivated;
+//            this.Opened -= OnWindowOpened;
+//            this.Deactivated -= OnWindowDeactivated;
 
 //            _timer?.Stop();
 //            _timer?.Dispose();
@@ -136,10 +178,12 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -156,9 +200,12 @@ namespace Cash8Avalon
             SetupControls();
             SetupTimer();
 
-            // ГЛАВНОЕ: Opened для Linux
+            // Подписка на события жизненного цикла
             this.Opened += OnWindowOpened;
-            this.Deactivated += OnWindowDeactivated;
+
+            // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Подписка на клавиши через AddHandler с Tunnel стратегией
+            // Это гарантирует, что ESC будет обработан ДО любой другой логики
+            this.AddHandler(KeyDownEvent, OnKeyDownHandler, RoutingStrategies.Tunnel);
         }
 
         private void InitializeComponent()
@@ -187,61 +234,57 @@ namespace Cash8Avalon
         // ===== КЛЮЧЕВОЙ МЕТОД ДЛЯ LINUX =====
         private async void OnWindowOpened(object sender, EventArgs e)
         {
-            await Task.Delay(50); // Даём время оконному менеджеру
+            await Task.Delay(50);
 
             await Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                // 1. Активируем окно
                 this.Activate();
                 this.Focus();
 
-                // 2. Трюк с Topmost для Linux
-                this.Topmost = false;
-                this.Topmost = true;
+                // Трюк с Topmost для Linux
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    this.Topmost = false;
+                    this.Topmost = true;
+                }
 
-                // 3. Задержка для применения
                 await Task.Delay(100);
-
-                // 4. Ещё раз фокус
                 this.Focus();
-
-                // 5. Финальная активация
                 this.Activate();
-
             }, DispatcherPriority.Render);
         }
 
-        // Если окно потеряло фокус - возвращаем
-        private async void OnWindowDeactivated(object sender, EventArgs e)
+        // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Обработчик клавиш через AddHandler
+        private void OnKeyDownHandler(object sender, KeyEventArgs e)
         {
-            if (this.IsVisible)
-            {
-                await Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await Task.Delay(50);
+            Console.WriteLine($"[TovarNotFound] KeyDown: {e.Key}, RoutedEvent: {e.RoutedEvent}");
 
-                    this.Topmost = false;
-                    this.Topmost = true;
-                    this.Activate();
-                    this.Focus();
-
-                }, DispatcherPriority.Render);
-            }
-        }
-
-        // Обработка нажатия клавиш
-        protected override async void OnKeyDown(KeyEventArgs e)
-        {
             if (e.Key == Key.Escape)
-            {                
+            {
+                Console.WriteLine("[TovarNotFound] ESC pressed - closing window");
                 e.Handled = true; // ВАЖНО: помечаем как обработанное
                 _timer?.Stop();
+                _timer?.Dispose();
                 this.Close();
                 return;
             }
 
-            base.OnKeyDown(e);
+            if (e.Key == Key.Enter)
+            {
+                Console.WriteLine("[TovarNotFound] Enter pressed - closing window");
+                e.Handled = true;
+                _timer?.Stop();
+                _timer?.Dispose();
+                this.Close();
+                return;
+            }
         }
+
+        // УДАЛИТЬ или закомментировать старый OnKeyDown - он больше не нужен
+        // protected override async void OnKeyDown(KeyEventArgs e)
+        // {
+        //     ...
+        // }
 
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
@@ -301,11 +344,14 @@ namespace Cash8Avalon
         {
             base.OnClosed(e);
 
+            // Отписка от событий
             this.Opened -= OnWindowOpened;
-            this.Deactivated -= OnWindowDeactivated;
+            this.RemoveHandler(KeyDownEvent, OnKeyDownHandler);
 
+            // Очистка таймера
             _timer?.Stop();
             _timer?.Dispose();
+            _timer = null;
         }
     }
 }

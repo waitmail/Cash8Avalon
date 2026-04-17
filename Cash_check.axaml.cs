@@ -1860,7 +1860,14 @@ namespace Cash8Avalon
             var reasonsDialog = new ReasonsDeletionCheck();
             reasonsDialog.Title = "Удаление документа";
 
+            StopFocusKeeper();
             var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+            // После блока if/else (в конце метода):
+            if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+            {
+                StartFocusKeeper();
+            }
 
             if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
             {
@@ -1881,6 +1888,7 @@ namespace Cash8Avalon
             bool? result = null;
                        
             InputActionBarcode dialog = null;
+            StopFocusKeeper();
 
             try
             {
@@ -1929,6 +1937,11 @@ namespace Cash8Avalon
             {
                 //dialog?.Close();
                 InputSearchProduct.Focus();
+
+                if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+                {
+                    StartFocusKeeper();
+                }
             }
 
 
@@ -1992,6 +2005,7 @@ namespace Cash8Avalon
         private async void ShowSimpleClientDialog()
         {
             InputActionBarcode? dialog = null;
+            StopFocusKeeper();
 
             try
             {
@@ -2028,6 +2042,10 @@ namespace Cash8Avalon
                 {
                     this.InputSearchProduct.Focus();
                 }, DispatcherPriority.Render);
+                if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+                {
+                    StartFocusKeeper();
+                }
             }
         }
                
@@ -3255,7 +3273,12 @@ namespace Cash8Avalon
         /// </summary>
         private async Task<double[]> get_cash_on_type_payment_3_new(double sum_cash, double sum_non_cashe, double sum_sertificate)
         {
-            System.Diagnostics.Debugger.Break();
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
             double[] result = new double[3];
             result[0] = sum_cash;
             result[1] = sum_non_cashe;
@@ -3426,7 +3449,12 @@ namespace Cash8Avalon
                                                   bool last_rewrite, string cash_money, string non_cash_money,
                                                   string sertificate_money, string its_deleted, bool sendToScreen = true)
         {
-            System.Diagnostics.Debugger.Break();
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
             if ((sum_doc == "") || (sum_doc == "0"))
             {
                 sum_doc = calculation_of_the_sum_of_the_document().ToString();
@@ -4303,11 +4331,29 @@ namespace Cash8Avalon
                         this);
                 }
             }
-        }      
+        }
 
+        /// <summary>
+        /// Показ окна "Товар не найден" с правильным управлением фокусом
+        /// </summary>
         private async Task ShowTovarNotFoundWindow(Window owner)
         {
-            await ModalWindowHelper.ShowModalWindow<TovarNotFound>(owner,InputSearchProduct);           
+            // ВАЖНО: Останавливаем таймер фокуса ПЕРЕД открытием модального окна
+            StopFocusKeeper();
+
+            try
+            {
+                await ModalWindowHelper.ShowModalWindow<TovarNotFound>(owner, InputSearchProduct);
+            }
+            finally
+            {
+                // ВАЖНО: Перезапускаем таймер ПОСЛЕ закрытия модального окна
+                // Но только если это новый чек продажи
+                if (IsNewCheck && CheckType?.SelectedIndex == 0)
+                {
+                    StartFocusKeeper();
+                }
+            }
         }
 
         //public async void find_barcode_or_code_in_tovar_new(string barcode, string marking_code)
@@ -6828,7 +6874,14 @@ namespace Cash8Avalon
                                         await Task.Delay(50);
                                     }
 
+                                    StopFocusKeeper();
                                     var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                                    // После блока if/else (в конце метода):
+                                    if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+                                    {
+                                        StartFocusKeeper();
+                                    }
 
                                     // Если отменили или причину не выбрали
                                     if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
@@ -7406,7 +7459,14 @@ namespace Cash8Avalon
                             }
 
                             // Владелец устанавливается через параметр ShowDialog, а не через свойство Owner
+                            StopFocusKeeper();
                             var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                            // После блока if/else (в конце метода):
+                            if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+                            {
+                                StartFocusKeeper();
+                            }
 
                             if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
                             {
@@ -7561,7 +7621,14 @@ namespace Cash8Avalon
                     var reasonsDialog = new ReasonsDeletionCheck();
                     reasonsDialog.Title = "Удаление строки";
 
+                    StopFocusKeeper();
                     var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                    // После блока if/else (в конце метода):
+                    if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+                    {
+                        StartFocusKeeper();
+                    }
 
                     if (dialogResult == true && !string.IsNullOrEmpty(reasonsDialog.Reason))
                     {
@@ -8355,6 +8422,8 @@ namespace Cash8Avalon
         // Добавили параметр int rowIndex
         private async Task<double?> ShowQuantityDialog(string productName, double currentQuantity, bool isFractional, int rowIndex)
         {
+            StopFocusKeeper();
+
             int decimals = isFractional ? 3 : 0;
             string title = isFractional ? "Введите вес (кг)" : "Введите количество";
             string format = isFractional ? "0.000" : "0";
@@ -8428,8 +8497,23 @@ namespace Cash8Avalon
                 }, DispatcherPriority.Background);
             };
 
+            //var parentWindow = this is Window window ? window : this.FindAncestorOfType<Window>();
+            //return await dialog.ShowDialog<double?>(parentWindow);
+
             var parentWindow = this is Window window ? window : this.FindAncestorOfType<Window>();
-            return await dialog.ShowDialog<double?>(parentWindow);
+
+            // Оборачиваем только ShowDialog
+            try
+            {
+                return await dialog.ShowDialog<double?>(parentWindow);
+            }
+            finally
+            {
+                if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+                {
+                    StartFocusKeeper();
+                }
+            }
         }
 
         private void PositionDialogByRow(Window dialog, int rowIndex)

@@ -1523,7 +1523,12 @@ namespace Cash8Avalon
         /// <returns>true - печать успешна, false - произошла ошибка</returns>
         public async Task<bool> print_sell_2_3_or_return_sell(Cash_check check, int variant)
         {
-            System.Diagnostics.Debugger.Break();
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
             bool error = false;
 
             IFptr fptr = MainStaticClass.FPTR;

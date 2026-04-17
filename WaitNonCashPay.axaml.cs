@@ -298,7 +298,12 @@ namespace Cash8Avalon
         /// </summary>
         public static async Task<TerminalResult> SendRequestAsync(string url, string data, int timeoutSeconds = 80)
         {
-            System.Diagnostics.Debugger.Break();
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
 
             //string mockXmlResponse = @"<?xml version=""1.0"" encoding=""windows-1251"" standalone=""no""?>
             //<response>
