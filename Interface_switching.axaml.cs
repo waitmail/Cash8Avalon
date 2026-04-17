@@ -106,8 +106,7 @@ namespace Cash8Avalon
                 {
                     string password = textBox.Text;
 
-                    // Проверяем, что пароль не пустой
-                    if (password.Trim().Length == 0)
+                    if (string.IsNullOrEmpty(password))
                         return;
 
                     // Только проверяем пароль на минимальную валидность

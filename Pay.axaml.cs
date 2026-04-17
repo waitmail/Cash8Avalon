@@ -483,6 +483,45 @@ namespace Cash8Avalon
         //    await it_is_paid();
         //}
 
+        //private async void button2_Click(object sender, RoutedEventArgs e)
+        //{
+        //    // ==========================================
+        //    // 1. ГЛАВНАЯ ЗАЩИТА ОТ ПАДЕНИЯ (CRITICAL FIX)
+        //    // ==========================================
+        //    try
+        //    {
+        //        if (!this.button_pay.IsEnabled) return;
+
+        //        // Проверка ввода копеек
+        //        if (!await copFilledCorrectly()) { CalculateChange(); return; }
+
+        //        // 2. Проверки бизнес-логики (вынесены в отдельный метод)
+        //        if (!await ValidateInputs()) return;
+
+        //        // 3. Подготовка данных
+        //        cc.SetCertificatesFromPay(_certificatesList);
+        //        MainStaticClass.write_event_in_log("Окно оплаты: переход к оплате", "Документ чек", cc.numdoc.ToString());
+
+        //        // 4. Запуск процесса оплаты
+        //        await it_is_paid();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Ловим ЛЮБУЮ ошибку (сеть, парсинг, null reference) и показываем вместо краша
+        //        MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+
+        //        await MessageBoxHelper.Show(
+        //            $"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.",
+        //            "Сбой программы",
+        //            MessageBoxButton.OK,
+        //            MessageBoxType.Error,
+        //            this
+        //        );
+
+        //        CalculateChange(); // Восстанавливаем состояние
+        //    }
+        //}
+
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
             // ==========================================
@@ -490,15 +529,27 @@ namespace Cash8Avalon
             // ==========================================
             try
             {
-                if (!this.button_pay.IsEnabled) return;
+                MainStaticClass.write_event_in_log($"[Pay] Начало button2_Click. IsEnabled: {this.button_pay.IsEnabled}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+
+                if (!this.button_pay.IsEnabled)
+                {
+                    MainStaticClass.write_event_in_log("[Pay] Кнопка заблокирована, выход", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                    return;
+                }
 
                 // Проверка ввода копеек
                 if (!await copFilledCorrectly()) { CalculateChange(); return; }
 
-                // 2. Проверки бизнес-логики (вынесены в отдельный метод)
+                // 2. Проверки бизнес-логики (исправленный доступ к UI)
                 if (!await ValidateInputs()) return;
 
                 // 3. Подготовка данных
+                if (cc == null)
+                {
+                    await MessageBoxHelper.Show("Ошибка: ссылка на чек (cc) не инициализирована.", "Ошибка данных", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    return;
+                }
+
                 cc.SetCertificatesFromPay(_certificatesList);
                 MainStaticClass.write_event_in_log("Окно оплаты: переход к оплате", "Документ чек", cc.numdoc.ToString());
 
@@ -508,7 +559,7 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 // Ловим ЛЮБУЮ ошибку (сеть, парсинг, null reference) и показываем вместо краша
-                MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}\nStackTrace: {ex.StackTrace}", "PayWindow", cc?.numdoc.ToString() ?? "0");
 
                 await MessageBoxHelper.Show(
                     $"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.",
@@ -522,8 +573,93 @@ namespace Cash8Avalon
             }
         }
 
+        ///// <summary>
+        ///// Проверяет все условия оплаты перед отправкой на терминал и в БД.
+        ///// </summary>
+        //private async Task<bool> ValidateInputs()
+        //{
+        //    // Вспомогательная функция безопасного парсинга
+        //    double Parse(string text)
+        //    {
+        //        if (string.IsNullOrWhiteSpace(text)) return 0.0;
+        //        if (double.TryParse(text, out double res)) return res;
+        //        if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
+        //        return 0.0;
+        //    }
+
+        //    // Парсим значения один раз
+        //    double cash_money = Math.Round(Parse(txtB_cash_sum.Text), 2);
+        //    double non_cash_money = Math.Round(get_non_cash_sum(), 2);
+        //    double sertificate_money = Math.Round(Parse(sertificates_sum.Text), 2);
+        //    double bonus_money = Math.Round(Parse(pay_bonus_many.Text), 2);
+        //    double sum_on_document = Math.Round(Parse(pay_sum.Text), 2);
+        //    double remainderVal = Parse(remainder.Text);
+
+        //    double total_paid = cash_money + non_cash_money + sertificate_money + bonus_money;
+
+        //    // 1. Проверка общей суммы
+        //    if (total_paid < sum_on_document)
+        //    {
+        //        await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        return false;
+        //    }
+
+        //    // 2. Проверка сдачи при возврате
+        //    if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
+        //    {
+        //        await MessageBoxHelper.Show(" Сумма возврата должна быть равна сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        return false;
+        //    }
+
+        //    // 3. Логика бонусов
+        //    if (bonus_money > 0)
+        //    {
+        //        bonus_on_document.Text = "0";
+        //        if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
+        //        {
+        //            await MessageBoxHelper.Show("Сумма сертификатов + карта + бонусы превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            return false;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        if (non_cash_money + sertificate_money > sum_on_document)
+        //        {
+        //            await MessageBoxHelper.Show(" Сумма сертификатов + карта превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            return false;
+        //        }
+        //    }
+
+        //    // 4. Проверка схождения сумм (для определенных схем работы)
+        //    if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
+        //    {
+        //        double cash_final = cash_money - remainderVal;
+        //        double sum_doc_calc = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
+
+        //        if (Math.Round(sum_doc_calc, 2) != Math.Round((cash_final + non_cash_money + sertificate_money + bonus_money), 2))
+        //        {
+        //            await MessageBoxHelper.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            return false;
+        //        }
+        //    }
+
+        //    // 5. Проверка возврата (сумма не больше продажи)
+        //    if (cc.check_type.SelectedIndex == 1)
+        //    {
+        //        double cash_final = cash_money - remainderVal;
+        //        if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, cash_final, non_cash_money))
+        //        {
+        //            return false; // Сообщение уже показано внутри метода validate
+        //        }
+        //    }
+
+        //    return true;
+        //}
+
         /// <summary>
         /// Проверяет все условия оплаты перед отправкой на терминал и в БД.
+        /// ИСПРАВЛЕНО: Используются свойства (PaySum, Change) вместо прямых полей (_pay_sum.Text), 
+        /// что предотвращает NullReferenceException.
         /// </summary>
         private async Task<bool> ValidateInputs()
         {
@@ -536,13 +672,21 @@ namespace Cash8Avalon
                 return 0.0;
             }
 
+            // ИСПОЛЬЗУЕМ СВОЙСТВА (Properties), а не поля TextBox'ов!
+            // Свойства определены ниже и используют FindControl с защитой от null.
+            string paySumStr = this.PaySum;
+            string changeStr = this.Change;
+            string certSumStr = this.CertificatesSum;
+            string bonusManyStr = this.BonusMany;
+            string cashSumStr = this.CashSum;
+
             // Парсим значения один раз
-            double cash_money = Math.Round(Parse(txtB_cash_sum.Text), 2);
-            double non_cash_money = Math.Round(get_non_cash_sum(), 2);
-            double sertificate_money = Math.Round(Parse(sertificates_sum.Text), 2);
-            double bonus_money = Math.Round(Parse(pay_bonus_many.Text), 2);
-            double sum_on_document = Math.Round(Parse(pay_sum.Text), 2);
-            double remainderVal = Parse(remainder.Text);
+            double cash_money = Math.Round(Parse(cashSumStr), 2);
+            double non_cash_money = Math.Round(get_non_cash_sum(), 2); // Этот метод тоже нужно проверить на null (см. ниже)
+            double sertificate_money = Math.Round(Parse(certSumStr), 2);
+            double bonus_money = Math.Round(Parse(bonusManyStr), 2);
+            double sum_on_document = Math.Round(Parse(paySumStr), 2);
+            double remainderVal = Parse(changeStr);
 
             double total_paid = cash_money + non_cash_money + sertificate_money + bonus_money;
 
@@ -563,7 +707,9 @@ namespace Cash8Avalon
             // 3. Логика бонусов
             if (bonus_money > 0)
             {
-                bonus_on_document.Text = "0";
+                // Используем свойство BonusSum (оно есть в коде ниже)
+                if (!string.IsNullOrEmpty(this.BonusSum)) this.BonusSum = "0";
+
                 if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
                 {
                     await MessageBoxHelper.Show("Сумма сертификатов + карта + бонусы превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
@@ -618,15 +764,34 @@ namespace Cash8Avalon
         {
             System.Diagnostics.Debugger.Break();
 
+            // Проверка на null чека
+            if (cc == null) return;
+
             if (cc.check_type.SelectedIndex == 0) // ОПЛАТА
             {
-                if ((Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)) < 0)
+                // Безопасный парсинг через свойства
+                decimal cashSumVal = 0;
+                decimal remainderVal = 0;
+                decimal paySumVal = 0;
+
+                decimal.TryParse(this.CashSum, out cashSumVal);
+                decimal.TryParse(this.Change, out remainderVal);
+                decimal.TryParse(this.PaySum, out paySumVal);
+
+                if ((cashSumVal - remainderVal) < 0)
                 {
                     await MessageBoxHelper.Show("Ошибка при определении суммы наличных", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                     return;
                 }
 
-                if (Convert.ToDecimal(pay_sum.Text) - (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text) + Convert.ToDecimal(sertificates_sum.Text) + Convert.ToDecimal(pay_bonus_many.Text) + Convert.ToDecimal(non_cash_sum.Text)) > 1)
+                // Используем безопасные значения для расчета
+                decimal sertSum = 0, bonusSum = 0, nonCashSum = 0;
+                decimal.TryParse(this.CertificatesSum, out sertSum);
+                decimal.TryParse(this.BonusMany, out bonusSum);
+                // non_cash_sum берем через метод, так как он сложнее (рубли + копейки)
+                nonCashSum = Convert.ToDecimal(get_non_cash_sum());
+
+                if (paySumVal - (cashSumVal - remainderVal + sertSum + bonusSum + nonCashSum) > 1)
                 {
                     await MessageBoxHelper.Show(" Неверно внесенные суммы ", "Проверка оплаты", MessageBoxButton.OK, MessageBoxType.Error, this);
                     return;
@@ -639,12 +804,12 @@ namespace Cash8Avalon
                 }
 
                 // === ПОДГОТОВКА ДАННЫХ ДЛЯ ЗАПИСИ ===
-                string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
-                string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
-                string sertificate_money_str = Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".");
-                string bonus_money_str = (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim());
+                string sum_cash_pay = (cashSumVal - remainderVal).ToString().Replace(",", ".");
+                string non_sum_cash_pay = get_non_cash_sum().ToString().Replace(",", ".");
+                string sertificate_money_str = sertSum.ToString().Replace(",", ".");
+                string bonus_money_str = string.IsNullOrEmpty(this.BonusMany.Trim()) ? "0" : this.BonusMany.Trim();
                 string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
-                string remainder_str = remainder.Text.Replace(",", ".");
+                string remainder_str = this.Change.Replace(",", ".");
 
                 // === ШАГ 1: Предварительная запись в БД (до терминала!) ===
                 bool writeResult = await cc.write_new_document(
@@ -1064,10 +1229,26 @@ namespace Cash8Avalon
         [XmlRoot(ElementName = "field")] public class Field { [XmlAttribute(AttributeName = "id")] public string Id { get; set; } [XmlText] public string Text { get; set; } }
         [XmlRoot(ElementName = "response")] public class Response { [XmlElement(ElementName = "field")] public List<Field> Field { get; set; } }
 
+        //private double get_non_cash_sum()
+        //{
+        //    double result = 0;
+        //    result += double.Parse(non_cash_sum.Text) + double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100;
+        //    return result;
+        //}
+
+        // ИСПРАВЛЕННЫЙ метод get_non_cash_sum с защитой от null
         private double get_non_cash_sum()
         {
             double result = 0;
-            result += double.Parse(non_cash_sum.Text) + double.Parse(non_cash_sum_kop.Text.Trim().Length == 0 ? "0" : non_cash_sum_kop.Text) / 100;
+            // Используем свойства NonCashSum и NonCashSumKop вместо полей
+            string rub = this.NonCashSum;
+            string kop = this.NonCashSumKop;
+
+            if (double.TryParse(rub, out double rubVal)) result += rubVal;
+
+            // Копейки могут быть пустыми или содержать нечисловое значение
+            if (double.TryParse(kop, out double kopVal)) result += kopVal / 100;
+
             return result;
         }
 
