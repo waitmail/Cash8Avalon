@@ -1079,6 +1079,13 @@ namespace Cash8Avalon
         /// <returns>true - печать успешна, false - произошла ошибка</returns>
         public async Task<bool> print_sell_2_or_return_sell(Cash_check check)
         {
+            // 1. Глобальная проверка объекта чека
+            if (check == null)
+            {
+                MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] CRITICAL: check object is NULL!", "PrintError", "0");
+                return false;
+            }
+
             bool error = false;
 
             IFptr fptr = MainStaticClass.FPTR;
@@ -1087,7 +1094,8 @@ namespace Cash8Avalon
                 fptr.open();
             }
 
-            if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)//для возвратов и красных чеков старая схема
+            // Логика проверки маркировки для возвратов/коррекций
+            if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)
             {
                 ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
 
@@ -1097,7 +1105,6 @@ namespace Cash8Avalon
                 {
                     if (productItem.Mark.Trim().Length > 14)
                     {
-
                         string marking_code = productItem.Mark.Trim().Replace("vasya2021", "'");
                         string tovarCode = productItem.Code.ToString().Trim();
                         productData = await InventoryManager.FindProductAsync(tovarCode, check);
@@ -1127,9 +1134,8 @@ namespace Cash8Avalon
 
             if (error)
             {
-                return false; // ИЗМЕНЕНО: вместо просто return
+                return false;
             }
-
 
             fptr.setParam(1021, MainStaticClass.Cash_Operator);
             fptr.setParam(1203, MainStaticClass.CashOperatorInn);
@@ -1168,20 +1174,39 @@ namespace Cash8Avalon
                 }
             }
 
-            if (check.txtB_email_telephone.Text != null)
+            // === ИСПРАВЛЕННАЯ ЛОГИКА ПРОВЕРКИ КОНТАКТОВ ===
+
+            // 1. Телефон/Email
+            if (check.txtB_email_telephone != null)
             {
-                if (check.txtB_email_telephone.Text.Trim().Length > 0)
+                string contact = check.txtB_email_telephone.Text;
+                if (!string.IsNullOrWhiteSpace(contact) && contact.Trim().Length > 0)
                 {
-                    fptr.setParam(1008, check.txtB_email_telephone.Text);
+                    fptr.setParam(1008, contact);
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
                 }
-
-                if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
-                {
-                    fptr.setParam(1228, check.txtB_inn.Text);
-                    fptr.setParam(1227, check.txtB_name.Text);
-                }
             }
+            else
+            {
+                MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_email_telephone is NULL. Client contact not printed.", "PrintCheck", check.numdoc.ToString());
+            }
+
+            // 2. ИНН и Наименование покупателя
+            bool hasInn = check.txtB_inn != null && !string.IsNullOrWhiteSpace(check.txtB_inn.Text);
+            bool hasName = check.txtB_name != null && !string.IsNullOrWhiteSpace(check.txtB_name.Text);
+
+            if (hasInn && hasName)
+            {
+                fptr.setParam(1228, check.txtB_inn.Text);
+                fptr.setParam(1227, check.txtB_name.Text);
+            }
+            else
+            {
+                // Логируем, если что-то пустое или null
+                if (!hasInn) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_inn is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
+                if (!hasName) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_name is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
+            }
+            // ==============================================
 
             if (MainStaticClass.SystemTaxation == 1)
             {
@@ -1209,7 +1234,7 @@ namespace Cash8Avalon
                     fptr.cancelReceipt();
                     await MessageBoxHelper.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека", MessageBoxButton.OK, MessageBoxType.Error, check);
                 }
-                return false; // ИЗМЕНЕНО
+                return false;
             }
 
             foreach (ProductItem productItem in check._productsData)
@@ -1282,7 +1307,6 @@ namespace Cash8Avalon
 
                 if (MainStaticClass.SystemTaxation == 1)
                 {
-                    Console.WriteLine("Зашли в секцию налогообложения 1");
                     if (stavka_nds == 0)
                     {
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT0);
@@ -1343,6 +1367,7 @@ namespace Cash8Avalon
                     }
                 }
 
+                //Проверка на сертификат
                 if (check.check_type.SelectedIndex == 0)
                 {
                     if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
@@ -1369,7 +1394,7 @@ namespace Cash8Avalon
 
             if (error)
             {
-                return false; // ИЗМЕНЕНО
+                return false;
             }
 
             // Регистрация итога
@@ -1450,7 +1475,7 @@ namespace Cash8Avalon
                     "\r\n " + fptr.errorDescription().ToString(), "Ошибка при печати", MessageBoxButton.OK, MessageBoxType.Error, check);
                 error = true;
                 fptr.cancelReceipt();
-                return false; // ИЗМЕНЕНО
+                return false;
             }
             else
             {
@@ -1478,7 +1503,7 @@ namespace Cash8Avalon
                 await MessageBoxHelper.Show(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "Ошибка при печати чека", MessageBoxButton.OK, MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 error = true;
-                return false; // ИЗМЕНЕНО
+                return false;
             }
 
             if (!fptr.getParamBool(AtolConstants.LIBFPTR_PARAM_DOCUMENT_PRINTED))
@@ -1503,14 +1528,14 @@ namespace Cash8Avalon
             {
                 MainStaticClass.its_print(check.numdoc.ToString());
                 check.closing = false;
-                return true; // ИЗМЕНЕНО: успех
+                return true; // Успех
             }
             else
             {
-                await MessageBoxHelper.Show("При печати чека произошли ошибки,печать чека будет отменена", "Печать чека", MessageBoxButton.OK, MessageBoxType.Error, check);
+                await MessageBoxHelper.Show("При печати чека произошли ошибки, печать чека будет отменена", "Печать чека", MessageBoxButton.OK, MessageBoxType.Error, check);
                 MainStaticClass.WriteRecordErrorLog(String.Format("Не удалось напечатать документ (Ошибка \"{0}\"). Устраните неполадку и повторите.", fptr.errorDescription()), "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
                 fptr.cancelReceipt();
-                return false; // ИЗМЕНЕНО: ошибка
+                return false; // Ошибка
             }
         }
 

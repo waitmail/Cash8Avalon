@@ -394,162 +394,33 @@ namespace Cash8Avalon
             return true;
         }
 
-        //private async void button2_Click(object sender, RoutedEventArgs e)
-        //{
-        //    if (!this.button_pay.IsEnabled) return;
-        //    if (!await copFilledCorrectly()) { CalculateChange(); return; }
-
-        //    // Вспомогательная функция ТОЛЬКО для строк из TextBox
-        //    double ParseUiText(string text)
-        //    {
-        //        if (string.IsNullOrWhiteSpace(text)) return 0.0;
-        //        // Пробуем распарсить как есть (с учетом текущей культуры системы)
-        //        if (double.TryParse(text, out double res)) return res;
-        //        // Если не вышло, пробуем инвариантную культуру (точки)
-        //        if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
-        //        return 0.0;
-        //    }
-
-        //    // 1. Числа из TextBox парсим через функцию
-        //    double cash_money = Math.Round(ParseUiText(txtB_cash_sum.Text), 2);
-        //    double sertificate_money = Math.Round(ParseUiText(sertificates_sum.Text), 2);
-        //    double bonus_money = Math.Round(ParseUiText(pay_bonus_many.Text), 2);
-        //    double sum_on_document = Math.Round(ParseUiText(pay_sum.Text), 2);
-
-        //    // 2. Числа из методов берем напрямую (они уже double)
-        //    double non_cash_money = Math.Round(get_non_cash_sum(), 2);
-
-        //    double all_cash_non_cash = cash_money + non_cash_money + sertificate_money + bonus_money;
-
-        //    if (Math.Round(all_cash_non_cash, 2) - Math.Round(sum_on_document, 2) < 0)
-        //    {
-        //        await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        return;
-        //    }
-
-        //    TextBox Remainder = this.FindControl<TextBox>("remainder");
-        //    double remainderVal = ParseUiText(Remainder?.Text);
-
-        //    if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
-        //    {
-        //        await MessageBoxHelper.Show(" Сумма возврата должна быть равно сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        return;
-        //    }
-
-        //    if (bonus_money != 0) bonus_on_document.Text = "0";
-
-        //    if (bonus_money > 0)
-        //    {
-        //        if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
-        //        {
-        //            await MessageBoxHelper.Show("Сумма сертификатов + сумма по карте оплаты + сумма по бонусам превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            return;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (non_cash_money + sertificate_money > sum_on_document)
-        //        {
-        //            await MessageBoxHelper.Show(" Сумма сертификатов + сумма по карте оплаты превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            return;
-        //        }
-        //    }
-
-        //    cc.SetCertificatesFromPay(_certificatesList);
-        //    MainStaticClass.write_event_in_log("Окно оплаты перед записью и закрытием документа ", "Документ чек", cc.numdoc.ToString());
-
-        //    Double _cash_summ_ = cash_money - remainderVal;
-        //    Double _non_cash_summ_ = non_cash_money;
-        //    Double _sertificates_sum_ = sertificate_money;
-        //    Double _pay_bonus_many_ = bonus_money;
-
-        //    // decimal приводим к double
-        //    Double sum_of_the_document = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
-
-        //    if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
-        //    {
-        //        if (Math.Round(sum_of_the_document, 2) != Math.Round((_cash_summ_ + _non_cash_summ_ + _sertificates_sum_ + _pay_bonus_many_), 2))
-        //        {
-        //            await MessageBoxHelper.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            return;
-        //        }
-        //    }
-
-        //    if (cc.check_type.SelectedIndex == 1)
-        //    {
-        //        if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, _cash_summ_, _non_cash_summ_)) return;
-        //    }
-
-        //    await it_is_paid();
-        //}
-
-        //private async void button2_Click(object sender, RoutedEventArgs e)
-        //{
-        //    // ==========================================
-        //    // 1. ГЛАВНАЯ ЗАЩИТА ОТ ПАДЕНИЯ (CRITICAL FIX)
-        //    // ==========================================
-        //    try
-        //    {
-        //        if (!this.button_pay.IsEnabled) return;
-
-        //        // Проверка ввода копеек
-        //        if (!await copFilledCorrectly()) { CalculateChange(); return; }
-
-        //        // 2. Проверки бизнес-логики (вынесены в отдельный метод)
-        //        if (!await ValidateInputs()) return;
-
-        //        // 3. Подготовка данных
-        //        cc.SetCertificatesFromPay(_certificatesList);
-        //        MainStaticClass.write_event_in_log("Окно оплаты: переход к оплате", "Документ чек", cc.numdoc.ToString());
-
-        //        // 4. Запуск процесса оплаты
-        //        await it_is_paid();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Ловим ЛЮБУЮ ошибку (сеть, парсинг, null reference) и показываем вместо краша
-        //        MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}", "PayWindow", cc?.numdoc.ToString() ?? "0");
-
-        //        await MessageBoxHelper.Show(
-        //            $"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.",
-        //            "Сбой программы",
-        //            MessageBoxButton.OK,
-        //            MessageBoxType.Error,
-        //            this
-        //        );
-
-        //        CalculateChange(); // Восстанавливаем состояние
-        //    }
-        //}
-
         private async void button2_Click(object sender, RoutedEventArgs e)
         {
-            // ==========================================
-            // 1. ГЛАВНАЯ ЗАЩИТА ОТ ПАДЕНИЯ (CRITICAL FIX)
-            // ==========================================
             try
             {
-                MainStaticClass.write_event_in_log($"[Pay] Начало button2_Click. IsEnabled: {this.button_pay.IsEnabled}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                MainStaticClass.write_event_in_log($"[Pay.button2_Click] Start. ButtonEnabled: {this.button_pay.IsEnabled}", "PayWindow", cc?.numdoc.ToString() ?? "0");
 
                 if (!this.button_pay.IsEnabled)
                 {
-                    MainStaticClass.write_event_in_log("[Pay] Кнопка заблокирована, выход", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                    MainStaticClass.write_event_in_log("[Pay.button2_Click] Button disabled, exiting.", "PayWindow", cc?.numdoc.ToString() ?? "0");
                     return;
                 }
 
                 // Проверка ввода копеек
                 if (!await copFilledCorrectly()) { CalculateChange(); return; }
 
-                // 2. Проверки бизнес-логики (исправленный доступ к UI)
-                if (!await ValidateInputs()) return;
-
-                // 3. Подготовка данных
+                // Проверка ссылки на чек
                 if (cc == null)
                 {
-                    await MessageBoxHelper.Show("Ошибка: ссылка на чек (cc) не инициализирована.", "Ошибка данных", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    MainStaticClass.write_event_in_log($"[Pay.button2_Click] CRITICAL: cc (Cash_check) is NULL!", "PayWindow", "0");
+                    await MessageBoxHelper.Show("Внутренняя ошибка: не передана ссылка на чек.", "Ошибка данных", MessageBoxButton.OK, MessageBoxType.Error, this);
                     return;
                 }
 
+                // 2. Проверки бизнес-логики
+                if (!await ValidateInputs()) return;
+
+                // 3. Подготовка данных
                 cc.SetCertificatesFromPay(_certificatesList);
                 MainStaticClass.write_event_in_log("Окно оплаты: переход к оплате", "Документ чек", cc.numdoc.ToString());
 
@@ -558,109 +429,12 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                // Ловим ЛЮБУЮ ошибку (сеть, парсинг, null reference) и показываем вместо краша
                 MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}\nStackTrace: {ex.StackTrace}", "PayWindow", cc?.numdoc.ToString() ?? "0");
-
-                await MessageBoxHelper.Show(
-                    $"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.",
-                    "Сбой программы",
-                    MessageBoxButton.OK,
-                    MessageBoxType.Error,
-                    this
-                );
-
-                CalculateChange(); // Восстанавливаем состояние
+                await MessageBoxHelper.Show($"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.", "Сбой программы", MessageBoxButton.OK, MessageBoxType.Error, this);
+                CalculateChange();
             }
         }
 
-        ///// <summary>
-        ///// Проверяет все условия оплаты перед отправкой на терминал и в БД.
-        ///// </summary>
-        //private async Task<bool> ValidateInputs()
-        //{
-        //    // Вспомогательная функция безопасного парсинга
-        //    double Parse(string text)
-        //    {
-        //        if (string.IsNullOrWhiteSpace(text)) return 0.0;
-        //        if (double.TryParse(text, out double res)) return res;
-        //        if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
-        //        return 0.0;
-        //    }
-
-        //    // Парсим значения один раз
-        //    double cash_money = Math.Round(Parse(txtB_cash_sum.Text), 2);
-        //    double non_cash_money = Math.Round(get_non_cash_sum(), 2);
-        //    double sertificate_money = Math.Round(Parse(sertificates_sum.Text), 2);
-        //    double bonus_money = Math.Round(Parse(pay_bonus_many.Text), 2);
-        //    double sum_on_document = Math.Round(Parse(pay_sum.Text), 2);
-        //    double remainderVal = Parse(remainder.Text);
-
-        //    double total_paid = cash_money + non_cash_money + sertificate_money + bonus_money;
-
-        //    // 1. Проверка общей суммы
-        //    if (total_paid < sum_on_document)
-        //    {
-        //        await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        return false;
-        //    }
-
-        //    // 2. Проверка сдачи при возврате
-        //    if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
-        //    {
-        //        await MessageBoxHelper.Show(" Сумма возврата должна быть равна сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        return false;
-        //    }
-
-        //    // 3. Логика бонусов
-        //    if (bonus_money > 0)
-        //    {
-        //        bonus_on_document.Text = "0";
-        //        if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
-        //        {
-        //            await MessageBoxHelper.Show("Сумма сертификатов + карта + бонусы превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            return false;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (non_cash_money + sertificate_money > sum_on_document)
-        //        {
-        //            await MessageBoxHelper.Show(" Сумма сертификатов + карта превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            return false;
-        //        }
-        //    }
-
-        //    // 4. Проверка схождения сумм (для определенных схем работы)
-        //    if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
-        //    {
-        //        double cash_final = cash_money - remainderVal;
-        //        double sum_doc_calc = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
-
-        //        if (Math.Round(sum_doc_calc, 2) != Math.Round((cash_final + non_cash_money + sertificate_money + bonus_money), 2))
-        //        {
-        //            await MessageBoxHelper.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            return false;
-        //        }
-        //    }
-
-        //    // 5. Проверка возврата (сумма не больше продажи)
-        //    if (cc.check_type.SelectedIndex == 1)
-        //    {
-        //        double cash_final = cash_money - remainderVal;
-        //        if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, cash_final, non_cash_money))
-        //        {
-        //            return false; // Сообщение уже показано внутри метода validate
-        //        }
-        //    }
-
-        //    return true;
-        //}
-
-        /// <summary>
-        /// Проверяет все условия оплаты перед отправкой на терминал и в БД.
-        /// ИСПРАВЛЕНО: Используются свойства (PaySum, Change) вместо прямых полей (_pay_sum.Text), 
-        /// что предотвращает NullReferenceException.
-        /// </summary>
         private async Task<bool> ValidateInputs()
         {
             // Вспомогательная функция безопасного парсинга
@@ -672,17 +446,22 @@ namespace Cash8Avalon
                 return 0.0;
             }
 
-            // ИСПОЛЬЗУЕМ СВОЙСТВА (Properties), а не поля TextBox'ов!
-            // Свойства определены ниже и используют FindControl с защитой от null.
+            if (cc == null)
+            {
+                MainStaticClass.write_event_in_log($"[Pay.ValidateInputs] Error: cc is null", "PayWindow", "0");
+                return false;
+            }
+
+            // ИСПОЛЬЗУЕМ СВОЙСТВА (Properties)
             string paySumStr = this.PaySum;
             string changeStr = this.Change;
             string certSumStr = this.CertificatesSum;
             string bonusManyStr = this.BonusMany;
             string cashSumStr = this.CashSum;
 
-            // Парсим значения один раз
+            // Парсим значения
             double cash_money = Math.Round(Parse(cashSumStr), 2);
-            double non_cash_money = Math.Round(get_non_cash_sum(), 2); // Этот метод тоже нужно проверить на null (см. ниже)
+            double non_cash_money = Math.Round(get_non_cash_sum(), 2);
             double sertificate_money = Math.Round(Parse(certSumStr), 2);
             double bonus_money = Math.Round(Parse(bonusManyStr), 2);
             double sum_on_document = Math.Round(Parse(paySumStr), 2);
@@ -690,26 +469,21 @@ namespace Cash8Avalon
 
             double total_paid = cash_money + non_cash_money + sertificate_money + bonus_money;
 
-            // 1. Проверка общей суммы
             if (total_paid < sum_on_document)
             {
                 await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return false;
             }
 
-            // 2. Проверка сдачи при возврате
             if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
             {
                 await MessageBoxHelper.Show(" Сумма возврата должна быть равна сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return false;
             }
 
-            // 3. Логика бонусов
             if (bonus_money > 0)
             {
-                // Используем свойство BonusSum (оно есть в коде ниже)
                 if (!string.IsNullOrEmpty(this.BonusSum)) this.BonusSum = "0";
-
                 if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
                 {
                     await MessageBoxHelper.Show("Сумма сертификатов + карта + бонусы превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
@@ -725,7 +499,6 @@ namespace Cash8Avalon
                 }
             }
 
-            // 4. Проверка схождения сумм (для определенных схем работы)
             if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
             {
                 double cash_final = cash_money - remainderVal;
@@ -738,13 +511,12 @@ namespace Cash8Avalon
                 }
             }
 
-            // 5. Проверка возврата (сумма не больше продажи)
             if (cc.check_type.SelectedIndex == 1)
             {
                 double cash_final = cash_money - remainderVal;
                 if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, cash_final, non_cash_money))
                 {
-                    return false; // Сообщение уже показано внутри метода validate
+                    return false;
                 }
             }
 
@@ -762,34 +534,49 @@ namespace Cash8Avalon
 
         private async Task it_is_paid()
         {
-            System.Diagnostics.Debugger.Break();
-
-            // Проверка на null чека
-            if (cc == null) return;
+            if (cc == null)
+            {
+                MainStaticClass.write_event_in_log($"[Pay.it_is_paid] CRITICAL: cc is null", "PayWindow", "0");
+                return;
+            }
 
             if (cc.check_type.SelectedIndex == 0) // ОПЛАТА
             {
-                // Безопасный парсинг через свойства
-                decimal cashSumVal = 0;
-                decimal remainderVal = 0;
-                decimal paySumVal = 0;
-
+                decimal cashSumVal = 0, remainderVal = 0, paySumVal = 0;
                 decimal.TryParse(this.CashSum, out cashSumVal);
                 decimal.TryParse(this.Change, out remainderVal);
                 decimal.TryParse(this.PaySum, out paySumVal);
 
-                if ((cashSumVal - remainderVal) < 0)
-                {
-                    await MessageBoxHelper.Show("Ошибка при определении суммы наличных", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return;
-                }
+                //if ((cashSumVal - remainderVal) < 0)
+                //{
+                //    await MessageBoxHelper.Show("Ошибка при определении суммы наличных", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                //    return;
+                //}
 
-                // Используем безопасные значения для расчета
                 decimal sertSum = 0, bonusSum = 0, nonCashSum = 0;
                 decimal.TryParse(this.CertificatesSum, out sertSum);
                 decimal.TryParse(this.BonusMany, out bonusSum);
-                // non_cash_sum берем через метод, так как он сложнее (рубли + копейки)
                 nonCashSum = Convert.ToDecimal(get_non_cash_sum());
+
+                if (remainderVal < 0)
+                {
+                    await MessageBoxHelper.Show(
+                        $"ОШИБКА РАСЧЁТА!\n\n" +
+                        $"Сумма чека: {paySumVal:F2} ₽\n" +
+                        $"Внесено наличными: {cashSumVal:F2} ₽\n" +
+                        $"Внесено по карте: {nonCashSum:F2} ₽\n" +
+                        $"Сертификатами: {sertSum:F2} ₽\n" +
+                        $"Бонусами: {bonusSum:F2} ₽\n" +
+                        $"Итого внесено: {(cashSumVal + nonCashSum + sertSum + bonusSum):F2} ₽\n\n" +
+                        $"НЕХВАТАЕТ: {Math.Abs(remainderVal):F2} ₽\n\n" +
+                        "Проверьте введённые суммы и попробуйте снова.",
+                        "Ошибка расчёта оплаты",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error,
+                        this);
+                    CalculateChange();
+                    return;
+                }
 
                 if (paySumVal - (cashSumVal - remainderVal + sertSum + bonusSum + nonCashSum) > 1)
                 {
@@ -799,7 +586,7 @@ namespace Cash8Avalon
 
                 if (!cc.ValidateCheckSumAtDiscount())
                 {
-                    await MessageBoxHelper.Show(" При распределении расчетов получилась нулевая/отрицательная сумма в строке, попробуйте ввести суммы оплаты еще раз", "Проверка суммы со скидкой", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBoxHelper.Show(" При распределении расчетов получилась нулевая/отрицательная сумма в строке...", "Проверка суммы со скидкой", MessageBoxButton.OK, MessageBoxType.Error, this);
                     return;
                 }
 
@@ -811,43 +598,34 @@ namespace Cash8Avalon
                 string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
                 string remainder_str = this.Change.Replace(",", ".");
 
-                // === ШАГ 1: Предварительная запись в БД (до терминала!) ===
+                // === ШАГ 1: Предварительная запись в БД ===
                 bool writeResult = await cc.write_new_document(
-                    txtB_cash_sum.Text,
+                    this.CashSum, // Используем свойство
                     sum_doc_str,
                     remainder_str,
                     bonus_money_str,
-                    false, // last_rewrite = false → its_deleted = 2 ("в процессе")
+                    false,
                     sum_cash_pay,
                     non_sum_cash_pay,
                     sertificate_money_str,
-                    "2",   // its_deleted (переопределяется через last_rewrite)
-                    false   // sendToScreen
+                    "2",
+                    false
                 );
 
                 if (!writeResult)
                 {
                     await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return; // ❌ Терминал НЕ трогаем!
+                    return;
                 }
 
-
-
-                //string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
-                //string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
-
-                //if (!await cc.it_is_paid(txtB_cash_sum.Text, cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), remainder.Text.Replace(",", "."), (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim()), false, sum_cash_pay, non_sum_cash_pay, Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".")))
-                //{
-                //    return;
-                //}
-
-                double notCashSum = Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100;
+                double notCashSum = get_non_cash_sum();
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
                 {
                     if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
                     {
-                        string money = CalculateMoneyInKopecks(this.non_cash_sum.Text.Trim(), non_cash_sum_kop.Text.Trim());
+                        // ИСПОЛЬЗУЕМ СВОЙСТВА
+                        string money = CalculateMoneyInKopecks(this.NonCashSum, this.NonCashSumKop);
 
                         if (MainStaticClass.GetAcquiringBank == 1) //ВТБ
                         {
@@ -855,9 +633,8 @@ namespace Cash8Avalon
 
                             if (checkBox_payment_by_sbp.IsChecked != true)
                             {
-                                #region Обычная оплата картой (РНКБ)
+                                #region Обычная оплата картой
                                 string _str_command_sale_ = str_command_sale.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
-
                                 MainStaticClass.write_event_in_log($"Оплата картой: {money} коп.", "Terminal", cc?.numdoc.ToString() ?? "0");
                                 var terminalResult = await WaitNonCashPay.ShowAndWaitAsync(this, 80, url, _str_command_sale_, this.cc);
 
@@ -867,7 +644,6 @@ namespace Cash8Avalon
                                     await MessageBoxHelper.Show(terminalResult.ErrorMessage, "Оплата по терминалу", MessageBoxButton.OK, MessageBoxType.Error, this);
                                     return;
                                 }
-
                                 cc.code_authorization_terminal = terminalResult.AuthorizationCode;
                                 cc.id_transaction_terminal = terminalResult.ReferenceNumber;
                                 cc.recharge_note = terminalResult.RechargeNote;
@@ -875,28 +651,19 @@ namespace Cash8Avalon
                             }
                             else
                             {
-                                #region Оплата СБП (ВТБ)
+                                #region Оплата СБП
                                 string _str_sale_sbp = str_sale_sbp.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("guid", cc.guid);
-
                                 MainStaticClass.write_event_in_log($"Оплата СБП (Init): {money} коп.", "Terminal", cc?.numdoc.ToString() ?? "0");
                                 var resultSbp = await WaitNonCashPay.SendRequestAsync(url, _str_sale_sbp);
-
                                 TerminalResult finalResult = resultSbp;
 
                                 if (!resultSbp.IsSuccess)
                                 {
                                     string _str_payment_status = str_payment_status_sale_sbp.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("sale_code_authorization_terminal", cc.guid);
-
                                     var (success, pollResult) = await PollSbpStatusAsync(url, _str_payment_status, "Оплата СБП");
-
-                                    if (!success)
-                                    {
-                                        CalculateChange(); cc.recharge_note = "";
-                                        return;
-                                    }
+                                    if (!success) { CalculateChange(); cc.recharge_note = ""; return; }
                                     finalResult = pollResult;
                                 }
-
                                 cc.code_authorization_terminal = finalResult.AuthorizationCode;
                                 cc.id_transaction_terminal = finalResult.ReferenceNumber;
                                 cc.payment_by_sbp = true;
@@ -908,20 +675,9 @@ namespace Cash8Avalon
                             var sberService = new SberPaymentService();
                             if (int.TryParse(money, out int amountKopecks))
                             {
-                                // Определяем тип оплаты
-                                //bool isSbpPayment = checkBox_payment_by_sbp.IsChecked == true;
-
                                 Func<CancellationToken, Task<TerminalResult>> sberp = async (ct) =>
                                 {
-                                    // ВАЖНО: Здесь передаем все 5 параметров по порядку:
-                                    // 1. Сумма
-                                    // 2. Команда (1)
-                                    // 3. RRN (null)
-                                    // 4. isSbpPayment (bool) -> ЭТОТ ПАРАМЕТР БЫЛ ПРОПУЩЕН В ВАШЕМ КОДЕ
-                                    // 5. ct (CancellationToken)
-
                                     var res = await sberService.PayAsync(amountKopecks, 1, null, ct);
-
                                     return new TerminalResult
                                     {
                                         IsSuccess = res.IsSuccess,
@@ -932,204 +688,154 @@ namespace Cash8Avalon
                                         CodeResponse = res.IsSuccess ? "1" : "0"
                                     };
                                 };
-
                                 var result = await WaitNonCashPay.ShowCustomAndWaitAsync(this, 80, sberp, this.cc);
-
-                                if (!result.IsSuccess)
-                                {
-                                    CalculateChange();
-                                    await MessageBoxHelper.Show(result.ErrorMessage, "Ошибка оплаты Сбер", MessageBoxButton.OK, MessageBoxType.Error, this);
-                                    return;
-                                }
-
+                                if (!result.IsSuccess) { CalculateChange(); await MessageBoxHelper.Show(result.ErrorMessage, "Ошибка оплаты Сбер", MessageBoxButton.OK, MessageBoxType.Error, this); return; }
                                 cc.code_authorization_terminal = result.AuthorizationCode;
                                 cc.id_transaction_terminal = result.ReferenceNumber;
                                 if (!string.IsNullOrEmpty(result.RechargeNote)) cc.recharge_note = result.RechargeNote;
-                                
                             }
                         }
-
                     }
                 }
 
-                //string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
-                //string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
                 cc.print_to_button = 0;
-
-                if (await cc.it_is_paid(txtB_cash_sum.Text, cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), remainder.Text.Replace(",", "."), (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim()), true, sum_cash_pay, non_sum_cash_pay, Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".")))
+                if (await cc.it_is_paid(this.CashSum, sum_doc_str, remainder_str, bonus_money_str, true, sum_cash_pay, non_sum_cash_pay, sertSum.ToString().Replace(",", ".")))
                 {
                     cc.closing = false; this.Tag = true; this.Close();
                 }
             }
             else // ВОЗВРАТ
             {
-                // === ПОДГОТОВКА ДАННЫХ ДЛЯ ЗАПИСИ ===
-                string sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text)).ToString().Replace(",", ".");
-                string non_sum_cash_pay = (get_non_cash_sum()).ToString().Replace(",", ".");
-                string sertificate_money_str = Convert.ToDecimal(sertificates_sum.Text).ToString().Replace(",", ".");
-                string bonus_money_str = (pay_bonus_many.Text.Trim() == "" ? "0" : pay_bonus_many.Text.Trim());
-                string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
-                string remainder_str = remainder.Text.Replace(",", ".");
 
-                // === ШАГ 1: Предварительная запись в БД (до терминала!) ===
+                // 1. СНАЧАЛА парсим и проверяем
+                decimal returnCashSum = Convert.ToDecimal(this.CashSum);
+                decimal returnRemainder = Convert.ToDecimal(this.Change);
+
+                if (returnRemainder < 0)
+                {
+                    await MessageBoxHelper.Show(
+                        "Ошибка: сумма возврата превышает внесённую сумму.",
+                        "Ошибка расчёта возврата",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Error, this);
+                    return;
+                }
+
+
+                string sum_cash_pay = (Convert.ToDecimal(this.CashSum) - Convert.ToDecimal(this.Change)).ToString().Replace(",", ".");
+                string non_sum_cash_pay = get_non_cash_sum().ToString().Replace(",", ".");
+                string sertificate_money_str = Convert.ToDecimal(this.CertificatesSum).ToString().Replace(",", ".");
+                string bonus_money_str = (string.IsNullOrEmpty(this.BonusMany.Trim()) ? "0" : this.BonusMany.Trim());
+                string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
+                string remainder_str = this.Change.Replace(",", ".");
+
+                
+
+
                 bool writeResult = await cc.write_new_document(
-                    txtB_cash_sum.Text,
-                    sum_doc_str,
-                    remainder_str,
-                    bonus_money_str,
-                    false, // last_rewrite = false → its_deleted = 2 ("в процессе")
-                    sum_cash_pay,
-                    non_sum_cash_pay,
-                    sertificate_money_str,
-                    "2",   // its_deleted (переопределяется через last_rewrite)
-                    false   // sendToScreen
+                    this.CashSum, sum_doc_str, remainder_str, bonus_money_str,
+                    false, sum_cash_pay, non_sum_cash_pay, sertificate_money_str, "2", false
                 );
 
                 if (!writeResult)
                 {
                     await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return; // ❌ Терминал НЕ трогаем!
+                    return;
                 }
 
                 if (cc.check_type.SelectedIndex == 1 && get_non_cash_sum() < 1)
                 {
-                    sum_cash_pay = (Convert.ToDecimal(txtB_cash_sum.Text) - Convert.ToDecimal(remainder.Text) + Convert.ToDecimal(get_non_cash_sum())).ToString().Replace(",", ".");
+                    sum_cash_pay = (Convert.ToDecimal(this.CashSum) - Convert.ToDecimal(this.Change) + Convert.ToDecimal(get_non_cash_sum())).ToString().Replace(",", ".");
                     non_sum_cash_pay = "0";
                 }
 
-                if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && (Convert.ToDouble(non_cash_sum.Text) > 0))
+                if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && (get_non_cash_sum() > 0))
                 {
                     if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
                     {
-                        string money = ((Convert.ToDouble(this.non_cash_sum.Text.Trim()) + Convert.ToDouble(non_cash_sum_kop.Text) / 100) * 100).ToString();
+                        // ИСПОЛЬЗУЕМ СВОЙСТВА
+                        string money = CalculateMoneyInKopecks(this.NonCashSum, this.NonCashSumKop);
 
                         if (MainStaticClass.GetAcquiringBank == 1)//РНКБ
                         {
                             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
-
                             if (checkBox_payment_by_sbp.IsChecked != true)
                             {
-                                #region Возврат картой (РНКБ)
                                 string xmlData = "";
                                 if (cc.sale_date.CompareTo(DateTime.Today) < 0)
-                                {
                                     xmlData = str_return_sale.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("sale_code_authorization_terminal", cc.sale_code_authorization_terminal).Replace("number_reference", cc.sale_id_transaction_terminal);
-                                }
                                 else
                                 {
                                     xmlData = str_cancel_sale.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("sale_code_authorization_terminal", cc.sale_code_authorization_terminal).Replace("number_reference", cc.sale_id_transaction_terminal);
                                     if (money.Trim() != (cc.sale_non_cash_money * 100).ToString().Trim()) xmlData = xmlData.Replace("sale_non_cash_money", (cc.sale_non_cash_money * 100).ToString());
                                     else xmlData = xmlData.Replace(@"<field id=""01"">sale_non_cash_money</field>", "");
                                 }
-
                                 MainStaticClass.write_event_in_log($"Возврат картой: {money} коп.", "Terminal", cc?.numdoc.ToString() ?? "0");
                                 var resultReturn = await WaitNonCashPay.ShowAndWaitAsync(this, 60, url, xmlData, this.cc);
+                                if (!resultReturn.IsSuccess) { CalculateChange(); await MessageBoxHelper.Show($"Неудачная попытка возврата: {resultReturn.ErrorMessage}", "Возврат по терминалу", MessageBoxButton.OK, MessageBoxType.Error, this); return; }
 
-                                if (!resultReturn.IsSuccess)
-                                {
-                                    CalculateChange();
-                                    await MessageBoxHelper.Show($"Неудачная попытка возврата: {resultReturn.ErrorMessage}", "Возврат по терминалу", MessageBoxButton.OK, MessageBoxType.Error, this);
-                                    return;
-                                }
-
-                                //cc.code_authorization_terminal = resultReturn.AuthorizationCode;
                                 cc.code_authorization_terminal = resultReturn.AuthorizationCode ?? string.Empty;
                                 cc.id_transaction_terminal = resultReturn.ReferenceNumber;
                                 complete = true;
-                                #endregion
                             }
                             else
                             {
-                                #region Возврат СБП (РНКБ)
                                 string _str_return_sale_sbp_ = str_return_sale_sbp.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("sale_code_authorization_terminal", cc.sale_id_transaction_terminal).Replace("guid", cc.guid_sales);
-
                                 MainStaticClass.write_event_in_log($"Возврат СБП (Init): {money} коп.", "Terminal", cc?.numdoc.ToString() ?? "0");
                                 var resultSbpReturn = await WaitNonCashPay.SendRequestAsync(url, _str_return_sale_sbp_);
-
                                 TerminalResult finalResult = resultSbpReturn;
-
                                 if (!resultSbpReturn.IsSuccess)
                                 {
                                     string _str_payment_status_return = str_payment_status_return_sale_sbp.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("sale_code_authorization_terminal", cc.sale_id_transaction_terminal).Replace("guid", cc.guid_sales);
-
                                     var (success, pollResult) = await PollSbpStatusAsync(url, _str_payment_status_return, "Возврат СБП");
-
-                                    if (!success)
-                                    {
-                                        CalculateChange();
-                                        return;
-                                    }
+                                    if (!success) { CalculateChange(); return; }
                                     finalResult = pollResult;
                                 }
-
                                 cc.code_authorization_terminal = finalResult.AuthorizationCode;
                                 cc.id_transaction_terminal = finalResult.ReferenceNumber;
                                 cc.payment_by_sbp = true;
-                                #endregion
                             }
                         }
-                        else if (MainStaticClass.GetAcquiringBank == 2) // СБЕР (ВОЗВРАТ)
+                        else if (MainStaticClass.GetAcquiringBank == 2) // СБЕР
                         {
-                            // Определяем, был ли исходный чек оплачен по СБП
-                            //bool isSbpReturn = checkBox_payment_by_sbp.IsChecked == true;
-
                             var sberService = new SberPaymentService();
                             if (int.TryParse(money, out int amountKopecks))
                             {
                                 Func<CancellationToken, Task<TerminalResult>> sberOp = async (ct) =>
                                 {
-                                    // ИСПРАВЛЕНО: Добавлен параметр isSbpReturn перед ct
                                     var res = await sberService.PayAsync(amountKopecks, 3, cc.sale_id_transaction_terminal, ct);
-
-                                    return new TerminalResult
-                                    {
-                                        IsSuccess = res.IsSuccess,
-                                        ErrorMessage = res.ErrorMessage,
-                                        AuthorizationCode = res.AuthorizationCode,
-                                        ReferenceNumber = res.ReferenceNumber,
-                                        RechargeNote = res.SlipContent,
-                                        CodeResponse = res.IsSuccess ? "1" : "0"
-                                    };
+                                    return new TerminalResult { IsSuccess = res.IsSuccess, ErrorMessage = res.ErrorMessage, AuthorizationCode = res.AuthorizationCode, ReferenceNumber = res.ReferenceNumber, RechargeNote = res.SlipContent, CodeResponse = res.IsSuccess ? "1" : "0" };
                                 };
-
                                 var result = await WaitNonCashPay.ShowCustomAndWaitAsync(this, 80, sberOp, this.cc);
-
-                                if (!result.IsSuccess)
-                                {
-                                    CalculateChange();
-                                    await MessageBoxHelper.Show(result.ErrorMessage, "Ошибка возврата Сбер", MessageBoxButton.OK, MessageBoxType.Error, this);
-                                    return;
-                                }
-
+                                if (!result.IsSuccess) { CalculateChange(); await MessageBoxHelper.Show(result.ErrorMessage, "Ошибка возврата Сбер", MessageBoxButton.OK, MessageBoxType.Error, this); return; }
                                 cc.code_authorization_terminal = result.AuthorizationCode;
                                 cc.id_transaction_terminal = result.ReferenceNumber;
                                 if (!string.IsNullOrEmpty(result.RechargeNote)) cc.recharge_note = result.RechargeNote;
-
                                 complete = true;
                             }
                         }
                     }
-                    //cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-                    //cc.closing = false;
-                    //this.Close();
                 }
-                //cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-                //cc.closing = false;
-                //this.Close();
                 bool printSuccess = await cc.sale_cancellation_Click(sum_cash_pay, non_sum_cash_pay);
-
-                if (printSuccess)
-                {
-                    cc.closing = false;
-                    this.Close(); // Закрываем окно оплаты ТОЛЬКО при успехе
-                }
-                else
-                {
-                    // Печать упала. Окно оплаты остается открытым, кассир видит ошибку от принтера
-                    // и может нажать "Отмена" или попробовать еще раз.
-                }
+                if (printSuccess) { cc.closing = false; this.Close(); }
             }
         }
+
+        //private double get_non_cash_sum()
+        //{
+        //    double result = 0;
+        //    string rub = this.NonCashSum;
+        //    string kop = this.NonCashSumKop;
+
+        //    // Логируем, если свойства вернули null (хотя свойства этого не должны делать, но на всякий случай)
+        //    if (rub == null) MainStaticClass.write_event_in_log($"[Pay.get_non_cash_sum] NonCashSum is null", "PayWindow", cc?.numdoc.ToString() ?? "0");
+        //    if (kop == null) MainStaticClass.write_event_in_log($"[Pay.get_non_cash_sum] NonCashSumKop is null", "PayWindow", cc?.numdoc.ToString() ?? "0");
+
+        //    if (double.TryParse(rub, out double rubVal)) result += rubVal;
+        //    if (double.TryParse(kop, out double kopVal)) result += kopVal / 100;
+
+        //    return result;
+        //}
 
         /// <summary>
         /// Универсальный метод опроса статуса СБП (для оплаты и возврата)
@@ -1244,9 +950,19 @@ namespace Cash8Avalon
             string rub = this.NonCashSum;
             string kop = this.NonCashSumKop;
 
-            if (double.TryParse(rub, out double rubVal)) result += rubVal;
+            // Логируем, если свойства вернули null (хотя свойства этого не должны делать, но на всякий случай)
+            if (rub == null)
+            {
+                MainStaticClass.write_event_in_log($"[Pay.get_non_cash_sum] NonCashSum is null", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                rub = "0"; // Дополнительная защита, чтобы TryParse не сработал странно
+            }
+            if (kop == null)
+            {
+                MainStaticClass.write_event_in_log($"[Pay.get_non_cash_sum] NonCashSumKop is null", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                kop = "0"; // Дополнительная защита
+            }
 
-            // Копейки могут быть пустыми или содержать нечисловое значение
+            if (double.TryParse(rub, out double rubVal)) result += rubVal;
             if (double.TryParse(kop, out double kopVal)) result += kopVal / 100;
 
             return result;

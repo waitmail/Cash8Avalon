@@ -724,6 +724,14 @@ namespace Cash8Avalon
 
         public async Task send_sales_data_Click(object sender, EventArgs e)
         {
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
+
+            MainStaticClass.write_event_in_log("Попытка отправить данные", "send_sales_data_Click", "0");
             if (await MainStaticClass.GetUnloadingInterval() == 0)
             {
                 return;
@@ -805,7 +813,7 @@ namespace Cash8Avalon
             }
 
             DS ds = MainStaticClass.get_ds();
-            ds.Timeout = 20000;
+            ds.Timeout = 80000;
 
             string count_day = CryptorEngine.get_count_day();
 
@@ -817,6 +825,7 @@ namespace Cash8Avalon
             // ✅ Здесь всё было верно и осталось без изменений
             try
             {
+
                 result_web_quey = ds.UploadDataOnSalesPortionJasonAvalon(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString());
             }
             catch (System.Net.WebException ex)

@@ -361,6 +361,46 @@ namespace Cash8Avalon
                 this.WindowState = WindowState.Maximized;
             }
 
+            // ==========================================
+            // ПРОВЕРКА СВОБОДНОГО МЕСТА (УНИВЕРСАЛЬНО: WINDOWS + LINUX)
+            // ==========================================
+            try
+            {
+                string basePath = AppDomain.CurrentDomain.BaseDirectory;
+                // В Windows вернет "C:\", в Linux вернет "/"
+                string rootPath = Path.GetPathRoot(basePath) ?? Path.DirectorySeparatorChar.ToString();
+
+                var drive = new DriveInfo(rootPath);
+
+                // 5 ГБ в байтах
+                long minRequiredBytes = 5L * 1024 * 1024 * 1024;
+                long freeBytes = drive.AvailableFreeSpace;
+
+                if (freeBytes < minRequiredBytes)
+                {
+                    double freeGb = freeBytes / (1024.0 * 1024.0 * 1024.0);
+                    string warningMsg = $"ВНИМАНИЕ!\n" +
+                                        $"На диске, где установлена программа ({rootPath}), критически мало свободного места.\n" +
+                                        $"Осталось: {freeGb:F2} ГБ (Рекомендуемый минимум: 5 ГБ).\n\n" +
+                                        $"Нехватка места может привести к повреждению базы данных, ошибкам записи логов и сбоям синхронизации!\n" +
+                                        $"Пожалуйста, освободите место на диске.";
+
+                    if (_isDisposed) return;
+                    await Task.Delay(50);
+                    await ShowSafeMessage(warningMsg, "Критически мало свободного места", MessageBoxButton.OK, MessageBoxType.Warning);
+                }
+                else
+                {
+                    double freeGb = freeBytes / (1024.0 * 1024.0 * 1024.0);
+                    Console.WriteLine($"✓ Проверка диска пройдена. Свободно на {rootPath}: {freeGb:F2} ГБ");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARNING] Не удалось проверить свободное место на диске: {ex.Message}");
+            }
+
+
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Setting.gaa");
             if (!File.Exists(configPath))
             {

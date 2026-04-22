@@ -1595,10 +1595,14 @@ namespace Cash8Avalon
 
             return result;
         }
-        
-        /// Обработка акций 13 типа
+
+        /// <summary>
+        /// Обработка акций 13 типа.
+        /// Логика: считает общее количество товара (суммируя и маркированные, и обычные),
+        /// получает градиентную цену за это общее количество и применяет её к каждой строке.
+        /// МАРКИРОВКА ПРИ ЭТОМ НИКУДА НЕ ТРОГАЕТСЯ И ОСТАЕТСЯ 100% СТАБИЛЬНОЙ.
         /// </summary>
-        /// <param name="num_doc"></param>
+        /// <param name="num_doc">Номер документа акции</param>
         private async Task action_13_dt(int num_doc)
         {
             try
@@ -1607,43 +1611,70 @@ namespace Cash8Avalon
                 {
                     conn.Open();
 
-                    // Создаем резервную копию таблицы
+                    // Создаем резервную копию таблицы на случай критической ошибки
                     DataTable originalDt = dt.Copy();
 
                     try
                     {
-                        // Группируем строки по code_tovar
-                        var groupedRows = dt.AsEnumerable()
-                            .GroupBy(row => row.Field<double>("tovar_code"))
-                            .Where(group => group.All(row => row.Field<int>("action2") == 0)) // Товар не участвовал в других акциях
-                            .ToList();
-
-                        foreach (var group in groupedRows)
+                        // 1. Собираем уникальные коды товаров, которые еще не участвовали в других акциях
+                        var targetCodes = new HashSet<double>();
+                        foreach (DataRow row in dt.Rows)
                         {
-                            double codeTovar = group.Key;
-                            double totalQuantity = group.Sum(row => row.Field<double>("quantity"));
+                            if (Convert.ToInt32(row["action2"]) == 0)
+                            {
+                                targetCodes.Add(Convert.ToDouble(row["tovar_code"]));
+                            }
+                        }
+
+                        // 2. Для каждого кода товара считаем ОБЩЕЕ количество 
+                        // (суммируем и маркированные, и немаркированные позиции)
+                        // и получаем акционную цену по градиенту
+                        var actionPrices = new Dictionary<double, decimal>();
+                        foreach (double codeTovar in targetCodes)
+                        {
+                            double totalQuantity = 0;
+                            foreach (DataRow row in dt.Rows)
+                            {
+                                if (Convert.ToDouble(row["tovar_code"]) == codeTovar && Convert.ToInt32(row["action2"]) == 0)
+                                {
+                                    totalQuantity += Convert.ToDouble(row["quantity"]);
+                                }
+                            }
 
                             decimal? actionPrice = GetPriceAction13(num_doc, codeTovar, totalQuantity, conn);
-                            if (!actionPrice.HasValue) continue;
-
-                            // Обновляем все строки с этим товаром
-                            foreach (DataRow row in group)
+                            if (actionPrice.HasValue)
                             {
-                                decimal qty = Convert.ToDecimal(row.Field<double>("quantity"));
+                                actionPrices[codeTovar] = actionPrice.Value;
+                            }
+                        }
+
+                        // 3. Применяем полученные цены НАПРЯМУЮ К СТРОКАМ В ИСХОДНОЙ ТАБЛИЦЕ
+                        // Мы НЕ удаляем и НЕ создаем строки заново, поэтому поле marking остается нетронутым!
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            if (Convert.ToInt32(row["action2"]) > 0) continue; // Пропускаем уже учтенные
+
+                            double currentCode = Convert.ToDouble(row["tovar_code"]);
+                            if (actionPrices.ContainsKey(currentCode))
+                            {
+                                decimal qty = Convert.ToDecimal(row["quantity"]);
                                 decimal price = row.Field<decimal>("price");
 
-                                row["price_at_discount"] = actionPrice.Value;
-                                row["sum_full"] = (qty * price).ToString();
-                                //row["sum_at_discount"] = (Math.Ceiling((decimal)qty * actionPrice.Value * 100) / 100).ToString();//((decimal)qty * actionPrice.Value).ToString();
-                                row["sum_at_discount"] = Math.Round((decimal)qty * actionPrice.Value, 2, MidpointRounding.AwayFromZero).ToString();
+                                // Обновляем только финансовые поля
+                                row["price_at_discount"] = actionPrices[currentCode];
+                                row["sum_full"] = Math.Round(qty * price, 2, MidpointRounding.AwayFromZero);
+                                row["sum_at_discount"] = Math.Round(qty * actionPrices[currentCode], 2, MidpointRounding.AwayFromZero);
                                 row["action"] = num_doc.ToString();
                                 row["action2"] = num_doc.ToString();
+
+                                // ВАЖНО: Мы НИКАК не трогаем row["marking"]. 
+                                // Если тут было "010460...XYZ", оно так и останется "010460...XYZ".
                             }
                         }
                     }
                     catch
                     {
-                        // Восстанавливаем исходное состояние таблицы при ошибке
+                        // Восстанавливаем исходное состояние таблицы при любой ошибке
                         dt.Clear();
                         foreach (DataRow row in originalDt.Rows)
                         {

@@ -4794,7 +4794,7 @@ namespace Cash8Avalon
 
                         if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
                         {
-                            marking_code = dialog.EnteredBarcode;
+                            marking_code = CleanQrCodeString(dialog.EnteredBarcode);
 
                             if (!qr_code_lenght.Contains(marking_code.Length))
                             {
@@ -5762,6 +5762,46 @@ namespace Cash8Avalon
             return true;
         }
 
+        //private string CleanQrCodeString(string input)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrEmpty(input))
+        //            return input;
+
+        //        string result = input;
+        //        int numPos = result.IndexOf("\\");
+
+        //        // Пока находим \u001d - удаляем
+        //        while (numPos > 0 && result.Length > numPos + 5)
+        //        {
+        //            if (result.Substring(numPos + 1, 5) == "u001d")
+        //            {
+        //                // Удаляем \u001d
+        //                result = result.Substring(0, numPos) + result.Substring(numPos + 6);
+        //                numPos = result.IndexOf("\\");
+        //            }
+        //            else
+        //            {
+        //                break;
+        //            }
+        //        }
+
+        //        Console.WriteLine($"Очистка QR-кода: '{input}' -> '{result}'");
+        //        return result;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Ошибка при очистке QR-кода: {ex.Message}");
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBoxHelper.Show($"Ошибка при очистке QR-кода: {ex.Message}", "CleanQrCodeString",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //        return input; // Возвращаем оригинал при ошибке
+        //    }
+        //}
+
         private string CleanQrCodeString(string input)
         {
             try
@@ -5770,35 +5810,27 @@ namespace Cash8Avalon
                     return input;
 
                 string result = input;
-                int numPos = result.IndexOf("\\");
 
-                // Пока находим \u001d - удаляем
-                while (numPos > 0 && result.Length > numPos + 5)
-                {
-                    if (result.Substring(numPos + 1, 5) == "u001d")
-                    {
-                        // Удаляем \u001d
-                        result = result.Substring(0, numPos) + result.Substring(numPos + 6);
-                        numPos = result.IndexOf("\\");
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
+                // 1. Удаляем РЕАЛЬНЫЙ (невидимый) символ GS1 (ASCII код 29 / 0x1D)
+                // Именно его присылают некоторые сканеры напрямую из штрихкода
+                string gs1Char = char.ConvertFromUtf32(29);
+                result = result.Replace(gs1Char, "");
 
-                Console.WriteLine($"Очистка QR-кода: '{input}' -> '{result}'");
+                // 2. Удаляем текстовую строку "\u001d" (на случай других сканеров или терминалов)
+                result = result.Replace("\\u001d", "");
+
+                // 3. Удаляем текстовую строку "\x1D" (тоже иногда встречается в логах)
+                result = result.Replace("\\x1D", "");
+
+                Console.WriteLine($"Очистка QR-кода: длина {input.Length} -> {result.Length}");
+
                 return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при очистке QR-кода: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await MessageBoxHelper.Show($"Ошибка при очистке QR-кода: {ex.Message}", "CleanQrCodeString",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
-                });
-                return input; // Возвращаем оригинал при ошибке
+                // Возвращаем как есть, чтобы не сломать процесс, но логируем
+                return input;
             }
         }
 
@@ -6845,6 +6877,19 @@ namespace Cash8Avalon
                         if (CheckType.SelectedIndex == 0) // Продажа
                         {
                             var product = _productsData[_selectedProductRowIndex];
+
+                            if (product.IsMarked)
+                            {
+                                await MessageBoxHelper.Show(
+                                    "Нельзя изменить количество маркированного товара.\nКаждая единица маркировки должна быть продана отдельной строкой.",
+                                    "Проверка ввода",
+                                    MessageBoxButton.OK,
+                                    MessageBoxType.Warning,
+                                    this);
+                                e.Handled = true;
+                                break; // Прерываем выполнение
+                            }
+
 
                             // 1. Показываем диалог ввода количества
                             double? result = await ShowQuantityDialog(product.Tovar, Convert.ToDouble(product.Quantity), product.IsFractional, _selectedProductRowIndex);

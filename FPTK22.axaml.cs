@@ -262,7 +262,7 @@ public partial class FPTK22 : Window
             System.Net.WebRequest req = System.Net.WebRequest.Create(Url);
             req.Method = "POST";
             req.Timeout = 120000;
-            req.ContentType = "text/xml;charset = windows-1251";
+            req.ContentType = "text/xml;charset=windows-1251";
 
             byte[] sentData = Encoding.GetEncoding("Windows-1251").GetBytes(Data);
             req.ContentLength = sentData.Length;
