@@ -58,17 +58,24 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
                             <Grid>
                                 <Grid.RowDefinitions>
+                                    <!-- Строка 0: Тип чека, Кассир, Email -->
                                     <RowDefinition Height="40"/>
+                                    
+                                    <!-- Строка 1: Информация об оплате -->
                                     <RowDefinition Height="Auto"/>
+                                    
+                                    <!-- Строка 2: Последний товар -->
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
+                                    
+                                    <!-- Строка 3: Клиент, ИНН и Поиск товара -->
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 
-                                <!-- Строка 1: Тип чека и информация -->
+                                <!-- Строка 1: Тип чека и информация + Кассир + Email/телефон -->
                                 <Grid Grid.Row="0" Margin="0,0,0,5" VerticalAlignment="Center">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -99,77 +106,28 @@
                                     </Button>
 
                                     <TextBox Grid.Column="4" Name="num_cash" IsReadOnly="True" 
-                                             Text="КАССА №" VerticalAlignment="Center"
+                                             Text="" VerticalAlignment="Center"
                                              VerticalContentAlignment="Center" Margin="10,0"
-                                             MinWidth="120" HorizontalAlignment="Left"/>
+                                             MinWidth="40" HorizontalAlignment="Left"/>
 
                                     <TextBox Grid.Column="5" Name="date_time_start" IsReadOnly="True" 
                                              VerticalAlignment="Center" VerticalContentAlignment="Center" 
-                                             MinWidth="150" Margin="10,0"/>
+                                             MinWidth="100" Margin="10,0"/>
 
-                                    <TextBlock Grid.Column="6" Text="Пользователь:" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="6" Text="Кассир:" VerticalAlignment="Center"/>
                                     <TextBox Grid.Column="7" Name="user" VerticalAlignment="Center"
                                              IsReadOnly="True" 
                                              VerticalContentAlignment="Center" Margin="5,0"/>
-                                </Grid>
-                                
-                                <!-- Строка 2: Клиент и ИНН в одной строке -->
-                                <Grid Grid.Row="1" Margin="0,5,0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <!-- Клиент: -->
-                                        <ColumnDefinition Width="Auto"/>
-                                        
-                                        <!-- Поле клиента -->
-                                        <ColumnDefinition Width="200"/>
-                                        
-                                        <!-- ИНН: -->
-                                        <ColumnDefinition Width="Auto"/>
-                                        
-                                        <!-- Поле ИНН -->
-                                        <ColumnDefinition Width="120"/>
-                                        
-                                        <!-- Кнопка "==>" -->
-                                        <ColumnDefinition Width="Auto"/>
-                                        
-                                        <!-- Поле наименования -->
-                                        <ColumnDefinition Width="150"/>
-                                        
-                                        <!-- Email / телефон: -->
-                                        <ColumnDefinition Width="Auto"/>
-                                        
-                                        <!-- Поле Email/телефона -->
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
 
-                                    <!-- Клиент -->
-                                    <TextBlock Grid.Column="0" Text="Клиент:" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Column="1" Name="client" IsReadOnly="True" 
-                                             VerticalAlignment="Center" Margin="10,0"/>
-                                    
-                                    <!-- ИНН -->
-                                    <TextBlock Grid.Column="2" Text="ИНН:" 
-                                               VerticalAlignment="Center" Margin="10,0,0,0"/>
-                                    <TextBox Grid.Column="3" Name="txtB_inn" MaxLength="12" 
-                                             VerticalAlignment="Center" Margin="5,0"/>
-                                    
-                                    <!-- Кнопка поиска по ИНН -->
-                                    <Button Grid.Column="4" Name="btn_get_name" Content="==>" 
-                                           VerticalAlignment="Center" Margin="5,0"
-                                           Width="40" Height="30"/>
-                                    
-                                    <!-- Наименование -->
-                                    <TextBox Grid.Column="5" Name="txtB_name" MaxLength="250"                                              
-                                             VerticalAlignment="Center" Margin="5,0"/>
-                                    
                                     <!-- Email / телефон -->
-                                    <TextBlock Grid.Column="6" Text="Email / телефон:" 
+                                    <TextBlock Grid.Column="8" Text="Email / телефон:" 
                                                VerticalAlignment="Center" Margin="10,0,0,0" FontSize="11"/> 
-                                    <TextBox Grid.Column="7" Name="txtB_email_telephone" x:FieldModifier="public"
+                                    <TextBox Grid.Column="9" Name="txtB_email_telephone" x:FieldModifier="public"
                                              VerticalAlignment="Center" Margin="5,0"/>
                                 </Grid>
                                 
-                                <!-- Строка 3: Информация об оплате (обернута в Border) -->
-                                <Border x:Name="PaymentInfoRow" Grid.Row="2" IsVisible="False" Margin="0,5,0,5">
+                                <!-- Строка 2: Информация об оплате (обернута в Border) -->
+                                <Border x:Name="PaymentInfoRow" Grid.Row="1" IsVisible="False" Margin="0,5,0,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -237,61 +195,59 @@
                                     </Grid>
                                 </Border>
                                 
-                                <!-- Строка 4: Последний товар (бывшая строка 2) -->
-                                <TextBox Grid.Row="3" Name="last_tovar" IsReadOnly="True" 
+                                <!-- Строка 3: Последний товар -->
+                                <TextBox Grid.Row="2" Name="last_tovar" IsReadOnly="True" 
                                          Foreground="Blue" FontSize="26" MinHeight="60" Margin="0,5,0,5"/>
                                 
-                                <!-- Строка 5: Панель возврата (бывшая строка 3) -->
-                                <Border Grid.Row="4" Name="panel_return" Background="LightYellow" 
-                                       BorderBrush="Gray" BorderThickness="1" Padding="10" 
-                                       IsVisible="False" Margin="0,5,0,5">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        
-                                        <Grid Grid.Row="0" Margin="0,0,0,10">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="100"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="150"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="30"/>
-                                                <ColumnDefinition Width="80"/>
-                                            </Grid.ColumnDefinitions>
-                                            
-                                            <TextBlock Grid.Column="0" Text="Количество:" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="1" Name="return_quantity" VerticalAlignment="Center"/>
-                                            
-                                            <TextBlock Grid.Column="2" Text="Цена:" VerticalAlignment="Center" 
-                                                      Margin="10,0,0,0"/>
-                                            <TextBox Grid.Column="3" Name="return_rouble" IsEnabled="False" 
-                                                     VerticalAlignment="Center"/>
-                                            
-                                            <TextBlock Grid.Column="4" Text="." FontSize="20" VerticalAlignment="Center" 
-                                                      HorizontalAlignment="Center"/>
-                                            <TextBox Grid.Column="5" Name="return_kop" IsEnabled="False" 
-                                                     VerticalAlignment="Center"/>
-                                        </Grid>
-                                        
-                                        <Button Grid.Row="1" Name="return_enter" Content="Ввод" 
-                                               HorizontalAlignment="Center" Width="100"/>
-                                    </Grid>
-                                </Border>
-                                
-                                <!-- Строка 6: Поиск товара (бывшая строка 6) -->
-                                <Grid Grid.Row="5" Margin="0,5,0,5">
+                                <!-- Строка 4: Клиент, ИНН и Поиск товара -->
+                                <Grid Grid.Row="3" Margin="0,5,0,5">
                                     <Grid.ColumnDefinitions>
+                                        <!-- Клиент: -->
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- Поле клиента -->
+                                        <ColumnDefinition Width="150"/>
+                                        <!-- ИНН: -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- Поле ИНН -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- Кнопка "==>" -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- Поле наименования -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- Код/ШК/Код Марк.: -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- Поле поиска товара -->
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
+
+                                    <!-- Клиент -->
+                                    <TextBlock Grid.Column="0" Text="Клиент:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Name="client" IsReadOnly="True" 
+                                             VerticalAlignment="Center" Margin="10,0"/>
                                     
-                                    <TextBlock Grid.Column="0" Text="Код/ШК/Код Марк.:" 
-                                              VerticalAlignment="Center" FontSize="14"/>
-                                    <TextBox Grid.Column="1" Name="txtB_search_product" 
+                                    <!-- ИНН -->
+                                    <TextBlock Grid.Column="2" Text="ИНН:" 
+                                               IsVisible="False"
+                                               VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    <TextBox Grid.Column="3" Name="txtB_inn" MaxLength="12" 
+                                             IsVisible="False"
+                                             VerticalAlignment="Center" Margin="5,0"/>
+                                    
+                                    <!-- Кнопка поиска по ИНН -->
+                                    <Button Grid.Column="4" Name="btn_get_name" Content="==>" 
+                                           IsVisible="False"
+                                           VerticalAlignment="Center" Margin="5,0"
+                                           Width="40" Height="30"/>
+                                    
+                                    <!-- Наименование -->
+                                    <TextBox Grid.Column="5" Name="txtB_name" MaxLength="250"                                              
+                                             IsVisible="False"
+                                             VerticalAlignment="Center" Margin="5,0"/>
+
+                                    <!-- Поиск товара -->
+                                    <TextBlock Grid.Column="6" Text="Код/ШК/Код Марк.:" 
+                                              VerticalAlignment="Center" FontSize="14" Margin="10,0,0,0"/>
+                                    <TextBox Grid.Column="7" Name="txtB_search_product" 
                                             VerticalAlignment="Center" Margin="5,0" FontSize="14"/>
                                 </Grid>
                             </Grid>

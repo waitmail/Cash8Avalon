@@ -140,6 +140,8 @@ namespace Cash8Avalon
         public TextBox InputSearchProduct { get; private set; }
         public Button Pay { get; private set; }
         public TextBox Comment { get; private set; }
+        public TextBox LastTovar { get; private set; }
+        
 
         // Добавьте в поля класса Cash_check
         //private TextBlock statusText;
@@ -226,68 +228,7 @@ namespace Cash8Avalon
                    (Client?.IsFocused == true) ||
                    (InputSearchProduct?.IsFocused == true); // Тоже считаем важным, чтобы не дергать лишний раз
         }
-
-        /// <summary>
-        /// Логика проверки и восстановления фокуса с дебансом
-        /// </summary>
-        //private void FocusKeeper_Tick(object sender, EventArgs e)
-        //{
-        //    try
-        //    {
-        //        // 1. Базовые проверки
-        //        if (_isDisposed || !this.IsVisible) return;
-
-        //        // ВАЖНО: Если окно отключено (открыто модальное диалоговое окно, например, Оплата) - НЕ ДЕЛАЕМ НИЧЕГО.
-        //        // Это предотвращает конфликты фокуса и "исчезновение" окон.
-        //        if (!this.IsEnabled) return;
-
-        //        // Если окно НЕ активно (свёрнуто или в фоне) — не мешаем системе
-        //        if (!this.IsActive) return;
-
-        //        // === НОВАЯ ПРОВЕРКА: Отключаем для возвратов и коррекций ===
-        //        if (CheckType != null && CheckType.SelectedIndex != 0)
-        //            return;
-
-        //        // 2. Проверяем, где сейчас фокус
-
-        //        // Если фокус на таблице товаров — ОТЛИЧНО! Ничего не делаем, даем работать +/-
-        //        if (_productsScrollViewer != null && _productsScrollViewer.IsFocused) return;
-
-        //        // Если фокус на поле поиска — тоже отлично
-        //        if (InputSearchProduct != null && InputSearchProduct.IsFocused) return;
-
-        //        // Если фокус на других важных полях ввода — не мешаем кассиру печатать
-        //        if (IsFocusOnImportantControl()) return;
-
-        //        // === ДЕБАНС: Защита от слишком частых срабатываний ===
-        //        if ((DateTime.Now - _lastFocusRestore).TotalMilliseconds < FOCUS_RESTORE_COOLDOWN_MS)
-        //            return;
-
-        //        // 3. Если мы здесь, значит фокус "потерян" (упал на фон, заголовок или пустое место)
-        //        Console.WriteLine("⚠ [FocusKeeper] Фокус потерян (в никуда)! Восстановление...");
-
-        //        _lastFocusRestore = DateTime.Now;
-
-        //        // === "Ядерный" трюк для Linux ===
-        //        this.Activate();
-        //        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        //        {
-        //            this.Topmost = true;
-        //            Dispatcher.UIThread.Post(() =>
-        //            {
-        //                try { if (this.IsVisible) this.Topmost = false; } catch { }
-        //            }, DispatcherPriority.ApplicationIdle);
-        //        }
-
-        //        // Возвращаем фокус на поле поиска (как безопасное место по умолчанию)
-        //        InputSearchProduct?.Focus();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка в FocusKeeper_Tick: {ex.Message}");
-        //    }
-        //}
-
+        
         private void FocusKeeper_Tick(object sender, EventArgs e)
         {
             try
@@ -1287,7 +1228,8 @@ namespace Cash8Avalon
             base.OnLoaded(e);
             // Теперь ищем конкретно num_cash
             var _num_cash = this.FindControl<TextBox>("num_cash");
-            _num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
+            //_num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
+            _num_cash.Text = "№ " + MainStaticClass.CashDeskNumber.ToString();
             _num_cash.Tag = MainStaticClass.CashDeskNumber;
 
             //Создание таблицы для перераспределения акций
@@ -1332,7 +1274,8 @@ namespace Cash8Avalon
                                 
                 this.txtB_search_product.Focus();
 
-                this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
+                //this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
+                this.date_time_start.Text = DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
                 this.Discount = 0;
                 this.user.Text = MainStaticClass.Cash_Operator;
                 this.user.Tag = MainStaticClass.Cash_Operator_Client_Code;//gaa поменять на инн
@@ -2076,6 +2019,7 @@ namespace Cash8Avalon
                 NumCash = this.FindControl<TextBox>("num_cash");
                 User = this.FindControl<TextBox>("user");
                 Comment= this.FindControl<TextBox>("comment");
+                LastTovar = this.FindControl<TextBox>("last_tovar"); // Если решили сделать публичным
 
                 ClientBarcodeOrPhone = this.FindControl<TextBox>("client_barcode");
                 if (ClientBarcodeOrPhone != null)
@@ -3451,7 +3395,7 @@ namespace Cash8Avalon
         {
 #if DEBUG
             if (System.Diagnostics.Debugger.IsAttached)
-            {
+            {                
                 System.Diagnostics.Debugger.Break();
             }
 #endif
@@ -4769,7 +4713,7 @@ namespace Cash8Avalon
 
                 if (productData.IsEmpty())
                 {
-                    last_tovar.Text = barcode;
+                    LastTovar.Text = barcode;
                     await ShowTovarNotFoundWindow(this);
                     return;
                 }
@@ -4826,7 +4770,7 @@ namespace Cash8Avalon
 
                     if (error)
                     {
-                        last_tovar.Text = barcode;
+                        LastTovar.Text = barcode;
                         await ShowTovarNotFoundWindow(this);
                         this.Focus();
                         return;
@@ -4876,7 +4820,7 @@ namespace Cash8Avalon
                             this.cdn_markers_result_check,
                             this.check_type.SelectedIndex))
                         {
-                            last_tovar.Text = barcode;
+                            LastTovar.Text = barcode;
                             await ShowTovarNotFoundWindow(this);
                             this.Focus();
                             return;
@@ -4886,7 +4830,7 @@ namespace Cash8Avalon
                     {
                         if (!productData.IsRefusalMarking())
                         {
-                            last_tovar.Text = barcode;
+                            LastTovar.Text = barcode;
                             await ShowTovarNotFoundWindow(this);
                             this.Focus();
                             return;
@@ -4903,7 +4847,7 @@ namespace Cash8Avalon
                         MessageBoxButton.OK,
                         MessageBoxType.Error,
                         this);
-                    last_tovar.Text = barcode;
+                    LastTovar.Text = barcode;
                     await ShowTovarNotFoundWindow(this);
                     this.Focus();
                     return;
@@ -5156,7 +5100,7 @@ namespace Cash8Avalon
                 }
 
                 RecalculateProductSums(productItem);
-                last_tovar.Text = productData.GetName();
+                LastTovar.Text = productData.GetName();
                 _productsData.Add(productItem);
                 await AddSingleProductToGrid(productItem);
                 UpdateTotalSum();
@@ -6806,7 +6750,7 @@ namespace Cash8Avalon
         //    }
         //}
         // В методе OnGlobalKeyDownForProducts добавьте:
-        private async Task OnGlobalKeyDownForProducts(object sender, KeyEventArgs e)
+        private async void OnGlobalKeyDownForProducts(object sender, KeyEventArgs e)
         {
             // Проверяем, есть ли фокус в таблице товаров
             bool isProductsTableFocused = _productsScrollViewer?.IsFocused == true ||

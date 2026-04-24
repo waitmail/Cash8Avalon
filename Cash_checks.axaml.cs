@@ -486,16 +486,16 @@ namespace Cash8Avalon
                 // 4. Настройка колонок (одинаковая для обеих сеток)
                 var columnWidths = new[]
                 {
-            new GridLength(0.8, GridUnitType.Star), // 0: Статус
-            new GridLength(1.3, GridUnitType.Star), // 1: Дата
-            new GridLength(2.0, GridUnitType.Star), // 2: Клиент
-            new GridLength(0.8, GridUnitType.Star), // 3: Сумма
-            new GridLength(0.8, GridUnitType.Star), // 4: Сдача
-            new GridLength(2.0, GridUnitType.Star), // 5: Комментарий
+            new GridLength(0.5, GridUnitType.Star), // 0: Статус
+            new GridLength(1.5, GridUnitType.Star), // 1: Дата
+            new GridLength(1.3, GridUnitType.Star), // 2: Клиент
+            new GridLength(1.2, GridUnitType.Star), // 3: Сумма
+            new GridLength(1.2, GridUnitType.Star), // 4: Сдача
+            new GridLength(0.5, GridUnitType.Star), // 5: Комментарий
             new GridLength(0.7, GridUnitType.Star), // 6: Тип
             new GridLength(0.8, GridUnitType.Star), // 7: Номер
-            new GridLength(0.5, GridUnitType.Star), // 8: Напечатан
-            new GridLength(0.5, GridUnitType.Star)  // 9: ПечатьП
+            new GridLength(0.4, GridUnitType.Star), // 8: Напечатан
+            new GridLength(0.4, GridUnitType.Star)  // 9: ПечатьП
         };
                 foreach (var width in columnWidths)
                 {

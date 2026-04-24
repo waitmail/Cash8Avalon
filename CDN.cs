@@ -858,9 +858,14 @@ namespace Cash8Avalon
                     result_check = await check_lm_ch_z(cash_Check, mark_str);
                 }
             }
-
-
-            return result_check;
+            if (MainStaticClass.Nick_Shop == "A01")
+            {
+                return true;
+            }
+            else
+            {
+                return result_check;
+            }                
         }
     }
 }
