@@ -1397,29 +1397,107 @@ namespace Cash8Avalon
                 return false;
             }
 
+            //// Регистрация итога
+            //fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
+            //fptr.receiptTotal();
+
+            //double[] get_result_payment = MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString());
+            //if (get_result_payment[0] != 0)
+            //{
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_CASH);
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[0]);
+            //    fptr.payment();
+            //}
+            //if (get_result_payment[1] != 0)
+            //{
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+            //    fptr.payment();
+            //}
+            //if (get_result_payment[2] != 0)
+            //{
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_PREPAID);
+            //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[2]);
+            //    fptr.payment();
+            //}
             // Регистрация итога
-            fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
+            decimal checkTotalSum = check.calculation_of_the_sum_of_the_document();
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)checkTotalSum);
             fptr.receiptTotal();
 
-            double[] get_result_payment = MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString());
-            if (get_result_payment[0] != 0)
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
+            // 2. Сравнение с БД (защита от "фантомных данных")
+            double[] get_result_payment = await MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString(), check);
+            decimal cashFromDb = Convert.ToDecimal(get_result_payment[0]);
+            decimal cardFromDb = Convert.ToDecimal(get_result_payment[1]);
+            decimal certFromDb = Convert.ToDecimal(get_result_payment[2]);
+
+            if (check.LastPaymentSnapshot != null)
+            {
+                // 1. Проверка суммы чека
+                if (Math.Round(check.LastPaymentSnapshot.TotalSumAtDiscount, 2) != Math.Round(checkTotalSum, 2))
+                {
+                    await MessageBoxHelper.Show(
+                        "Ошибка целостности данных!\n" +
+                        $"Сумма чека ({checkTotalSum}) не совпадает с данными оплаты ({check.LastPaymentSnapshot.TotalSumAtDiscount}).\n" +
+                        "Печать отменена.", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, check);
+                    fptr.cancelReceipt();
+                    return false;
+                }
+
+                //// 2. Сравнение с БД (защита от "фантомных данных")
+                //double[] get_result_payment = await MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString(), check);
+                //decimal cashFromDb = Convert.ToDecimal(get_result_payment[0]);
+                //decimal cardFromDb = Convert.ToDecimal(get_result_payment[1]);
+                //decimal certFromDb = Convert.ToDecimal(get_result_payment[2]);
+
+                // Допускаем погрешность в 1 копейку при округлении
+                bool isCashValid = Math.Abs(check.LastPaymentSnapshot.CashMoney- cashFromDb) < 0.01m;
+                bool isCardValid = Math.Abs(check.LastPaymentSnapshot.NonCashMoney - cardFromDb) < 0.01m;
+                bool isCertValid = Math.Abs(check.LastPaymentSnapshot.CertificateMoney - certFromDb) < 0.01m;
+
+                if (!isCashValid || !isCardValid || !isCertValid)
+                {
+                    string errorDetails = "РАССИНХРОН ДАННЫХ!\n" +
+                                          $"Источники:\n" +
+                                          $"Снимок (Plan): Нал={check.LastPaymentSnapshot.CashMoney}, Карта={check.LastPaymentSnapshot.NonCashMoney}\n" +
+                                          $"База (Fact):   Нал={cashFromDb}, Карта={cardFromDb}\n\n" +
+                                          "Печать невозможна. Проверьте правильность ввода оплаты.";
+
+                    MainStaticClass.write_event_in_log(errorDetails, "PrintValidation_ERROR", check.numdoc.ToString());
+                    await MessageBoxHelper.Show(errorDetails, "Ошибка данных", MessageBoxButton.OK, MessageBoxType.Error, check);
+                    fptr.cancelReceipt();
+                    return false;
+                }
+
+            }
+            
+
+                // Передаем в ФР скорректированные суммы
+                if (cashFromDb > 0)
             {
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_CASH);
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[0]);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, (double)cashFromDb);
                 fptr.payment();
             }
-            if (get_result_payment[1] != 0)
+            if (cardFromDb > 0)
             {
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_ELECTRONICALLY);
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[1]);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, (double)cardFromDb);
                 fptr.payment();
             }
-            if (get_result_payment[2] != 0)
+            if (certFromDb > 0)
             {
                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_TYPE, AtolConstants.LIBFPTR_PT_PREPAID);
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, get_result_payment[2]);
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_PAYMENT_SUM, (double)certFromDb);
                 fptr.payment();
             }
+            // === КОНЕЦ ЗАЩИТЫ ===
             string s = "";
             if (check.check_type.SelectedIndex == 0)
             {
@@ -1548,12 +1626,12 @@ namespace Cash8Avalon
         /// <returns>true - печать успешна, false - произошла ошибка</returns>
         public async Task<bool> print_sell_2_3_or_return_sell(Cash_check check, int variant)
         {
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
-            {
-                System.Diagnostics.Debugger.Break();
-            }
-#endif
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
             bool error = false;
 
             IFptr fptr = MainStaticClass.FPTR;

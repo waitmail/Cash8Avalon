@@ -313,6 +313,7 @@ namespace Cash8Avalon
         private static string kitchen_print = "0";
         private static int included_piot = -1;
         private static string piot_url = "0";
+        private static bool piot_error_203 = false;
 
         // === ПОЛЯ ДЛЯ КЭШИРОВАНИЯ ===
         private static string _lastWorkingServiceUrl = null;
@@ -393,6 +394,7 @@ namespace Cash8Avalon
             }
         });
 
+
         //public static string IncludedPiot => _includedPiotLazy.Value ? "1" : "0";
         public static bool IncludedPiot => _includedPiotLazy.Value;
 
@@ -437,6 +439,24 @@ namespace Cash8Avalon
                 return piot_url;
             }
         }
+
+        /// <summary>
+        /// Возвращает piot_url        
+        /// </summary>
+        public static bool PiotError203
+        {
+            get
+            {               
+                return piot_error_203;
+            }
+            set
+            {
+                piot_error_203 = value;
+            }
+        }
+
+
+
 
         //public static Dictionary DictionaryProductData
         //{
@@ -1604,7 +1624,7 @@ namespace Cash8Avalon
         /// 
         /// </summary>
         /// <returns></returns>
-        public static double[] get_cash_on_type_payment(string numdoc)
+        public async static Task<double[]> get_cash_on_type_payment(string numdoc,Window owner)
         {
             double[] result = new double[3];
             result[0] = 0;
@@ -1626,14 +1646,10 @@ namespace Cash8Avalon
                 reader.Close();
                 command.Dispose();
                 conn.Close();
-            }
-            catch (NpgsqlException ex)
-            {
-                MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
-            }
+            }            
             catch (Exception ex)
             {
-                MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message);
+                await MessageBox.Show("Произошли ошибки при получении сумм по типам оплаты" + ex.Message, "get_cash_on_type_payment", MessageBoxButton.OK, MessageBoxType.Error, owner);
             }
             finally
             {
@@ -2880,11 +2896,11 @@ namespace Cash8Avalon
 
             string errorMessage = JsonConvert.SerializeObject(GetErrorInfo(exception), Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             // Валидация числовых параметров
-            if (numDoc < 0)
-                throw new ArgumentOutOfRangeException(nameof(numDoc), "Номер документа должен быть положительным числом");
+            //if (numDoc < 0)
+            //    throw new ArgumentOutOfRangeException(nameof(numDoc), "Номер документа должен быть положительным числом");
 
-            if (cashDeskNumber <= 0)
-                throw new ArgumentOutOfRangeException(nameof(cashDeskNumber), "Номер кассы должен быть положительным числом");
+            //if (cashDeskNumber <= 0)
+            //    throw new ArgumentOutOfRangeException(nameof(cashDeskNumber), "Номер кассы должен быть положительным числом");
             string methodName = "methodName";
             // Обработка строковых параметров
             string truncatedErrorMessage = errorMessage.Trim();
@@ -2964,12 +2980,12 @@ namespace Cash8Avalon
      short cashDeskNumber,
      string description)
         {
-            // Валидация числовых параметров
-            if (numDoc < 0)
-                throw new ArgumentOutOfRangeException(nameof(numDoc), "Номер документа должен быть положительным числом");
+            //// Валидация числовых параметров
+            //if (numDoc < 0)
+            //    throw new ArgumentOutOfRangeException(nameof(numDoc), "Номер документа должен быть положительным числом");
 
-            if (cashDeskNumber <= 0)
-                throw new ArgumentOutOfRangeException(nameof(cashDeskNumber), "Номер кассы должен быть положительным числом");
+            //if (cashDeskNumber <= 0)
+            //    throw new ArgumentOutOfRangeException(nameof(cashDeskNumber), "Номер кассы должен быть положительным числом");
 
             // Обработка строковых параметров
             string truncatedErrorMessage = TruncateString(errorMessage, 255);
@@ -3670,6 +3686,14 @@ namespace Cash8Avalon
         {
             bool result = true;
 
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
+
+
             string count_day = CryptorEngine.get_count_day();
             string key = nick_shop.Trim() + count_day.Trim() + nick_shop.Trim();
             string data_encrypt = "";
@@ -3689,29 +3713,28 @@ namespace Cash8Avalon
             {
                 resultGetData.DeviceInfo = get_device_info_printing_libraries(owner);
             }
-            resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries().ToString();
-            //string vatin = get_registration_info();
-            //if (vatin.Trim() != "")
-            //{
-            //    vatin = "vatin=" + vatin;
-            //}
-            //resultGetData.DeviceInfo += vatin;
-
+            resultGetData.PrintingLibrary = (await MainStaticClass.PrintingUsingLibraries()).ToString();
+            string vatin = get_registration_info();
+            if (vatin.Trim() != "")
+            {
+                vatin = "vatin=" + vatin;
+            }
+            resultGetData.DeviceInfo += vatin;
 
             string data = JsonConvert.SerializeObject(resultGetData, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             data_encrypt = CryptorEngine.Encrypt(data, true, key);
-            //using (var ds = MainStaticClass.get_ds())
-            //{
-            //    ds.Timeout = 60000;
-            //    try
-            //    {
-            //        ds.GetDataForCasheV8Successfully(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
-            //    }
-            //    catch
-            //    {
-            //        result = false;
-            //    }
-            //}
+            var ds = MainStaticClass.get_ds();
+            
+                ds.Timeout = 60000;
+                try
+                {
+                    ds.GetDataForCasheV8Successfully(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
+                }
+                catch
+                {
+                    result = false;
+                }
+            
 
             return result;
         }
@@ -3738,18 +3761,17 @@ namespace Cash8Avalon
             resultGetData.VersionPrintingLibrary = await GetAtolDriverVersion();
             string data = JsonConvert.SerializeObject(resultGetData, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             data_encrypt = CryptorEngine.Encrypt(data, true, key);
-            //using (var ds = MainStaticClass.get_ds())
-            //{
-            //    ds.Timeout = 60000;
-            //    try
-            //    {
-            //        ds.OnlineCasheV8Successfully(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
-            //    }
-            //    catch
-            //    {
-            //        result = false;
-            //    }
-            //}
+            var ds = MainStaticClass.get_ds();
+            ds.Timeout = 60000;
+
+            try
+            {
+                ds.OnlineCasheV8Successfully(nick_shop, data_encrypt, MainStaticClass.GetWorkSchema.ToString());
+            }
+            catch
+            {
+                result = false;
+            }
 
             return result;
         }
@@ -5407,6 +5429,38 @@ namespace Cash8Avalon
             }
 
         }
+        //public static Int16 CashDeskNumber
+        //{
+        //    get
+        //    {
+        //        if (cashDeskNumber == 0)
+        //        {
+        //            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+        //            try
+        //            {
+        //                conn.Open();
+        //                string queryString = "SELECT cash_desk_number FROM constants";
+        //                NpgsqlCommand command = new NpgsqlCommand(queryString, conn);
+        //                cashDeskNumber = Convert.ToInt16(command.ExecuteScalar());
+        //                conn.Close();
+        //            }
+        //            catch (NpgsqlException ex)
+        //            {
+        //                MessageBox.Show("Ошибка при получении номера кассы" + ex.Message, "CashDeskNumber",MainStaticClass.MainWindow);
+        //            }
+        //            finally
+        //            {
+        //                if (conn.State == ConnectionState.Open)
+        //                {
+        //                    conn.Close();
+        //                }
+        //            }
+        //        }
+
+        //        return cashDeskNumber;
+        //    }
+        //}
+
         public static Int16 CashDeskNumber
         {
             get
@@ -5420,21 +5474,20 @@ namespace Cash8Avalon
                         string queryString = "SELECT cash_desk_number FROM constants";
                         NpgsqlCommand command = new NpgsqlCommand(queryString, conn);
                         cashDeskNumber = Convert.ToInt16(command.ExecuteScalar());
-                        conn.Close();
                     }
                     catch (NpgsqlException ex)
                     {
-                        MessageBox.Show("Ошибка при получении номера кассы" + ex.Message);
+                        // Кидаем показ MessageBox в очередь UI потока (Fire-and-forget)
+                        Dispatcher.UIThread.InvokeAsync(async () =>
+                        {
+                            await MessageBox.Show("Ошибка при получении номера кассы: " + ex.Message, "CashDeskNumber", MessageBoxButton.OK, MessageBoxType.Error,MainStaticClass.MainWindow);
+                        });
                     }
                     finally
                     {
-                        if (conn.State == ConnectionState.Open)
-                        {
-                            conn.Close();
-                        }
+                        if (conn.State == ConnectionState.Open) conn.Close();
                     }
                 }
-
                 return cashDeskNumber;
             }
         }
@@ -6461,349 +6514,7 @@ namespace Cash8Avalon
 
 
     }
-    //public static class ModalWindowHelper
-    //{
-    //    #region По типу (создание нового окна)
-
-    //    public static async Task ShowModalWindow<T>(
-    //        Window owner,
-    //        params Control[] focusableElementsToDisable) where T : Window, new()
-    //    {
-    //        await ShowModalWindowInternal(owner, new T(), null, focusableElementsToDisable);
-    //    }
-
-    //    public static async Task ShowModalWindow<T>(
-    //        Window owner,
-    //        Action<T> configure,
-    //        params Control[] focusableElementsToDisable) where T : Window, new()
-    //    {
-    //        var modalWindow = new T { Topmost = true };
-    //        configure?.Invoke(modalWindow);
-    //        await ShowModalWindowInternal(owner, modalWindow, null, focusableElementsToDisable);
-    //    }
-
-    //    public static async Task ShowModalWindow<T>(
-    //        Window owner,
-    //        Control elementToFocusAfterClose,
-    //        params Control[] focusableElementsToDisable) where T : Window, new()
-    //    {
-    //        await ShowModalWindowInternal(owner, new T(), elementToFocusAfterClose, focusableElementsToDisable);
-    //    }
-
-    //    #endregion
-
-    //    #region По экземпляру (уже созданное окно)
-
-    //    public static async Task ShowModalWindow(
-    //        Window owner,
-    //        Window modalWindow,
-    //        params Control[] focusableElementsToDisable)
-    //    {
-    //        await ShowModalWindowInternal(owner, modalWindow, null, focusableElementsToDisable);
-    //    }
-
-    //    public static async Task ShowModalWindow(
-    //        Window owner,
-    //        Window modalWindow,
-    //        Control elementToFocusAfterClose,
-    //        params Control[] focusableElementsToDisable)
-    //    {
-    //        await ShowModalWindowInternal(owner, modalWindow, elementToFocusAfterClose, focusableElementsToDisable);
-    //    }
-
-    //    #endregion
-
-    //    #region Внутренняя реализация
-
-    //    //private static async Task ShowModalWindowInternal(
-    //    //    Window owner,
-    //    //    Window modalWindow,
-    //    //    Control elementToFocusAfterClose,
-    //    //    Control[] focusableElementsToDisable)
-    //    //{
-    //    //    // 1. Полное снятие фокуса с родителя
-    //    //    await Dispatcher.UIThread.InvokeAsync(() =>
-    //    //    {
-    //    //        owner.FocusManager?.ClearFocus();
-    //    //        owner.IsHitTestVisible = false;
-
-    //    //        foreach (var element in focusableElementsToDisable)
-    //    //        {
-    //    //            if (element != null)
-    //    //                element.Focusable = false;
-    //    //        }
-    //    //    }, DispatcherPriority.Render);
-
-    //    //    // 2. Снимаем Topmost с родителя
-    //    //    owner.Topmost = false;
-    //    //    await Task.Delay(20);
-
-    //    //    // 3. Показать модальное окно
-    //    //    modalWindow.Topmost = true;
-    //    //    await modalWindow.ShowDialog(owner);
-
-    //    //    // 4. Восстановить родителя
-    //    //    owner.IsHitTestVisible = true;
-
-    //    //    foreach (var element in focusableElementsToDisable)
-    //    //    {
-    //    //        if (element != null)
-    //    //            element.Focusable = true;
-    //    //    }
-
-    //    //    owner.Activate();
-    //    //    owner.Focus();
-
-    //    //    // 5. Фокус на конкретный элемент
-    //    //    if (elementToFocusAfterClose != null)
-    //    //    {
-    //    //        elementToFocusAfterClose.Focus();
-    //    //    }
-    //    //}
-
-    //    //    private static async Task ShowModalWindowInternal(
-    //    //Window owner,
-    //    //Window modalWindow,
-    //    //Control elementToFocusAfterClose,
-    //    //Control[] focusableElementsToDisable)
-    //    //    {
-    //    //        // 1. Подготовка (снимаем фокус, блокируем элементы)
-    //    //        await Dispatcher.UIThread.InvokeAsync(() =>
-    //    //        {
-    //    //            owner.FocusManager?.ClearFocus();
-    //    //            owner.IsHitTestVisible = false;
-    //    //            if (focusableElementsToDisable != null)
-    //    //            {
-    //    //                foreach (var element in focusableElementsToDisable)
-    //    //                    if (element != null) element.Focusable = false;
-    //    //            }
-    //    //        }, DispatcherPriority.Render);
-
-    //    //        // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
-    //    //        owner.Topmost = false;
-    //    //        await Task.Delay(20); // ⏱ Только здесь!
-
-    //    //        // 3. Показать модальное окно
-    //    //        modalWindow.Topmost = true;
-    //    //        await modalWindow.ShowDialog(owner);
-
-    //    //        // 4. Восстановить родителя — СИНХРОННО, БЕЗ ЗАДЕРЖЕК
-    //    //        owner.IsHitTestVisible = true;
-    //    //        if (focusableElementsToDisable != null)
-    //    //        {
-    //    //            foreach (var element in focusableElementsToDisable)
-    //    //                if (element != null) element.Focusable = true;
-    //    //        }
-    //    //        owner.Activate();
-    //    //        owner.Focus();
-
-    //    //        // 5. Фокус на конкретный элемент — ПРЯМОЙ ВЫЗОВ
-    //    //        if (elementToFocusAfterClose != null)
-    //    //        {
-    //    //            elementToFocusAfterClose.Focus();
-    //    //        }
-    //    //    }
-
-    //    //    private static async Task ShowModalWindowInternal(
-    //    //Window owner,
-    //    //Window modalWindow,
-    //    //Control elementToFocusAfterClose,
-    //    //Control[] focusableElementsToDisable)
-    //    //    {
-    //    //        // Сохраняем состояние "поверх всех", чтобы вернуть его после закрытия диалога
-    //    //        bool wasTopmost = owner.Topmost;
-
-    //    //        // 1. Подготовка (снимаем фокус, блокируем элементы)
-    //    //        await Dispatcher.UIThread.InvokeAsync(() =>
-    //    //        {
-    //    //            owner.FocusManager?.ClearFocus();
-    //    //            owner.IsHitTestVisible = false;
-    //    //            if (focusableElementsToDisable != null)
-    //    //            {
-    //    //                foreach (var element in focusableElementsToDisable)
-    //    //                    if (element != null) element.Focusable = false;
-    //    //            }
-    //    //        }, DispatcherPriority.Render);
-
-    //    //        // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
-    //    //        owner.Topmost = false;
-    //    //        await Task.Delay(20);
-
-    //    //        // 3. Показать модальное окно
-    //    //        modalWindow.Topmost = true;
-    //    //        await modalWindow.ShowDialog(owner);
-
-    //    //        // 4. Восстановление родителя
-    //    //        // Сначала восстанавливаем Topmost, чтобы окно "всплыло" над другими приложениями
-    //    //        owner.Topmost = wasTopmost;
-    //    //        owner.IsHitTestVisible = true;
-
-    //    //        if (focusableElementsToDisable != null)
-    //    //        {
-    //    //            foreach (var element in focusableElementsToDisable)
-    //    //                if (element != null) element.Focusable = true;
-    //    //        }
-
-    //    //        // Активируем окно (поднимаем его вверх)
-    //    //        owner.Activate();
-
-    //    //        // 5. ВАЖНО ДЛЯ LINUX/XFCE: Отложенная установка фокуса
-    //    //        // На Linux/X11 фокус нельзя вернуть мгновенно синхронно.
-    //    //        // Используем Post с приоритетом ContextIdle, чтобы система успела обработать закрытие окна.
-    //    //        Dispatcher.UIThread.Post(() =>
-    //    //        {
-    //    //            owner.Focus();
-
-    //    //            if (elementToFocusAfterClose != null)
-    //    //            {
-    //    //                // Если сам элемент (например, ScrollViewer) не может принять фокус,
-    //    //                // ищем внутри него первый фокусируемый контрол (например, DataGrid)
-    //    //                if (elementToFocusAfterClose.Focusable)
-    //    //                {
-    //    //                    elementToFocusAfterClose.Focus();
-    //    //                }
-    //    //                else
-    //    //                {
-    //    //                    var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
-    //    //                        .OfType<Control>()
-    //    //                        .FirstOrDefault(c => c.Focusable);
-
-    //    //                    if (focusableChild != null)
-    //    //                        focusableChild.Focus();
-    //    //                    else
-    //    //                        owner.Focus();
-    //    //                }
-    //    //            }
-    //    //        }, DispatcherPriority.ContextIdle);
-    //    //    }
-
-    //    private static async Task ShowModalWindowInternal(
-    //Window owner,
-    //Window modalWindow,
-    //Control elementToFocusAfterClose,
-    //Control[] focusableElementsToDisable)
-    //    {
-    //        // Сохраняем состояние "поверх всех", чтобы вернуть его после закрытия диалога
-    //        bool wasTopmost = owner.Topmost;
-
-    //        // 1. Подготовка (снимаем фокус, блокируем элементы)
-    //        await Dispatcher.UIThread.InvokeAsync(() =>
-    //        {
-    //            owner.FocusManager?.ClearFocus();
-    //            owner.IsHitTestVisible = false;
-    //            if (focusableElementsToDisable != null)
-    //            {
-    //                foreach (var element in focusableElementsToDisable)
-    //                    if (element != null) element.Focusable = false;
-    //            }
-    //        }, DispatcherPriority.Render);
-
-    //        // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
-    //        owner.Topmost = false;
-    //        await Task.Delay(20);
-
-    //        // 3. Показать модальное окно
-    //        // --- ИСПРАВЛЕНИЕ ДЛЯ ОТЛАДКИ ---
-    //        // Если дебаггер подключен, не делаем окно Topmost, чтобы Visual Studio была доступна.
-    //        // ShowDialog сам по себе поднимет окно над владельцем (owner), Topmost нужен только
-    //        // для того, чтобы перекрывать ДРУГИЕ приложения (например, проводник), что при отладке мешает.
-    //        if (System.Diagnostics.Debugger.IsAttached)
-    //        {
-    //            modalWindow.Topmost = false;
-    //        }
-    //        else
-    //        {
-    //            modalWindow.Topmost = true;
-    //        }
-    //        // ------------------------------
-
-    //        await modalWindow.ShowDialog(owner);
-
-    //        // 4. Восстановление родителя
-    //        // Сначала восстанавливаем Topmost, чтобы окно "всплыло" над другими приложениями
-
-    //        // --- ИСПРАВЛЕНИЕ ДЛЯ ОТЛАДКИ (часть 2) ---
-    //        // Если мы в отладке, лучше не возвращать owner.Topmost = true сразу,
-    //        // иначе при остановке на брейкпоинте главное окно перекроет студию.
-    //        if (!System.Diagnostics.Debugger.IsAttached)
-    //        {
-    //            owner.Topmost = wasTopmost;
-    //        }
-    //        // ----------------------------------------
-
-    //        owner.IsHitTestVisible = true;
-
-    //        if (focusableElementsToDisable != null)
-    //        {
-    //            foreach (var element in focusableElementsToDisable)
-    //                if (element != null) element.Focusable = true;
-    //        }
-
-    //        // Активируем окно (поднимаем его вверх)
-    //        owner.Activate();
-
-    //        // 5. ВАЖНО ДЛЯ LINUX/XFCE: Отложенная установка фокуса
-    //        Dispatcher.UIThread.Post(() =>
-    //        {
-    //            owner.Focus();
-
-    //            if (elementToFocusAfterClose != null)
-    //            {
-    //                if (elementToFocusAfterClose.Focusable)
-    //                {
-    //                    elementToFocusAfterClose.Focus();
-    //                }
-    //                else
-    //                {
-    //                    var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
-    //                        .OfType<Control>()
-    //                        .FirstOrDefault(c => c.Focusable);
-
-    //                    if (focusableChild != null)
-    //                        focusableChild.Focus();
-    //                    else
-    //                        owner.Focus();
-    //                }
-    //            }
-    //        }, DispatcherPriority.ContextIdle);
-    //    }
-    //    #endregion
-    //}
-
-
-
-
-    //        // Простой вызов (как было):
-    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(this, _productsScrollViewer);
-
-    //        // С настройкой окна:
-    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(this,
-    //            window => 
-    //    {
-    //            window.LabelText = "Товар не найден";
-    //            window.TextBoxText = barcode;
-    //        },
-    //    _productsScrollViewer);
-
-    //// С возвратом фокуса на конкретный элемент:
-    //await ModalWindowHelper.ShowModalWindow<TovarNotFound>(this,
-    //    InputSearchProduct,  // Фокус сюда после закрытия
-    //    _productsScrollViewer);
-
-    //        // С несколькими элементами для отключения:
-    //        await ModalWindowHelper.ShowModalWindow<Pay>(this,
-    //            InputSearchProduct,
-    //            _productsScrollViewer,
-    //            _anotherControl);
-
-    // В обычном классе:
-    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(ownerWindow);
-
-    //        // С параметрами:
-    //        await ModalWindowHelper.ShowModalWindow<TovarNotFound>(ownerWindow, window =>
-    //{
-    //            window.LabelText = "Товар не найден";
-    //        });     
+    
 
 
     public static class ModalWindowHelper

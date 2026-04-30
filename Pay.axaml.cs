@@ -48,24 +48,58 @@ namespace Cash8Avalon
         string str_payment_status_return_sale_sbp = @"<?xml version=""1.0"" encoding=""UTF-8""?><request><field id = ""00"">sum</field><field id=""04"">643</field><field id=""13"">sale_code_authorization_terminal</field><field id=""14"">guid</field><field id = ""25"" >29</field><field id=""27"">id_terminal</field><field id=""53"">119</field></request>";
 
         public Cash_check cc = null;
-        TextBox cashSumTextBox = null;
+        //TextBox cashSumTextBox = null;
+
+        // ═══════════════════════════════════════════════
+        //  КЭШИРОВАННЫЕ ССЫЛКИ НА КОНТРОЛЫ
+        // ═══════════════════════════════════════════════
+        public TextBox _paySumTextBox;
+        private TextBox _cashSumTextBox;
+        private TextBox _nonCashSumTextBox;        
+        private TextBox _nonCashSumKopTextBox;
+        private TextBox _sertificatesSumTextBox;
+        public TextBox _bonusSumTextBox;       // pay_bonus
+        public TextBox _bonusManyTextBox;      // pay_bonus_many
+        private TextBox _remainderTextBox;
+        private CheckBox _checkBoxPaymentBySbp;
+        private CheckBox _checkBoxDoNotSendPaymentToTheTerminal;
+        private Button _buttonPay;
+        private Button _button1;
+
 
         public Pay()
         {
             InitializeComponent();
+            LoadControls();
             this.ShowInTaskbar = false;
             this.Loaded += Pay_Loaded;
             this.Opened += Pay_Opened;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
+        public void  LoadControls()
+        {            
+            _paySumTextBox = this.FindControl<TextBox>("pay_sum");
+            _cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
+            _nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
+            _nonCashSumKopTextBox = this.FindControl<TextBox>("non_cash_sum_kop");
+            _sertificatesSumTextBox = this.FindControl<TextBox>("sertificates_sum");
+            _bonusSumTextBox = this.FindControl<TextBox>("pay_bonus");
+            _bonusManyTextBox = this.FindControl<TextBox>("pay_bonus_many");
+            _remainderTextBox = this.FindControl<TextBox>("remainder");
+            _checkBoxPaymentBySbp = this.FindControl<CheckBox>("checkBox_payment_by_sbp");
+            _checkBoxDoNotSendPaymentToTheTerminal = this.FindControl<CheckBox>("checkBox_do_not_send_payment_to_the_terminal");
+            _buttonPay = this.FindControl<Button>("button_pay");
+            _button1 = this.FindControl<Button>("button1");
+        }
+
         private void Pay_Loaded(object? sender, RoutedEventArgs e)
         {
-            this.pay_bonus_many.Text = "0";
-            this.pay_bonus.Text = "0";
-            this.sertificates_sum.Text = "0";
-            this.non_cash_sum.Text = "0";
-            this.non_cash_sum_kop.Text = "0";
+            this._bonusManyTextBox.Text = "0";
+            this._bonusSumTextBox.Text = "0";
+            this._sertificatesSumTextBox.Text = "0";
+            this._nonCashSumTextBox.Text = "0";
+            this._nonCashSumKopTextBox.Text = "0";
 
             InitializeEventHandlers();
 
@@ -73,16 +107,19 @@ namespace Cash8Avalon
             {
                 if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
                 {
-                    checkBox_payment_by_sbp.Opacity = 1;
-                    checkBox_payment_by_sbp.IsHitTestVisible = true;
+                    if (_checkBoxPaymentBySbp != null)
+                    {
+                        _checkBoxPaymentBySbp.Opacity = 1;
+                        _checkBoxPaymentBySbp.IsHitTestVisible = true;
+                    }
                 }
-                checkBox_do_not_send_payment_to_the_terminal.Opacity = 1;
-                checkBox_do_not_send_payment_to_the_terminal.IsHitTestVisible = true;
+                _checkBoxDoNotSendPaymentToTheTerminal.Opacity = 1;
+                _checkBoxDoNotSendPaymentToTheTerminal.IsHitTestVisible = true;
             }
 
             if (cc.payment_by_sbp_sales)
             {
-                checkBox_payment_by_sbp.IsChecked = true;
+                _checkBoxPaymentBySbp.IsChecked = true;
             }
 
             var toolTipContent = new StackPanel
@@ -94,7 +131,7 @@ namespace Cash8Avalon
                     new TextBlock { Text = "Не отправлять запрос об оплате на терминал", TextWrapping = TextWrapping.Wrap, MaxWidth = 250 }
                 }
             };
-            ToolTip.SetTip(checkBox_do_not_send_payment_to_the_terminal, toolTipContent);
+            ToolTip.SetTip(_checkBoxDoNotSendPaymentToTheTerminal, toolTipContent);
             CalculateChange();
         }
 
@@ -105,10 +142,10 @@ namespace Cash8Avalon
             this.Topmost = false;
             this.Activate();
 
-            if (cashSumTextBox != null)
+            if (_cashSumTextBox != null)
             {
-                cashSumTextBox.Focus();
-                if (cashSumTextBox is TextBox tb)
+                _cashSumTextBox.Focus();
+                if (_cashSumTextBox is TextBox tb)
                 {
                     string text = tb.Text;
                     if (!string.IsNullOrEmpty(text))
@@ -137,31 +174,31 @@ namespace Cash8Avalon
         {
             this.KeyDown += Pay_KeyDown;
 
-            var checkBoxPaymentBySbp = this.FindControl<CheckBox>("checkBox_payment_by_sbp");
-            if (checkBoxPaymentBySbp != null) checkBoxPaymentBySbp.IsCheckedChanged += CheckBox_payment_by_sbp_CheckedChanged;
+            //var checkBoxPaymentBySbp = this.FindControl<CheckBox>("checkBox_payment_by_sbp");
+            if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsCheckedChanged += CheckBox_payment_by_sbp_CheckedChanged;
 
-            this.button_pay.Click += Button_pay_Click;
-            this.button1.Click += Button1_Click;
+            this._buttonPay.Click += Button_pay_Click;
+            this._button1.Click += Button1_Click;
 
-            cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
-            if (cashSumTextBox != null)
+            //cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
+            if (_cashSumTextBox != null)
             {
-                cashSumTextBox.TextChanged += CashSumTextBox_TextChanged;
-                cashSumTextBox.GotFocus += OnCashSumGotFocus;
-                cashSumTextBox.LostFocus += OnCashSumLostFocus;
-                cashSumTextBox.TextInput += OnCashSumTextInput;
-                cashSumTextBox.KeyDown += OnCashSumKeyDown;
-                cashSumTextBox.KeyUp += CashSumTextBox_KeyUp;
-                cashSumTextBox.Text = "0,00";
+                _cashSumTextBox.TextChanged += CashSumTextBox_TextChanged;
+                _cashSumTextBox.GotFocus += OnCashSumGotFocus;
+                _cashSumTextBox.LostFocus += OnCashSumLostFocus;
+                _cashSumTextBox.TextInput += OnCashSumTextInput;
+                _cashSumTextBox.KeyDown += OnCashSumKeyDown;
+                _cashSumTextBox.KeyUp += CashSumTextBox_KeyUp;
+                _cashSumTextBox.Text = "0,00";
             }
 
-            var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
-            if (nonCashSumTextBox != null)
+            //var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
+            if (_nonCashSumTextBox != null)
             {
-                nonCashSumTextBox.KeyDown += NonCashSumTextBox_KeyDown;
-                nonCashSumTextBox.LostFocus += OnNonCashSumLostFocus;
-                nonCashSumTextBox.TextChanged += NonCashSumTextBox_TextChanged;
-                nonCashSumTextBox.Text = "0";
+                _nonCashSumTextBox.KeyDown += NonCashSumTextBox_KeyDown;
+                _nonCashSumTextBox.LostFocus += OnNonCashSumLostFocus;
+                _nonCashSumTextBox.TextChanged += NonCashSumTextBox_TextChanged;
+                _nonCashSumTextBox.Text = "0";
             }
         }
 
@@ -229,71 +266,72 @@ namespace Cash8Avalon
             this.Close();
         }
         private void Button_pay_Click(object? sender, RoutedEventArgs e) => button2_Click(null, null);
-        private void OnCashSumGotFocus(object sender, GotFocusEventArgs e) { if (cashSumTextBox?.Text == "0,00") _firstInput = true; }
+        private void OnCashSumGotFocus(object sender, GotFocusEventArgs e) { if (_cashSumTextBox?.Text == "0,00") _firstInput = true; }
         private void OnCashSumLostFocus(object sender, RoutedEventArgs e)
         {
-            if (cashSumTextBox == null) return;
-            if (string.IsNullOrWhiteSpace(cashSumTextBox.Text)) { cashSumTextBox.Text = "0,00"; _firstInput = true; }
-            else { if (decimal.TryParse(cashSumTextBox.Text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result)) cashSumTextBox.Text = result.ToString("F2"); else cashSumTextBox.Text = "0,00"; _firstInput = true; }
+            if (_cashSumTextBox == null) return;
+            if (string.IsNullOrWhiteSpace(_cashSumTextBox.Text)) { _cashSumTextBox.Text = "0,00"; _firstInput = true; }
+            else { if (decimal.TryParse(_cashSumTextBox.Text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result)) _cashSumTextBox.Text = result.ToString("F2"); else _cashSumTextBox.Text = "0,00"; _firstInput = true; }
             CalculateChange();
         }
         private void OnCashSumTextInput(object sender, TextInputEventArgs e)
         {
-            if (cashSumTextBox == null) return;
+            if (_cashSumTextBox == null) return;
             if (string.IsNullOrEmpty(e.Text)) { e.Handled = true; return; }
             char inputChar = e.Text[0];
             bool isDigit = char.IsDigit(inputChar);
             bool isSeparator = inputChar == ',' || inputChar == '.';
             if (!isDigit && !isSeparator && !char.IsControl(inputChar)) { e.Handled = true; return; }
 
-            var selectionStart = cashSumTextBox.CaretIndex;
-            var currentText = cashSumTextBox.Text ?? "";
+            var selectionStart = _cashSumTextBox.CaretIndex;
+            var currentText = _cashSumTextBox.Text ?? "";
 
             if (isDigit)
             {
-                if (_firstInput) { _firstInput = false; cashSumTextBox.Text = inputChar + currentText.Substring(1); e.Handled = true; cashSumTextBox.CaretIndex = 1; }
-                else { cashSumTextBox.Text = currentText.Insert(selectionStart, inputChar.ToString()); e.Handled = true; cashSumTextBox.CaretIndex = selectionStart + 1; }
+                if (_firstInput) { _firstInput = false; _cashSumTextBox.Text = inputChar + currentText.Substring(1); e.Handled = true; _cashSumTextBox.CaretIndex = 1; }
+                else { _cashSumTextBox.Text = currentText.Insert(selectionStart, inputChar.ToString()); e.Handled = true; _cashSumTextBox.CaretIndex = selectionStart + 1; }
             }
             else if (isSeparator)
             {
                 string separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-                if (!currentText.Contains(separator)) { cashSumTextBox.Text = currentText.Insert(selectionStart, separator); e.Handled = true; cashSumTextBox.CaretIndex = selectionStart + 1; }
-                else { cashSumTextBox.CaretIndex = currentText.IndexOf(separator) + 1; e.Handled = true; }
+                if (!currentText.Contains(separator)) { _cashSumTextBox.Text = currentText.Insert(selectionStart, separator); e.Handled = true; _cashSumTextBox.CaretIndex = selectionStart + 1; }
+                else { _cashSumTextBox.CaretIndex = currentText.IndexOf(separator) + 1; e.Handled = true; }
             }
 
             var separatorChar = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-            if (cashSumTextBox.Text.Contains(separatorChar))
+            if (_cashSumTextBox.Text.Contains(separatorChar))
             {
-                int decimalIndex = cashSumTextBox.Text.IndexOf(separatorChar);
-                if (cashSumTextBox.Text.Length - decimalIndex - 1 < 2) { cashSumTextBox.Text = cashSumTextBox.Text.Substring(0, decimalIndex + 1) + cashSumTextBox.Text.Substring(decimalIndex + 1).PadRight(2, '0'); cashSumTextBox.CaretIndex = decimalIndex + 1; }
+                int decimalIndex = _cashSumTextBox.Text.IndexOf(separatorChar);
+                if (_cashSumTextBox.Text.Length - decimalIndex - 1 < 2) { _cashSumTextBox.Text = _cashSumTextBox.Text.Substring(0, decimalIndex + 1) + _cashSumTextBox.Text.Substring(decimalIndex + 1).PadRight(2, '0'); 
+                    _cashSumTextBox.CaretIndex = decimalIndex + 1; }
             }
-            if (cashSumTextBox.CaretIndex == 0) cashSumTextBox.CaretIndex = cashSumTextBox.Text.Length;
+            if (_cashSumTextBox.CaretIndex == 0) _cashSumTextBox.CaretIndex = _cashSumTextBox.Text.Length;
             CalculateChange();
         }
         private void OnCashSumKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Back || e.Key == Key.Delete) { _firstInput = false; Task.Delay(10).ContinueWith(_ => Dispatcher.UIThread.InvokeAsync(() => { if (cashSumTextBox != null) FormatCashSumText(); })); }
+            if (e.Key == Key.Back || e.Key == Key.Delete) { _firstInput = false; Task.Delay(10).ContinueWith(_ => Dispatcher.UIThread.InvokeAsync(() => { if (_cashSumTextBox != null) FormatCashSumText(); })); }
             CalculateChange();
         }
-        private void CashSumTextBox_TextChanged(object sender, TextChangedEventArgs e) { if (cashSumTextBox == null) return; FormatCashSumText(); CalculateChange(); }
+        private void CashSumTextBox_TextChanged(object sender, TextChangedEventArgs e) { if (_cashSumTextBox == null) return; FormatCashSumText(); CalculateChange(); }
         private void FormatCashSumText()
         {
-            if (cashSumTextBox == null) return;
-            var currentText = cashSumTextBox.Text;
+            if (_cashSumTextBox == null) return;
+            var currentText = _cashSumTextBox.Text;
             if (!string.IsNullOrEmpty(currentText))
             {
                 var separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
                 var cleanedText = new string(currentText.Where(c => char.IsDigit(c) || c == separator[0]).ToArray());
                 int separatorCount = cleanedText.Count(c => c == separator[0]);
                 if (separatorCount > 1) { int firstIndex = cleanedText.IndexOf(separator[0]); cleanedText = cleanedText.Substring(0, firstIndex + 1) + new string(cleanedText.Substring(firstIndex + 1).Where(char.IsDigit).ToArray()); }
-                if (cleanedText != currentText) { cashSumTextBox.Text = cleanedText; cashSumTextBox.CaretIndex = cleanedText.Length; }
+                if (cleanedText != currentText) { _cashSumTextBox.Text = cleanedText; _cashSumTextBox.CaretIndex = cleanedText.Length; }
             }
             var separatorChar = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-            if (cashSumTextBox.Text.Contains(separatorChar))
+            if (_cashSumTextBox.Text.Contains(separatorChar))
             {
-                int decimalIndex = cashSumTextBox.Text.IndexOf(separatorChar); string text = cashSumTextBox.Text;
-                if (text.Length - decimalIndex - 1 < 2) cashSumTextBox.Text = text.Substring(0, decimalIndex + 1) + text.Substring(decimalIndex + 1).PadRight(2, '0');
-                else if (text.Length - decimalIndex - 1 > 2) cashSumTextBox.Text = text.Substring(0, decimalIndex + 3);
+                int decimalIndex = _cashSumTextBox.Text.IndexOf(separatorChar); string text = _cashSumTextBox.Text;
+                if (text.Length - decimalIndex - 1 < 2) _cashSumTextBox.Text = text.Substring(0, decimalIndex + 1) + text.Substring(decimalIndex + 1).PadRight(2, '0');
+                else if (text.Length - decimalIndex - 1 > 2) _cashSumTextBox.Text = text.Substring(0, decimalIndex + 3);
             }
         }
         #endregion
@@ -304,8 +342,9 @@ namespace Cash8Avalon
             {
                 case Key.F5: e.Handled = true; Button1_Click(sender, e); break;
                 case Key.F12: e.Handled = true; button2_Click(null, null); break;
-                case Key.Y: e.Handled = true; this.CashSum = this.PaySum; ClearNonCash(); cashSumTextBox?.Focus(); break;
-                case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); this.FindControl<TextBox>("non_cash_sum")?.Focus(); break;
+                case Key.Y: e.Handled = true; this.CashSum = this.PaySum; ClearNonCash(); _cashSumTextBox?.Focus(); break;
+                //case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); this.FindControl<TextBox>("non_cash_sum")?.Focus(); break;
+                case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); _nonCashSumTextBox?.Focus(); break;
                 case Key.F8: e.Handled = true; await ShowCertificatesDialog(); break;
             }
         }
@@ -325,7 +364,7 @@ namespace Cash8Avalon
             {
                 await MessageBoxHelper.Show($"Ошибка открытия формы сертификатов: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
             }
-            await Dispatcher.UIThread.InvokeAsync(() => { this.Focus(); this.Activate(); cashSumTextBox?.Focus(); this.Topmost = true; }, DispatcherPriority.Render);
+            await Dispatcher.UIThread.InvokeAsync(() => { this.Focus(); this.Activate(); _cashSumTextBox?.Focus(); this.Topmost = true; }, DispatcherPriority.Render);
         }
 
         private async Task ProcessCertificatesData(object certificateData)
@@ -375,19 +414,19 @@ namespace Cash8Avalon
 
         private async Task<bool> copFilledCorrectly()
         {
-            if (string.IsNullOrWhiteSpace(non_cash_sum.Text))
+            if (string.IsNullOrWhiteSpace(_nonCashSumTextBox.Text))
             {
                 await MessageBoxHelper.Show("У вас пустое поле оплата по карте. Сделайте фото и создайте заявку в ит отдел.", "Проверки при оплате картой", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return false;
             }
-            if (non_cash_sum.Text.Trim().Length > 0)
+            if (_nonCashSumTextBox.Text.Trim().Length > 0)
             {
-                if (int.TryParse(non_cash_sum.Text.Trim(), out int rubles) && rubles == 0)
+                if (int.TryParse(_nonCashSumTextBox.Text.Trim(), out int rubles) && rubles == 0)
                 {
-                    if (short.TryParse(non_cash_sum_kop.Text.Trim(), out short kopecks) && kopecks > 0)
+                    if (short.TryParse(_nonCashSumKopTextBox.Text.Trim(), out short kopecks) && kopecks > 0)
                     {
                         MessageBoxResult dialogResult = await MessageBoxHelper.Show("У вас заполнены копейки для оплаты по карте, но не заполнена целая часть суммы оплаты по карте.\n\nЕсли вы выберете ДА, тогда копейки будут оплачены по карте.\nЕсли вы выберете НЕТ, то копейки обнулятся.", "Проверки при оплате картой", MessageBoxButton.YesNo, MessageBoxType.Question, this);
-                        if (dialogResult == MessageBoxResult.No) { non_cash_sum_kop.Text = "0"; return false; }
+                        if (dialogResult == MessageBoxResult.No) { _nonCashSumKopTextBox.Text = "0"; return false; }
                     }
                 }
             }
@@ -398,9 +437,9 @@ namespace Cash8Avalon
         {
             try
             {
-                MainStaticClass.write_event_in_log($"[Pay.button2_Click] Start. ButtonEnabled: {this.button_pay.IsEnabled}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                MainStaticClass.write_event_in_log($"[Pay.button2_Click] Start. ButtonEnabled: {this._buttonPay.IsEnabled}", "PayWindow", cc?.numdoc.ToString() ?? "0");
 
-                if (!this.button_pay.IsEnabled)
+                if (!this._buttonPay.IsEnabled)
                 {
                     MainStaticClass.write_event_in_log("[Pay.button2_Click] Button disabled, exiting.", "PayWindow", cc?.numdoc.ToString() ?? "0");
                     return;
@@ -454,7 +493,7 @@ namespace Cash8Avalon
 
             // ИСПОЛЬЗУЕМ СВОЙСТВА (Properties)
             string paySumStr = this.PaySum;
-            string changeStr = this.Change;
+            string changeStr = this.Remainder;
             string certSumStr = this.CertificatesSum;
             string bonusManyStr = this.BonusMany;
             string cashSumStr = this.CashSum;
@@ -538,13 +577,13 @@ namespace Cash8Avalon
             {
                 MainStaticClass.write_event_in_log($"[Pay.it_is_paid] CRITICAL: cc is null", "PayWindow", "0");
                 return;
-            }
+            }            
 
             if (cc.check_type.SelectedIndex == 0) // ОПЛАТА
             {
                 decimal cashSumVal = 0, remainderVal = 0, paySumVal = 0;
                 decimal.TryParse(this.CashSum, out cashSumVal);
-                decimal.TryParse(this.Change, out remainderVal);
+                decimal.TryParse(this.Remainder, out remainderVal);
                 decimal.TryParse(this.PaySum, out paySumVal);
 
                 //if ((cashSumVal - remainderVal) < 0)
@@ -596,9 +635,21 @@ namespace Cash8Avalon
                 string sertificate_money_str = sertSum.ToString().Replace(",", ".");
                 string bonus_money_str = string.IsNullOrEmpty(this.BonusMany.Trim()) ? "0" : this.BonusMany.Trim();
                 string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
-                string remainder_str = this.Change.Replace(",", ".");
+                string remainder_str = this.Remainder.Replace(",", ".");
 
-                // === ШАГ 1: Предварительная запись в БД ===
+
+                cc.LastPaymentSnapshot = new PaymentSnapshot
+                {
+                    CashMoney = cashSumVal - remainderVal,
+                    NonCashMoney = nonCashSum,
+                    CertificateMoney = sertSum,                    
+                    TotalSumAtDiscount = paySumVal,
+                    CreatedAt = DateTime.Now
+                };
+                // Записываем лог для отладки
+                MainStaticClass.write_event_in_log($"[Pay] Snapshot created: {cc.LastPaymentSnapshot}", "PaymentSnapshot", cc.numdoc.ToString());
+
+                //=== ШАГ 1: Предварительная запись в БД ===
                 bool writeResult = await cc.write_new_document(
                     this.CashSum, // Используем свойство
                     sum_doc_str,
@@ -622,8 +673,9 @@ namespace Cash8Avalon
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
                 {
-                    if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
-                    {
+                    //if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
+                        if (checkBox_payment_by_sbp.IsChecked != true)
+                        {
                         // ИСПОЛЬЗУЕМ СВОЙСТВА
                         string money = CalculateMoneyInKopecks(this.NonCashSum, this.NonCashSumKop);
 
@@ -631,8 +683,10 @@ namespace Cash8Avalon
                         {
                             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
 
-                            if (checkBox_payment_by_sbp.IsChecked != true)
-                            {
+                            //if (checkBox_payment_by_sbp.IsChecked != true)
+                                if (_checkBoxPaymentBySbp?.IsChecked != true)
+
+                                {
                                 #region Обычная оплата картой
                                 string _str_command_sale_ = str_command_sale.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal);
                                 MainStaticClass.write_event_in_log($"Оплата картой: {money} коп.", "Terminal", cc?.numdoc.ToString() ?? "0");
@@ -709,7 +763,7 @@ namespace Cash8Avalon
 
                 // 1. СНАЧАЛА парсим и проверяем
                 decimal returnCashSum = Convert.ToDecimal(this.CashSum);
-                decimal returnRemainder = Convert.ToDecimal(this.Change);
+                decimal returnRemainder = Convert.ToDecimal(this.Remainder);
 
                 if (returnRemainder < 0)
                 {
@@ -722,14 +776,12 @@ namespace Cash8Avalon
                 }
 
 
-                string sum_cash_pay = (Convert.ToDecimal(this.CashSum) - Convert.ToDecimal(this.Change)).ToString().Replace(",", ".");
+                string sum_cash_pay = (Convert.ToDecimal(this.CashSum) - Convert.ToDecimal(this.Remainder)).ToString().Replace(",", ".");
                 string non_sum_cash_pay = get_non_cash_sum().ToString().Replace(",", ".");
                 string sertificate_money_str = Convert.ToDecimal(this.CertificatesSum).ToString().Replace(",", ".");
                 string bonus_money_str = (string.IsNullOrEmpty(this.BonusMany.Trim()) ? "0" : this.BonusMany.Trim());
                 string sum_doc_str = cc.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
-                string remainder_str = this.Change.Replace(",", ".");
-
-                
+                string remainder_str = this.Remainder.Replace(",", ".");
 
 
                 bool writeResult = await cc.write_new_document(
@@ -745,22 +797,24 @@ namespace Cash8Avalon
 
                 if (cc.check_type.SelectedIndex == 1 && get_non_cash_sum() < 1)
                 {
-                    sum_cash_pay = (Convert.ToDecimal(this.CashSum) - Convert.ToDecimal(this.Change) + Convert.ToDecimal(get_non_cash_sum())).ToString().Replace(",", ".");
+                    sum_cash_pay = (Convert.ToDecimal(this.CashSum) - Convert.ToDecimal(this.Remainder) + Convert.ToDecimal(get_non_cash_sum())).ToString().Replace(",", ".");
                     non_sum_cash_pay = "0";
                 }
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && (get_non_cash_sum() > 0))
                 {
-                    if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
-                    {
+                    //if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
+                        if (_checkBoxDoNotSendPaymentToTheTerminal?.IsChecked != true)
+                        {
                         // ИСПОЛЬЗУЕМ СВОЙСТВА
                         string money = CalculateMoneyInKopecks(this.NonCashSum, this.NonCashSumKop);
 
                         if (MainStaticClass.GetAcquiringBank == 1)//РНКБ
                         {
                             string url = "http://" + MainStaticClass.IpAddressAcquiringTerminal;
-                            if (checkBox_payment_by_sbp.IsChecked != true)
-                            {
+                            //if (checkBox_payment_by_sbp.IsChecked != true)
+                                if (_checkBoxPaymentBySbp?.IsChecked != true)
+                                {
                                 string xmlData = "";
                                 if (cc.sale_date.CompareTo(DateTime.Today) < 0)
                                     xmlData = str_return_sale.Replace("sum", money).Replace("id_terminal", MainStaticClass.IdAcquirerTerminal).Replace("sale_code_authorization_terminal", cc.sale_code_authorization_terminal).Replace("number_reference", cc.sale_id_transaction_terminal);
@@ -972,18 +1026,16 @@ namespace Cash8Avalon
         {
             var checkBox = sender as CheckBox;
             if (checkBox != null)
-            {
-                var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
-                var nonCashSumKopTextBox = this.FindControl<TextBox>("non_cash_sum_kop");
+            {                
 
                 if (checkBox.IsChecked != true)
                 {
-                    if (nonCashSumTextBox != null) { nonCashSumTextBox.Text = "0"; nonCashSumTextBox.IsEnabled = false; }
-                    if (nonCashSumKopTextBox != null) nonCashSumKopTextBox.Text = "0";
+                    if (_nonCashSumTextBox != null) { _nonCashSumTextBox.Text = "0"; _nonCashSumTextBox.IsEnabled = false; }
+                    if (_nonCashSumKopTextBox != null) _nonCashSumKopTextBox.Text = "0";
                 }
                 else
                 {
-                    if (nonCashSumTextBox != null) nonCashSumTextBox.IsEnabled = true;
+                    if (_nonCashSumTextBox != null) _nonCashSumTextBox.IsEnabled = true;
                 }
                 SbpPaymentChanged?.Invoke(this, checkBox.IsChecked ?? false);
             }
@@ -991,54 +1043,76 @@ namespace Cash8Avalon
 
         private void CalculateChange()
         {
-            var paySumTextBox = this.FindControl<TextBox>("pay_sum");
-            var cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
-            var nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
-            var nonCashSumKopTextBox = this.FindControl<TextBox>("non_cash_sum_kop");
-            var sertificatesSumTextBox = this.FindControl<TextBox>("sertificates_sum");
-            var bonusManyTextBox = this.FindControl<TextBox>("pay_bonus_many");
-            var remainderTextBox = this.FindControl<TextBox>("remainder");
 
-            if (paySumTextBox != null && cashSumTextBox != null && remainderTextBox != null)
+            if (_paySumTextBox != null && _cashSumTextBox != null && _remainderTextBox != null)
             {
                 try
                 {
                     decimal ParseDecimal(string text) { if (string.IsNullOrWhiteSpace(text)) return 0m; text = text.Replace(",", "."); return decimal.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture); }
                     int ParseInt(string text) { if (string.IsNullOrWhiteSpace(text)) return 0; return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture); }
 
-                    decimal paySum = ParseDecimal(paySumTextBox.Text);
-                    decimal cashSum = ParseDecimal(cashSumTextBox.Text);
+                    decimal paySum = ParseDecimal(_paySumTextBox.Text);
+                    decimal cashSum = ParseDecimal(_cashSumTextBox.Text);
                     decimal nonCashSum = 0;
-                    if (nonCashSumTextBox != null) { nonCashSum = ParseDecimal(nonCashSumTextBox.Text); if (nonCashSumKopTextBox != null) nonCashSum += ParseInt(nonCashSumKopTextBox.Text) / 100m; }
-                    decimal certificatesSum = sertificatesSumTextBox != null ? ParseDecimal(sertificatesSumTextBox.Text) : 0;
-                    decimal bonusSum = bonusManyTextBox != null ? ParseDecimal(bonusManyTextBox.Text) : 0;
+                    if (_nonCashSumTextBox != null) { nonCashSum = ParseDecimal(_nonCashSumTextBox.Text); if (_nonCashSumKopTextBox != null) nonCashSum += ParseInt(_nonCashSumKopTextBox.Text) / 100m; }
+                    decimal certificatesSum = _sertificatesSumTextBox != null ? ParseDecimal(_sertificatesSumTextBox.Text) : 0;
+                    decimal bonusSum = _bonusManyTextBox != null ? ParseDecimal(_bonusManyTextBox.Text) : 0;
 
                     decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
                     decimal remainder = totalPaid - paySum;
-                    remainderTextBox.Text = remainder.ToString("F2");
+                    _remainderTextBox.Text = remainder.ToString("F2");
 
-                    if (remainder < 0 || remainder > cashSum) remainderTextBox.Foreground = Brushes.Red;
-                    else remainderTextBox.Foreground = Brushes.Green;
+                    if (remainder < 0 || remainder > cashSum) _remainderTextBox.Foreground = Brushes.Red;
+                    else _remainderTextBox.Foreground = Brushes.Green;
 
-                    var buttonPay = this.FindControl<Button>("button_pay");
-                    if (buttonPay != null) buttonPay.IsEnabled = totalPaid >= paySum;
+                    //var buttonPay = this.FindControl<Button>("button_pay");
+                    if (_buttonPay != null) _buttonPay.IsEnabled = totalPaid >= paySum;
                 }
-                catch { remainderTextBox.Text = "0.00"; remainderTextBox.Foreground = Brushes.Green; var buttonPay = this.FindControl<Button>("button_pay"); if (buttonPay != null) buttonPay.IsEnabled = false; }
+                catch
+                {
+                    _remainderTextBox.Text = "0.00";
+                    _remainderTextBox.Foreground = Brushes.Green;                    
+                    if (_buttonPay != null)
+                    {
+                        _buttonPay.IsEnabled = false;
+                    }
+                }            
             }
         }
 
         #region Свойства доступа к UI
-        public string PaySum { get => this.FindControl<TextBox>("pay_sum")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("pay_sum"); if (textBox != null) { textBox.Text = value; CalculateChange(); } } }
-        public string CashSum { get => this.FindControl<TextBox>("txtB_cash_sum")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("txtB_cash_sum"); if (textBox != null) { textBox.Text = value; CalculateChange(); } } }
-        public string NonCashSum { get => this.FindControl<TextBox>("non_cash_sum")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("non_cash_sum"); if (textBox != null) { textBox.Text = value; CalculateChange(); } } }
-        public string NonCashSumKop { get => this.FindControl<TextBox>("non_cash_sum_kop")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("non_cash_sum_kop"); if (textBox != null) { textBox.Text = value; CalculateChange(); } } }
-        public string CertificatesSum { get => this.FindControl<TextBox>("sertificates_sum")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("sertificates_sum"); if (textBox != null) textBox.Text = value; } }
-        public string BonusSum { get => this.FindControl<TextBox>("pay_bonus")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("pay_bonus"); if (textBox != null) textBox.Text = value; } }
-        public string BonusMany { get => this.FindControl<TextBox>("pay_bonus_many")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("pay_bonus_many"); if (textBox != null) textBox.Text = value; } }
-        public string Change { get => this.FindControl<TextBox>("remainder")?.Text ?? string.Empty; set { var textBox = this.FindControl<TextBox>("remainder"); if (textBox != null) textBox.Text = value; } }
-        public bool IsSbpPayment { get => this.FindControl<CheckBox>("checkBox_payment_by_sbp")?.IsChecked ?? false; set { var checkBox = this.FindControl<CheckBox>("checkBox_payment_by_sbp"); if (checkBox != null) checkBox.IsChecked = value; } }
-        public void ShowBonusControls(bool show) { /* ... реализация ... */ }
-        public void ShowSbpControls(bool show) { if (this.FindControl<CheckBox>("checkBox_payment_by_sbp") is CheckBox ch) ch.IsVisible = false; if (this.FindControl<CheckBox>("checkBox_do_not_send_payment_to_the_terminal") is CheckBox ch2) ch2.IsVisible = show; }
+        // ... ваши существующие свойства ...
+
+        /// <summary>
+        /// Управляет видимостью и доступностью элементов управления бонусами
+        /// </summary>
+        public void SetBonusControlsState(bool isVisible, bool isEnabled)
+        {
+            if (_bonusSumTextBox != null)
+            {
+                _bonusSumTextBox.IsVisible = isVisible;
+                _bonusSumTextBox.IsEnabled = isEnabled;
+            }
+            // Если нужно управлять видимостью поля "Списать бонусов", раскомментируйте:
+            // if (_bonusManyTextBox != null)
+            // {
+            //     _bonusManyTextBox.IsVisible = isVisible;
+            //     _bonusManyTextBox.IsEnabled = isEnabled;
+            // }
+        }
+        #endregion
+
+        #region Свойства доступа к UI (ТЕПЕРЬ РАБОТАЮТ ЧЕРЕЗ КЭШИРОВАННЫЕ ПОЛЯ)
+        public string PaySum { get => _paySumTextBox?.Text ?? string.Empty; set { if (_paySumTextBox != null) { _paySumTextBox.Text = value; CalculateChange(); } } }
+        public string CashSum { get => _cashSumTextBox?.Text ?? string.Empty; set { if (_cashSumTextBox != null) { _cashSumTextBox.Text = value; CalculateChange(); } } }
+        public string NonCashSum { get => _nonCashSumTextBox?.Text ?? string.Empty; set { if (_nonCashSumTextBox != null) { _nonCashSumTextBox.Text = value; CalculateChange(); } } }
+        public string NonCashSumKop { get => _nonCashSumKopTextBox?.Text ?? string.Empty; set { if (_nonCashSumKopTextBox != null) { _nonCashSumKopTextBox.Text = value; CalculateChange(); } } }
+        public string CertificatesSum { get => _sertificatesSumTextBox?.Text ?? string.Empty; set { if (_sertificatesSumTextBox != null) _sertificatesSumTextBox.Text = value; } }
+        public string BonusSum { get => _bonusSumTextBox?.Text ?? string.Empty; set { if (_bonusSumTextBox != null) _bonusSumTextBox.Text = value; } }
+        public string BonusMany { get => _bonusManyTextBox?.Text ?? string.Empty; set { if (_bonusManyTextBox != null) _bonusManyTextBox.Text = value; } }
+        public string Remainder { get => _remainderTextBox?.Text ?? string.Empty; set { if (_remainderTextBox != null) _remainderTextBox.Text = value; } }
+        public bool IsSbpPayment { get => _checkBoxPaymentBySbp?.IsChecked ?? false; set { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsChecked = value; } }
+        public void ShowSbpControls(bool show) { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsVisible = false; if (_checkBoxDoNotSendPaymentToTheTerminal != null) _checkBoxDoNotSendPaymentToTheTerminal.IsVisible = show; }
         #endregion
     }
 }

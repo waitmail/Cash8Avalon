@@ -185,14 +185,17 @@ using Avalonia.Threading;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace Cash8Avalon
 {
     public partial class TovarNotFound : Window
     {
-        private Timer _timer;
+        // Заменили System.Timers.Timer на DispatcherTimer (работает прямо в UI-потоке)
+        private DispatcherTimer _dispatcherTimer;
         private Grid _mainGrid;
+
+        // Флаг для предотвращения двойного закрытия (важно для Linux)
+        private volatile bool _isClosing = false;
 
         public TovarNotFound()
         {
@@ -203,9 +206,43 @@ namespace Cash8Avalon
             // Подписка на события жизненного цикла
             this.Opened += OnWindowOpened;
 
-            // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Подписка на клавиши через AddHandler с Tunnel стратегией
-            // Это гарантирует, что ESC будет обработан ДО любой другой логики
+            // Подписка на клавиши через AddHandler с Tunnel стратегией
             this.AddHandler(KeyDownEvent, OnKeyDownHandler, RoutingStrategies.Tunnel);
+
+            this.Loaded += Window_FitToScreen;
+        }
+
+        /// <summary>
+        /// Универсальный метод, который заставляет окно влезть в экран 800x600.
+        /// </summary>
+        private void Window_FitToScreen(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var screen = this.Screens.ScreenFromVisual(this);
+                if (screen == null) return;
+
+                var workArea = screen.WorkingArea;
+
+                double windowWidth = this.Bounds.Width + 10;
+                double windowHeight = this.Bounds.Height + 10;
+
+                if (windowWidth > workArea.Width || windowHeight > workArea.Height)
+                {
+                    double targetX = workArea.X + (workArea.Width - windowWidth) / 2;
+                    double targetY = workArea.Y + (workArea.Height - windowHeight) / 2;
+
+                    if (targetX < workArea.X) targetX = workArea.X + 5;
+                    if (targetY < workArea.Y) targetY = workArea.Y + 5;
+
+                    this.WindowStartupLocation = WindowStartupLocation.Manual;
+                    this.Position = new PixelPoint((int)targetX, (int)targetY);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка подгонки окна под экран: {ex.Message}");
+            }
         }
 
         private void InitializeComponent()
@@ -224,37 +261,73 @@ namespace Cash8Avalon
 
         private void SetupTimer()
         {
-            _timer = new Timer(1000);
-            _timer.Elapsed += Timer_Elapsed;
-            _timer.AutoReset = true;
-            _timer.Enabled = true;
-            _timer.Start();
+            // DispatcherTimer не требует Dispatcher.UIThread.InvokeAsync, 
+            // так как сам выполняется в UI-потоке
+            _dispatcherTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _dispatcherTimer.Tick += DispatcherTimer_Tick;
+            _dispatcherTimer.Start();
         }
 
-        // ===== КЛЮЧЕВОЙ МЕТОД ДЛЯ LINUX =====
         private async void OnWindowOpened(object sender, EventArgs e)
         {
             await Task.Delay(50);
 
             await Dispatcher.UIThread.InvokeAsync(async () =>
             {
+                if (_isClosing) return; // Проверка флага
+
                 this.Activate();
                 this.Focus();
 
-                // Трюк с Topmost для Linux
+                // Трюк для Linux: чтобы вытащить окно на передний план
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    this.Topmost = false;
-                    this.Topmost = true;
+                    this.Topmost = true;  // Выбиваем наверх
+                    // this.Topmost = false; // Раскомментируйте, если не хотите, чтобы окно висело поверх ВСЕХ окон ОС
                 }
 
                 await Task.Delay(100);
+
+                if (_isClosing) return;
                 this.Focus();
                 this.Activate();
             }, DispatcherPriority.Render);
+
+            await Task.Delay(2000); // Ждем 2 секунды
+
+            // Если за 2 секунды не нажали ESC/Enter - закрываем
+            CloseWindow();
         }
 
-        // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Обработчик клавиш через AddHandler
+        /// <summary>
+        /// Единый и безопасный метод для закрытия окна
+        /// </summary>
+        private void CloseWindow()
+        {
+            // Атомарная проверка: если уже закрываем - выходим, предотвращая двойной Close()
+            if (_isClosing) return;
+            _isClosing = true;
+
+            _dispatcherTimer?.Stop();
+
+            try
+            {
+                // На Linux иногда Close() может упасть, если окно уже уничтожается оконным менеджером
+                if (this.IsVisible)
+                {
+                    this.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при закрытии окна TovarNotFound: {ex.Message}");
+            }
+        }
+
+        // Обработчик клавиш через AddHandler (Tunnel)
         private void OnKeyDownHandler(object sender, KeyEventArgs e)
         {
             Console.WriteLine($"[TovarNotFound] KeyDown: {e.Key}, RoutedEvent: {e.RoutedEvent}");
@@ -262,10 +335,8 @@ namespace Cash8Avalon
             if (e.Key == Key.Escape)
             {
                 Console.WriteLine("[TovarNotFound] ESC pressed - closing window");
-                e.Handled = true; // ВАЖНО: помечаем как обработанное
-                _timer?.Stop();
-                _timer?.Dispose();
-                this.Close();
+                e.Handled = true;
+                CloseWindow();
                 return;
             }
 
@@ -273,25 +344,15 @@ namespace Cash8Avalon
             {
                 Console.WriteLine("[TovarNotFound] Enter pressed - closing window");
                 e.Handled = true;
-                _timer?.Stop();
-                _timer?.Dispose();
-                this.Close();
+                CloseWindow();
                 return;
             }
         }
 
-        // УДАЛИТЬ или закомментировать старый OnKeyDown - он больше не нужен
-        // protected override async void OnKeyDown(KeyEventArgs e)
-        // {
-        //     ...
-        // }
-
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private void DispatcherTimer_Tick(object? sender, EventArgs e)
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                SetShowTovarNotFound();
-            });
+            // Мы уже в UI-потоке, можем безопасно менять цвета
+            SetShowTovarNotFound();
         }
 
         private void SetShowTovarNotFound()
@@ -349,9 +410,8 @@ namespace Cash8Avalon
             this.RemoveHandler(KeyDownEvent, OnKeyDownHandler);
 
             // Очистка таймера
-            _timer?.Stop();
-            _timer?.Dispose();
-            _timer = null;
+            _dispatcherTimer?.Stop();
+            _dispatcherTimer = null;
         }
     }
 }

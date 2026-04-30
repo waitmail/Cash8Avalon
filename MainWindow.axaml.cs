@@ -1183,6 +1183,8 @@ namespace Cash8Avalon
 
                     if (MainStaticClass.Last_Write_Check > MainStaticClass.Last_Send_Last_Successful_Sending)
                     {
+                        await MainStaticClass.SendOnlineStatus();
+
                         try { ct.ThrowIfCancellationRequested(); var sdsp = new SendDataOnSalesPortions(); sdsp.send_sales_data_Click(null, null); Console.WriteLine("✓ Данные о продажах отправлены"); }
                         catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки продаж"); Console.WriteLine($"✗ Продажи: {ex.Message}"); }
 

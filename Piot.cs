@@ -182,6 +182,13 @@ namespace Cash8Avalon
         //public bool cdn_check_marker_code(List<string> codes, string mark_str, ref HttpWebRequest request, string mark_str_cdn, Dictionary<string, string> d_tovar, Cash_check cash_Check, ProductData productData)
         public async Task<bool> cdn_check_marker_code(List<string> codes, string mark_str, Int64 numdoc, HttpWebRequest request, string mark_str_cdn, Dictionary<string, string> d_tovar, Cash_check cash_Check, ProductData productData)
         {
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
+
             bool result_check = false;
 
             StringBuilder sb = new StringBuilder();
@@ -218,6 +225,7 @@ namespace Cash8Avalon
         //$"РЕЗУЛЬТАТ (HEX): {resultHex}\n\n" +
         //$"Было байт: {originalHex.Length}, Стало байт: {resultHex.Length}",
         //        "GS Debug Hex");
+
 
             ApiResponse apiResponse = null;
 
@@ -300,34 +308,73 @@ namespace Cash8Avalon
                 
                 //Записываем лог 
                 MainStaticClass.write_cdn_log(response.Data, numdoc.ToString(), codes[0].ToString(), "1");
+                //MessageBox.Show(response.Data, "Ответ", cash_Check);
                 apiResponse = JsonConvert.DeserializeObject<ApiResponse>(response.Data);
-                //var answer_check_mark=;
-                //if (apiResponse.errorCode != null)
-                //{
-                //    answer_check_mark = apiResponse.codesResponse.codesResponse[0];
-                //}
-                //else
-                //{
-                //    return result_check;
-                //}
+                //#if DEBUG
+                //                if (System.Diagnostics.Debugger.IsAttached)
+                //                {
+                //                    System.Diagnostics.Debugger.Break();
+                //                }
+                //#endif
 
-                ResponseItem answer_check_mark = null; // Инициализируем как null
+                ResponseItem answer_check_mark = null;
 
+                // 1. Пытаемся получить данные по коду маркировки
                 if (apiResponse.codesResponse != null && apiResponse.codesResponse.codesResponse != null && apiResponse.codesResponse.codesResponse.Count > 0)
                 {
                     answer_check_mark = apiResponse.codesResponse.codesResponse[0];
                 }
-                else if (apiResponse.errorCode != null)
+
+                // 2. Проверяем ошибки на УРОВНЕ КОДА МАРКИРОВКИ (приоритетная проверка)
+                if (answer_check_mark != null && answer_check_mark.codes != null && answer_check_mark.codes.Count > 0 && answer_check_mark.codes[0].errorCode != 0)
                 {
-                    // Это аварийный режим или другая ошибка
-                    result_check = true;
-                    return result_check;
+                    if (answer_check_mark.codes[0].errorCode == 10)
+                    {
+                        await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = 10\r\nТекст ошибки: данный код не найден в БД ЧЗ", "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                        return false; // Выходим, дальше проверять нет смысла
+                    }
+                    else if (answer_check_mark.codes[0].errorCode == 203)
+                    {
+                        await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = 203\r\nТекст ошибки: " + answer_check_mark.codes[0].message, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                        if (!MainStaticClass.PiotError203)
+                        {
+                            MainStaticClass.PiotError203 = true;
+                            return true; // Выходим с разрешением в первый раз встретившись с аварийным режимом 
+                        }
+                        else
+                        {
+                            return false; // Выходим с отказом
+                        }
+                    }
+                    else
+                    {
+                        await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки " + answer_check_mark.codes[0].message, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                        return false;
+                    }
                 }
-                else
+
+                // 3. Проверяем ошибки на УРОВНЕ ВСЕГО ЗАПРОСА (если на уровне кода ошибок не было)
+                if (apiResponse.errorCode == 203)
                 {
-                    // Неожиданный формат ответа
-                    return result_check;
+                    await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = 203\r\nТекст ошибки " + apiResponse.errorMessage, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                    if (!MainStaticClass.PiotError203)
+                    {
+                        MainStaticClass.PiotError203 = true;
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
+
+                // 4. Если структура ответа вообще не понятна
+                if (answer_check_mark == null || answer_check_mark.codes == null || answer_check_mark.codes.Count == 0)
+                {
+                    await MessageBox.Show("Не удалось получить ответ от ПИот\r\nПРОВЕРЬТЕ РАБОТОСПОСОБНОСТЬ ПИОТ", "Ошибка работы с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                    return false;
+                }
+
 
                 if (answer_check_mark.code == 0) // Это успех
                 {
@@ -335,6 +382,7 @@ namespace Cash8Avalon
                     {
                         if (!answer_check_mark.isCheckedOffline)//Это была онлайн проверка 
                         {
+                            await MessageBox.Show("Онлайн проверка кода маркировки", "Онлайн", MessageBoxButton.OK, MessageBoxType.Info, cash_Check);
                             string s = "ТОВАР НЕ МОЖЕТ БЫТЬ ПРОДАН!\r\n";
                             if (!answer_check_mark.codes[0].isOwner)
                             {
@@ -461,17 +509,19 @@ namespace Cash8Avalon
                         }
                         else//это была офлайн проверка 
                         {
+                            await MessageBox.Show("Офлайн проверка кода маркировки заблокирован = "+answer_check_mark.codes[0].isBlocked.ToString(), "Офлайн", MessageBoxButton.OK, MessageBoxType.Info, cash_Check);
+                            MessageBox.Show(response.Data, "Ответ", cash_Check);
                             if (answer_check_mark.codes[0].isBlocked)
                             {
                                 result_check = false;
-                                await MessageBox.Show("Офлайн проверка кода маркировки\r\nДанный код заблокирован", "Ошибка при работе с кодом аркировки", MessageBoxButton.OK, MessageBoxType.Error);
+                                await MessageBox.Show("Офлайн проверка кода маркировки\r\nДанный код заблокирован", "Ошибка при работе с кодом аркировки", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
                             }
                             else
                             {
 
                                 if (GetMarkingBalance(mark_str) > 0)
                                 {
-                                    await MessageBox.Show("Данный код марикровки найден в уже проданных.", "Ошибка при продаже марикрованного товара", MessageBoxButton.OK, MessageBoxType.Error);
+                                    await MessageBox.Show("Данный код марикровки найден в уже проданных.", "Ошибка при продаже марикрованного товара", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
                                     result_check = false;
                                     return result_check;
                                 }
@@ -485,7 +535,11 @@ namespace Cash8Avalon
                                 requisite1260.req1262 = "030";
                                 requisite1260.req1263 = "21.11.2023";
                                 requisite1260.req1264 = "1944";
-                                requisite1260.req1265 = "UUID=" + answer_check_mark.reqId + "&Time=" + answer_check_mark.reqTimestamp;
+                                requisite1260.req1265 = "UUID=" + answer_check_mark.reqId +
+                                                        "&Time=" + answer_check_mark.reqTimestamp +
+                                                        "&Inst=" + answer_check_mark.inst +
+                                                        "&Ver="+ answer_check_mark.version;
+
                                 cash_Check.verifyCDN.Add(mark_str, requisite1260);
 
                                 result_check = true;
@@ -494,16 +548,30 @@ namespace Cash8Avalon
                         }
                     }
                     else
-                    {
+                    {                        
                         if (answer_check_mark.codes[0].errorCode == 10)
                         {
                             await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки данный код не найден в БД ЧЗ", "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                            result_check = false;
+                        }
+                        else if (answer_check_mark.codes[0].errorCode == 203)
+                        {
+                            await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки " + answer_check_mark.codes[0].message, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
+                            if (!MainStaticClass.PiotError203)
+                            {
+                                MainStaticClass.PiotError203 = true;
+                                result_check = true;
+                            }
+                            else
+                            {
+                                result_check = false;
+                            }
                         }
                         else
                         {
                             await MessageBoxHelper.Show("Произошли ошибки при запросе к ПИОТ \r\nКод ошибки = " + answer_check_mark.codes[0].errorCode + "\r\nТекст ошибки " + answer_check_mark.codes[0].message, "Ошибка при работе с ПИот", MessageBoxButton.OK, MessageBoxType.Error, cash_Check);
-                        }
-                        result_check = false;
+                            result_check = false;
+                        }                        
                     }
                 }
             }
@@ -816,6 +884,12 @@ namespace Cash8Avalon
 
             [JsonProperty("isCheckedOffline")]
             public bool isCheckedOffline { get; set; }
+
+            [JsonProperty("version")]
+            public string version { get; set; }
+
+            [JsonProperty("inst")]
+            public string inst { get; set; }
         }
 
         public class CodeDetail
@@ -1158,7 +1232,7 @@ namespace Cash8Avalon
                     ServicePointManager.CheckCertificateRevocationList = false;
 
                     var request = (HttpWebRequest)WebRequest.Create(url);
-                    request.Timeout = 3000;
+                    request.Timeout = 5000;
                     request.Method = "POST";
                     request.ContentType = "application/json";
                     request.Accept = "application/json";
