@@ -1425,12 +1425,12 @@ namespace Cash8Avalon
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)checkTotalSum);
             fptr.receiptTotal();
 
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
-            {
-                System.Diagnostics.Debugger.Break();
-            }
-#endif
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
             // 2. Сравнение с БД (защита от "фантомных данных")
             double[] get_result_payment = await MainStaticClass.get_cash_on_type_payment(check.numdoc.ToString(), check);
             decimal cashFromDb = Convert.ToDecimal(get_result_payment[0]);

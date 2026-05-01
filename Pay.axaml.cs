@@ -1080,8 +1080,29 @@ namespace Cash8Avalon
             }
         }
 
-        #region Свойства доступа к UI
-        // ... ваши существующие свойства ...
+        //#region Свойства доступа к UI
+        
+
+        ///// <summary>
+        ///// Управляет видимостью и доступностью элементов управления бонусами
+        ///// </summary>
+        //public void SetBonusControlsState(bool isVisible, bool isEnabled)
+        //{
+        //    if (_bonusSumTextBox != null)
+        //    {
+        //        _bonusSumTextBox.IsVisible = isVisible;
+        //        _bonusSumTextBox.IsEnabled = isEnabled;
+        //    }
+        //    // Если нужно управлять видимостью поля "Списать бонусов", раскомментируйте:
+        //    // if (_bonusManyTextBox != null)
+        //    // {
+        //    //     _bonusManyTextBox.IsVisible = isVisible;
+        //    //     _bonusManyTextBox.IsEnabled = isEnabled;
+        //    // }
+        //}
+        //#endregion
+
+        #region Свойства доступа к UI (ТЕПЕРЬ РАБОТАЮТ ЧЕРЕЗ КЭШИРОВАННЫЕ ПОЛЯ)
 
         /// <summary>
         /// Управляет видимостью и доступностью элементов управления бонусами
@@ -1100,9 +1121,7 @@ namespace Cash8Avalon
             //     _bonusManyTextBox.IsEnabled = isEnabled;
             // }
         }
-        #endregion
 
-        #region Свойства доступа к UI (ТЕПЕРЬ РАБОТАЮТ ЧЕРЕЗ КЭШИРОВАННЫЕ ПОЛЯ)
         public string PaySum { get => _paySumTextBox?.Text ?? string.Empty; set { if (_paySumTextBox != null) { _paySumTextBox.Text = value; CalculateChange(); } } }
         public string CashSum { get => _cashSumTextBox?.Text ?? string.Empty; set { if (_cashSumTextBox != null) { _cashSumTextBox.Text = value; CalculateChange(); } } }
         public string NonCashSum { get => _nonCashSumTextBox?.Text ?? string.Empty; set { if (_nonCashSumTextBox != null) { _nonCashSumTextBox.Text = value; CalculateChange(); } } }
@@ -1113,6 +1132,7 @@ namespace Cash8Avalon
         public string Remainder { get => _remainderTextBox?.Text ?? string.Empty; set { if (_remainderTextBox != null) _remainderTextBox.Text = value; } }
         public bool IsSbpPayment { get => _checkBoxPaymentBySbp?.IsChecked ?? false; set { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsChecked = value; } }
         public void ShowSbpControls(bool show) { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsVisible = false; if (_checkBoxDoNotSendPaymentToTheTerminal != null) _checkBoxDoNotSendPaymentToTheTerminal.IsVisible = show; }
+
         #endregion
     }
 }

@@ -2913,14 +2913,16 @@ namespace Cash8Avalon
             date_time_record,
             method_name,
             num_doc,            
-            description
+            description,
+            cash_desk_number
         )
         VALUES(
             @errorMessage,
             @dateTimeRecord,
             @methodName,
             @numDoc,            
-            @description
+            @description,
+            @cashDeskNumber
         )";
 
             try
@@ -2998,14 +3000,17 @@ namespace Cash8Avalon
             date_time_record,
             method_name,
             num_doc,            
-            description
+            description,
+            cash_desk_number
+
         )
         VALUES(
             @errorMessage,
             @dateTimeRecord,
             @methodName,
             @numDoc,            
-            @description
+            @description,
+            @cashDeskNumber
         )";
 
             try
@@ -5264,35 +5269,35 @@ namespace Cash8Avalon
             }
         }
 
-        public static int Width_Of_Symbols
-        {
-            get
-            {
-                int result = 0;
-                NpgsqlConnection conn = null;
-                try
-                {
-                    conn = MainStaticClass.NpgsqlConn();
-                    conn.Open();
-                    string query = "select width_of_symbols FROM constants";
-                    NpgsqlCommand command = new NpgsqlCommand(query, conn);
-                    result = Convert.ToInt16(command.ExecuteScalar());
-                    conn.Close();
-                }
-                catch (NpgsqlException ex)
-                {
-                    MessageBox.Show(ex.Message, "Ошибка при работе с базой данных");
-                }
-                finally
-                {
-                    if (conn.State == ConnectionState.Open)
-                    {
-                        conn.Close();
-                    }
-                }
-                return result;
-            }
-        }
+        //public static int Width_Of_Symbols
+        //{
+        //    get
+        //    {
+        //        int result = 0;
+        //        NpgsqlConnection conn = null;
+        //        try
+        //        {
+        //            conn = MainStaticClass.NpgsqlConn();
+        //            conn.Open();
+        //            string query = "select width_of_symbols FROM constants";
+        //            NpgsqlCommand command = new NpgsqlCommand(query, conn);
+        //            result = Convert.ToInt16(command.ExecuteScalar());
+        //            conn.Close();
+        //        }
+        //        catch (NpgsqlException ex)
+        //        {
+        //            MessageBox.Show(ex.Message, "Ошибка при работе с базой данных");
+        //        }
+        //        finally
+        //        {
+        //            if (conn.State == ConnectionState.Open)
+        //            {
+        //                conn.Close();
+        //            }
+        //        }
+        //        return result;
+        //    }
+        //}
 
 
 

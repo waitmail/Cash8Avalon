@@ -2794,7 +2794,6 @@ namespace Cash8Avalon
                 var original = kvp.Value;
                 var current = currentMarkingsByCode.ContainsKey(code) ? currentMarkingsByCode[code] : new List<string>();
 
-                // Except идеально подходит, т.к. маркировки уникальны
                 var missing = original.Except(current).ToList();
                 if (missing.Count > 0)
                     missingMarkingsQueues[code] = new Queue<string>(missing);
@@ -2826,13 +2825,24 @@ namespace Cash8Avalon
                 if (currentMarking != "0" && qty > 1)
                 {
                     int extraUnits = Math.Min((int)qty - 1, missingMarkingsQueues[code].Count);
+
+                    // ═══════════════════════════════════════
+                    // ЛОГ: Ошибка группировки маркированного товара
+                    // ═══════════════════════════════════════
+                    MainStaticClass.WriteRecordErrorLog(
+                        $"Акция сгруппировала маркированный товар (qty={qty})",
+                        "RestoreMarkingsAfterActions",
+                        this.numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        $"Код: {code}, Марк: {currentMarking}, Разбито строк: {extraUnits + 1}");
+
                     for (int j = 0; j < extraUnits; j++)
                     {
                         string missingMark = missingMarkingsQueues[code].Dequeue();
                         DataRow newRow = dtFixed.NewRow();
-                        newRow.ItemArray = row.ItemArray; // Копируем всё, включая акционные флаги
+                        newRow.ItemArray = row.ItemArray;
                         newRow["quantity"] = 1m;
-                        newRow["sum_full"] = Math.Round(1m * priceFull, 2); // Явный расчёт с округлением
+                        newRow["sum_full"] = Math.Round(1m * priceFull, 2);
                         newRow["sum_at_discount"] = Math.Round(1m * priceDisc, 2);
                         newRow["marking"] = missingMark;
                         rowsToAdd.Add(newRow);
@@ -2850,24 +2860,46 @@ namespace Cash8Avalon
                 {
                     if (qty == 1)
                     {
-                        row["marking"] = missingMarkingsQueues[code].Dequeue();
+                        string restoredMark = missingMarkingsQueues[code].Dequeue();
+                        row["marking"] = restoredMark;
+
+                        // ═══════════════════════════════════════
+                        // ЛОГ: Акция потеряла маркировку в одной строке
+                        // ═══════════════════════════════════════
+                        MainStaticClass.WriteRecordErrorLog(
+                            "Акция удалила маркировку из строки (qty=1)",
+                            "RestoreMarkingsAfterActions",
+                            this.numdoc,
+                            MainStaticClass.CashDeskNumber,
+                            $"Код: {code}, Восстановлена: {restoredMark}");
                     }
                     else if (qty > 1)
                     {
                         int unitsToExtract = Math.Min((int)qty, missingMarkingsQueues[code].Count);
+
+                        // ═══════════════════════════════════════
+                        // ЛОГ: Акция сгруппировала маркированный товар и потеряла маркировки
+                        // ═══════════════════════════════════════
+                        MainStaticClass.WriteRecordErrorLog(
+                            $"Акция сгруппировала маркированный товар и удалила маркировки (qty={qty})",
+                            "RestoreMarkingsAfterActions",
+                            this.numdoc,
+                            MainStaticClass.CashDeskNumber,
+                            $"Код: {code}, Восстановлено маркировок: {unitsToExtract}");
+
                         for (int j = 0; j < unitsToExtract; j++)
                         {
                             string missingMark = missingMarkingsQueues[code].Dequeue();
                             DataRow newRow = dtFixed.NewRow();
                             newRow.ItemArray = row.ItemArray;
                             newRow["quantity"] = 1m;
-                            newRow["sum_full"] = Math.Round(1m * priceFull, 2); // Явный расчёт с округлением
+                            newRow["sum_full"] = Math.Round(1m * priceFull, 2);
                             newRow["sum_at_discount"] = Math.Round(1m * priceDisc, 2);
                             newRow["marking"] = missingMark;
                             rowsToAdd.Add(newRow);
                         }
 
-                        decimal remainingQty = qty - unitsToExtract; // Защита Math.Min выше гарантирует, что remainingQty >= 0
+                        decimal remainingQty = qty - unitsToExtract;
                         row["quantity"] = remainingQty;
                         row["sum_full"] = Math.Round(remainingQty * priceFull, 2);
                         row["sum_at_discount"] = Math.Round(remainingQty * priceDisc, 2);
@@ -2899,7 +2931,10 @@ namespace Cash8Avalon
                 {
                     MainStaticClass.WriteRecordErrorLog(
                         $"Не удалось восстановить маркировки для товара {code}: нет исходных данных.",
-                        "RestoreMarkingsAfterActions", 0, MainStaticClass.CashDeskNumber, "");
+                        "RestoreMarkingsAfterActions",
+                        this.numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        "В таблице нет строки для прикрепления потерянной маркировки");
                     continue;
                 }
 
@@ -2926,6 +2961,16 @@ namespace Cash8Avalon
                     forcedRow["marking"] = mark;
 
                     dtFixed.Rows.Add(forcedRow);
+
+                    // ═══════════════════════════════════════
+                    // ЛОГ: Экстренное восстановление (создание новой строки с нуля)
+                    // ═══════════════════════════════════════
+                    MainStaticClass.WriteRecordErrorLog(
+                        "Экстренный fallback: создана новая строка для потерянной маркировки",
+                        "RestoreMarkingsAfterActions",
+                        this.numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        $"Код: {code}, Маркировка: {mark}");
                 }
             }
 
@@ -3118,6 +3163,31 @@ namespace Cash8Avalon
                 pay_form.BonusMany = "0";
                 pay_form.cc = this;
 
+                //if (this.check_type.SelectedIndex == 0)
+                //{
+                //    MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
+                //    BackupProductsData();
+
+                //    MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
+                //    DataTable dataTable = await to_define_the_action_dt(true);
+
+                //    // ★ Восстанавливаем маркировки в DataTable ПЕРЕД конвертацией в List<ProductItem>
+                //    dataTable = RestoreMarkingsAfterActions(dataTable, _productsDataBackup);
+
+                //    _productsData = CreateProductsFromDataTable(dataTable);
+                //    await RecalculateAllProducts(true);
+                //    selection_goods = false;
+
+                //    MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
+
+                //    pay_form._paySumTextBox.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+                //    write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);
+                //}
+                //else
+                //{
+                //    pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+                //}
+
                 if (this.check_type.SelectedIndex == 0)
                 {
                     MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
@@ -3126,7 +3196,6 @@ namespace Cash8Avalon
                     MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
                     DataTable dataTable = await to_define_the_action_dt(true);
 
-                    // ★ Восстанавливаем маркировки в DataTable ПЕРЕД конвертацией в List<ProductItem>
                     dataTable = RestoreMarkingsAfterActions(dataTable, _productsDataBackup);
 
                     _productsData = CreateProductsFromDataTable(dataTable);
@@ -3135,12 +3204,12 @@ namespace Cash8Avalon
 
                     MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
 
-                    pay_form._paySumTextBox.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+                    pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture); // ✅ ИСПРАВЛЕНО
                     write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);
                 }
                 else
                 {
-                    pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+                    pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture); // ✅ ИСПРАВЛЕНО
                 }
 
                 Console.WriteLine($"✓ Перед передачей на 2 экран : {_productsDataBackup.Count} записей");

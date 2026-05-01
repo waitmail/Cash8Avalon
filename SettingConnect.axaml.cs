@@ -7,9 +7,11 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics.Metrics;
 using System.IO;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
 
 namespace Cash8Avalon
 {
@@ -672,6 +674,7 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE IF EXISTS public.checks_header ADD COLUMN kitchen_print boolean NOT NULL DEFAULT false;");
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN piot_url character varying(200) COLLATE pg_catalog.default;");
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN IF NOT EXISTS include_piot boolean NOT NULL DEFAULT false;");
+            queries.Add("ALTER TABLE public.errors_log    ADD COLUMN cash_desk_number smallint;");
 
 
             //            Блок по созданию индексов для проверки кодов маркировки при офлайн проверке корректности кодов маркировки
