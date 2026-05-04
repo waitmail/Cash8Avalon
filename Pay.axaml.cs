@@ -37,6 +37,7 @@ namespace Cash8Avalon
 
         public bool code_it_is_confirmed = false;
         private bool complete = false;
+        private bool _isShowingCertificatesDialog = false;
 
         // Строки шаблонов XML
         private string str_command_sale = @"<?xml version=""1.0"" encoding=""UTF-8""?><request><field id = ""00"">sum</field><field id=""04"">643</field><field id = ""25"" >1</field><field id=""27"">id_terminal</field></request>";
@@ -53,13 +54,13 @@ namespace Cash8Avalon
         // ═══════════════════════════════════════════════
         //  КЭШИРОВАННЫЕ ССЫЛКИ НА КОНТРОЛЫ
         // ═══════════════════════════════════════════════
-        public TextBox _paySumTextBox;
+        private TextBox _paySumTextBox;
         private TextBox _cashSumTextBox;
         private TextBox _nonCashSumTextBox;        
         private TextBox _nonCashSumKopTextBox;
         private TextBox _sertificatesSumTextBox;
-        public TextBox _bonusSumTextBox;       // pay_bonus
-        public TextBox _bonusManyTextBox;      // pay_bonus_many
+        private TextBox _bonusSumTextBox;       // pay_bonus
+        private TextBox _bonusManyTextBox;      // pay_bonus_many
         private TextBox _remainderTextBox;
         private CheckBox _checkBoxPaymentBySbp;
         private CheckBox _checkBoxDoNotSendPaymentToTheTerminal;
@@ -351,20 +352,46 @@ namespace Cash8Avalon
 
         private async Task ShowCertificatesDialog()
         {
+            // 1. Защита от двойного клика
+            if (_isShowingCertificatesDialog)
+            {
+                Console.WriteLine("⚠ Диалог сертификатов уже открыт, пропуск повторного вызова.");
+                return;
+            }
+
+            _isShowingCertificatesDialog = true; // Взводим флаг
+
             try
             {
                 var inputSertificates = new InputSertificates();
                 if (_certificatesList.Count > 0) inputSertificates.LoadExistingCertificates(_certificatesList);
                 inputSertificates.Topmost = true;
+
                 await inputSertificates.ShowDialog<List<InputSertificates.CertificateItem>>(this);
+
                 var updatedCertificates = inputSertificates.Tag as List<InputSertificates.CertificateItem>;
-                if (updatedCertificates != null) await ProcessCertificatesData(updatedCertificates);
+                if (updatedCertificates != null)
+                {
+                    await ProcessCertificatesData(updatedCertificates);
+                }
             }
             catch (Exception ex)
             {
                 await MessageBoxHelper.Show($"Ошибка открытия формы сертификатов: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
             }
-            await Dispatcher.UIThread.InvokeAsync(() => { this.Focus(); this.Activate(); _cashSumTextBox?.Focus(); this.Topmost = true; }, DispatcherPriority.Render);
+            finally
+            {
+                // 2. Гарантированно сбрасываем флаг и восстанавливаем фокус
+                _isShowingCertificatesDialog = false;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    this.Focus();
+                    this.Activate();
+                    _cashSumTextBox?.Focus();
+                    this.Topmost = true;
+                }, DispatcherPriority.Render);
+            }
         }
 
         private async Task ProcessCertificatesData(object certificateData)
@@ -674,7 +701,7 @@ namespace Cash8Avalon
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
                 {
                     //if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
-                        if (checkBox_payment_by_sbp.IsChecked != true)
+                        if (_checkBoxPaymentBySbp.IsChecked != true)
                         {
                         // ИСПОЛЬЗУЕМ СВОЙСТВА
                         string money = CalculateMoneyInKopecks(this.NonCashSum, this.NonCashSumKop);

@@ -159,8 +159,8 @@ namespace Cash8Avalon
                 // Заполняем данные из ProductItem
                 row["tovar_code"] = (double)product.Code;
                 row["tovar_name"] = product.Tovar;
-                row["characteristic_code"] = DBNull.Value; // Пусто
-                row["characteristic_name"] = DBNull.Value; // Пусто
+                row["characteristic_code"] = ""; // Пусто
+                row["characteristic_name"] = ""; // Пусто
                 row["quantity"] = (double)product.Quantity;
                 row["price"] = product.Price;
                 row["price_at_discount"] = product.PriceAtDiscount;
@@ -1658,7 +1658,7 @@ namespace Cash8Avalon
                             if (actionPrices.ContainsKey(currentCode))
                             {
                                 decimal qty = Convert.ToDecimal(row["quantity"]);
-                                decimal price = row.Field<decimal>("price");
+                                decimal price = Convert.ToDecimal(row["price"]);
 
                                 // Обновляем только финансовые поля
                                 row["price_at_discount"] = actionPrices[currentCode];
@@ -3511,8 +3511,8 @@ namespace Cash8Avalon
                 // 1. Переносим строки, не участвующие в акции
                 foreach (DataRow row in originalDt.Rows)
                 {
-                    if (row.Field<int>("action2") > 0 ||
-                        !IsTovarInAction(actionPricesByDoc, num_doc, (long)row.Field<double>("tovar_code")))
+                    if (Convert.ToInt32(row["action2"]) > 0 ||
+                        !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
                     {
                         tempDt.ImportRow(row);
                     }
@@ -3522,7 +3522,7 @@ namespace Cash8Avalon
                 var items = new List<ItemData>();
                 foreach (DataRow row in originalDt.Rows)
                 {
-                    if (row.Field<int>("action2") > 0)
+                    if (Convert.ToInt32(row["action2"]) > 0)
                     {
                         continue;
                     }
@@ -3532,17 +3532,17 @@ namespace Cash8Avalon
                         continue;
                     }
 
-                    long tovarCode = (long)row.Field<double>("tovar_code");
+                    long tovarCode = (long)Convert.ToDouble(row["tovar_code"]);
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
 
                     items.Add(new ItemData
                     {
-                        Code = row.Field<double>("tovar_code"),
+                        Code = Convert.ToDouble(row["tovar_code"]),
                         TovarName = row.Field<string>("tovar_name"),
                         CharName = row.Field<string>("characteristic_name"),
                         CharGuid = row.Field<string>("characteristic_code"),
-                        Price = row.Field<decimal>("price"),
-                        Quantity = row.Field<double>("quantity"),
+                        Price = Convert.ToDecimal(row["price"]),
+                        Quantity = Convert.ToDouble(row["quantity"]),
                         Marking = row.Field<string>("marking") ?? "0" // ДОБАВЛЕНО МАРКИРОВКУ
                     });
                 }
@@ -4097,8 +4097,8 @@ namespace Cash8Avalon
                 // Фильтрация строк, которые не участвуют в акции
                 foreach (DataRow row in originalDt.Rows)
                 {
-                    if (row.Field<int>("action2") > 0 ||
-                        !IsTovarInAction(actionPricesByDoc, num_doc, (long)row.Field<double>("tovar_code")))
+                    if (Convert.ToInt32(row["action2"]) > 0 ||
+                        !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
                     {
                         tempDt.ImportRow(row);
                     }
@@ -4108,19 +4108,19 @@ namespace Cash8Avalon
                 var items = new List<ItemData>();
                 foreach (DataRow row in originalDt.Rows)
                 {
-                    if (row.Field<int>("action2") > 0) continue;
+                    if (Convert.ToInt32(row["action2"]) > 0) continue;
 
-                    long tovarCode = (long)row.Field<double>("tovar_code");
+                    long tovarCode = (long)Convert.ToDouble(row["tovar_code"]);
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
                     
                     items.Add(new ItemData
                     {
-                        Code = row.Field<double>("tovar_code"),
+                        Code = Convert.ToDouble(row["tovar_code"]),
                         TovarName = row.Field<string>("tovar_name"),
                         CharName = row.Field<string>("characteristic_name") ?? string.Empty,
                         CharGuid = row.Field<string>("characteristic_code") ?? string.Empty,
-                        Price = row.Field<decimal>("price"),
-                        Quantity = row.Field<double>("quantity"),
+                        Price = Convert.ToDecimal(row["price"]),
+                        Quantity = Convert.ToDouble(row["quantity"]),
                         Marking = row.Field<string>("marking") ?? "0"
                     });
                 }

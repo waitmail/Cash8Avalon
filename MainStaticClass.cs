@@ -6576,6 +6576,13 @@ namespace Cash8Avalon
 
         #region Внутренняя реализация
 
+        /// <summary>
+        /// Показывает модальное окно с корректным управлением фокусом, состоянием владельца и защитой от повторного входа.
+        /// </summary>
+        /// <param name="owner">Окно-владелец (обычно Cash_check)</param>
+        /// <param name="modalWindow">Экземпляр модального окна для показа</param>
+        /// <param name="elementToFocusAfterClose">Контрол, на который вернуть фокус после закрытия</param>
+        /// <param name="focusableElementsToDisable">Массив элементов, которые нужно временно сделать нефокусируемыми</param>
         private static async Task ShowModalWindowInternal(
             Window owner,
             Window modalWindow,
@@ -6586,9 +6593,20 @@ namespace Cash8Avalon
             bool wasOwnerTopmost = owner.Topmost;
             bool isDebugging = Debugger.IsAttached;
 
+            // Если owner - это наше окно чека, проверяем флаг рекурсии
+            if (owner is Cash_check cc && cc.IsShowingModal)
+            {
+                Console.WriteLine("⚠ Попытка открыть модальное окно, когда уже одно открыто. Пропуск.");
+                return;
+            }
+
+            // Взводим флаг (только если владелец — Cash_check)
+            if (owner is Cash_check cc2)
+                cc2.IsShowingModal = true;
+
             try
             {
-                // 1. Подготовка (снимаем фокус, блокируем элементы)
+                // 1. Подготовка: снимаем фокус, блокируем элементы
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     owner.FocusManager?.ClearFocus();
@@ -6604,75 +6622,95 @@ namespace Cash8Avalon
                     }
                 }, DispatcherPriority.Render);
 
-                // 2. Снимаем Topmost с родителя + задержка для оконного менеджера (хак для X11/WPF)
+                // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
+                // Хак для X11: даём WM время обработать снятие Topmost, иначе модальное окно может появиться "под" главным.
                 owner.Topmost = false;
                 await Task.Delay(20);
 
                 // 3. Настройка и показ модального окна
-                // Хак для отладки: если висим под дебаггером, не делаем Topmost, 
-                // чтобы окно Visual Studio не перекрывалось.
+                // Хак для отладки: если висим под дебаггером, не делаем модальное окно Topmost, 
+                // чтобы окно Visual Studio / Rider не перекрывалось модальным диалогом.
                 modalWindow.Topmost = !isDebugging;
 
-                // Примечание: ShowDialog возвращает bool? (true - OK, false - Cancel, null - закрытие крестиком).
-                // Если вам нужен результат диалога, меняйте сигнатуры методов с Task на Task<bool?> 
-                // и пишите: var result = await modalWindow.ShowDialog(owner);
                 await modalWindow.ShowDialog(owner);
             }
             finally
             {
-                // 4. Восстановление родителя (Гарантированно выполнится даже при падении)
-                if (!isDebugging)
+                // 4. Восстановление состояния владельца (гарантированно выполнится даже при исключении)
+                try
                 {
-                    owner.Topmost = wasOwnerTopmost;
-                }
-
-                owner.IsHitTestVisible = true;
-
-                if (focusableElementsToDisable != null)
-                {
-                    foreach (var element in focusableElementsToDisable)
+                    if (!isDebugging)
                     {
-                        if (element != null)
-                            element.Focusable = true;
+                        owner.Topmost = wasOwnerTopmost;
+                    }
+
+                    owner.IsHitTestVisible = true;
+
+                    if (focusableElementsToDisable != null)
+                    {
+                        foreach (var element in focusableElementsToDisable)
+                        {
+                            if (element != null)
+                                element.Focusable = true;
+                        }
+                    }
+
+                    // Активируем окно-владелец (только если оно ещё живо)
+                    if (owner.IsVisible && owner.IsInitialized)
+                    {
+                        owner.Activate();
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[Modal] Warning: Failed to restore owner state: {ex.Message}");
+                }
 
-                // Активируем окно
-                owner.Activate();
-
-                // 5. ВАЖНО ДЛЯ LINUX/XFCE: Отложенная установка фокуса
+                // 5. Восстановление фокуса (отложенное, для стабильности на Linux/WM)
                 Dispatcher.UIThread.Post(() =>
                 {
-                    // На некоторых WM XFCE фокус всё равно может "потеряться" здесь. 
-                    // Если это произойдет, раскомментируйте строку ниже:
-                    // Task.Delay(50).Wait(); 
-
-                    owner.Focus();
-
-                    if (elementToFocusAfterClose != null)
+                    try
                     {
-                        if (elementToFocusAfterClose.Focusable && elementToFocusAfterClose.IsVisible)
-                        {
-                            elementToFocusAfterClose.Focus();
-                        }
-                        else
-                        {
-                            // Ищем первый ВИДИМЫЙ и ДОСТУПНЫЙ фокусируемый контрол внутри переданного
-                            var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
-                                .OfType<Control>()
-                                .FirstOrDefault(c => c.Focusable && c.IsEnabled && c.IsVisible);
+                        // Проверяем, что окно ещё существует и видимо
+                        if (!owner.IsVisible || !owner.IsInitialized)
+                            return;
 
-                            if (focusableChild != null)
+                        owner.Focus();
+
+                        if (elementToFocusAfterClose != null)
+                        {
+                            if (elementToFocusAfterClose.Focusable && elementToFocusAfterClose.IsEnabled && elementToFocusAfterClose.IsVisible)
                             {
-                                focusableChild.Focus();
+                                elementToFocusAfterClose.Focus();
                             }
                             else
                             {
-                                owner.Focus();
+                                // Ищем первый ВИДИМЫЙ, включённый и фокусируемый дочерний контрол
+                                var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
+                                    .OfType<Control>()
+                                    .FirstOrDefault(c => c.Focusable && c.IsEnabled && c.IsVisible);
+
+                                if (focusableChild != null)
+                                {
+                                    focusableChild.Focus();
+                                }
+                                else
+                                {
+                                    // Фоллбэк: фокус на владельца
+                                    owner.Focus();
+                                }
                             }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[Modal] Warning: Failed to restore focus: {ex.Message}");
+                    }
                 }, DispatcherPriority.ContextIdle);
+
+                // 6. Сбрасываем флаг рекурсии
+                if (owner is Cash_check cc3)
+                    cc3.IsShowingModal = false;
             }
         }
 

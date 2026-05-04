@@ -1929,8 +1929,43 @@ namespace Cash8Avalon
                 }
             }
 
+            // Защита от изменения суммы чека во время печати (как в первом методе)
+            if (check.LastPaymentSnapshot != null)
+            {
+                decimal checkTotalSum = check.calculation_of_the_sum_of_the_document();
+                if (Math.Round(check.LastPaymentSnapshot.TotalSumAtDiscount, 2) != Math.Round(checkTotalSum, 2))
+                {
+                    await MessageBoxHelper.Show(
+                        "Ошибка целостности данных!\n" +
+                        $"Сумма чека ({checkTotalSum}) не совпадает с данными оплаты ({check.LastPaymentSnapshot.TotalSumAtDiscount}).\n" +
+                        "Печать отменена.", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, check);
+                    fptr.cancelReceipt();
+                    return false;
+                }
+            }
+
+            // === ИСПРАВЛЕННАЯ ЛОГИКА РЕГИСТРАЦИИ ИТОГА ===
+            decimal currentVariantSum = 0;
+
+            // 1. Считаем сумму только для текущего варианта чека
+            foreach (ProductItem productItem in check._productsData)
+            {
+                bool isMarked = productItem.Mark.Trim().Length > 14;
+
+                if (variant == 0 && !isMarked) // Немаркированный
+                {
+                    currentVariantSum += productItem.SumAtDiscount;
+                }
+                else if (variant == 1 && isMarked) // Маркированный
+                {
+                    currentVariantSum += productItem.SumAtDiscount;
+                }
+            }
+
             // Регистрация итога
-            fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
+            //fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)check.calculation_of_the_sum_of_the_document());
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_SUM, (double)currentVariantSum);
+
             fptr.receiptTotal();
 
             double[] get_result_payment = check.get_summ1_systemtaxation3(variant);

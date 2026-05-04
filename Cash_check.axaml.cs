@@ -21,6 +21,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -199,6 +200,8 @@ namespace Cash8Avalon
         // Для дебанса (защиты от частых срабатываний)
         private DateTime _lastFocusRestore = DateTime.MinValue;
         private const int FOCUS_RESTORE_COOLDOWN_MS = 300; // Минимальная пауза между восстановлениями
+
+        public bool IsShowingModal { get; set; } = false;
 
 
         /// <summary>
@@ -1808,61 +1811,106 @@ namespace Cash8Avalon
 
         private async void DeletedThisDocument()
         {
-            if (_productsData.Count == 0)
+            // 1. Защита от двойного запуска с использованием единого свойства
+            if (this.IsShowingModal)
             {
-                await MessageBoxHelper.Show("Нет строк", "Проверка при удалении", this);
+                Console.WriteLine("⚠ Попытка повторного запуска удаления документа. Пропуск.");
                 return;
             }
 
-            if (MainStaticClass.Code_right_of_user != 1)
+            IsShowingModal = true; // Блокируем любые другие модальные вызовы и повторные клики
+
+            try
             {
-                // Для обычных пользователей показываем диалог подтверждения
-                enable_delete = false;
-                var interfaceSwitching = new Interface_switching();
-                interfaceSwitching.caller_type = 3;
-                interfaceSwitching.cc = this;
-                interfaceSwitching.not_change_Cash_Operator = true;
-
-                var result = await interfaceSwitching.ShowDialog<bool?>(this);
-
-                if (!enable_delete)
+                if (_productsData.Count == 0)
                 {
-                    await MessageBoxHelper.Show("Вам запрещено удалять документы",
-                                         "Права доступа",
-                                         MessageBoxButton.OK,
-                                         MessageBoxType.Warning, this);
+                    await MessageBoxHelper.Show("Нет строк", "Проверка при удалении", this);
                     return;
                 }
+
+                if (MainStaticClass.Code_right_of_user != 1)
+                {
+                    enable_delete = false;
+                    var interfaceSwitching = new Interface_switching();
+                    interfaceSwitching.caller_type = 3;
+                    interfaceSwitching.cc = this;
+                    interfaceSwitching.not_change_Cash_Operator = true;
+
+                    var result = await interfaceSwitching.ShowDialog<bool?>(this);
+
+                    if (!enable_delete)
+                    {
+                        await MessageBoxHelper.Show("Вам запрещено удалять документы",
+                                             "Права доступа",
+                                             MessageBoxButton.OK,
+                                             MessageBoxType.Warning, this);
+                        return;
+                    }
+                }
+
+                var reasonsDialog = new ReasonsDeletionCheck();
+                reasonsDialog.Title = "Удаление документа";
+
+                StopFocusKeeper();
+                var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                {
+                    Console.WriteLine("⚠ Удаление документа отменено пользователем");
+                    return;
+                }
+
+                this.comment.Text += " >>" + reasonsDialog.Reason + "<<";
+
+                // Оптимизация: вызываем расчет суммы 1 раз вместо 2
+                decimal sumToDelete = calculation_of_the_sum_of_the_document();
+
+                // 2. Обертка опасной операции (работа с БД)
+                try
+                {
+                    await write_new_document("0", sumToDelete.ToString().Replace(",", "."), "0", "0", false, "0", "0", "0", "1");
+
+                    closing = false;
+                    this.Close(); // Закрываем окно только если запись в БД прошла успешно
+                }
+                catch (Exception ex)
+                {
+                    // Если БД упала, окно НЕ закрывается, показываем ошибку
+                    Console.Error.WriteLine($"Ошибка при записи удаляемого документа: {ex.Message}");
+                    await MessageBoxHelper.Show($"Ошибка при удалении документа:\n{ex.Message}", "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    // Не делаем return, чтобы внешний finally восстановил фокус, так как окно осталось открытым
+                }
             }
-
-            var reasonsDialog = new ReasonsDeletionCheck();
-            reasonsDialog.Title = "Удаление документа";
-
-            StopFocusKeeper();
-            var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-            // После блока if/else (в конце метода):
-            if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
+            catch (Exception ex)
             {
-                StartFocusKeeper();
+                // Глобальный перехват непредвиденных ошибок
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "DeletedThisDocument");
+                await MessageBoxHelper.Show($"Непредвиденная ошибка:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
             }
-
-            if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+            finally
             {
-                Console.WriteLine("⚠ Удаление документа отменено пользователем");
-                return;
+                // Восстанавливаем фокус только если окно НЕ закрывается
+                // Логика: closing = false устанавливается только при успешной записи в БД перед this.Close().
+                // Если closing == true, значит произошла отмена или ошибка БД, и окно остается открытым.
+                if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0 && closing)
+                {
+                    StartFocusKeeper();
+                }
+
+                IsShowingModal = false;
             }
-
-            this.comment.Text += " >>" + reasonsDialog.Reason + "<<";
-            calculation_of_the_sum_of_the_document();
-            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString().Replace(",", "."), "0", "0", false, "0", "0", "0", "1"); //Это удаляемый документ
-            closing = false;
-            this.Close();
-
         }
 
         private async Task<bool?> ShowQueryWindowBarcode(int call_type, int count, int num_doc)
         {
+            // 1. Защита от двойного вызова
+            if (this.IsShowingModal)
+            {
+                Console.WriteLine("⚠ ShowQueryWindowBarcode уже выполняется, пропуск.");
+                return null;
+            }
+
+            IsShowingModal = true;
             bool? result = null;
 
             InputActionBarcode dialog = null;
@@ -1920,8 +1968,9 @@ namespace Cash8Avalon
                 {
                     StartFocusKeeper();
                 }
-            }
 
+                IsShowingModal = false; // Обязательно сбрасываем флаг
+            }
 
             return result;
         }
@@ -1982,6 +2031,14 @@ namespace Cash8Avalon
 
         private async void ShowSimpleClientDialog()
         {
+            // 1. Защита от двойного вызова
+            if (this.IsShowingModal)
+            {
+                Console.WriteLine("⚠ ShowSimpleClientDialog уже выполняется, пропуск.");
+                return;
+            }
+
+            IsShowingModal = true;
             InputActionBarcode? dialog = null;
             StopFocusKeeper();
 
@@ -1998,8 +2055,6 @@ namespace Cash8Avalon
 
                 bool? result = await dialog.ShowModalBlocking(this);
                 string enteredBarcode = dialog.EnteredBarcode; // Сохраняем значение
-
-                //await ModalWindowHelper.ShowModalWindow(this, dialog, InputSearchProduct);
 
                 if (result == true && !string.IsNullOrEmpty(enteredBarcode))
                 {
@@ -2024,6 +2079,8 @@ namespace Cash8Avalon
                 {
                     StartFocusKeeper();
                 }
+
+                IsShowingModal = false; // Обязательно сбрасываем флаг
             }
         }
 
@@ -2756,15 +2813,28 @@ namespace Cash8Avalon
         {
             DataTable dtFixed = dtProcessed.Copy();
 
+            // Локальная функция для строгой валидации маркировки
+            bool IsValidMarking(string mark)
+            {
+                if (string.IsNullOrWhiteSpace(mark)) return false;
+                string trimmed = mark.Trim();
+                if (trimmed == "0") return false;
+                // Код маркировки (DataMatrix) не может быть короче 14 символов
+                return trimmed.Length >= 14;
+            }
+
             // 1. Собираем оригинальные маркировки из бэкапа по коду товара
             var backupMarkingsByCode = new Dictionary<int, List<string>>();
             foreach (var product in backup)
             {
-                if (product.IsMarked && !string.IsNullOrEmpty(product.Mark) && product.Mark.Trim() != "0")
+                if (product.IsMarked && IsValidMarking(product.Mark))
                 {
-                    if (!backupMarkingsByCode.ContainsKey(product.Code))
-                        backupMarkingsByCode[product.Code] = new List<string>();
-                    backupMarkingsByCode[product.Code].Add(product.Mark);
+                    if (!backupMarkingsByCode.TryGetValue(product.Code, out var list))
+                    {
+                        list = new List<string>();
+                        backupMarkingsByCode[product.Code] = list;
+                    }
+                    list.Add(product.Mark.Trim());
                 }
             }
 
@@ -2775,14 +2845,17 @@ namespace Cash8Avalon
             var currentMarkingsByCode = new Dictionary<int, List<string>>();
             foreach (DataRow row in dtFixed.Rows)
             {
-                object markObj = row["marking"];
-                string marking = (markObj == DBNull.Value || markObj == null) ? "0" : markObj.ToString().Trim();
-                if (marking != "0")
+                string marking = (row["marking"] == DBNull.Value || row["marking"] == null) ? "" : row["marking"].ToString().Trim();
+
+                if (IsValidMarking(marking))
                 {
                     int code = Convert.ToInt32(row["tovar_code"]);
-                    if (!currentMarkingsByCode.ContainsKey(code))
-                        currentMarkingsByCode[code] = new List<string>();
-                    currentMarkingsByCode[code].Add(marking);
+                    if (!currentMarkingsByCode.TryGetValue(code, out var list))
+                    {
+                        list = new List<string>();
+                        currentMarkingsByCode[code] = list;
+                    }
+                    list.Add(marking);
                 }
             }
 
@@ -2792,7 +2865,7 @@ namespace Cash8Avalon
             {
                 int code = kvp.Key;
                 var original = kvp.Value;
-                var current = currentMarkingsByCode.ContainsKey(code) ? currentMarkingsByCode[code] : new List<string>();
+                var current = currentMarkingsByCode.TryGetValue(code, out var curList) ? curList : new List<string>();
 
                 var missing = original.Except(current).ToList();
                 if (missing.Count > 0)
@@ -2801,6 +2874,12 @@ namespace Cash8Avalon
 
             if (missingMarkingsQueues.Count == 0)
                 return dtFixed;
+
+            // ═══════════════════════════════════════════════════════════════
+            // ВНИМАНИЕ: Обнаружены потерянные маркировки! 
+            // Сохраняем первичный порядок чека из бэкапа в файл для разбора полетов.
+            // ═══════════════════════════════════════════════════════════════
+            SaveBackupToFile(backup, this.numdoc, MainStaticClass.CashDeskNumber);
 
             // 4. Восстановление: идём снизу вверх
             var rowsToAdd = new List<DataRow>();
@@ -2811,34 +2890,38 @@ namespace Cash8Avalon
                 DataRow row = dtFixed.Rows[i];
                 int code = Convert.ToInt32(row["tovar_code"]);
 
-                object markObj = row["marking"];
-                string currentMarking = (markObj == DBNull.Value || markObj == null) ? "0" : markObj.ToString().Trim();
-
-                if (!missingMarkingsQueues.ContainsKey(code) || missingMarkingsQueues[code].Count == 0)
+                if (!missingMarkingsQueues.TryGetValue(code, out var queue) || queue.Count == 0)
                     continue;
+
+                string currentMarking = (row["marking"] == DBNull.Value || row["marking"] == null) ? "" : row["marking"].ToString().Trim();
+                bool hasValidMarking = IsValidMarking(currentMarking);
 
                 decimal qty = Convert.ToDecimal(row["quantity"]);
                 decimal priceFull = Convert.ToDecimal(row["price"]);
                 decimal priceDisc = Convert.ToDecimal(row["price_at_discount"]);
 
-                // Если строка уже имеет маркировку, но quantity > 1 (ошибка группировки)
-                if (currentMarking != "0" && qty > 1)
+                // Если строка имеет ВАЛИДНУЮ маркировку, но quantity > 1 (ошибка группировки)
+                if (hasValidMarking && qty > 1)
                 {
-                    int extraUnits = Math.Min((int)qty - 1, missingMarkingsQueues[code].Count);
+                    int totalQty = (int)qty;
 
-                    // ═══════════════════════════════════════
-                    // ЛОГ: Ошибка группировки маркированного товара
-                    // ═══════════════════════════════════════
                     MainStaticClass.WriteRecordErrorLog(
                         $"Акция сгруппировала маркированный товар (qty={qty})",
                         "RestoreMarkingsAfterActions",
                         this.numdoc,
                         MainStaticClass.CashDeskNumber,
-                        $"Код: {code}, Марк: {currentMarking}, Разбито строк: {extraUnits + 1}");
+                        $"Код: {code}, Марк: {currentMarking}");
 
-                    for (int j = 0; j < extraUnits; j++)
+                    row["quantity"] = 1m;
+                    row["sum_full"] = Math.Round(1m * priceFull, 2);
+                    row["sum_at_discount"] = Math.Round(1m * priceDisc, 2);
+
+                    int marksInQueue = queue.Count;
+                    int remainingUnmarkedQty = totalQty - 1 - marksInQueue;
+
+                    for (int j = 0; j < marksInQueue; j++)
                     {
-                        string missingMark = missingMarkingsQueues[code].Dequeue();
+                        string missingMark = queue.Dequeue();
                         DataRow newRow = dtFixed.NewRow();
                         newRow.ItemArray = row.ItemArray;
                         newRow["quantity"] = 1m;
@@ -2848,24 +2931,28 @@ namespace Cash8Avalon
                         rowsToAdd.Add(newRow);
                     }
 
-                    decimal remainingQty = qty - extraUnits;
-                    row["quantity"] = remainingQty;
-                    row["sum_full"] = Math.Round(remainingQty * priceFull, 2);
-                    row["sum_at_discount"] = Math.Round(remainingQty * priceDisc, 2);
+                    if (remainingUnmarkedQty > 0)
+                    {
+                        DataRow unmarkedRow = dtFixed.NewRow();
+                        unmarkedRow.ItemArray = row.ItemArray;
+                        unmarkedRow["quantity"] = remainingUnmarkedQty;
+                        unmarkedRow["sum_full"] = Math.Round(remainingUnmarkedQty * priceFull, 2);
+                        unmarkedRow["sum_at_discount"] = Math.Round(remainingUnmarkedQty * priceDisc, 2);
+                        unmarkedRow["marking"] = "0";
+                        rowsToAdd.Add(unmarkedRow);
+                    }
+
                     continue;
                 }
 
-                // Если строка БЕЗ маркировки для маркированного товара
-                if (currentMarking == "0")
+                // Если строка БЕЗ валидной маркировки
+                if (!hasValidMarking)
                 {
                     if (qty == 1)
                     {
-                        string restoredMark = missingMarkingsQueues[code].Dequeue();
+                        string restoredMark = queue.Dequeue();
                         row["marking"] = restoredMark;
 
-                        // ═══════════════════════════════════════
-                        // ЛОГ: Акция потеряла маркировку в одной строке
-                        // ═══════════════════════════════════════
                         MainStaticClass.WriteRecordErrorLog(
                             "Акция удалила маркировку из строки (qty=1)",
                             "RestoreMarkingsAfterActions",
@@ -2875,11 +2962,8 @@ namespace Cash8Avalon
                     }
                     else if (qty > 1)
                     {
-                        int unitsToExtract = Math.Min((int)qty, missingMarkingsQueues[code].Count);
+                        int unitsToExtract = Math.Min((int)qty, queue.Count);
 
-                        // ═══════════════════════════════════════
-                        // ЛОГ: Акция сгруппировала маркированный товар и потеряла маркировки
-                        // ═══════════════════════════════════════
                         MainStaticClass.WriteRecordErrorLog(
                             $"Акция сгруппировала маркированный товар и удалила маркировки (qty={qty})",
                             "RestoreMarkingsAfterActions",
@@ -2889,7 +2973,7 @@ namespace Cash8Avalon
 
                         for (int j = 0; j < unitsToExtract; j++)
                         {
-                            string missingMark = missingMarkingsQueues[code].Dequeue();
+                            string missingMark = queue.Dequeue();
                             DataRow newRow = dtFixed.NewRow();
                             newRow.ItemArray = row.ItemArray;
                             newRow["quantity"] = 1m;
@@ -2903,6 +2987,7 @@ namespace Cash8Avalon
                         row["quantity"] = remainingQty;
                         row["sum_full"] = Math.Round(remainingQty * priceFull, 2);
                         row["sum_at_discount"] = Math.Round(remainingQty * priceDisc, 2);
+                        row["marking"] = "0";
 
                         if (remainingQty == 0)
                             rowsToRemove.Add(row);
@@ -2910,7 +2995,6 @@ namespace Cash8Avalon
                 }
             }
 
-            // Применяем изменения
             foreach (var newRow in rowsToAdd)
                 dtFixed.Rows.Add(newRow);
 
@@ -2943,28 +3027,38 @@ namespace Cash8Avalon
                     string mark = marks.Dequeue();
                     DataRow forcedRow = dtFixed.NewRow();
 
-                    forcedRow["tovar_code"] = code;
-                    forcedRow["tovar_name"] = refRow?["tovar_name"] ?? refBackup?.Tovar ?? "";
-                    forcedRow["characteristic_code"] = refRow?["characteristic_code"] ?? DBNull.Value;
-                    forcedRow["characteristic_name"] = refRow?["characteristic_name"] ?? DBNull.Value;
+                    if (refRow != null)
+                    {
+                        forcedRow.ItemArray = refRow.ItemArray;
+                    }
+                    else
+                    {
+                        forcedRow["tovar_code"] = code;
+                        forcedRow["tovar_name"] = refBackup?.Tovar ?? "";
+                        forcedRow["characteristic_code"] = DBNull.Value;
+                        forcedRow["characteristic_name"] = DBNull.Value;
+                        forcedRow["price"] = refBackup?.Price ?? 0m;
+                        forcedRow["price_at_discount"] = refBackup?.PriceAtDiscount ?? 0m;
+                        forcedRow["action"] = refBackup?.Action ?? 0;
+                        forcedRow["gift"] = refBackup?.Gift ?? 0;
+                        forcedRow["action2"] = refBackup?.Action2 ?? 0;
+                    }
+
                     forcedRow["quantity"] = 1m;
-                    forcedRow["price"] = refRow?["price"] ?? refBackup?.Price ?? 0;
-                    forcedRow["price_at_discount"] = refRow?["price_at_discount"] ?? refBackup?.PriceAtDiscount ?? 0;
-                    forcedRow["sum_full"] = Math.Round(Convert.ToDecimal(forcedRow["price"]), 2);
-                    forcedRow["sum_at_discount"] = Math.Round(Convert.ToDecimal(forcedRow["price_at_discount"]), 2);
-                    forcedRow["action"] = refRow?["action"] ?? refBackup?.Action ?? 0;
-                    forcedRow["gift"] = refRow?["gift"] ?? refBackup?.Gift ?? 0;
-                    forcedRow["action2"] = refRow?["action2"] ?? refBackup?.Action2 ?? 0;
+                    forcedRow["marking"] = mark;
+
+                    decimal fPrice = refRow != null ? Convert.ToDecimal(refRow["price"]) : (refBackup?.Price ?? 0m);
+                    decimal fPriceDisc = refRow != null ? Convert.ToDecimal(refRow["price_at_discount"]) : (refBackup?.PriceAtDiscount ?? 0m);
+
+                    forcedRow["sum_full"] = Math.Round(fPrice, 2);
+                    forcedRow["sum_at_discount"] = Math.Round(fPriceDisc, 2);
+
                     forcedRow["bonus_reg"] = 0;
                     forcedRow["bonus_action"] = 0;
                     forcedRow["bonus_action_b"] = 0;
-                    forcedRow["marking"] = mark;
 
                     dtFixed.Rows.Add(forcedRow);
 
-                    // ═══════════════════════════════════════
-                    // ЛОГ: Экстренное восстановление (создание новой строки с нуля)
-                    // ═══════════════════════════════════════
                     MainStaticClass.WriteRecordErrorLog(
                         "Экстренный fallback: создана новая строка для потерянной маркировки",
                         "RestoreMarkingsAfterActions",
@@ -2982,6 +3076,49 @@ namespace Cash8Avalon
             }
 
             return dtFixed;
+        }
+
+        /// <summary>
+        /// Сохраняет содержимое чека из бэкапа в текстовый файл для разбора инцидентов.
+        /// Сохраняет оригинальный порядок сканирования.
+        /// </summary>
+        private void SaveBackupToFile(List<ProductItem> backup, long docNum, short cashDesk)
+        {
+            try
+            {
+                string logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs_MarkingBackup");
+                if (!Directory.Exists(logDir))
+                    Directory.CreateDirectory(logDir);
+
+                string fileName = Path.Combine(logDir, $"Backup_{docNum}_{cashDesk}_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+
+                using (StreamWriter sw = new StreamWriter(fileName, false, Encoding.UTF8))
+                {
+                    sw.WriteLine($"Бэкап чека № {docNum} | Касса: {cashDesk} | Время: {DateTime.Now:dd.MM.yyyy HH:mm:ss}");
+                    sw.WriteLine(new string('-', 120));
+                    sw.WriteLine($"{"Код",-10} | {"Кол-во",-7} | {"Цена",-10} | {"Маркировка",-35} | {"Товар"}");
+                    sw.WriteLine(new string('-', 120));
+
+                    foreach (var item in backup)
+                    {
+                        string markDisplay = string.IsNullOrEmpty(item.Mark) || item.Mark.Trim() == "0" ? "" : item.Mark;
+                        sw.WriteLine($"{item.Code,-10} | {item.Quantity,-7} | {item.Price,-10} | {markDisplay,-35} | {item.Tovar}");
+                    }
+
+                    sw.WriteLine(new string('-', 120));
+                    sw.WriteLine($"Итого строк в бэкапе: {backup.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Если не удалось сохранить файл, просто пишем в основной лог, чтобы не уронить кассу
+                MainStaticClass.WriteRecordErrorLog(
+                    "Ошибка сохранения бэкапа чека в файл",
+                    "SaveBackupToFile",
+                    docNum,
+                    cashDesk,
+                    ex.Message);
+            }
         }
 
         //private async void show_pay_form()
@@ -5517,29 +5654,47 @@ namespace Cash8Avalon
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (!this.IsVisible) return;
+                // Базовая проверка, что окно вообще живо
+                if (_isDisposed || !this.IsVisible) return;
 
-                // 2. Принудительно делаем окно активным
-                this.Activate();
-                this.Focus();
-
-                // 3. "Ядерный трюк" для Linux
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                try
                 {
-                    this.Topmost = true;
-                    Dispatcher.UIThread.Post(() => { this.Topmost = false; }, DispatcherPriority.ApplicationIdle);
+                    // 2. Принудительно делаем окно активным
+                    this.Activate();
+                    this.Focus();
+
+                    // 3. "Ядерный трюк" для Linux
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        this.Topmost = true;
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            try { this.Topmost = false; }
+                            catch { /* Тихо игнорируем, если окно уже умерло */ }
+                        },
+                        DispatcherPriority.ApplicationIdle);
+                    }
+
+                    // 4. Устанавливаем фокус ИМЕННО НА ТАБЛИЦУ (ScrollViewer), чтобы работали +/- 
+                    if (_productsScrollViewer != null)
+                    {
+                        _productsScrollViewer.Focus();
+                        Console.WriteLine("[Focus] Фокус установлен на таблицу товаров (ScrollViewer)");
+                    }
+                    else
+                    {
+                        // Фолбэк, если таблицы нет
+                        InputSearchProduct?.Focus();
+                    }
                 }
+                catch (Exception ex)
+                {
+                    // Тихо перехватываем ошибки X11/D-Bus (Window is destroyed, etc.)
+                    // Это нормально при закрытии формы, не нужно крашить или пугать пользователя
+                    Console.WriteLine($"[Focus] Предупреждение: не удалось восстановить фокус (окно закрывается?): {ex.Message}");
 
-                // 4. Устанавливаем фокус ИМЕННО НА ТАБЛИЦУ (ScrollViewer), чтобы работали +/- 
-                if (_productsScrollViewer != null)
-                {
-                    _productsScrollViewer.Focus();
-                    Console.WriteLine("[Focus] Фокус установлен на таблицу товаров (ScrollViewer)");
-                }
-                else
-                {
-                    // Фолбэк, если таблицы нет
-                    InputSearchProduct?.Focus();
+                    // На всякий случай останавливаем таймер фокуса, если он пытается дернуть разрушенное окно
+                    StopFocusKeeper();
                 }
             }, DispatcherPriority.Render);
         }
@@ -5550,31 +5705,59 @@ namespace Cash8Avalon
         {
             if (window == null) return;
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            try
             {
-                if (window.IsVisible)
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    // Попытка активировать окно
-                    window.Activate();
-                    window.Focus();
+                    // В Avalonia нет IsDisposed, полагаемся на IsVisible и try-catch
+                    if (!window.IsVisible) return;
 
-                    // Для Linux - трюк с Topmost
-                    if (OperatingSystem.IsLinux())
+                    try
                     {
-                        window.Topmost = true;
-                        window.Topmost = false;
+                        // Попытка активировать окно
+                        window.Activate();
+                        window.Focus();
                     }
-                }
-            }, DispatcherPriority.Render);
+                    catch (InvalidOperationException)
+                    {
+                        // Окно еще не загрузилось или уже разрушается
+                    }
 
-            // Дайте оконному менеджеру время отреагировать
-            if (OperatingSystem.IsLinux())
-            {
-                await Task.Delay(100); // 100 мс для надежности
+                    // Для Linux - трюк с Topmost (используем отложенный сброс, как в вашем коде!)
+                    if (OperatingSystem.IsLinux() || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        try
+                        {
+                            window.Topmost = true;
+
+                            // Сбрасываем Topmost в_idle, чтобы WM успел отработать
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                try { window.Topmost = false; }
+                                catch { /* Игнорируем, если окно закрылось за это время */ }
+                            }, DispatcherPriority.ApplicationIdle);
+                        }
+                        catch
+                        {
+                            // Игнорируем ошибки X11/Wayland
+                        }
+                    }
+                }, DispatcherPriority.Render);
+
+                // Дайте оконному менеджеру время отреагировать
+                if (OperatingSystem.IsLinux())
+                {
+                    await Task.Delay(100);
+                }
+                else
+                {
+                    await Task.Delay(10);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await Task.Delay(10); // Для Windows достаточно
+                // Перехватываем ObjectDisposedException, если окно убили из другого потока
+                Console.WriteLine($"[Focus] Предупреждение при активации окна: {ex.Message}");
             }
         }
 
@@ -7130,105 +7313,141 @@ namespace Cash8Avalon
                     break;
 
                 case Key.Enter:
-                    //if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
-                    //{
-                    //    if (CheckType.SelectedIndex == 0)
-                    //    {
-                    //        ShowQuantityEditDialog(_selectedProductRowIndex);
-                    //    }
-                    //    else if (CheckType.SelectedIndex != 0)
-                    //    {
-                    //        await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);    
-                    //    }
-                    //    e.Handled = true;
-                    //}                                
+                    // 1. Защита от двойного нажатия (если уже открыт диалог, игнорируем Enter)
+                    if (IsShowingModal)
+                    {
+                        e.Handled = true;
+                        break;
+                    }
+
                     if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
                     {
-                        if (CheckType.SelectedIndex == 0) // Продажа
+                        IsShowingModal = true; // Блокируем повторный вход
+                        bool needToWriteDoc = false; // Флаг: нужно ли перезаписывать документ
+                        bool cancelEdit = false;     // Флаг: отменил ли пользователь действие
+
+                        try
                         {
-                            var product = _productsData[_selectedProductRowIndex];
-
-                            if (product.IsMarked)
+                            if (CheckType.SelectedIndex == 0) // Продажа
                             {
-                                await MessageBoxHelper.Show(
-                                    "Нельзя изменить количество маркированного товара.\nКаждая единица маркировки должна быть продана отдельной строкой.",
-                                    "Проверка ввода",
-                                    MessageBoxButton.OK,
-                                    MessageBoxType.Warning,
-                                    this);
-                                e.Handled = true;
-                                break; // Прерываем выполнение
-                            }
+                                var product = _productsData[_selectedProductRowIndex];
 
-
-                            // 1. Показываем диалог ввода количества
-                            double? result = await ShowQuantityDialog(product.Tovar, Convert.ToDouble(product.Quantity), product.IsFractional, _selectedProductRowIndex);
-
-                            if (result.HasValue)
-                            {
-                                double newQuantity = result.Value;
-                                double oldQuantity = Convert.ToDouble(product.Quantity);
-
-                                // 2. Проверяем: ввели ли число МЕНЬШЕ текущего?
-                                if (newQuantity < oldQuantity)
+                                if (product.IsMarked)
                                 {
-
-                                    if (product.IsFractional)
-                                    {
-                                        await MessageBox.Show("В весовом товаре нельзя уменьшать количество", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Error, this);
-                                        return;
-                                    }
-
-                                    // Показываем диалог причины
-                                    var reasonsDialog = new ReasonsDeletionCheck();
-                                    reasonsDialog.Title = "Уменьшение количества";
-
-                                    // Задержка для Linux (как в вашем коде)
-                                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                                    {
-                                        await Task.Delay(50);
-                                    }
-
-                                    StopFocusKeeper();
-                                    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-                                    // После блока if/else (в конце метода):
-                                    if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
-                                    {
-                                        StartFocusKeeper();
-                                    }
-
-                                    // Если отменили или причину не выбрали
-                                    if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
-                                    {
-                                        Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
-                                        return; // Прерываем выполнение, данные не обновляем
-                                    }
-
-                                    // Записываем инцидент (сколько убрали)
-                                    double delta = oldQuantity - newQuantity;
-
-                                    await InsertIncidentRecordAsync(
-                                        product.Code.ToString(),
-                                        delta.ToString("F2"), // Логируем разницу (сколько убрали), а не новое количество
-                                        "1",
-                                        reasonsDialog.Reason
-                                    );
+                                    await MessageBoxHelper.Show(
+                                        "Нельзя изменить количество маркированного товара.\nКаждая единица маркировки должна быть продана отдельной строкой.",
+                                        "Проверка ввода",
+                                        MessageBoxButton.OK,
+                                        MessageBoxType.Warning,
+                                        this);
+                                    e.Handled = true;
+                                    // Не делаем return, чтобы finally корректно отработал
                                 }
+                                else
+                                {
+                                    // Останавливаем фокус-кипер перед показом любого диалога
+                                    StopFocusKeeper();
 
-                                // 3. Если все ок (или количество увеличилось) — применяем изменения
-                                product.Quantity = Convert.ToDecimal(newQuantity);
-                                RecalculateProductSums(product);
-                                UpdateProductRowInGrid(_selectedProductRowIndex);
-                                UpdateTotalSum();
+                                    // 1. Показываем диалог ввода количества
+                                    double? result = await ShowQuantityDialog(product.Tovar, Convert.ToDouble(product.Quantity), product.IsFractional, _selectedProductRowIndex);
 
-                                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                                    if (result.HasValue)
+                                    {
+                                        double newQuantity = result.Value;
+                                        double oldQuantity = Convert.ToDouble(product.Quantity);
+
+                                        // 2. Проверяем: ввели ли число МЕНЬШЕ текущего?
+                                        if (newQuantity < oldQuantity)
+                                        {
+                                            if (product.IsFractional)
+                                            {
+                                                await MessageBox.Show("В весовом товаре нельзя уменьшать количество", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Error, this);
+                                                cancelEdit = true; // Вместо return
+                                            }
+                                            else
+                                            {
+                                                // Показываем диалог причины
+                                                var reasonsDialog = new ReasonsDeletionCheck();
+                                                reasonsDialog.Title = "Уменьшение количества";
+
+                                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                                                {
+                                                    await Task.Delay(50);
+                                                }
+
+                                                var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                                                // Если отменили или причину не выбрали
+                                                if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                                                {
+                                                    Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+                                                    cancelEdit = true; // Вместо return
+                                                }
+                                                else
+                                                {
+                                                    // Записываем инцидент (сколько убрали)
+                                                    double delta = oldQuantity - newQuantity;
+                                                    await InsertIncidentRecordAsync(
+                                                        product.Code.ToString(),
+                                                        delta.ToString("F2"),
+                                                        "1",
+                                                        reasonsDialog.Reason
+                                                    );
+                                                }
+                                            }
+                                        }
+
+                                        // 3. Если все ок (или количество увеличилось) — применяем изменения
+                                        if (!cancelEdit)
+                                        {
+                                            product.Quantity = Convert.ToDecimal(newQuantity);
+                                            RecalculateProductSums(product);
+                                            UpdateProductRowInGrid(_selectedProductRowIndex);
+                                            UpdateTotalSum();
+                                            needToWriteDoc = true; // Помечаем, что нужно сохранить в БД
+                                        }
+                                    }
+                                }
+                            }
+                            else if (CheckType.SelectedIndex != 0)
+                            {
+                                await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);
+                            }
+
+                            // 4. Выносим запись в БД из глубокой вложенности
+                            if (needToWriteDoc)
+                            {
+                                try
+                                {
+                                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Защита от падения при записи в БД
+                                    Console.Error.WriteLine($"Ошибка записи документа: {ex.Message}");
+                                    await MessageBoxHelper.Show($"Ошибка при сохранении документа:\n{ex.Message}", "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
+                                }
                             }
                         }
-                        else if (CheckType.SelectedIndex != 0)
+                        catch (Exception ex)
                         {
-                            await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);
+                            // Глобальный перехват непредвиденных ошибок (например, окно не открылось)
+                            MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "EnterKey_QuantityEdit");
                         }
+                        finally
+                        {
+                            // 5. ГАРАНТИРОВАННОЕ восстановление состояния
+
+                            // Восстанавливаем фокус только если окно НЕ закрывается (используем вашу проверку с closing)
+                            if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0 && closing)
+                            {
+                                StartFocusKeeper();
+                            }
+
+                            // Обязательно сбрасываем флаг блокировки!
+                            IsShowingModal = false;
+                        }
+
                         e.Handled = true;
                     }
                     break;
@@ -7708,6 +7927,12 @@ namespace Cash8Avalon
         // Метод для уменьшения количества        
         private async void DecreaseProductQuantity(int dataIndex)
         {
+            // 1. Защита от двойного вызова
+            if (IsShowingModal) return;
+            IsShowingModal = true;
+
+            bool cancelEdit = false; // Флаг отмены операции
+
             try
             {
                 if (dataIndex >= 0 && dataIndex < _productsData.Count)
@@ -7716,9 +7941,11 @@ namespace Cash8Avalon
 
                     if (product.Quantity > 1)
                     {
+                        // Останавливаем фокус-кипер перед показом ЛЮБЫХ диалогов
+                        StopFocusKeeper();
+
                         if (MainStaticClass.Code_right_of_user != 1)
                         {
-                            // Для обычных пользователей показываем диалог подтверждения
                             enable_delete = false;
                             var interfaceSwitching = new Interface_switching();
                             interfaceSwitching.caller_type = 3;
@@ -7733,82 +7960,63 @@ namespace Cash8Avalon
                                                      "Права доступа",
                                                      MessageBoxButton.OK,
                                                      MessageBoxType.Warning, this);
-                                return;
+                                cancelEdit = true; // Вместо return
                             }
                         }
 
-                        // ✅ ВАЖНО: Диалог причины ТОЛЬКО для чеков продажи!
-                        //if (CheckType.SelectedIndex == 0) // Только продажа
-                        //{
-                        //    // Показываем диалог указания причины удаления
-                        //    var reasonsDialog = new ReasonsDeletionCheck();
-                        //    reasonsDialog.Title = "Уменьшение количества";
-
-                        //    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-                        //    if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
-                        //    {
-                        //        Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
-                        //        return;
-                        //    }
-
-                        //    // Записываем в лог
-                        //    await InsertIncidentRecordAsync(
-                        //        product.Code.ToString(),
-                        //        product.Quantity.ToString("F2"),
-                        //        "1",
-                        //        reasonsDialog.Reason
-                        //    );
-                        //}
-
-                        if (CheckType.SelectedIndex == 0) // Только продажа
+                        if (!cancelEdit && CheckType.SelectedIndex == 0) // Только продажа
                         {
-                            // Показываем диалог указания причины удаления
                             var reasonsDialog = new ReasonsDeletionCheck();
                             reasonsDialog.Title = "Уменьшение количества";
 
-                            // Для Linux добавляем небольшую задержку перед показом
                             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                             {
                                 await Task.Delay(50);
                             }
 
-                            // Владелец устанавливается через параметр ShowDialog, а не через свойство Owner
-                            StopFocusKeeper();
                             var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-                            // После блока if/else (в конце метода):
-                            if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0)
-                            {
-                                StartFocusKeeper();
-                            }
 
                             if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
                             {
                                 Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
-                                return;
+                                cancelEdit = true; // Вместо return
                             }
-
-                            // Записываем в лог
-                            await InsertIncidentRecordAsync(
-                                product.Code.ToString(),
-                                product.Quantity.ToString("F2"),
-                                "1",
-                                reasonsDialog.Reason
-                            );
+                            else
+                            {
+                                // Записываем в лог только если причину выбрали
+                                await InsertIncidentRecordAsync(
+                                    product.Code.ToString(),
+                                    product.Quantity.ToString("F2"),
+                                    "1",
+                                    reasonsDialog.Reason
+                                );
+                            }
                         }
 
-                        // Уменьшаем количество
-                        product.Quantity--;
+                        // Если нигде не отменили — применяем изменения
+                        if (!cancelEdit)
+                        {
+                            product.Quantity--;
 
-                        RecalculateProductSums(product);
-                        UpdateProductRowInGrid(dataIndex);
-                        UpdateTotalSum();
+                            RecalculateProductSums(product);
+                            UpdateProductRowInGrid(dataIndex);
+                            UpdateTotalSum();
 
-                        ShowQuantityEffect(dataIndex, false);
-                        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                                      "0", "0", false, "0", "0", "0", "0");
-                        Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
+                            ShowQuantityEffect(dataIndex, false);
+
+                            // 2. Безопасная запись в БД
+                            try
+                            {
+                                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                              "0", "0", false, "0", "0", "0", "0");
+                                Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
+                            }
+                            catch (Exception dbEx)
+                            {
+                                Console.WriteLine($"✗ Ошибка БД при уменьшении количества: {dbEx.Message}");
+                                await MessageBoxHelper.Show($"Ошибка при сохранении документа:\n{dbEx.Message}", "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
+                            }
+                        }
                     }
                     else
                     {
@@ -7820,9 +8028,20 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при уменьшении количества: {ex.Message}");
-
                 await MessageBoxHelper.Show($"✗ Ошибка при уменьшении количества: {ex.Message}", "DecreaseProductQuantity",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
+            }
+            finally
+            {
+                // 3. ГАРАНТИРОВАННОЕ восстановление состояния
+                // Восстанавливаем фокус только если окно НЕ закрывается
+                if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0 && closing)
+                {
+                    StartFocusKeeper();
+                }
+
+                // Обязательно сбрасываем флаг блокировки!
+                IsShowingModal = false;
             }
         }
 
@@ -7855,6 +8074,14 @@ namespace Cash8Avalon
         {
             try
             {
+                if (this.IsShowingModal)
+                {
+                    Console.WriteLine("⚠ DeleteProductWithConfirmation уже выполняется, пропуск.");
+                    return;
+                }
+
+                IsShowingModal = true;
+
                 // 1. Проверяем права пользователя (аналог WinForms кода)
                 if (!IsNewCheck)
                 {
@@ -8007,6 +8234,11 @@ namespace Cash8Avalon
                                      MessageBoxButton.OK,
                                      MessageBoxType.Error,
                                      this);
+            }
+            finally
+            {
+                // Гарантированно сбрасываем флаг при ЛЮБОМ исходе метода
+                IsShowingModal = false;
             }
         }
 
