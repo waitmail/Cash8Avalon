@@ -692,6 +692,7 @@ namespace Cash8Avalon
 
                         if (MainStaticClass.CashDeskNumber != 9)
                         {
+                            UploadPhoneClients();
                             _ = loadBonusClients();
                             if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                             {
@@ -720,7 +721,7 @@ namespace Cash8Avalon
                         await Task.Delay(150);
                         await ShowSafeMessage("В этой бд нет таблицы constatnts, необходимо создать таблицы бд", "Проверка наличия таблицы", MessageBoxButton.OK, MessageBoxType.Error);
                     }
-                    await check_add_field();
+                    await check_add_field();                    
 
                     _viewModel.OpenCashChecks();
                 }
@@ -1171,6 +1172,7 @@ namespace Cash8Avalon
             }, TaskScheduler.Default);
         }
 
+
         private async Task PerformUnloadAsync(CancellationToken ct)
         {
             await Task.Run(async () =>
@@ -1218,6 +1220,113 @@ namespace Cash8Avalon
                     throw;
                 }
             }, ct);
+        }
+
+        public class PhoneClient
+        {
+            public string NumPhone { get; set; }
+            public string ClientCode { get; set; }
+        }
+
+        public class PhonesClients : IDisposable
+        {
+            public string Version { get; set; }
+            public string NickShop { get; set; }
+            public string CodeShop { get; set; }
+            public List<PhoneClient> ListPhoneClient { get; set; }
+
+            void IDisposable.Dispose()
+            {
+
+            }
+        }
+
+        private async void UploadPhoneClients()
+        {
+            //StringBuilder sb = new StringBuilder();
+            PhonesClients phonesClients = new PhonesClients();
+            phonesClients.CodeShop = MainStaticClass.Code_Shop;
+            phonesClients.NickShop = MainStaticClass.Nick_Shop;
+            phonesClients.ListPhoneClient = new List<PhoneClient>();
+
+            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
+
+            try
+            {
+                conn.Open();
+                string query = " SELECT barcode, phone  FROM temp_phone_clients; ";
+                NpgsqlCommand command = new NpgsqlCommand(query, conn);
+                NpgsqlDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    PhoneClient phoneClient = new PhoneClient();
+                    phoneClient.NumPhone = reader["phone"].ToString().Trim();
+                    phoneClient.ClientCode = reader["barcode"].ToString();
+                    phonesClients.ListPhoneClient.Add(phoneClient);
+                }
+                reader.Close();
+                reader.Dispose();
+
+                if (phonesClients.ListPhoneClient.Count == 0)
+                {
+                    return;
+                }
+
+                if (!MainStaticClass.service_is_worker())
+                {
+                    //MessageBox.Show("Веб сервис недоступен");
+                    return;
+                }
+                DS ds = MainStaticClass.get_ds();
+                ds.Timeout = 20000;
+
+                //Получить параметра для запроса на сервер 
+                string nick_shop = MainStaticClass.Nick_Shop.Trim();
+                if (nick_shop.Trim().Length == 0)
+                {
+                    //MessageBox.Show(" Не удалось получить название магазина ");
+                    return;
+                }
+
+                string code_shop = MainStaticClass.Code_Shop.Trim();
+                if (code_shop.Trim().Length == 0)
+                {
+                    //MessageBox.Show(" Не удалось получить код магазина ");
+                    return;
+                }
+
+                string count_day = CryptorEngine.get_count_day();
+                string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
+                string data = JsonConvert.SerializeObject(phonesClients, Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                string encrypt_string = CryptorEngine.Encrypt(data, true, key);
+                //string answer = ds.UploadPhoneClients(nick_shop, encrypt_string,MainStaticClass.GetWorkSchema.ToString());
+                string answer = ds.UploadPhoneClients(nick_shop, encrypt_string, "4");
+                if (answer == "1")
+                {
+                    query = "DELETE FROM temp_phone_clients";
+                    command = new NpgsqlCommand(query, conn);
+                    command.ExecuteNonQuery();
+                    command.Dispose();
+                }
+                else
+                {
+                    //MessageBox.Show("Произошли ошибки на сервере при передаче телефонов клиентов");
+                    MainStaticClass.WriteRecordErrorLog("Произошли ошибки на сервере при передаче телефонов клиентов", "UploadPhoneClients", 0, MainStaticClass.CashDeskNumber, "не удалось передать информацию о телефонах клиентов");
+                }
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show("Произошли ошибки при передаче телефонов клиентов " + ex.Message);
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "не удалось передать информацию о телефонах клиентов");
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
         }
 
         // Вспомогательные классы OpenCloseShop, CdnLogs, DeletedItem, RecordsErrorLog оставляем без изменений

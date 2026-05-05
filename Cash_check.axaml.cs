@@ -3730,12 +3730,6 @@ namespace Cash8Avalon
         /// </summary>
         private async Task<double[]> get_cash_on_type_payment_3_new(double sum_cash, double sum_non_cashe, double sum_sertificate)
         {
-//#if DEBUG
-//            if (System.Diagnostics.Debugger.IsAttached)
-//            {
-//                System.Diagnostics.Debugger.Break();
-//            }
-//#endif
             double[] result = new double[3];
             result[0] = sum_cash;
             result[1] = sum_non_cashe;
@@ -3759,9 +3753,16 @@ namespace Cash8Avalon
                     // lvi.SubItems[7].Text = продукт.Sum (колонка 7 = сумма)
                     if (product.Mark?.Trim().Length < 14)
                     {
-                        sum_print += (double)product.Sum;
+                        sum_print += (double)product.SumAtDiscount;
                     }
                 }
+#if DEBUG
+                if (System.Diagnostics.Debugger.IsAttached)
+                {
+                    System.Diagnostics.Debugger.Break();
+                }
+#endif
+
 
                 if (result[0] > 0)
                 {
@@ -3825,7 +3826,7 @@ namespace Cash8Avalon
                     // Проверка длины маркировки (> 13 символов)
                     if (!string.IsNullOrEmpty(product.Mark) && product.Mark.Trim().Length > 14)
                     {
-                        sum_print += (double)product.Sum;
+                        sum_print += (double)product.SumAtDiscount;
                     }
                 }
 
@@ -5701,6 +5702,66 @@ namespace Cash8Avalon
 
 
 
+        //private async Task ActivateWindow(Window window)
+        //{
+        //    if (window == null) return;
+
+        //    try
+        //    {
+        //        await Dispatcher.UIThread.InvokeAsync(() =>
+        //        {
+        //            // В Avalonia нет IsDisposed, полагаемся на IsVisible и try-catch
+        //            if (!window.IsVisible) return;
+
+        //            try
+        //            {
+        //                // Попытка активировать окно
+        //                window.Activate();
+        //                window.Focus();
+        //            }
+        //            catch (InvalidOperationException)
+        //            {
+        //                // Окно еще не загрузилось или уже разрушается
+        //            }
+
+        //            // Для Linux - трюк с Topmost (используем отложенный сброс, как в вашем коде!)
+        //            if (OperatingSystem.IsLinux() || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //            {
+        //                try
+        //                {
+        //                    window.Topmost = true;
+
+        //                    // Сбрасываем Topmost в_idle, чтобы WM успел отработать
+        //                    Dispatcher.UIThread.Post(() =>
+        //                    {
+        //                        try { window.Topmost = false; }
+        //                        catch { /* Игнорируем, если окно закрылось за это время */ }
+        //                    }, DispatcherPriority.ApplicationIdle);
+        //                }
+        //                catch
+        //                {
+        //                    // Игнорируем ошибки X11/Wayland
+        //                }
+        //            }
+        //        }, DispatcherPriority.Render);
+
+        //        // Дайте оконному менеджеру время отреагировать
+        //        if (OperatingSystem.IsLinux())
+        //        {
+        //            await Task.Delay(100);
+        //        }
+        //        else
+        //        {
+        //            await Task.Delay(10);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Перехватываем ObjectDisposedException, если окно убили из другого потока
+        //        Console.WriteLine($"[Focus] Предупреждение при активации окна: {ex.Message}");
+        //        MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "ActivateWindow");
+        //    }
+        //}
         private async Task ActivateWindow(Window window)
         {
             if (window == null) return;
@@ -5709,7 +5770,6 @@ namespace Cash8Avalon
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    // В Avalonia нет IsDisposed, полагаемся на IsVisible и try-catch
                     if (!window.IsVisible) return;
 
                     try
@@ -5720,11 +5780,18 @@ namespace Cash8Avalon
                     }
                     catch (InvalidOperationException)
                     {
-                        // Окно еще не загрузилось или уже разрушается
+                        // Окно еще не загрузилось или уже разрушается - это штатная ситуация, логировать не обязательно
+                        Console.WriteLine("[Focus] Окно еще не загрузилось или уже разрушается (InvalidOperationException)");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Ловим синхронные ошибки X11/DBus при Activate/Focus
+                        Console.WriteLine($"[Focus] Ошибка Activate/Focus: {ex.Message}");
+                        MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "ActivateWindow_ActivateError");
                     }
 
-                    // Для Linux - трюк с Topmost (используем отложенный сброс, как в вашем коде!)
-                    if (OperatingSystem.IsLinux() || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    // Для Linux - трюк с Topmost
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
                         try
                         {
@@ -5734,18 +5801,25 @@ namespace Cash8Avalon
                             Dispatcher.UIThread.Post(() =>
                             {
                                 try { window.Topmost = false; }
-                                catch { /* Игнорируем, если окно закрылось за это время */ }
+                                catch (Exception postEx)
+                                {
+                                    // Игнорируем ошибки сброса, но логируем на всякий случай
+                                    Console.WriteLine($"[Focus] Ошибка сброса Topmost: {postEx.Message}");
+                                    MainStaticClass.WriteRecordErrorLog(postEx, numdoc, MainStaticClass.CashDeskNumber, "ActivateWindow_ResetTopmostError");
+                                }
                             }, DispatcherPriority.ApplicationIdle);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Игнорируем ошибки X11/Wayland
+                            // Ловим синхронные ошибки X11/DBus при установке Topmost = true
+                            Console.WriteLine($"[Focus] Ошибка установки Topmost: {ex.Message}");
+                            MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "ActivateWindow_SetTopmostError");
                         }
                     }
                 }, DispatcherPriority.Render);
 
                 // Дайте оконному менеджеру время отреагировать
-                if (OperatingSystem.IsLinux())
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     await Task.Delay(100);
                 }
@@ -5756,8 +5830,9 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                // Перехватываем ObjectDisposedException, если окно убили из другого потока
-                Console.WriteLine($"[Focus] Предупреждение при активации окна: {ex.Message}");
+                // Перехватываем фатальные ошибки (например, ObjectDisposedException, если окно убили во время работы метода)
+                Console.WriteLine($"[Focus] Критическая ошибка при активации окна: {ex.Message}");
+                MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber, "ActivateWindow_CriticalError");
             }
         }
 

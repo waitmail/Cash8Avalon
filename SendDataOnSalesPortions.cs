@@ -724,12 +724,12 @@ namespace Cash8Avalon
 
         public async Task send_sales_data_Click(object sender, EventArgs e)
         {
-//#if DEBUG
-//            if (System.Diagnostics.Debugger.IsAttached)
-//            {
-//                System.Diagnostics.Debugger.Break();
-//            }
-//#endif
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
 
             MainStaticClass.write_event_in_log("Попытка отправить данные", "send_sales_data_Click", "0");
             if (await MainStaticClass.GetUnloadingInterval() == 0)
@@ -812,7 +812,8 @@ namespace Cash8Avalon
                 return;
             }
 
-            DS ds = MainStaticClass.get_ds();
+            //DS ds = MainStaticClass.get_ds();
+            DS ds = await ServiceLocator.DsAsync();
             ds.Timeout = 80000;
 
             string count_day = CryptorEngine.get_count_day();
@@ -835,7 +836,8 @@ namespace Cash8Avalon
                     ex.Status == System.Net.WebExceptionStatus.ConnectFailure)
                 {
                     Console.WriteLine($"[WebService] Ошибка сети ({ex.Status})! Сброс кэша адресов...");
-                    MainStaticClass.ResetDsCache();
+                    //MainStaticClass.ResetDsCache();
+                    await ServiceLocator.ResetDsCacheAsync();
                 }
                 else
                 {

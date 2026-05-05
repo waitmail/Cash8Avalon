@@ -700,8 +700,8 @@ namespace Cash8Avalon
 
                 if ((MainStaticClass.IpAddressAcquiringTerminal.Trim() != "") && (MainStaticClass.IdAcquirerTerminal.Trim() != "") && notCashSum > 0)
                 {
-                    //if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)
-                        if (_checkBoxPaymentBySbp.IsChecked != true)
+                    //if (checkBox_do_not_send_payment_to_the_terminal.IsChecked != true)                    
+                        if (_checkBoxDoNotSendPaymentToTheTerminal.IsChecked != true)
                         {
                         // ИСПОЛЬЗУЕМ СВОЙСТВА
                         string money = CalculateMoneyInKopecks(this.NonCashSum, this.NonCashSumKop);
