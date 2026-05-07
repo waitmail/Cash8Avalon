@@ -13,6 +13,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -1239,22 +1240,285 @@ namespace Cash8Avalon
         //    }
         //}
 
+        //public async Task load_bonus_clients(bool show_message)
+        //{
+        //    await Task.Run(() => load_bonus_clients_internal(show_message));
+        //}
+
         public async Task load_bonus_clients(bool show_message)
         {
-            await Task.Run(() => load_bonus_clients_internal(show_message));
+            // Просто вызываем метод. Вся асинхронность работает через await внутри него.
+            // Task.Run здесь не нужен и вреден!
+            await load_bonus_clients_internal(show_message);
         }
+
+        //        private async Task load_bonus_clients_internal(bool show_message)
+        //        {
+        //            try
+        //            {
+        //                //if (!MainStaticClass.service_is_worker())
+        //                //{
+        //                //    if (show_message) await MessageBox.Show("Веб сервис недоступен", "Ошибка", owner: this);
+        //                //    return;
+        //                //}
+
+        //#if DEBUG
+        //                if (System.Diagnostics.Debugger.IsAttached)
+        //                {
+        //                    System.Diagnostics.Debugger.Break();
+        //                }
+        //#endif
+
+
+        //                //DS ds = MainStaticClass.get_ds();
+        //                DS ds = await ServiceLocator.DsAsync();
+        //                ds.Timeout = 60000;
+
+        //                string nick_shop = MainStaticClass.Nick_Shop.Trim();
+        //                if (string.IsNullOrWhiteSpace(nick_shop))
+        //                {
+        //                    if (show_message) await MessageBox.Show("Не удалось получить название магазина", "Ошибка", owner: this);
+        //                    return;
+        //                }
+
+        //                string code_shop = MainStaticClass.Code_Shop.Trim();
+        //                if (string.IsNullOrWhiteSpace(code_shop))
+        //                {
+        //                    if (show_message) await MessageBox.Show("Не удалось получить код магазина", "Ошибка", owner: this);
+        //                    return;
+        //                }
+
+        //                string count_day = CryptorEngine.get_count_day();
+        //                string key = nick_shop + count_day + code_shop;
+
+        //                bool needToLoadMore = true;
+        //                int portionNumber = 1;
+
+        //                while (needToLoadMore)
+        //                {
+        //                    Console.WriteLine($"--- Запрос порции № {portionNumber} ---");
+
+        //                    DateTime dt = last_date_download_bonus_clients();
+        //                    string data = CryptorEngine.Encrypt($"{nick_shop}|{dt.Ticks}|{code_shop}", true, key);
+
+        //                    string result_query = "-1";
+        //                    try
+        //                    {
+        //                        result_query = ds.GetDiscountClientsV8DateTime_NEW(nick_shop, data, "4");
+        //                    }
+        //                    catch (Exception ex)
+        //                    {
+        //                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (веб-сервис)");
+        //                        if (show_message) await MessageBox.Show(ex.Message, "Ошибка", owner: this);
+        //                        break;
+        //                    }
+
+        //                    if (result_query == "-1")
+        //                    {
+        //                        Console.WriteLine("Веб-сервис вернул -1. Остановка.");
+        //                        if (show_message) await MessageBox.Show("При обработке запроса на сервере произошли ошибки", "Ошибка", owner: this);
+        //                        break;
+        //                    }
+
+        //                    string result_query_decrypt = CryptorEngine.Decrypt(result_query, true, key);
+        //                    Clients clients = JsonConvert.DeserializeObject<Clients>(result_query_decrypt);
+
+        //                    // ИСПРАВЛЕНО: Безопасная проверка на null и пустоту
+        //                    if (clients?.list_clients == null || clients.list_clients.Count == 0)
+        //                    {
+        //                        Console.WriteLine("Список клиентов пуст. Загрузка завершена.");
+        //                        break;
+        //                    }
+
+        //                    Console.WriteLine($"Получено клиентов: {clients.list_clients.Count}");
+
+        //                    // === БД: параметризованные запросы ===
+        //                    NpgsqlConnection conn = null;
+        //                    NpgsqlTransaction tran = null;
+        //                    Client failedClient = null;
+
+        //                    try
+        //                    {
+        //                        conn = MainStaticClass.NpgsqlConn();
+        //                        await conn.OpenAsync();
+        //                        tran = await conn.BeginTransactionAsync();
+
+        //                        string local_last_date_download_bonus_clients = string.Empty;
+
+        //                        // === Подготовленные команды (создаём ОДИН раз на порцию) ===
+
+        //                        // UPDATE
+        //                        const string updateQuery = @"
+        //                    UPDATE clients SET 
+        //                        phone = @phone,
+        //                        name = @name,
+        //                        date_of_birth = @date_of_birth,
+        //                        its_work = @its_work,
+        //                        reason_for_blocking = @reason_for_blocking,
+        //                        notify_security = @notify_security
+        //                    WHERE code = @code";
+
+        //                        using var cmdUpdate = new NpgsqlCommand(updateQuery, conn, tran);
+        //                        AddClientParameters(cmdUpdate);
+
+        //                        // INSERT
+        //                        const string insertQuery = @"
+        //                    INSERT INTO clients (
+        //                        code, phone, name, date_of_birth, its_work, reason_for_blocking, notify_security
+        //                    ) VALUES (
+        //                        @code, @phone, @name, @date_of_birth, @its_work, @reason_for_blocking, @notify_security
+        //                    )";
+
+        //                        using var cmdInsert = new NpgsqlCommand(insertQuery, conn, tran);
+        //                        AddClientParameters(cmdInsert);
+
+
+        //                        // === Обработка клиентов ===
+        //                        foreach (Client client in clients.list_clients)
+        //                        {
+        //                            failedClient = client;
+        //                            SetClientParameters(cmdUpdate, client);
+        //                            int rowsAffected = await cmdUpdate.ExecuteNonQueryAsync();
+
+        //                            if (rowsAffected == 0)
+        //                            {
+        //                                SetClientParameters(cmdInsert, client);
+        //                                await cmdInsert.ExecuteNonQueryAsync();
+        //                            }
+
+        //                            if (!string.IsNullOrWhiteSpace(client.datetime_update))
+        //                                local_last_date_download_bonus_clients = client.datetime_update;
+        //                        }
+
+        //                        // === Обновление метаданных ===
+        //                        const string updateConstantsQuery = @"
+        //                    UPDATE constants SET last_date_download_bonus_clients = @last_date;
+        //                    UPDATE date_sync SET client = @last_date";
+
+        //                        using var cmdConstants = new NpgsqlCommand(updateConstantsQuery, conn, tran);
+
+        //                        // ИСПРАВЛЕНО: Тип Timestamp вместо Varchar
+        //                        cmdConstants.Parameters.Add("@last_date", NpgsqlTypes.NpgsqlDbType.Timestamp);
+
+        //                        // ИСПРАВЛЕНО: Парсинг строки в DateTime (с сохранением времени, в отличие от Date)
+        //                        object lastDateValue = DBNull.Value;
+        //                        if (!string.IsNullOrWhiteSpace(local_last_date_download_bonus_clients) &&
+        //                            DateTime.TryParse(local_last_date_download_bonus_clients, out DateTime parsedLastDate))
+        //                        {
+        //                            lastDateValue = parsedLastDate; // Передаем полный DateTime (дата + время)
+        //                        }
+
+        //                        cmdConstants.Parameters["@last_date"].Value = lastDateValue;
+
+        //                        await cmdConstants.ExecuteNonQueryAsync();
+
+        //                        await tran.CommitAsync();
+        //                        Console.WriteLine("Транзакция успешно закоммичена.");
+
+        //                        // === Проверка: последняя порция? ===
+        //                        if (clients.list_clients.Count < 50000)
+        //                        {
+        //                            Console.WriteLine("Порция меньше 50000. Это были последние данные.");
+        //                            needToLoadMore = false;
+        //                        }
+        //                        else
+        //                        {
+        //                            portionNumber++;
+        //                        }
+        //                    }
+        //                    catch (NpgsqlException ex)
+        //                    {
+        //                        string errorType = "Ошибка БД (Npgsql)";
+        //                        string detailedMessage = FormatExceptionMessage(ex, failedClient, errorType);
+
+        //                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients | {detailedMessage}");
+        //                        Console.WriteLine($"!!! {errorType}: {detailedMessage}");
+
+        //                        if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
+
+        //                        if (tran != null) await tran.RollbackAsync();
+
+        //                        // 🔥 Гибкая реакция на ошибку БД: 
+        //                        // Если это просто дубликат или нарушение констрейнта - можем попробовать продолжить (continue)
+        //                        // Если это смерть коннекта - обязательно прерываем (break)
+        //                        if (ex.IsTransient) // Встроенный метод Npgsql для сетевых/временных ошибок
+        //                        {
+        //                            Console.WriteLine("Транзиентная ошибка БД (сеть/таймаут). Остановка порции.");
+        //                            break;
+        //                        }
+        //                        else
+        //                        {
+        //                            Console.WriteLine("Ошибка целостности данных. Пропуск клиента.");
+        //                            continue; // Пробуем следующий клиент
+        //                        }
+        //                    }
+        //                    catch (System.Net.WebException ex)
+        //                    {
+        //                        // Сбрасываем кэш ТОЛЬКО если упали по таймауту или не смогли подключиться
+        //                        if (ex.Status == System.Net.WebExceptionStatus.Timeout ||
+        //                            ex.Status == System.Net.WebExceptionStatus.ConnectFailure)
+        //                        {
+        //                            await ServiceLocator.ResetDsCacheAsync();
+        //                        }
+        //                        else
+        //                        {
+        //                            // Сервер ответил (например, 500 ошибкой), но сеть работает. Кэш не трогаем.
+        //                            MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients (WebException: {ex.Status})");
+        //                        }
+
+        //                        if (show_message)
+        //                            await MessageBox.Show("Ошибка связи с сервером при загрузке клиентов.", "Ошибка сети", owner: this);
+
+        //                        break; // Сеть упала - нет смысла запрашивать следующие порции
+        //                    }
+        //                    catch (Exception ex)
+        //                    {
+        //                        string errorType = "Критическая ошибка логики";
+        //                        string detailedMessage = FormatExceptionMessage(ex, failedClient, errorType);
+
+        //                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients | {detailedMessage}");
+        //                        Console.WriteLine($"!!! {errorType}: {detailedMessage}");
+
+        //                        if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
+
+        //                        if (tran != null) await tran.RollbackAsync();
+
+        //                        // 🔥 Жесткая реакция: если упал код (NullRef, Format и т.д.), продолжать цикл БЕССМЫСЛЕННО
+        //                        break;
+        //                    }
+        //                    finally
+        //                    {
+        //                        if (conn != null && conn.State == System.Data.ConnectionState.Open)
+        //                        {
+        //                            conn.Close();
+        //                        }
+        //                        conn?.Dispose();
+        //                        tran?.Dispose();
+        //                    }
+        //                }
+
+        //                if (show_message)
+        //                    await MessageBox.Show("Загрузка клиентов полностью завершена", "Успех", owner: this);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (Критическая ошибка)");
+        //                Console.WriteLine($"Критическая ошибка в load_bonus_clients: {ex}");
+        //            }
+        //        }
 
         private async Task load_bonus_clients_internal(bool show_message)
         {
             try
             {
-                if (!MainStaticClass.service_is_worker())
+#if DEBUG
+                if (System.Diagnostics.Debugger.IsAttached)
                 {
-                    if (show_message) await MessageBox.Show("Веб сервис недоступен", "Ошибка", owner: this);
-                    return;
+                    System.Diagnostics.Debugger.Break();
                 }
+#endif
 
-                DS ds = MainStaticClass.get_ds();
+                DS ds = await ServiceLocator.DsAsync();
                 ds.Timeout = 60000;
 
                 string nick_shop = MainStaticClass.Nick_Shop.Trim();
@@ -1306,151 +1570,154 @@ namespace Cash8Avalon
                     string result_query_decrypt = CryptorEngine.Decrypt(result_query, true, key);
                     Clients clients = JsonConvert.DeserializeObject<Clients>(result_query_decrypt);
 
-                    // ИСПРАВЛЕНО: Безопасная проверка на null и пустоту
                     if (clients?.list_clients == null || clients.list_clients.Count == 0)
                     {
                         Console.WriteLine("Список клиентов пуст. Загрузка завершена.");
                         break;
                     }
 
-                    Console.WriteLine($"Получено клиентов: {clients.list_clients.Count}");
+                    Console.WriteLine($"Получено клиентов от сервера: {clients.list_clients.Count}");
 
-                    // === БД: параметризованные запросы ===
-                    NpgsqlConnection conn = null;
-                    NpgsqlTransaction tran = null;
+                    // Вычисляем максимальную дату обновления среди всех клиентов в порции ЗАРАНЕЕ.
+                    // Это безопасно: если транзакция откатится, мы эту дату не запишем.
+                    DateTime? maxDateInPortion = clients.list_clients
+                        .Where(c => !string.IsNullOrWhiteSpace(c.datetime_update))
+                        .Select(c => DateTime.TryParse(c.datetime_update, out var parsedDate) ? parsedDate : (DateTime?)null)
+                        .Max();
+
                     Client failedClient = null;
 
-                    try
+                    await using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
                     {
-                        conn = MainStaticClass.NpgsqlConn();
                         await conn.OpenAsync();
-                        tran = await conn.BeginTransactionAsync();
-
-                        string local_last_date_download_bonus_clients = string.Empty;
-
-                        // === Подготовленные команды (создаём ОДИН раз на порцию) ===
-
-                        // UPDATE
-                        const string updateQuery = @"
-                    UPDATE clients SET 
-                        phone = @phone,
-                        name = @name,
-                        date_of_birth = @date_of_birth,
-                        its_work = @its_work,
-                        reason_for_blocking = @reason_for_blocking,
-                        notify_security = @notify_security
-                    WHERE code = @code";
-
-                        using var cmdUpdate = new NpgsqlCommand(updateQuery, conn, tran);
-                        AddClientParameters(cmdUpdate);
-
-                        // INSERT
-                        const string insertQuery = @"
-                    INSERT INTO clients (
-                        code, phone, name, date_of_birth, its_work, reason_for_blocking, notify_security
-                    ) VALUES (
-                        @code, @phone, @name, @date_of_birth, @its_work, @reason_for_blocking, @notify_security
-                    )";
-
-                        using var cmdInsert = new NpgsqlCommand(insertQuery, conn, tran);
-                        AddClientParameters(cmdInsert);
-
-                        
-                        // === Обработка клиентов ===
-                        foreach (Client client in clients.list_clients)
+                        await using (NpgsqlTransaction tran = await conn.BeginTransactionAsync())
                         {
-                            failedClient = client;
-                            SetClientParameters(cmdUpdate, client);
-                            int rowsAffected = await cmdUpdate.ExecuteNonQueryAsync();
-
-                            if (rowsAffected == 0)
+                            try
                             {
-                                SetClientParameters(cmdInsert, client);
-                                await cmdInsert.ExecuteNonQueryAsync();
+                                // Используем один быстрый запрос INSERT ... ON CONFLICT DO UPDATE (Upsert)
+                                // Это заменяет медленный шаблон "сначала UPDATE, если 0 строк то INSERT"
+                                const string upsertQuery = @"
+                            INSERT INTO clients (code, phone, name, date_of_birth, its_work, reason_for_blocking, notify_security)
+                            VALUES (@code, @phone, @name, @date_of_birth, @its_work, @reason_for_blocking, @notify_security)
+                            ON CONFLICT (code) DO UPDATE SET 
+                                phone = EXCLUDED.phone,
+                                name = EXCLUDED.name,
+                                date_of_birth = EXCLUDED.date_of_birth,
+                                its_work = EXCLUDED.its_work,
+                                reason_for_blocking = EXCLUDED.reason_for_blocking,
+                                notify_security = EXCLUDED.notify_security";
+
+                                await using var cmdUpsert = new NpgsqlCommand(upsertQuery, conn, tran);
+
+                                // Добавляем параметры один раз
+                                AddClientParameters(cmdUpsert);
+
+                                // Подготавливаем план выполнения запроса для ускорения цикла
+                                cmdUpsert.Prepare();
+
+                                var processedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                                int successCount = 0;
+                                int duplicateSourceCount = 0;
+
+                                foreach (Client client in clients.list_clients)
+                                {
+                                    // Проверка на дубликаты внутри пришедшего JSON
+                                    if (!string.IsNullOrWhiteSpace(client.code))
+                                    {
+                                        if (!processedCodes.Add(client.code))
+                                        {
+                                            duplicateSourceCount++;
+                                            continue;
+                                        }
+                                    }
+
+                                    // Запоминаем клиента ДО выполнения запроса, чтобы точно знать на ком упало
+                                    failedClient = client;
+
+                                    SetClientParameters(cmdUpsert, client);
+                                    await cmdUpsert.ExecuteNonQueryAsync();
+                                    successCount++;
+                                }
+
+                                Console.WriteLine($"--- ИТОГО ПОРЦИИ: Обработано: {successCount} | Дубли в JSON: {duplicateSourceCount} ---");
+
+                                // === Обновление метаданных ===
+                                const string updateConstantsQuery = @"
+                            UPDATE constants SET last_date_download_bonus_clients = @last_date;
+                            UPDATE date_sync SET client = @last_date";
+
+                                await using var cmdConstants = new NpgsqlCommand(updateConstantsQuery, conn, tran);
+                                cmdConstants.Parameters.Add("@last_date", NpgsqlTypes.NpgsqlDbType.Timestamp);
+                                cmdConstants.Parameters["@last_date"].Value = (object)maxDateInPortion ?? DBNull.Value;
+                                await cmdConstants.ExecuteNonQueryAsync();
+
+                                // Если дошли сюда - ошибок не было, коммитим
+                                await tran.CommitAsync();
+                                Console.WriteLine("Транзакция успешно закоммичена.");
+
+                                failedClient = null; // Сбрасываем, так как порция успешна
+
+                                if (clients.list_clients.Count < 50000)
+                                {
+                                    Console.WriteLine("Порция меньше 50000. Это были последние данные.");
+                                    needToLoadMore = false;
+                                }
+                                else
+                                {
+                                    portionNumber++;
+                                }
                             }
+                            catch (NpgsqlException ex)
+                            {
+                                // Сюда попадаем при ЛЮБОЙ ошибке БД (включая ошибку одного клиента)
+                                // Без Savepoint вся транзакция уже мертва, просто откатываем её
+                                await tran.RollbackAsync();
 
-                            if (!string.IsNullOrWhiteSpace(client.datetime_update))
-                                local_last_date_download_bonus_clients = client.datetime_update;
-                        }
+                                // failedClient содержит того самого клиента, на котором произошел облом
+                                string errorType = ex.IsTransient ? "Ошибка сети/таймаут БД" : "Ошибка данных БД";
+                                string detailedMessage = $"{errorType}. Ошибка на клиенте: Code={failedClient?.code}, Phone={failedClient?.phone}, Name={failedClient?.name} | Причина: {ex.Message}";
 
-                        // === Обновление метаданных ===
-                        const string updateConstantsQuery = @"
-                    UPDATE constants SET last_date_download_bonus_clients = @last_date;
-                    UPDATE date_sync SET client = @last_date";
+                                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients | {detailedMessage}");
+                                Console.WriteLine($"!!! {detailedMessage}");
 
-                        using var cmdConstants = new NpgsqlCommand(updateConstantsQuery, conn, tran);
+                                if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
 
-                        // ИСПРАВЛЕНО: Тип Timestamp вместо Varchar
-                        cmdConstants.Parameters.Add("@last_date", NpgsqlTypes.NpgsqlDbType.Timestamp);
+                                // Прерываем цикл порций, так как нет смысла грузить дальше, пока проблема не будет решена
+                                break;
+                            }
+                            catch (System.Net.WebException ex)
+                            {
+                                await tran.RollbackAsync();
 
-                        // ИСПРАВЛЕНО: Парсинг строки в DateTime (с сохранением времени, в отличие от Date)
-                        object lastDateValue = DBNull.Value;
-                        if (!string.IsNullOrWhiteSpace(local_last_date_download_bonus_clients) &&
-                            DateTime.TryParse(local_last_date_download_bonus_clients, out DateTime parsedLastDate))
-                        {
-                            lastDateValue = parsedLastDate; // Передаем полный DateTime (дата + время)
-                        }
+                                if (ex.Status == System.Net.WebExceptionStatus.Timeout || ex.Status == System.Net.WebExceptionStatus.ConnectFailure)
+                                {
+                                    await ServiceLocator.ResetDsCacheAsync();
+                                }
+                                else
+                                {
+                                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients (WebException: {ex.Status})");
+                                }
 
-                        cmdConstants.Parameters["@last_date"].Value = lastDateValue;
+                                if (show_message) await MessageBox.Show("Ошибка связи с сервером при загрузке клиентов.", "Ошибка сети", owner: this);
+                                break;
+                            }
+                            catch (Exception ex)
+                            {
+                                await tran.RollbackAsync();
 
-                        await cmdConstants.ExecuteNonQueryAsync();
+                                string errorType = "Критическая ошибка логики";
+                                string detailedMessage = $"{errorType}. Ошибка на клиенте: Code={failedClient?.code}, Phone={failedClient?.phone}, Name={failedClient?.name} | Причина: {ex.Message}";
 
-                        await tran.CommitAsync();
-                        Console.WriteLine("Транзакция успешно закоммичена.");
+                                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients | {detailedMessage}");
+                                Console.WriteLine($"!!! {detailedMessage}");
 
-                        // === Проверка: последняя порция? ===
-                        if (clients.list_clients.Count < 50000)
-                        {
-                            Console.WriteLine("Порция меньше 50000. Это были последние данные.");
-                            needToLoadMore = false;
-                        }
-                        else
-                        {
-                            portionNumber++;
-                        }
-                    }
-                    catch (NpgsqlException ex)
-                    {
-                        // ИСПРАВЛЕНО: Формируем подробное сообщение об ошибке
-                        string clientInfo = failedClient != null
-                            ? $"Код: '{failedClient.code}', Телефон: '{failedClient.phone}', Имя: '{failedClient.name}'"
-                            : "Неизвестно (ошибка до начала цикла)";
+                                if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
+                                break;
+                            }
+                        } // tran Dispose
+                    } // conn Dispose
 
-                        string detailedMessage = $"Ошибка на клиенте: {clientInfo}\n\nОшибка БД: {ex.Message}";
-
-                        MainStaticClass.WriteRecordErrorLog(new Exception(detailedMessage, ex), 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (БД Npgsql)");
-                        Console.WriteLine($"!!! ОШИБКА БД: {detailedMessage}");
-
-                        if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
-                        if (tran != null) await tran.RollbackAsync();
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        // ИСПРАВЛЕНО: Аналогично для общего исключения
-                        string clientInfo = failedClient != null
-                            ? $"Код: '{failedClient.code}', Телефон: '{failedClient.phone}', Имя: '{failedClient.name}'"
-                            : "Неизвестно";
-
-                        string detailedMessage = $"Ошибка на клиенте: {clientInfo}\n\nСистемная ошибка: {ex.Message}";
-
-                        MainStaticClass.WriteRecordErrorLog(new Exception(detailedMessage, ex), 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (INSERT/UPDATE)");
-                        Console.WriteLine($"!!! ОБЩАЯ ОШИБКА: {detailedMessage}");
-
-                        if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
-                        if (tran != null) await tran.RollbackAsync();
-                        break;
-                    }
-                    finally
-                    {
-                        if (conn != null && conn.State == System.Data.ConnectionState.Open)
-                        {
-                            conn.Close();
-                        }
-                        conn?.Dispose();
-                        tran?.Dispose();
-                    }
-                }
+                } // end while
 
                 if (show_message)
                     await MessageBox.Show("Загрузка клиентов полностью завершена", "Успех", owner: this);
@@ -1460,6 +1727,20 @@ namespace Cash8Avalon
                 MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (Критическая ошибка)");
                 Console.WriteLine($"Критическая ошибка в load_bonus_clients: {ex}");
             }
+        }
+
+        private string FormatExceptionMessage(Exception ex, Client failedClient, string errorType)
+        {
+            string clientInfo = failedClient != null
+                ? $"Код: '{failedClient.code}', Телефон: '{failedClient.phone}', Имя: '{failedClient.name}'"
+                : "Неизвестно (ошибка до начала цикла)";
+
+            // Обращаемся напрямую к свойствам оригинального исключения
+            string stackTrace = string.IsNullOrEmpty(ex.StackTrace) ? "Стек недоступен" : ex.StackTrace;
+
+            return $"[{errorType}] Клиент: {clientInfo}\n" +
+                   $"Сообщение: {ex.Message}\n" +
+                   $"Стек: {stackTrace}";
         }
 
         // === Вспомогательные методы ===

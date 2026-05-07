@@ -807,10 +807,10 @@ namespace Cash8Avalon
                 return;
             }
 
-            if (!MainStaticClass.service_is_worker())
-            {
-                return;
-            }
+            //if (!MainStaticClass.service_is_worker())
+            //{
+            //    return;
+            //}
 
             //DS ds = MainStaticClass.get_ds();
             DS ds = await ServiceLocator.DsAsync();
@@ -838,6 +838,7 @@ namespace Cash8Avalon
                     Console.WriteLine($"[WebService] Ошибка сети ({ex.Status})! Сброс кэша адресов...");
                     //MainStaticClass.ResetDsCache();
                     await ServiceLocator.ResetDsCacheAsync();
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "send_sales_data_Click (WebException)");
                 }
                 else
                 {

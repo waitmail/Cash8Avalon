@@ -2056,7 +2056,7 @@ namespace Cash8Avalon
                 }
 
                 // Проверка времени с ФН
-                MainStaticClass.validate_date_time_with_fn(15, MainStaticClass.MainWindow);
+                MainStaticClass.validate_date_time_with_fn(5, MainStaticClass.MainWindow);
 
                 // Создаем окно для нового чека
                 var checkWindow = new Cash_check();

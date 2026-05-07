@@ -6584,11 +6584,19 @@ namespace Cash8Avalon
         /// <param name="elementToFocusAfterClose">Контрол, на который вернуть фокус после закрытия</param>
         /// <param name="focusableElementsToDisable">Массив элементов, которые нужно временно сделать нефокусируемыми</param>
         private static async Task ShowModalWindowInternal(
-            Window owner,
-            Window modalWindow,
-            Control elementToFocusAfterClose,
-            Control[] focusableElementsToDisable)
+    Window owner,
+    Window modalWindow,
+    Control elementToFocusAfterClose,
+    Control[] focusableElementsToDisable)
         {
+            // ✅ ЗАЩИТА 1: Проверяем живое ли окно-владелец перед любыми действиями
+            if (owner == null || !owner.IsVisible)
+            {
+                Console.WriteLine("[Modal] Отмена: окно-владелец уже закрыто или скрыто.");
+                modalWindow?.Close();
+                return;
+            }
+
             // Сохраняем исходное состояние
             bool wasOwnerTopmost = owner.Topmost;
             bool isDebugging = Debugger.IsAttached;
@@ -6623,42 +6631,50 @@ namespace Cash8Avalon
                 }, DispatcherPriority.Render);
 
                 // 2. Снимаем Topmost с родителя + задержка для оконного менеджера
-                // Хак для X11: даём WM время обработать снятие Topmost, иначе модальное окно может появиться "под" главным.
                 owner.Topmost = false;
                 await Task.Delay(20);
 
+                // ✅ ЗАЩИТА 2: Повторная проверка прямо перед ShowDialog 
+                // (за 20мс задержки пользователь мог нажать "Закрыть" или отвалиться сеть)
+                if (!owner.IsVisible)
+                {
+                    Console.WriteLine("[Modal] Отмена перед показом: окно-владелец закрылось во время задержки.");
+                    modalWindow?.Close();
+                    return;
+                }
+
                 // 3. Настройка и показ модального окна
-                // Хак для отладки: если висим под дебаггером, не делаем модальное окно Topmost, 
-                // чтобы окно Visual Studio / Rider не перекрывалось модальным диалогом.
                 modalWindow.Topmost = !isDebugging;
 
                 await modalWindow.ShowDialog(owner);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("closed owner"))
+            {
+                // ✅ ЗАЩИТА 3: Ловушка для тех 0.001% случаев, если проверка IsVisible не успела сработать
+                Console.WriteLine($"[Modal] Intercepted Avalonia error: {ex.Message}");
+                modalWindow?.Close();
             }
             finally
             {
                 // 4. Восстановление состояния владельца (гарантированно выполнится даже при исключении)
                 try
                 {
-                    if (!isDebugging)
+                    // ✅ ЗАЩИТА 4: Перед восстановлением свойств тоже проверяем
+                    if (owner.IsVisible)
                     {
-                        owner.Topmost = wasOwnerTopmost;
-                    }
+                        if (!isDebugging) owner.Topmost = wasOwnerTopmost;
+                        owner.IsHitTestVisible = true;
 
-                    owner.IsHitTestVisible = true;
-
-                    if (focusableElementsToDisable != null)
-                    {
-                        foreach (var element in focusableElementsToDisable)
+                        if (focusableElementsToDisable != null)
                         {
-                            if (element != null)
-                                element.Focusable = true;
+                            foreach (var element in focusableElementsToDisable)
+                            {
+                                if (element != null) element.Focusable = true;
+                            }
                         }
-                    }
 
-                    // Активируем окно-владелец (только если оно ещё живо)
-                    if (owner.IsVisible && owner.IsInitialized)
-                    {
-                        owner.Activate();
+                        // Активируем окно-владелец
+                        if (owner.IsInitialized) owner.Activate();
                     }
                 }
                 catch (Exception ex)
@@ -6672,8 +6688,7 @@ namespace Cash8Avalon
                     try
                     {
                         // Проверяем, что окно ещё существует и видимо
-                        if (!owner.IsVisible || !owner.IsInitialized)
-                            return;
+                        if (!owner.IsVisible || !owner.IsInitialized) return;
 
                         owner.Focus();
 
@@ -6685,20 +6700,12 @@ namespace Cash8Avalon
                             }
                             else
                             {
-                                // Ищем первый ВИДИМЫЙ, включённый и фокусируемый дочерний контрол
                                 var focusableChild = elementToFocusAfterClose.GetVisualDescendants()
                                     .OfType<Control>()
                                     .FirstOrDefault(c => c.Focusable && c.IsEnabled && c.IsVisible);
 
-                                if (focusableChild != null)
-                                {
-                                    focusableChild.Focus();
-                                }
-                                else
-                                {
-                                    // Фоллбэк: фокус на владельца
-                                    owner.Focus();
-                                }
+                                if (focusableChild != null) focusableChild.Focus();
+                                else owner.Focus();
                             }
                         }
                     }
@@ -6709,8 +6716,7 @@ namespace Cash8Avalon
                 }, DispatcherPriority.ContextIdle);
 
                 // 6. Сбрасываем флаг рекурсии
-                if (owner is Cash_check cc3)
-                    cc3.IsShowingModal = false;
+                if (owner is Cash_check cc3) cc3.IsShowingModal = false;
             }
         }
 
