@@ -11,6 +11,7 @@ using System.Diagnostics.Metrics;
 using System.IO;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using static Cash8Avalon.LoadDataWebService;
 using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
 
 namespace Cash8Avalon
@@ -675,6 +676,9 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN piot_url character varying(200) COLLATE pg_catalog.default;");
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN IF NOT EXISTS include_piot boolean NOT NULL DEFAULT false;");
             queries.Add("ALTER TABLE public.errors_log    ADD COLUMN cash_desk_number smallint;");
+            queries.Add("ALTER TABLE public.constants ADD COLUMN last_date_reset_bonus_clients TIMESTAMP;");
+            queries.Add("ALTER TABLE public.clients ADD COLUMN last_server_sync TIMESTAMP;");
+
 
 
             //            Блок по созданию индексов для проверки кодов маркировки при офлайн проверке корректности кодов маркировки

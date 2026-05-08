@@ -655,6 +655,7 @@ namespace Cash8Avalon
             {
                 try
                 {
+                    
                     UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
                     Console.WriteLine("=== ВЫПОЛНЕНИЕ ПРОВЕРОК ПРИ СТАРТЕ ===");
                     MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
@@ -673,6 +674,7 @@ namespace Cash8Avalon
 
                     if (await MainStaticClass.exist_table_name("constants"))
                     {
+                        await check_add_field();
                         _ = InventoryManager.FillDictionaryProductDataAsync(this);
                         _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);
                         await UpdateUnloadingPeriod();
@@ -716,7 +718,8 @@ namespace Cash8Avalon
 
                         if (MainStaticClass.CashDeskNumber != 9)
                         {
-                            UploadPhoneClients();
+                            _= UploadPhoneClients();
+                            await CheckCorectClients();
                             _ = loadBonusClients();
                             if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                             {
@@ -745,8 +748,7 @@ namespace Cash8Avalon
                         await Task.Delay(150);
                         await ShowSafeMessage("В этой бд нет таблицы constatnts, необходимо создать таблицы бд", "Проверка наличия таблицы", MessageBoxButton.OK, MessageBoxType.Error);
                     }
-                    await check_add_field();                    
-
+                    
                     _viewModel.OpenCashChecks();
                 }
                 catch (Exception ex)
@@ -835,7 +837,7 @@ namespace Cash8Avalon
                 try
                 {
                     await conn.OpenAsync();
-                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'errors_log' AND column_name = 'cash_desk_number');";
+                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'last_server_sync');";
 
                     using (var command = new NpgsqlCommand(query, conn))
                     {
@@ -1473,6 +1475,205 @@ namespace Cash8Avalon
             {
 
             }
+        }
+
+
+        private async Task CheckCorectClients()
+        {
+#if DEBUG
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+#endif
+
+            ClientsCompareResult compareResult = await CheckClientsCountSync();
+
+            switch (compareResult)
+            {
+                case ClientsCompareResult.Equals:
+                    // Всё идеально, работаем спокойно
+                    Console.WriteLine("Количество клиентов совпадает.");
+                    break;
+
+                case ClientsCompareResult.MinorDifference:
+                    // Разница есть, но меньше 5000. Не паникуем, фоновую выгрузку не сбрасываем.
+                    Console.WriteLine("Небольшая разница в клиентах, допустимо. Синхронизация продолжится в обычном режиме.");
+                    break;
+
+                case ClientsCompareResult.MajorDifference:
+                    // Разница 5000 и более! Явный обрыв синхронизации.
+                    Console.WriteLine("КРИТИЧЕСКАЯ РАЗНИЦА! Проверяем, был ли сброс за последние 3 суток...");
+
+                    try
+                    {
+                        using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
+                        {
+                            await conn.OpenAsync();
+
+                            // Атомарный запрос: сбросит дату выгрузки на 2000 год ТОЛЬКО если 
+                            // последний сброс был БОЛЕЕ 3-х суток назад (или его вообще никогда не было).
+                            string query = @"
+                        UPDATE public.constants 
+                        SET last_date_download_bonus_clients = @resetDate,
+                            last_date_reset_bonus_clients = @nowDate
+                        WHERE last_date_reset_bonus_clients IS NULL 
+                           OR last_date_reset_bonus_clients < (CURRENT_TIMESTAMP - INTERVAL '3 days')";
+
+                            using (NpgsqlCommand cmd = new NpgsqlCommand(query, conn))
+                            {
+                                cmd.Parameters.AddWithValue("@resetDate", new DateTime(2000, 1, 1));
+                                cmd.Parameters.AddWithValue("@nowDate", DateTime.Now);
+
+                                // ExecuteNonQuery вернет количество измененных строк
+                                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                                if (rowsAffected > 0)
+                                {
+                                    // Строка обновилась, значит прошло больше 3-х суток. Мы сделали сброс!
+                                    Console.WriteLine("Дата синхронизации УСПЕШНО сброшена на 01.01.2000. При следующем цикле пойдет полная выгрузка.");
+
+                                    // Если нужно, чтобы полная выгрузка началась прямо сейчас же, раскомментируйте:
+                                    // await load_bonus_clients_internal(false); 
+                                }
+                                else
+                                {
+                                    // Строка НЕ обновилась (rowsAffected == 0). 
+                                    // Это значит, что в колонке last_date_reset_bonus_clients стоит дата свежее, чем 3 дня назад.
+                                    Console.WriteLine("Сброс даты синхронизации УЖЕ ВЫПОЛНЯЛСЯ за последние 3 суток. Повторный сброс отменен.");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка при сбросе даты синхронизации клиентов");
+                    }
+                    break;
+
+                case ClientsCompareResult.Error:
+                    // Сеть отвалилась или БД упала. Ничего не делаем, попробуем в следующий раз.
+                    Console.WriteLine("Не удалось сверить количество. Пропуск.");
+                    break;
+            }
+        }
+
+        public class CountResult
+        {
+            public int count { get; set; }
+        }
+
+        private async Task<ClientsCompareResult> CheckClientsCountSync()
+        {
+            int localCount = 0;
+            int serverCount = -1;
+
+            // === ШАГ 1: Получаем количество из ЛОКАЛЬНОЙ базы ===
+            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
+            {
+                try
+                {
+                    await conn.OpenAsync();
+                    string query = "SELECT COUNT(1) FROM clients WHERE code <> ''";
+                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                    {
+                        object result = await command.ExecuteScalarAsync();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            localCount = Convert.ToInt32(result);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "CheckClientsCountSync (Локальная БД)");
+                    return ClientsCompareResult.Error;
+                }
+            }
+
+            if (!MainStaticClass.service_is_worker()) return ClientsCompareResult.Error;
+
+            string nick_shop = MainStaticClass.Nick_Shop.Trim();
+            string code_shop = MainStaticClass.Code_Shop.Trim();
+            if (string.IsNullOrWhiteSpace(nick_shop) || string.IsNullOrWhiteSpace(code_shop)) return ClientsCompareResult.Error;
+
+            // === ШАГ 2: Запрос к серверу ===
+            try
+            {
+                DS ds = await ServiceLocator.DsAsync();
+                ds.Timeout = 20000;
+
+                string count_day = CryptorEngine.get_count_day();
+                string key = nick_shop + count_day + code_shop;
+                string payload = $"{nick_shop}|{DateTime.Now.Ticks}|{code_shop}";
+                string encrypt_string = CryptorEngine.Encrypt(payload, true, key);
+
+                string answer = ds.GetDiscountClientsCount(nick_shop, encrypt_string, "4");
+
+                if (answer == "-1")
+                {
+                    MainStaticClass.WriteRecordErrorLog("Сервер вернул -1", "CheckClientsCountSync", 0, MainStaticClass.CashDeskNumber, "");
+                    return ClientsCompareResult.Error;
+                }
+
+                string decrypt_answer = CryptorEngine.Decrypt(answer, true, key);
+                dynamic serverData = JsonConvert.DeserializeObject(decrypt_answer);
+
+                if (serverData != null && serverData.count != null)
+                {
+                    serverCount = (int)serverData.count;
+                }
+                else
+                {
+                    return ClientsCompareResult.Error;
+                }
+
+                // === ШАГ 3: СРАВНЕНИЕ С УЧЕТОМ ПОРОГА ===
+
+                // Допустимая разница. Если расхождение больше этого значения - это проблема.
+                // Настройте это число под ваши реалии (например, 100 или 500)
+                const int CRITICAL_THRESHOLD = 5000;
+
+                // Считаем разницу по модулю (неважно, локальных больше или серверных)
+                int difference = Math.Abs(localCount - serverCount);
+
+                Console.WriteLine($"[СВЕРКА КЛИЕНТОВ] Локально: {localCount} | Сервер: {serverCount} | Разница: {difference}");
+
+                if (difference == 0)
+                {
+                    return ClientsCompareResult.Equals;
+                }
+                else if (difference <= CRITICAL_THRESHOLD)
+                {
+                    // Разница есть, но она в пределах нормы (например, 20 человек)
+                    MainStaticClass.WriteRecordErrorLog($"Незначительная рассинхронизация клиентов. Локально: {localCount}, Сервер: {serverCount}", "CheckClientsCountSync", 0, MainStaticClass.CashDeskNumber, "ВНИМАНИЕ");
+                    return ClientsCompareResult.MinorDifference;
+                }
+                else
+                {
+                    // Разница критическая (например, 1000 человек)
+                    MainStaticClass.WriteRecordErrorLog($"КРИТИЧЕСКАЯ рассинхронизация клиентов! Локально: {localCount}, Сервер: {serverCount}", "CheckClientsCountSync", 0, MainStaticClass.CashDeskNumber, "ОШИБКА СИНХРОНИЗАЦИИ");
+                    return ClientsCompareResult.MajorDifference;
+                }
+            }
+            catch (System.Net.WebException ex)
+            {
+                HandleWebException(ex, "CheckClientsCountSync");
+                return ClientsCompareResult.Error;
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "CheckClientsCountSync (Ошибка при сверке)");
+                return ClientsCompareResult.Error;
+            }
+        }
+
+        public enum ClientsCompareResult
+        {
+            Equals,          // Идеальное совпадение (или разница = 0)
+            MinorDifference, // Небольшая разница (в пределах допуска, не страшно)
+            MajorDifference, // Критическая разница (явная проблема, нужен перезалив)
+            Error            // Техническая ошибка (упала БД, нет сети и т.д.)
         }
 
         private async Task UploadPhoneClients()
