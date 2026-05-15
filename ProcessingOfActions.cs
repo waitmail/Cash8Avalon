@@ -426,14 +426,14 @@ namespace Cash8Avalon
 
                         if (persent != 0)
                         {
-                            if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
-                            {
+                             if (LoadActionDataInMemory.AllActionData2 == null || LoadActionDataInMemory.AllActionData2.Count == 0)
+                             {
                                 await action_2_dt(num_doc, persent, comment);
-                            }
-                            else
-                            {
-                                await action_2_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData2);
-                            }
+                             }
+                             else
+                             {
+                                 await action_2_dt(num_doc, persent, comment, LoadActionDataInMemory.AllActionData2);
+                             }
                         }
                         else
                         {
@@ -2453,83 +2453,88 @@ namespace Cash8Avalon
         }
 
         private async Task ProcessActionData(DataTable dtCopy, int num_doc, decimal percent, string comment,
-                              Dictionary<int, List<long>> listItems,
-                              Dictionary<int, int> listQuantities)
+            Dictionary<int, List<long>> listItems,
+            Dictionary<int, int> listQuantities)
         {
-            if (!listItems.ContainsKey(1))
+            if (!listItems.ContainsKey(1) || !listItems.ContainsKey(2))
             {
-                await MessageBoxHelper.Show("Первый список товаров отсутствует.\r\nНомер акции " + num_doc.ToString(), "Обработка акций 2 типа");
-                MainStaticClass.WriteRecordErrorLog("Первый список товаров отсутствует.", "action_2_dt скидка", Convert.ToInt16(num_doc), MainStaticClass.CashDeskNumber, "Обработка акций 2 типа общий метод для чтения с диска и словаря");
+                await MessageBoxHelper.Show("Отсутствует первый или второй список товаров.\r\nНомер акции " + num_doc,
+                    "Обработка акций 2 типа");
                 return;
             }
 
-            // Очищаем значения listQuantities перед подсчетом
-            foreach (var key in listQuantities.Keys.ToList())
+            // Словари для отслеживания доступного количества по товарам
+            var availableList1 = new Dictionary<long, int>(); // code_tovar -> количество из списка 1
+            var availableList2 = new Dictionary<long, int>(); // code_tovar -> количество из списка 2
+
+            // 1️⃣ Сначала собираем, какие товары из каких списков есть в чеке
+            foreach (DataRow row in dtCopy.Rows)
             {
-                listQuantities[key] = 0;
+                if (Convert.ToInt32(row["action2"]) > 0) continue; // уже обработано
+
+                long code = Convert.ToInt64(row["tovar_code"]);
+                int qty = Convert.ToInt32(row["quantity"]);
+
+                if (listItems[1].Contains(code))
+                    availableList1[code] = availableList1.GetValueOrDefault(code, 0) + qty;
+
+                if (listItems[2].Contains(code))
+                    availableList2[code] = availableList2.GetValueOrDefault(code, 0) + qty;
             }
 
-            Dictionary<long, int> firstListItems = new Dictionary<long, int>();
-            int min_quantity = int.MaxValue;
+            // 2️⃣ Считаем максимальное количество полных "комплектов"
+            // Вариант А: любой из списка 1 + любой из списка 2 = комплект
+            int totalList1 = availableList1.Values.Sum();
+            int totalList2 = availableList2.Values.Sum();
+            int kitsCount = Math.Min(totalList1, totalList2); // количество полных пар
 
-            try
+            if (kitsCount == 0) return;
+
+            // 3️⃣ Применяем скидку к товарам из списка №1, пока не исчерпаем лимит комплектов
+            int appliedDiscounts = 0;
+
+            foreach (DataRow row in dtCopy.Rows)
             {
-                // Инициализируем firstListItems
-                foreach (var code_tovar in listItems[1])
+                if (Convert.ToInt32(row["action2"]) > 0) continue;
+                if (Convert.ToDouble(row["sum_at_discount"]) < 1) continue;
+
+                long code = Convert.ToInt64(row["tovar_code"]);
+                int qty = Convert.ToInt32(row["quantity"]);
+
+                // Товар из первого списка и ещё есть лимит комплектов
+                if (availableList1.ContainsKey(code) && appliedDiscounts < kitsCount)
                 {
-                    firstListItems[code_tovar] = 0;
-                }
+                    int canDiscount = Math.Min(qty, kitsCount - appliedDiscounts);
 
-                // Анализируем dtCopy для подсчета количества товаров из каждого списка
-                foreach (DataRow row in dtCopy.Rows)
-                {
-                    if (Convert.ToInt32(row["action2"]) > 0)
+                    if (canDiscount > 0)
                     {
-                        continue;
-                    }
-                    //if (Convert.ToInt32(row["sum_at_discount"]) < 1)
-                    //{
-                    //    continue;
-                    //}
-
-                    long tovar_code = Convert.ToInt64(row["tovar_code"]);
-                    int quantity_of_pieces = Convert.ToInt32(row["quantity"]);
-
-                    // Проверяем, к какому списку принадлежит товар
-                    foreach (var num_list in listQuantities.Keys.ToList())
-                    {
-                        if (listItems.ContainsKey(num_list) && listItems[num_list].Contains(tovar_code))
+                        if (qty <= canDiscount)
                         {
-                            listQuantities[num_list] += quantity_of_pieces;
+                            ApplyDiscountToRow(row, percent, num_doc);
+                            appliedDiscounts += qty;
+                        }
+                        else
+                        {
+                            // Разделяем строку: часть со скидкой, часть без
+                            var discountedRow = CreateNewRow(dtCopy, row, canDiscount, percent, num_doc);
+                            dtCopy.Rows.Add(discountedRow);
+
+                            row["quantity"] = qty - canDiscount;
+                            row["sum_at_discount"] = Math.Round(
+                                Convert.ToDouble(row["quantity"]) * Convert.ToDouble(row["price_at_discount"]),
+                                2, MidpointRounding.AwayFromZero);
+
+                            appliedDiscounts += canDiscount;
                         }
                     }
-
-                    // Обновляем количество товаров из первого списка
-                    if (firstListItems.ContainsKey(tovar_code))
-                    {
-                        firstListItems[tovar_code] += quantity_of_pieces;
-                    }
                 }
 
-                // Находим минимальное количество для применения скидки
-                if (listQuantities.Any())
-                {
-                    min_quantity = listQuantities.Values.Min();
-                }
-
-                // Применяем скидку к товарам из первого списка
-                ApplyDiscountsToEligibleItems(dtCopy, num_doc, percent, min_quantity, firstListItems);
-
-                if (min_quantity != 0)
-                {
-                    //Помечаем товары, участвовавшие в акции
-                    marked_action_tovar_dt(dtCopy, num_doc, comment);
-                }
+                if (appliedDiscounts >= kitsCount) break;
             }
-            catch (Exception ex)
+
+            if (appliedDiscounts > 0)
             {
-                await MessageBoxHelper.Show(ex.Message, "Ошибка при обработке 2 типа акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
-                MainStaticClass.WriteRecordErrorLog(ex, Convert.ToInt16(num_doc), MainStaticClass.CashDeskNumber, "Обработка акций 2 типа общий метод для чтения с диска и словаря");
+                marked_action_tovar_dt(dtCopy, num_doc, comment);
             }
         }
 

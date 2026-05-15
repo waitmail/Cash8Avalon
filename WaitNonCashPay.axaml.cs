@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -21,21 +22,20 @@ namespace Cash8Avalon
     public class TerminalResult
     {
         public bool IsSuccess { get; set; }
-        public string CodeResponse { get; set; } // Поле 39
-        public string CodeResponse15 { get; set; } // Поле 15 (для СБП статусов)
-        public string AuthorizationCode { get; set; } = string.Empty; // Поле 13
-        public string ReferenceNumber { get; set; } = string.Empty; // Поле 14
-        public string RechargeNote { get; set; } = string.Empty; // Поле 90
+        public string CodeResponse { get; set; }
+        public string CodeResponse15 { get; set; }
+        public string AuthorizationCode { get; set; } = string.Empty;
+        public string ReferenceNumber { get; set; } = string.Empty;
+        public string RechargeNote { get; set; } = string.Empty;
         public string ErrorMessage { get; set; }
 
-        // Информация о попытках
         public int AttemptsCount { get; set; } = 1;
         public List<string> AttemptErrors { get; set; } = new List<string>();
 
-        public static TerminalResult CreateError(string message)
-        {
-            return new TerminalResult { IsSuccess = false, ErrorMessage = message };
-        }
+        // ★ ДОБАВЛЕНО: Храним оригинальное исключение для JSON-логирования
+        public Exception Exception { get; set; }
+
+        public static TerminalResult CreateError(string message) => new TerminalResult { IsSuccess = false, ErrorMessage = message };
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ namespace Cash8Avalon
     {
         // Настройки повторных попыток
         private const int MaxRetryAttempts = 3;
-        private const int RetryDelayMs = 1000;
+        private const int RetryDelayMs = 3000;
 
         // Поля для управления состоянием окна
         private CancellationTokenSource _cts;
@@ -216,12 +216,87 @@ namespace Cash8Avalon
 
         #region HTTP запрос (Retry Logic)
 
+        //private async Task<TerminalResult> SendRequestWithRetryAsync(CancellationToken cancellationToken)
+        //{
+        //    TerminalResult lastResult = null;
+        //    var attemptErrors = new List<string>();
+
+        //    // ИСПРАВЛЕНО: Минимум 20 секунд на запрос
+        //    int singleRequestTimeout = Math.Max(20, (_totalSeconds - (MaxRetryAttempts - 1) * (RetryDelayMs / 1000)) / MaxRetryAttempts);
+
+        //    using var overallTimeoutCts = new CancellationTokenSource(_totalSeconds * 1000);
+        //    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, overallTimeoutCts.Token);
+
+        //    for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
+        //    {
+        //        if (linkedCts.Token.IsCancellationRequested || _isClosed)
+        //            return TerminalResult.CreateError("Операция отменена");
+
+        //        _currentAttempt = attempt;
+        //        UpdateAttemptDisplay(attempt, MaxRetryAttempts);
+
+        //        // Логирование попытки
+        //        MainStaticClass.write_event_in_log($"Попытка {attempt}/{MaxRetryAttempts} отправки на {Url}", "Terminal", cc?.numdoc.ToString() ?? "0");
+
+        //        try
+        //        {
+        //            lastResult = await SendRequestAsync(Url, Data, singleRequestTimeout).ConfigureAwait(false);
+        //            lastResult.AttemptErrors = attemptErrors;
+        //            lastResult.AttemptsCount = attempt;
+
+        //            if (lastResult.IsSuccess)
+        //            {
+        //                InvokeCommandCompleted(lastResult);
+        //                return lastResult;
+        //            }
+
+        //            attemptErrors.Add($"Попытка {attempt}: {lastResult.ErrorMessage}");
+
+        //            if (!IsRetryableError(lastResult))
+        //            {
+        //                InvokeCommandCompleted(lastResult);
+        //                return lastResult;
+        //            }
+
+        //            // Экспоненциальная задержка (1с, 2с, 3с)
+        //            if (attempt < MaxRetryAttempts)
+        //            {
+        //                try { await Task.Delay(RetryDelayMs * attempt, linkedCts.Token).ConfigureAwait(false); }
+        //                catch (OperationCanceledException) { return TerminalResult.CreateError("Превышено время ожидания"); }
+        //            }
+        //        }
+        //        catch (OperationCanceledException) when (overallTimeoutCts.Token.IsCancellationRequested)
+        //        {
+        //            return TerminalResult.CreateError($"Превышено общее время ожидания ({_totalSeconds} сек).");
+        //        }
+        //        catch (OperationCanceledException) { throw; }
+        //        catch (Exception ex)
+        //        {
+        //            attemptErrors.Add($"Попытка {attempt}: {ex.Message}");
+        //            lastResult = TerminalResult.CreateError(ex.Message);
+        //            if (attempt < MaxRetryAttempts)
+        //            {
+        //                try { await Task.Delay(RetryDelayMs * attempt, linkedCts.Token).ConfigureAwait(false); }
+        //                catch (OperationCanceledException) { return TerminalResult.CreateError("Превышено время ожидания"); }
+        //            }
+        //        }
+        //    }
+
+        //    if (lastResult != null)
+        //    {
+        //        InvokeCommandCompleted(lastResult);
+        //        if (attemptErrors.Count > 1) lastResult.ErrorMessage = $"После {MaxRetryAttempts} попыток:\n\n{lastResult.ErrorMessage}";
+        //    }
+        //    else lastResult = TerminalResult.CreateError("Все попытки исчерпаны");
+
+        //    return lastResult;
+        //}
+
         private async Task<TerminalResult> SendRequestWithRetryAsync(CancellationToken cancellationToken)
         {
             TerminalResult lastResult = null;
             var attemptErrors = new List<string>();
 
-            // ИСПРАВЛЕНО: Минимум 20 секунд на запрос
             int singleRequestTimeout = Math.Max(20, (_totalSeconds - (MaxRetryAttempts - 1) * (RetryDelayMs / 1000)) / MaxRetryAttempts);
 
             using var overallTimeoutCts = new CancellationTokenSource(_totalSeconds * 1000);
@@ -230,17 +305,33 @@ namespace Cash8Avalon
             for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
             {
                 if (linkedCts.Token.IsCancellationRequested || _isClosed)
-                    return TerminalResult.CreateError("Операция отменена");
+                {
+                    var cancelResult = TerminalResult.CreateError("Операция отменена");
+                    LogTerminalErrorToDb(cancelResult, "Retry_Cancel");
+                    return cancelResult;
+                }
 
                 _currentAttempt = attempt;
                 UpdateAttemptDisplay(attempt, MaxRetryAttempts);
 
-                // Логирование попытки
                 MainStaticClass.write_event_in_log($"Попытка {attempt}/{MaxRetryAttempts} отправки на {Url}", "Terminal", cc?.numdoc.ToString() ?? "0");
 
                 try
                 {
-                    lastResult = await SendRequestAsync(Url, Data, singleRequestTimeout).ConfigureAwait(false);
+                    // ★ РАСКОММЕНТИРОВАНА И ИСПРАВЛЕНА ЛОГИКА ДИНАМИЧЕСКОГО ТАЙМАУТА ★
+                    int currentRequestTimeout = singleRequestTimeout;
+
+                    // Если это не первая попытка И предыдущая ошибка была "мгновенной" (сеть мертва) — 
+                    // жестко ставим 5 секунд на ВЕСЬ запрос. Нет смысла ждать 20 сек, если хост выключен.
+                    if (attempt > 1 && lastResult != null && IsImmediateNetworkError(lastResult.ErrorMessage))
+                    {
+                        currentRequestTimeout = 5;
+                        MainStaticClass.write_event_in_log(
+                            $"[Retry] Предыдущая ошибка мгновенная, сокращаю общий таймаут до {currentRequestTimeout} сек",
+                            "Terminal", cc?.numdoc.ToString() ?? "0");
+                    }
+
+                    lastResult = await SendRequestAsync(Url, Data, currentRequestTimeout).ConfigureAwait(false);
                     lastResult.AttemptErrors = attemptErrors;
                     lastResult.AttemptsCount = attempt;
 
@@ -254,86 +345,237 @@ namespace Cash8Avalon
 
                     if (!IsRetryableError(lastResult))
                     {
+                        LogTerminalErrorToDb(lastResult, "Retry_BusinessError");
                         InvokeCommandCompleted(lastResult);
                         return lastResult;
                     }
 
-                    // Экспоненциальная задержка (1с, 2с, 3с)
                     if (attempt < MaxRetryAttempts)
                     {
-                        try { await Task.Delay(RetryDelayMs * attempt, linkedCts.Token).ConfigureAwait(false); }
-                        catch (OperationCanceledException) { return TerminalResult.CreateError("Превышено время ожидания"); }
+                        int delayMs = RetryDelayMs; // Фиксированная пауза 3 секунды
+                        int delaySec = delayMs / 1000;
+
+                        string shortError = lastResult.ErrorMessage?.Split('\n').FirstOrDefault() ?? "Ошибка связи";
+                        if (!string.IsNullOrEmpty(shortError) && shortError.Length > 60)
+                            shortError = shortError.Substring(0, 57) + "...";
+
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (StatusLabel != null)
+                            {
+                                StatusLabel.Text = $"Попытка {attempt} из {MaxRetryAttempts}: {shortError}\nПовтор через {delaySec} сек...";
+                                StatusLabel.Foreground = Brushes.Orange;
+                            }
+                        });
+
+                        try { await Task.Delay(delayMs, linkedCts.Token).ConfigureAwait(false); }
+                        catch (OperationCanceledException)
+                        {
+                            var delayCancelResult = TerminalResult.CreateError("Превышено время ожидания при задержке");
+                            LogTerminalErrorToDb(delayCancelResult, "Retry_DelayCancel");
+                            return delayCancelResult;
+                        }
                     }
                 }
                 catch (OperationCanceledException) when (overallTimeoutCts.Token.IsCancellationRequested)
                 {
-                    return TerminalResult.CreateError($"Превышено общее время ожидания ({_totalSeconds} сек).");
+                    var overallTimeoutResult = TerminalResult.CreateError($"Превышено общее время ожидания ({_totalSeconds} сек).");
+                    LogTerminalErrorToDb(overallTimeoutResult, "Retry_OverallTimeout");
+                    return overallTimeoutResult;
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     attemptErrors.Add($"Попытка {attempt}: {ex.Message}");
                     lastResult = TerminalResult.CreateError(ex.Message);
+                    lastResult.Exception = ex;
+
                     if (attempt < MaxRetryAttempts)
                     {
-                        try { await Task.Delay(RetryDelayMs * attempt, linkedCts.Token).ConfigureAwait(false); }
-                        catch (OperationCanceledException) { return TerminalResult.CreateError("Превышено время ожидания"); }
+                        int delayMs = RetryDelayMs; // ★ ИСПРАВЛЕНО: Фиксированная пауза 3 секунды (было RetryDelayMs * attempt)
+                        int delaySec = delayMs / 1000;
+
+                        string shortError = ex.Message?.Split('\n').FirstOrDefault() ?? "Критическая ошибка";
+                        if (!string.IsNullOrEmpty(shortError) && shortError.Length > 60)
+                            shortError = shortError.Substring(0, 57) + "...";
+
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (StatusLabel != null)
+                            {
+                                StatusLabel.Text = $"Попытка {attempt} из {MaxRetryAttempts}: {shortError}\nПовтор через {delaySec} сек...";
+                                StatusLabel.Foreground = Brushes.Orange;
+                            }
+                        });
+
+                        try { await Task.Delay(delayMs, linkedCts.Token).ConfigureAwait(false); }
+                        catch (OperationCanceledException)
+                        {
+                            var exceptionDelayResult = TerminalResult.CreateError("Превышено время ожидания");
+                            LogTerminalErrorToDb(exceptionDelayResult, "Retry_ExceptionDelayCancel");
+                            return exceptionDelayResult;
+                        }
                     }
                 }
             }
 
             if (lastResult != null)
             {
+                LogTerminalErrorToDb(lastResult, "Retry_AllRetriesFailed");
+
                 InvokeCommandCompleted(lastResult);
-                if (attemptErrors.Count > 1) lastResult.ErrorMessage = $"После {MaxRetryAttempts} попыток:\n\n{lastResult.ErrorMessage}";
+
+                if (attemptErrors.Count > 1)
+                {
+                    var errorSummary = string.Join("\n", attemptErrors.Select((e, i) =>
+                    {
+                        string msg = e.Split('\n').FirstOrDefault() ?? e;
+                        if (msg.Length > 80) msg = msg.Substring(0, 77) + "...";
+                        return $"[{i + 1}] {msg}";
+                    }));
+
+                    lastResult.ErrorMessage = $"❌ Не удалось выполнить операцию после {MaxRetryAttempts} попыток.\n\n" +
+                                              $"Детали:\n{errorSummary}\n\n" +
+                                              $"Последняя ошибка:\n{lastResult.ErrorMessage}";
+                }
             }
-            else lastResult = TerminalResult.CreateError("Все попытки исчерпаны");
+            else
+            {
+                lastResult = TerminalResult.CreateError("Все попытки исчерпаны");
+                LogTerminalErrorToDb(lastResult, "Retry_UnknownFail");
+            }
 
             return lastResult;
+        }
+
+        /// <summary>
+        /// Протоколирует ошибку терминала в БД с максимальной детализацией для диагностики
+        /// </summary>
+        private void LogTerminalErrorToDb(TerminalResult result, string contextMethod)
+        {
+            if (result == null || result.IsSuccess) return;
+
+            try
+            {
+                // ВНИМАНИЕ: Замените MainStaticClass.CashDeskNumber на ваше реальное свойство!
+                short cashDesk = MainStaticClass.CashDeskNumber;
+
+                long numDoc = 0;
+                if (cc != null)
+                {
+                    numDoc = cc.numdoc;
+                }
+
+                // ★ Формируем описание, в которое упаковываем ВСЮ диагностическую информацию ★
+                // Включаем имя метода, коды ответа терминала и количество попыток.
+                string description = $"[{contextMethod}] Code39: '{result.CodeResponse ?? "null"}', Code15: '{result.CodeResponse15 ?? "null"}', Attempts: {result.AttemptsCount}";
+
+                // Обрезаем, чтобы влезло в 255 символов в БД
+                if (description.Length > 255) description = description.Substring(0, 252) + "...";
+
+                if (result.Exception != null)
+                {
+                    // Это технический сбой (сеть, таймаут сокета). 
+                    // Вызываем ваш оригинальный метод с Exception (без изменения его сигнатуры).
+                    // JSON-сериализатор внутри него упакует StackTrace и InnerException.
+                    MainStaticClass.WriteRecordErrorLog(result.Exception, numDoc, cashDesk, description);
+                }
+                else
+                {
+                    // Это бизнес-ошибка (терминал ответил, но отказал).
+                    // Формируем строку для первого метода логирования
+                    string errorMessage = result.ErrorMessage?.Split('\n').FirstOrDefault() ?? "Неизвестная ошибка терминала";
+
+                    // Приклеиваем код ответа к сообщению, чтобы оно 100% попало в error_message
+                    errorMessage += $" [Code39: {result.CodeResponse ?? "null"}]";
+
+                    if (errorMessage.Length > 255) errorMessage = errorMessage.Substring(0, 252) + "...";
+
+                    // Вызываем ваш оригинальный строковый метод логирования
+                    MainStaticClass.WriteRecordErrorLog(errorMessage, contextMethod, numDoc, cashDesk, description);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Если сама БД недоступна, пишем хотя бы в текстовый лог
+                MainStaticClass.write_event_in_log($"[LogTerminalErrorToDb] Ошибка записи в БД: {ex.Message}", "TerminalLog", cc?.numdoc.ToString() ?? "0");
+            }
         }
 
         /// <summary>
         /// Отправляет POST-запрос к терминалу и парсит XML-ответ.
         /// Не показывает окно, не управляет таймером — только сетевая логика.
         /// </summary>
+        //public static async Task<TerminalResult> SendRequestAsync(string url, string data, int timeoutSeconds = 80)
+        //{
+        //    try
+        //    {
+        //        // ★ НОВОЕ: Ограничиваем таймаут ПОДКЛЮЧЕНИЯ 5 секундами.
+        //        // Если терминал выключен или IP неверный, мы получим отлуп за 5 секунд, 
+        //        // а не будем висеть 20-30 секунд, ожидая ответа от маршрутизатора.
+        //        var handler = new SocketsHttpHandler
+        //        {
+        //            ConnectTimeout = TimeSpan.FromSeconds(5)
+        //        };
+
+        //        using var client = new HttpClient(handler);
+        //        client.Timeout = TimeSpan.FromSeconds(timeoutSeconds); // Общий таймаут на весь запрос
+
+        //        var content = new StringContent(data, Encoding.GetEncoding("Windows-1251"), "text/xml");
+        //        var response = await client.PostAsync(url, content).ConfigureAwait(false);
+        //        var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        //        if (!response.IsSuccessStatusCode)
+        //        {
+        //            return TerminalResult.CreateError(GetHttpErrorMessage(response.StatusCode, response.ReasonPhrase));
+        //        }
+
+        //        return ParseResponse(responseContent);
+        //    }
+        //    catch (TaskCanceledException ex)
+        //    {
+        //        var res = TerminalResult.CreateError("Терминал не ответил вовремя.\n\nПроверьте:\n• Терминал включен\n• Сетевой кабель подключен");
+        //        res.Exception = ex;
+        //        return res;
+        //    }
+        //    catch (HttpRequestException ex)
+        //    {
+        //        var res = TerminalResult.CreateError(GetNetworkErrorMessage(ex));
+        //        res.Exception = ex;
+        //        return res;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        var res = TerminalResult.CreateError(GetUserFriendlyMessage(ex, "Неожиданная ошибка"));
+        //        res.Exception = ex;
+        //        return res;
+        //    }
+        //}
+
+        /// <summary>
+        /// Отправляет POST-запрос к терминалу и парсит XML-ответ.
+        /// Не показывает окно, не управляет таймером — только сетевая логика.
+        /// </summary>
+        /// <summary>
+        /// Отправляет POST-запрос к терминалу и парсит XML-ответ.
+        /// </summary>
         public static async Task<TerminalResult> SendRequestAsync(string url, string data, int timeoutSeconds = 80)
         {
-//#if DEBUG
-//            if (System.Diagnostics.Debugger.IsAttached)
-//            {
-//                System.Diagnostics.Debugger.Break();
-//            }
-//#endif
-
-            //string mockXmlResponse = @"<?xml version=""1.0"" encoding=""windows-1251"" standalone=""no""?>
-            //<response>
-            //    <field id=""0"">25800</field>
-            //    <field id=""4"">643</field>
-            //    <field id=""6"">20260414155022</field>
-            //    <field id=""9"">0</field>
-            //    <field id=""10"">************6199</field>
-            //    <field id=""13"">244171</field>
-            //    <field id=""14"">114658723171</field>
-            //    <field id=""15"">001</field>
-            //    <field id=""19"">ОДОБРЕНО</field>
-            //    <field id=""21"">20260414155020</field>
-            //    <field id=""23"">0</field>
-            //    <field id=""25"">1</field>
-            //    <field id=""26"">0</field>
-            //    <field id=""27"">W0260144</field>
-            //    <field id=""28"">00000000</field>
-            //    <field id=""39"">1</field>
-            //    <field hex=""true"" id=""86"">EE38D10436313939D22845423638344138413137323334454344383238413344443230314136384242433230354442454237D306323230303033</field>
-            //    <field id=""90"">0x4F^^A0000006581010~0x95^^95058080008000~0xDD^^ /~0xDE^^МИР КРЕДИТ PIX 1010~</field>
-            //</response>";
-
-            //MainStaticClass.write_event_in_log("ВНИМАНИЕ: Используется ЗАГЛУШКА терминала (MOCK)", "Terminal", "0");
-            //return ParseResponse(mockXmlResponse);
-
-
             try
             {
-                using var client = new HttpClient();
+                // ★ НОВОЕ: Полный контроль над таймаутами через SocketsHttpHandler ★
+                var handler = new SocketsHttpHandler
+                {
+                    // Таймаут на установку TCP-соединения. Если терминал выключен, отвалится за 3 секунды.
+                    ConnectTimeout = TimeSpan.FromSeconds(3),
+
+                    // Отключаем пулинг для терминалов — каждый запрос "с нуля"
+                    PooledConnectionLifetime = TimeSpan.Zero,
+                };
+
+                using var client = new HttpClient(handler);
+
+                // Общий таймаут на ВСЁ (DNS + connect + send + wait for PIN + read)
                 client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
                 var content = new StringContent(data, Encoding.GetEncoding("Windows-1251"), "text/xml");
@@ -342,72 +584,182 @@ namespace Cash8Avalon
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    // ИСПРАВЛЕНО: Вернул понятные сообщения
                     return TerminalResult.CreateError(GetHttpErrorMessage(response.StatusCode, response.ReasonPhrase));
                 }
 
                 return ParseResponse(responseContent);
             }
-            catch (TaskCanceledException)
+            // ★ УЛУЧШЕННАЯ ЛОВУШКА ТАЙМАУТОВ ★
+            // SocketsHttpHandler при срабатывании ConnectTimeout выбрасывает именно TaskCanceledException 
+            // с InnerException типа TimeoutException.
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
             {
-                return TerminalResult.CreateError("Терминал не ответил вовремя.\n\nПроверьте:\n• Терминал включен\n• Сетевой кабель подключен");
+                // Это точно таймаут подключения (терминал не найден в сети за 3 секунды)
+                var res = TerminalResult.CreateError("Терминал не найден в сети.\n\nПроверьте:\n• Терминал включен\n• Сетевой кабель подключен\n• IP-адрес указан верно");
+                res.Exception = ex;
+                return res;
+            }
+            catch (TaskCanceledException ex)
+            {
+                // Это общий таймаут (client.Timeout) или отмена через CancellationToken
+                var res = TerminalResult.CreateError("Терминал не ответил вовремя (завис или долго обрабатывает).\n\nПроверьте терминал.");
+                res.Exception = ex;
+                return res;
+            }
+            catch (HttpRequestException ex) when (ex.Message.Contains("Connection refused") || ex.InnerException is System.Net.Sockets.SocketException { SocketErrorCode: System.Net.Sockets.SocketError.ConnectionRefused })
+            {
+                // Мгновенный отлуп — порт закрыт (терминал работает, но сервис банка не запущен)
+                var res = TerminalResult.CreateError("Не удалось подключиться к терминалу (соединение отклонено).\n\nПроверьте:\n• Терминал включен\n• Перезагрузите терминал");
+                res.Exception = ex;
+                return res;
             }
             catch (HttpRequestException ex)
             {
-                // ИСПРАВЛЕНО: Вернул понятные сообщения
-                return TerminalResult.CreateError(GetNetworkErrorMessage(ex));
+                // Другие сетевые ошибки (DNS не найден и т.д.)
+                var res = TerminalResult.CreateError(GetNetworkErrorMessage(ex));
+                res.Exception = ex;
+                return res;
             }
             catch (Exception ex)
             {
-                return TerminalResult.CreateError(GetUserFriendlyMessage(ex, "Неожиданная ошибка"));
+                var res = TerminalResult.CreateError(GetUserFriendlyMessage(ex, "Неожиданная ошибка"));
+                res.Exception = ex;
+                return res;
             }
         }
 
         /// <summary>
+        /// Определяет, является ли ошибка сетевой и «мгновенной» (хост не доступен, соединение отклонено и т.п.)
+        /// Такие ошибки не требуют долгого ожидания ответа — можно сразу пробовать снова с коротким таймаутом.
+        /// </summary>
+        private static bool IsImmediateNetworkError(string errorMessage)
+        {
+            if (string.IsNullOrEmpty(errorMessage)) return false;
+
+            var error = errorMessage.ToLower();
+
+            var immediatePhrases = new[] {
+                "connection refused", "не удалось подключиться", "нет соединения",
+                "не найден", "not found", "404", "name resolution failure",
+                "no such host", "host unreachable", "network unreachable",
+                "socketexception", "connectionreset", "forcibly closed"
+                // "терминал не отвечает" - УБРАНО! Если терминал найден, но тупит, даем ему 20 сек
+            };
+
+            return immediatePhrases.Any(p => error.Contains(p));
+        }
+
+        ///// <summary>
+        ///// Определяет, стоит ли повторять запрос при данной ошибке.
+        ///// Логика настроена по документации РНКБ.
+        ///// </summary>
+        //private bool IsRetryableError(TerminalResult result)
+        //{
+        //    if (result.IsSuccess) return false;
+
+        //    string error = result.ErrorMessage?.ToLower() ?? "";
+        //    string code = result.CodeResponse ?? "";
+
+        //    // 1. Коды, при которых точно НЕЛЬЗЯ повторять автоматически
+        //    // 16 - Отказано (банк отклонил)
+        //    // 53 - Прервана (действие пользователя)
+        //    // 2 - Частичное одобрение (требует внимания кассира)
+        //    if (code == "16" || code == "53" || code == "2")
+        //        return false;
+
+        //    // 2. Коды, при которых НУЖНО повторять (сетевые/временные проблемы)
+        //    // 34 - Нет соединения
+        //    // 0 - Неопределенный статус (может быть временный сбой)
+        //    if (code == "34" || code == "0")
+        //        return true;
+
+        //    // 3. Анализ текста ошибки (если код пустой или нестандартный)
+        //    // Сетевые ошибки - повторяем
+        //    var retryablePhrases = new[] {
+        //        "нет соединения", "timeout", "не отвечает", "connection refused",
+        //        "сетевое подключение", "временно недоступен", "превышено время",
+        //        "нет соединен" // частичный вариант
+        //    };
+        //            foreach (var p in retryablePhrases)
+        //                if (error.Contains(p)) return true;
+
+        //            // Ошибки карты/банка (по тексту) - не повторяем
+        //            var nonRetryablePhrases = new[] {
+        //        "отказано", "недостаточно средств", "неверный pin",
+        //        "срок действия", "карта заблокирована", "операция прервана",
+        //        "одобрена не на полную сумму"
+        //    };
+        //    foreach (var p in nonRetryablePhrases)
+        //        if (error.Contains(p)) return false;
+
+        //    // По умолчанию: если код ответа не "1" (успех), считаем, что это сетевой сбой и пробуем еще раз
+        //    return !string.IsNullOrEmpty(code) && code != "1";
+        //}
+
+        /// <summary>
         /// Определяет, стоит ли повторять запрос при данной ошибке.
-        /// Логика настроена по документации РНКБ.
         /// </summary>
         private bool IsRetryableError(TerminalResult result)
         {
             if (result.IsSuccess) return false;
 
-            string error = result.ErrorMessage?.ToLower() ?? "";
+            string error = (result.ErrorMessage ?? "").ToLower();
             string code = result.CodeResponse ?? "";
 
-            // 1. Коды, при которых точно НЕЛЬЗЯ повторять автоматически
-            // 16 - Отказано (банк отклонил)
-            // 53 - Прервана (действие пользователя)
-            // 2 - Частичное одобрение (требует внимания кассира)
-            if (code == "16" || code == "53" || code == "2")
+            MainStaticClass.write_event_in_log(
+                $"[RetryCheck] Code: '{code}', Error: '{result.ErrorMessage}'",
+                "Terminal", cc?.numdoc.ToString() ?? "0");
+
+            // 1. Коды, при которых точно НЕЛЬЗЯ повторять (бизнес-ошибки)
+            if (code == "16" || code == "53")
+            {
+                MainStaticClass.write_event_in_log("[RetryCheck] Non-retryable code", "Terminal", "0");
                 return false;
+            }
 
             // 2. Коды, при которых НУЖНО повторять (сетевые/временные проблемы)
-            // 34 - Нет соединения
-            // 0 - Неопределенный статус (может быть временный сбой)
-            if (code == "34" || code == "0")
+            if (code == "34" || code == "0" || string.IsNullOrEmpty(code))
+            {
+                MainStaticClass.write_event_in_log("[RetryCheck] Retryable code or empty", "Terminal", "0");
                 return true;
+            }
 
-            // 3. Анализ текста ошибки (если код пустой или нестандартный)
-            // Сетевые ошибки - повторяем
+            // 3. Анализ текста ошибки
             var retryablePhrases = new[] {
-                "нет соединения", "timeout", "не отвечает", "connection refused",
-                "сетевое подключение", "временно недоступен", "превышено время",
-                "нет соединен" // частичный вариант
-            };
-                    foreach (var p in retryablePhrases)
-                        if (error.Contains(p)) return true;
+        "нет соединения", "timeout", "не отвечает", "connection refused",
+        "сетевое подключение", "временно недоступен", "превышено время",
+        "нет соединен", "не найден", "name resolution failure",
+        "no such host", "http 404", "http 502", "http 503", "http 504"
+    };
 
-                    // Ошибки карты/банка (по тексту) - не повторяем
-                    var nonRetryablePhrases = new[] {
-                "отказано", "недостаточно средств", "неверный pin",
-                "срок действия", "карта заблокирована", "операция прервана",
-                "одобрена не на полную сумму"
-            };
+            foreach (var p in retryablePhrases)
+            {
+                if (error.Contains(p))
+                {
+                    MainStaticClass.write_event_in_log($"[RetryCheck] Retryable phrase found: '{p}'", "Terminal", "0");
+                    return true;
+                }
+            }
+
+            var nonRetryablePhrases = new[] {
+        "отказано", "недостаточно средств", "неверный pin",
+        "срок действия", "карта заблокирована", "операция прервана",
+        "одобрена не на полную сумму"
+    };
+
             foreach (var p in nonRetryablePhrases)
-                if (error.Contains(p)) return false;
+            {
+                if (error.Contains(p))
+                {
+                    MainStaticClass.write_event_in_log($"[RetryCheck] Non-retryable phrase found: '{p}'", "Terminal", "0");
+                    return false;
+                }
+            }
 
-            // По умолчанию: если код ответа не "1" (успех), считаем, что это сетевой сбой и пробуем еще раз
-            return !string.IsNullOrEmpty(code) && code != "1";
+            // 4. ИСПРАВЛЕННЫЙ Default: если код пустой ИЛИ это не явный успех "1" — пробуем еще раз
+            // Это ключевое изменение для обработки сетевых ошибок
+            MainStaticClass.write_event_in_log($"[RetryCheck] Default fallback -> Retry", "Terminal", "0");
+            return string.IsNullOrEmpty(code) || code != "1";
         }
 
         private void InvokeCommandCompleted(TerminalResult result)
@@ -555,11 +907,11 @@ namespace Cash8Avalon
 
                 "1" => "Операция одобрена.", // Обычно не выводится как ошибка
 
-                "2" => "Внимание! Операция «Оплата» одобрена НЕ на полную сумму.\n\n" +
-                       "При использовании СБП сверка итогов успешна только на хосте банка.\n" +
-                       "Проверьте сумму на терминале.",
+                //"2" => "Внимание! Операция «Оплата» одобрена НЕ на полную сумму.\n\n" +
+                //       "При использовании СБП сверка итогов успешна только на хосте банка.\n" +
+                //       "Проверьте сумму на терминале.",
 
-                "16" => "Отказано.\n\nТранзакция проведена, но ее одобрение не получено.\n" +
+                "16" => "Отказано.\n\n" +
                         "Возможные причины:\n" +
                         "• Недостаточно средств\n" +
                         "• Неверный PIN-код\n" +

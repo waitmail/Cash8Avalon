@@ -769,13 +769,23 @@ namespace Cash8Avalon
                 if (status == "-1")
                 {
                     await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
-                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error,this);
 
                     MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами",
                         "CheckSertificateActive", 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
                     return false;
                 }
 
+                if (status == "-2")
+                {
+                    await MessageBox.Show($"Сертификат {sertificateCode} не принадлежит вашей сети",
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+
+                    MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
+                    return false;
+                }
+
+                
                 string decryptData = CryptorEngine.Decrypt(status, true, key);
 
                 switch (decryptData)
@@ -786,10 +796,11 @@ namespace Cash8Avalon
 
                     case "0":
                         await MessageBox.Show($"Сертификат {sertificateCode} не активирован",
-                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
+                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
 
                         MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
                         return false;
+                   
 
                     default:
                         await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",

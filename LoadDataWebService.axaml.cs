@@ -771,6 +771,7 @@ namespace Cash8Avalon
         {
             NpgsqlConnection conn = null;
             NpgsqlTransaction tran = null;
+            string queryActual = "";
 
             try
             {
@@ -790,6 +791,7 @@ namespace Cash8Avalon
                 foreach (string query in queries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    queryActual = query;
 
                     using (var command = new NpgsqlCommand(query, conn))
                     {
@@ -838,9 +840,10 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
+
                 string errorMsg = $"Ошибка базы данных: {ex.Message}";
                 Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
-
+                await MessageBox.Show($"Ошибка базы данных: {ex.Message}" + queryActual, "Ошибка при загрузке", MessageBoxButton.OK, MessageBoxType.Error, MainStaticClass.MainWindow);
                 if (tran != null)
                 {
                     try { await tran.RollbackAsync(cancellationToken); } catch { }
@@ -1539,12 +1542,12 @@ namespace Cash8Avalon
         {
             try
             {
-#if DEBUG
-                if (System.Diagnostics.Debugger.IsAttached)
-                {
-                    System.Diagnostics.Debugger.Break();
-                }
-#endif
+//#if DEBUG
+//                if (System.Diagnostics.Debugger.IsAttached)
+//                {
+//                    System.Diagnostics.Debugger.Break();
+//                }
+//#endif
 
                 DS ds = await ServiceLocator.DsAsync();
                 ds.Timeout = 60000;
@@ -1785,25 +1788,79 @@ namespace Cash8Avalon
         {
             try
             {
+                // === ЭШЕЛОН ЗАЩИТЫ 1: Время из будущего ===
+                // Если пороговое время почему-то оказалось в будущем, останавливаемся
+                if (syncThresholdTime > DateTime.Now.AddMinutes(1))
+                {
+                    string errorMsg = $"[ОЧИСТКА МУСОРА] ОТМЕНА! Пороговое время синхронизации ({syncThresholdTime}) находится в будущем.";
+                    Console.WriteLine(errorMsg);
+                    MainStaticClass.WriteRecordErrorLog(errorMsg, "CleanUpOrphanClients", 0, MainStaticClass.CashDeskNumber, "ОШИБКА БЕЗОПАСНОСТИ");
+                    return;
+                }
+
                 using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
                 {
                     await conn.OpenAsync();
 
-                    // Удаляем тех, кто не получил метку NOW() во время полной перезагрузки
-                    string deleteQuery = @"
-                DELETE FROM clients 
-                WHERE last_server_sync IS NULL 
-                   OR last_server_sync < @syncThresholdTime";
+                    // === ЭШЕЛОН ЗАЩИТЫ 2 И 3: Подсчет жертв перед удалением ===
 
-                    using (NpgsqlCommand cmd = new NpgsqlCommand(deleteQuery, conn))
+                    // 1. Считаем общее количество клиентов
+                    string countTotalQuery = "SELECT COUNT(1) FROM clients";
+                    using (NpgsqlCommand cmdTotal = new NpgsqlCommand(countTotalQuery, conn))
                     {
-                        cmd.Parameters.AddWithValue("@syncThresholdTime", syncThresholdTime);
-                        int deletedRows = await cmd.ExecuteNonQueryAsync();
+                        long totalClients = (long)await cmdTotal.ExecuteScalarAsync();
 
-                        if (deletedRows > 0)
+                        if (totalClients == 0) return; // База пуста, делать нечего
+
+                        // 2. Считаем сколько клиентов попадает под удаление
+                        string countToDeleteQuery = @"
+                    SELECT COUNT(1) FROM clients 
+                    WHERE last_server_sync IS NULL 
+                       OR last_server_sync < @syncThresholdTime";
+
+                        using (NpgsqlCommand cmdCountDelete = new NpgsqlCommand(countToDeleteQuery, conn))
                         {
-                            Console.WriteLine($"[ОЧИСТКА МУСОРА] Удалено осиротевших клиентов: {deletedRows}");
-                            MainStaticClass.WriteRecordErrorLog($"Удалено осиротевших клиентов: {deletedRows}", "CleanUpOrphanClients", 0, MainStaticClass.CashDeskNumber, "ИНФО");
+                            cmdCountDelete.Parameters.AddWithValue("@syncThresholdTime", syncThresholdTime);
+                            long clientsToDelete = (long)await cmdCountDelete.ExecuteScalarAsync();
+
+                            if (clientsToDelete == 0) return; // Нечего удалять
+
+                            // Вычисляем процент удаляемых клиентов
+                            decimal deletePercentage = (decimal)clientsToDelete / totalClients;
+
+                            // Настройки безопасности (можно менять под ваши реалии)
+                            const decimal MAX_ALLOWED_PERCENTAGE = 0.30m; // Максимально допустимый процент удаления (30%)
+                            const int MAX_ALLOWED_ABSOLUTE = 300000;       // Максимально допустимое число удаляемых записей за раз
+
+                            // Если попытка удалить больше 30% ИЛИ больше 5000 клиентов сразу — это АНОМАЛИЯ
+                            if (deletePercentage > MAX_ALLOWED_PERCENTAGE || clientsToDelete > MAX_ALLOWED_ABSOLUTE)
+                            {
+                                string errorMsg = $"[ОЧИСТКА МУСОРА] ОТМЕНА! Попытка удалить аномальное количество данных. " +
+                                                  $"Хотим удалить: {clientsToDelete} из {totalClients} ({deletePercentage:P0}). " +
+                                                  $"Лимиты: не более {MAX_ALLOWED_PERCENTAGE:P0} или {MAX_ALLOWED_ABSOLUTE} записей.";
+
+                                Console.WriteLine(errorMsg);
+                                MainStaticClass.WriteRecordErrorLog(errorMsg, "CleanUpOrphanClients", 0, MainStaticClass.CashDeskNumber, "ОШИБКА БЕЗОПАСНОСТИ");
+                                return; // АВАРИЙНАЯ ОСТАНОВКА ОЧИСТКИ
+                            }
+
+                            // === Если все проверки пройдены — безопасное удаление ===
+                            string deleteQuery = @"
+                        DELETE FROM clients 
+                        WHERE last_server_sync IS NULL 
+                           OR last_server_sync < @syncThresholdTime";
+
+                            using (NpgsqlCommand cmdDelete = new NpgsqlCommand(deleteQuery, conn))
+                            {
+                                cmdDelete.Parameters.AddWithValue("@syncThresholdTime", syncThresholdTime);
+                                int deletedRows = await cmdDelete.ExecuteNonQueryAsync();
+
+                                if (deletedRows > 0)
+                                {
+                                    Console.WriteLine($"[ОЧИСТКА МУСОРА] Безопасно удалено осиротевших клиентов: {deletedRows}");
+                                    MainStaticClass.WriteRecordErrorLog($"Удалено осиротевших клиентов: {deletedRows}", "CleanUpOrphanClients", 0, MainStaticClass.CashDeskNumber, "ИНФО");
+                                }
+                            }
                         }
                     }
                 }

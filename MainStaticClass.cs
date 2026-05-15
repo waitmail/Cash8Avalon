@@ -3055,7 +3055,7 @@ namespace Cash8Avalon
                 }
                 catch (Exception fileEx)
                 {
-                    MessageBox.Show($"Ошибка записи в лог: {fileEx.Message}");
+                    //MessageBox.Show($"Ошибка записи в лог: {fileEx.Message}");
 
                 }
             }
@@ -3761,13 +3761,13 @@ namespace Cash8Avalon
             resultGetData.Successfully = "Successfully";
             resultGetData.Version = MainStaticClass.version().Replace(".", "");
             resultGetData.NumCash = MainStaticClass.CashDeskNumber.ToString();
-            resultGetData.PrintingLibrary = MainStaticClass.PrintingUsingLibraries().ToString();
+            resultGetData.PrintingLibrary = (await MainStaticClass.PrintingUsingLibraries()).ToString();
             resultGetData.VariantUsePrintingLibrary = MainStaticClass.variant_connect_fn.ToString();
             resultGetData.VersionPrintingLibrary = await GetAtolDriverVersion();
             string data = JsonConvert.SerializeObject(resultGetData, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             data_encrypt = CryptorEngine.Encrypt(data, true, key);
             var ds = MainStaticClass.get_ds();
-            ds.Timeout = 60000;
+            ds.Timeout = 6000;
 
             try
             {
@@ -3802,43 +3802,7 @@ namespace Cash8Avalon
 
             // Return the hexadecimal string.
             return sBuilder.ToString();
-        }
-
-        //public static int check_new_shema_autenticate()
-        //{
-        //    int result = 0;
-
-        //    NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-        //    try
-        //    {
-        //        conn.Open();
-        //        string query = "SELECT COUNT(*)FROM information_schema.columns where table_name='users' and column_name='rights'";
-        //        NpgsqlCommand command = new NpgsqlCommand(query, conn);
-        //        result = Convert.ToInt16(command.ExecuteScalar());
-        //        conn.Close();
-        //        command.Dispose();
-        //    }
-        //    catch (NpgsqlException ex)
-        //    {
-        //        MessageBox.Show(" Ошика при определении схемы " + ex.Message);
-        //        result = -1;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show(" Ошика при определении схемы " + ex.Message);
-        //        result = -1;
-        //    }
-        //    finally
-        //    {
-        //        if (conn.State == ConnectionState.Open)
-        //        {
-        //            conn.Close();
-        //        }
-        //    }
-
-        //    return result;
-
-        //}
+        }        
 
         public static IWebProxy CreateWebProxyWithCredentials(String sUrl, string ProxyUserName, string ProxyUserPassword, string sAuthType, string ProxyUserDomain)
         {
@@ -5434,37 +5398,7 @@ namespace Cash8Avalon
             }
 
         }
-        //public static Int16 CashDeskNumber
-        //{
-        //    get
-        //    {
-        //        if (cashDeskNumber == 0)
-        //        {
-        //            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-        //            try
-        //            {
-        //                conn.Open();
-        //                string queryString = "SELECT cash_desk_number FROM constants";
-        //                NpgsqlCommand command = new NpgsqlCommand(queryString, conn);
-        //                cashDeskNumber = Convert.ToInt16(command.ExecuteScalar());
-        //                conn.Close();
-        //            }
-        //            catch (NpgsqlException ex)
-        //            {
-        //                MessageBox.Show("Ошибка при получении номера кассы" + ex.Message, "CashDeskNumber",MainStaticClass.MainWindow);
-        //            }
-        //            finally
-        //            {
-        //                if (conn.State == ConnectionState.Open)
-        //                {
-        //                    conn.Close();
-        //                }
-        //            }
-        //        }
-
-        //        return cashDeskNumber;
-        //    }
-        //}
+       
 
         public static Int16 CashDeskNumber
         {
@@ -5583,33 +5517,6 @@ namespace Cash8Avalon
                 return codekey;
             }
         }
-
-        //public static string CodeBase
-        //{
-        //    get
-        //    {
-        //        if (codebase == null)
-        //        {
-        //            NpgsqlConnection conn = MainStaticClass.NpgsqlConn();
-        //            conn.Open();
-        //            object rez = null;
-        //            string queryString = "SELECT numbase FROM urbd";
-        //            NpgsqlCommand command = new NpgsqlCommand(queryString, conn);
-        //            try
-        //            {
-        //                rez = command.ExecuteScalar();
-        //            }
-        //            catch
-        //            { }
-        //            conn.Close();
-        //            if (rez != null)
-        //            {
-        //                codebase = rez.ToString();
-        //            }
-        //        }
-        //        return codebase;
-        //    }
-        //}
 
         public static string IPAdrServer
         {
@@ -5788,38 +5695,7 @@ namespace Cash8Avalon
                 }
             }
         }
-        //public static StringReader DecryptData(string inName)
-        //{
-        //    string roundtrip = "";
-
-        //    using (FileStream fin = new FileStream(inName, FileMode.Open, FileAccess.Read))
-        //    {
-        //        // Для Rijndael в .NET Core/6+
-        //        using (RijndaelManaged rijndael = new RijndaelManaged())
-        //        {
-        //            rijndael.Key = EncryptedSymmetricKey;
-        //            rijndael.IV = EncryptedSymmetricIV;
-
-        //            using (CryptoStream encStream = new CryptoStream(
-        //                fin,
-        //                rijndael.CreateDecryptor(),
-        //                CryptoStreamMode.Read))
-        //            {
-        //                Encoding ascii = Encoding.UTF8;
-        //                byte[] bin = new byte[100];
-        //                int len;
-
-        //                while ((len = encStream.Read(bin, 0, 100)) > 0)
-        //                {
-        //                    roundtrip += ascii.GetString(bin, 0, len);
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    return new StringReader(roundtrip);
-        //}
-
+       
         public static bool exists_update_prorgam()
         {
             bool result = false;
@@ -5920,106 +5796,7 @@ namespace Cash8Avalon
             }
 
             return result;
-        }
-
-
-        //public static async Task<bool> CheckNewVersionProgramm()
-        //{
-        //    bool result = false;
-        //    // Создаем и запускаем секундомер
-        //    //var sw = System.Diagnostics.Stopwatch.StartNew();
-
-        //    //// Выполняем проверку
-        //    //bool isWorker = MainStaticClass.service_is_worker();
-
-        //    //// Останавливаем секундомер
-        //    //sw.Stop();
-
-        //    // Выводим результат
-        //    //await MessageBoxHelper.Show(
-        //    //    $"Проверка service_is_worker заняла: {sw.Elapsed.TotalMilliseconds:F2} мс\nРезультат: {isWorker}",
-        //    //    "Замер времени",
-        //    //    MessageBoxButton.OK,
-        //    //    MessageBoxType.Info,
-        //    //    MainStaticClass.MainWindow
-        //    //);
-
-        //    // Возвращаем результат как в оригинале
-        //    //if (!isWorker)
-        //    //{
-        //    //    MainStaticClass.ResetDsCache();
-        //    //    return false;
-        //    //}
-
-        //    //var ds = MainStaticClass.get_ds();
-        //    //System.Diagnostics.Debugger.Break();
-        //    var ds = await ServiceLocator.DsAsync().ConfigureAwait(false);
-        //    //System.Diagnostics.Debugger.Break();
-        //    ds.Timeout = 20000;
-
-
-
-        //    //// Проверяем, чтобы не получить NullReferenceException
-        //    //if (ds.Endpoint != null && ds.Endpoint.Binding != null)
-        //    //{
-        //    //    ds.Endpoint.Binding.SendTimeout = TimeSpan.FromMilliseconds(20000);
-        //    //}
-
-        //    string nick_shop = MainStaticClass.Nick_Shop.Trim();
-        //    string code_shop = MainStaticClass.Code_Shop.Trim();
-
-        //    if (string.IsNullOrEmpty(nick_shop) || string.IsNullOrEmpty(code_shop))
-        //        return false;
-
-        //    string count_day = CryptorEngine.get_count_day();
-        //    string key = nick_shop + count_day + code_shop;
-        //    string local_version = MainStaticClass.version();
-        //    string data = code_shop + "|" + local_version + "|" + code_shop;
-
-        //    try
-        //    {
-        //        string encrypted_data = CryptorEngine.Encrypt(data, true, key);
-
-        //        // ✅ Прямой синхронный вызов веб-сервиса (без async/await)
-        //        //string encrypted_response = ds.ExistsUpdateProrgamAvalon(
-        //        //    nick_shop,
-        //        //    encrypted_data,
-        //        //    MainStaticClass.GetWorkSchema.ToString());
-
-        //        ////string encrypted_response = await ds.ExistsUpdateProrgamAvalonAsync(
-        //        ////    nick_shop,
-        //        ////    encrypted_data,
-        //        ////    MainStaticClass.GetWorkSchema.ToString()).ConfigureAwait(false);
-
-        //        string encrypted_response = await Task.Run(async () =>
-        //        {
-        //            return await ds.ExistsUpdateProrgamAvalonAsync(
-        //                nick_shop,
-        //                encrypted_data,
-        //                MainStaticClass.GetWorkSchema.ToString());
-        //        }).ConfigureAwait(false);
-
-        //        if (string.IsNullOrEmpty(encrypted_response))
-        //            return result;
-
-        //        string server_version = CryptorEngine.Decrypt(encrypted_response, true, key);
-
-        //        if (long.TryParse(local_version, out var local_ver) &&
-        //            long.TryParse(server_version, out var server_ver))
-        //        {
-        //            result = server_ver > local_ver;
-        //        }
-        //    }
-        //    catch(Exception ex)
-        //    {
-        //        // Логируем ошибку при необходимости
-        //        Console.WriteLine($"[Update] Check error: {ex.Message}");
-        //        //MainStaticClass.ResetDsCache();
-        //        await ServiceLocator.ResetDsCacheAsync();
-        //    }
-
-        //    return result;
-        //}
+        }        
 
         public static async Task<bool> CheckNewVersionProgrammAsync()
         {
@@ -6081,225 +5858,7 @@ namespace Cash8Avalon
             }
 
             return result;
-        }
-
-        //// Основной публичный метод для проверки доступности ПИОТ
-        //public async static Task<bool> CheckPiotAvailable(Window owner)
-        //{
-        //    try
-        //    {
-        //        IFptr fptr = MainStaticClass.FPTR;
-
-        //        // 1. Инициализация и проверка подключения к ФР
-        //        if (!await InitializeFiscalRegistrar(fptr,owner))
-        //        {
-        //            return false;
-        //        }
-
-        //        // 2. Получение данных из ФР
-        //        FiscalRegistrarData frData = await GetFiscalRegistrarData(fptr, owner);
-        //        if (frData == null)
-        //        {
-        //            return false;
-        //        }
-
-        //        // 3. Получение данных из ПИОТ
-        //        PIOTData piotData = await GetPIOTData(owner);
-        //        if (piotData == null)
-        //        {
-        //            return false;
-        //        }
-
-        //        // 4. Сравнение данных
-        //        bool complete = await CompareData(frData, piotData, owner);
-
-        //        // 5. Вывод результата проверки (оставляем для обратной совместимости)
-        //        await ShowVerificationResult(complete, owner);
-
-        //        return complete;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await MessageBoxHelper.Show($"Произошла непредвиденная ошибка: {ex.Message}\r\nПроверка прервана!", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error);
-        //        return false;
-        //    }
-        //}
-
-
-        //// Метод для использования при старте приложения
-        //public async static Task<bool> InitializeAndCheckPiot(Window owner)
-        //{
-        //    return await CheckPiotAvailable(owner);
-        //}
-
-        //// 1. Зона ответственности: Инициализация и проверка подключения к ФР
-        //private async static Task<bool> InitializeFiscalRegistrar(IFptr fptr,Window owner)
-        //{
-        //    if (!fptr.isOpened())
-        //    {
-        //        fptr.open();
-        //    }
-
-        //    if (fptr.errorCode() != 0)
-        //    {
-        //        await MessageBoxHelper.Show($"При открытии соединения с ФР произошла ошибка {fptr.errorDescription()}\r\nПроверка прервана!", "Проверка ПИот",MessageBoxButton.OK, MessageBoxType.Error, owner);
-        //        return false;
-        //    }
-
-        //    return true;
-        //}
-
-        //// 2. Зона ответственности: Получение данных из ФР
-        //private async static Task<FiscalRegistrarData> GetFiscalRegistrarData(IFptr fptr,Window owner)
-        //{
-        //    var frData = new FiscalRegistrarData();
-
-        //    // Получение серийного номер ККТ - запрос статуса
-        //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_STATUS);
-        //    if (!await ExecuteFiscalQuery(fptr, false, owner))
-        //    {
-        //        return null;
-        //    }
-        //    frData.SerialNumber = fptr.getParamString(AtolConstants.LIBFPTR_PARAM_SERIAL_NUMBER);
-
-        //    // Получение серийного номер ФН - запрос реквизитов ОФД
-        //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_CACHE_REQUISITES);
-        //    if (!await ExecuteFiscalQuery(fptr, false, owner))
-        //    {
-        //        return null;
-        //    }
-        //    frData.SerialNumberFN = fptr.getParamString(AtolConstants.LIBFPTR_PARAM_FN_SERIAL_NUMBER);
-
-        //    // Получение ИНН организации - запрос регистрационной информации ФН
-        //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_FN_DATA_TYPE, AtolConstants.LIBFPTR_FNDT_REG_INFO);
-        //    if (!await ExecuteFiscalQuery(fptr, true, owner))
-        //    {
-        //        return null;
-        //    }
-        //    frData.OrganizationVATIN = fptr.getParamString(1018);
-
-        //    return frData;
-        //}
-
-        //private async static Task<bool> ExecuteFiscalQuery(IFptr fptr, bool isFnQuery,Window owner)
-        //{
-        //    if (isFnQuery)
-        //    {
-        //        fptr.fnQueryData();
-        //    }
-        //    else
-        //    {
-        //        fptr.queryData();
-        //    }
-
-        //    if (fptr.errorCode() != 0)
-        //    {
-        //        await MessageBoxHelper.Show($"При запросе данных из ФР произошла ошибка {fptr.errorDescription()}\r\nПроверка прервана!", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
-        //        return false;
-        //    }
-
-        //    return true;
-        //}
-
-        //// 3. Зона ответственности: Получение данных из ПИОТ
-        //private async static Task<PIOTData> GetPIOTData(Window owner)
-        //{
-        //    try
-        //    {
-        //        Piot piot = new Piot();
-        //        Piot.PiotInfo piotInfo = piot.GetPiotInfo();
-
-        //        return new PIOTData
-        //        {
-        //            KktSerial = piotInfo.kktSerial,
-        //            KktInn = piotInfo.kktInn,
-        //            FnSerial = piotInfo.fnSerial
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await MessageBoxHelper.Show($"При получении данных из ПИОТ произошла ошибка: {ex.Message}\r\nПроверка прервана!", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
-        //        return null;
-        //    }
-        //}
-
-        //// 4. Зона ответственности: Сравнение данных
-        //private async static Task<bool> CompareData(FiscalRegistrarData frData, PIOTData piotData,Window owner)
-        //{
-        //    bool complete = true;
-
-        //    // Сравнение серийных номеров ККТ
-        //    if (!string.Equals(frData.SerialNumber, piotData.KktSerial, StringComparison.OrdinalIgnoreCase))
-        //    {
-        //        await ShowComparisonError("Серийный номер ККТ", frData.SerialNumber, piotData.KktSerial, owner);
-        //        complete = false;
-        //    }
-
-        //    // Сравнение ИНН
-        //    if (!string.Equals(frData.OrganizationVATIN, piotData.KktInn, StringComparison.OrdinalIgnoreCase))
-        //    {
-        //        await ShowComparisonError("ИНН", frData.OrganizationVATIN, piotData.KktInn, owner);
-        //        complete = false;
-        //    }
-
-        //    // Сравнение серийных номеров ФН
-        //    if (!string.Equals(frData.SerialNumberFN, piotData.FnSerial, StringComparison.OrdinalIgnoreCase))
-        //    {
-        //        await ShowComparisonError("Серийный номер ФН", frData.SerialNumberFN, piotData.FnSerial, owner);
-        //        complete = false;
-        //    }
-
-        //    return complete;
-        //}
-
-        //private async static Task ShowComparisonError(string fieldName, string frValue, string piotValue,Window owner)
-        //{
-        //    await MessageBoxHelper.Show($"{fieldName} в ККТ = {frValue ?? "не указан"}, а в ПИОТ зарегистрирован {fieldName.ToLower()} = {piotValue ?? "не указан"}", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
-        //}
-
-        //// 5. Зона ответственности: Вывод результата проверки
-        //private async static Task ShowVerificationResult(bool isComplete,Window owner)
-        //{
-        //    if (!isComplete)
-        //    {
-        //        await MessageBoxHelper.Show("При проверке соединения с ПИОТ и сопоставлении данных между ПИОТ и ФР произошли ошибки", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
-        //    }
-        //    else
-        //    {
-        //        await MessageBoxHelper.Show("Проверка соединения с ПИОТ и сопоставление данных между ПИОТ и ФР прошла успешно", "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Info, owner);
-        //    }
-        //}
-
-        //// Вспомогательные классы для передачи данных между методами
-        //private class FiscalRegistrarData
-        //{
-        //    public string SerialNumber { get; set; }
-        //    public string SerialNumberFN { get; set; }
-        //    public string OrganizationVATIN { get; set; }
-        //}
-
-        //private class PIOTData
-        //{
-        //    public string KktSerial { get; set; }
-        //    public string KktInn { get; set; }
-        //    public string FnSerial { get; set; }
-        //}
-
-        //public static void fiscall_print()
-        //{
-        //    Mini_FP_6 mini = new Mini_FP_6();            
-        //    System.Threading.Thread t = new System.Threading.Thread(delegate() { mini.fiscall_print(MainStaticClass.listview_print,MainStaticClass.sum_print); });
-        //    t.Start();
-        //    t.Join();
-        //}
-
-        //public static void test_print()
-        //{
-        //    //Test_Mini_FP_6 myPrint = new Test_Mini_FP_6();
-        //    //Thread t = new Thread(new ThreadStart(myPrint.Test));
-        //    //t.Start();
-        //    //t.Join();
-        //}
+        }        
 
         // Основной публичный метод для проверки доступности ПИОТ
         public async static Task<bool> CheckPiotAvailable(Window owner)

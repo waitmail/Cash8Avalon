@@ -724,12 +724,12 @@ namespace Cash8Avalon
 
         public async Task send_sales_data_Click(object sender, EventArgs e)
         {
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
-            {
-                System.Diagnostics.Debugger.Break();
-            }
-#endif
+// #if DEBUG
+//             if (System.Diagnostics.Debugger.IsAttached)
+//             {
+//                 System.Diagnostics.Debugger.Break();
+//             }
+// #endif
 
             MainStaticClass.write_event_in_log("Попытка отправить данные", "send_sales_data_Click", "0");
             if (await MainStaticClass.GetUnloadingInterval() == 0)

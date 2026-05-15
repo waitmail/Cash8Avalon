@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="Cash_check.axaml" value="Cash8Avalon.csproj" />
+        <entry key="LoadDataWebService.axaml" value="Cash8Avalon.csproj" />
+        <entry key="MainWindow.axaml" value="Cash8Avalon.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

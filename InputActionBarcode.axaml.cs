@@ -171,7 +171,7 @@ namespace Cash8Avalon
             }
             else if (call_type == 7) // Ввод клиента
             {
-                _authorizationTextBlock.Text = "Введите код карты (10 символов) или номер телефона (13 символов)";
+                _authorizationTextBlock.Text = "Введите код карты (10 символов) или номер телефона (13 символов без +7)";
                 _inputBarcodeTextBox.MaxLength = 13;
             }            
         }             

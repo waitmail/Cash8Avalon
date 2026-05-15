@@ -656,7 +656,7 @@ namespace Cash8Avalon
                 try
                 {
                     
-                    UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
+                    //UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
                     Console.WriteLine("=== ВЫПОЛНЕНИЕ ПРОВЕРОК ПРИ СТАРТЕ ===");
                     MainStaticClass.Last_Send_Last_Successful_Sending = DateTime.Now;
                     MainStaticClass.Last_Write_Check = DateTime.Now.AddSeconds(1);
@@ -719,7 +719,8 @@ namespace Cash8Avalon
                         if (MainStaticClass.CashDeskNumber != 9)
                         {
                             _= UploadPhoneClients();
-                            await CheckCorectClients();
+                            //await CheckCorectClients();
+                            //_= CheckCorectClients();
                             _ = loadBonusClients();
                             if (string.IsNullOrEmpty(MainStaticClass.CDN_Token))
                             {
@@ -749,6 +750,7 @@ namespace Cash8Avalon
                         await ShowSafeMessage("В этой бд нет таблицы constatnts, необходимо создать таблицы бд", "Проверка наличия таблицы", MessageBoxButton.OK, MessageBoxType.Error);
                     }
                     
+                    UpdateMenuVisibility(MainStaticClass.Code_right_of_user);
                     _viewModel.OpenCashChecks();
                 }
                 catch (Exception ex)
@@ -829,7 +831,6 @@ namespace Cash8Avalon
 
             return false;
         }
-
         private async Task<bool> check_exists_column()
         {
             using (var conn = MainStaticClass.NpgsqlConn())
@@ -860,7 +861,6 @@ namespace Cash8Avalon
             }
             return false; // ✅ Все нормально, возвращаем false
         }
-
         private async Task<bool> check_exists_table()
         {
             using (var conn = MainStaticClass.NpgsqlConn())
@@ -891,8 +891,7 @@ namespace Cash8Avalon
             }
             return false; // ✅ Все нормально, возвращаем false
         }
-
-
+        
         ///// <summary>
         ///// Исправление старого типа автор
         ///// в колонке
@@ -1394,39 +1393,39 @@ namespace Cash8Avalon
                             // Можно добавить пометку об ошибке прямо в текст
                             progress?.Report("Этап 1 из 5: Ошибка отправки чеков");
                         }
-#if DEBUG
-                        if (System.Diagnostics.Debugger.IsAttached)
-                        {
-                            System.Diagnostics.Debugger.Break();
-                        }
-#endif
+// #if DEBUG
+//                         if (System.Diagnostics.Debugger.IsAttached)
+//                         {
+//                             System.Diagnostics.Debugger.Break();
+//                         }
+// #endif
                         progress?.Report("Этап 2 из 5: Отправка удалений...");
                         try { ct.ThrowIfCancellationRequested(); await UploadDeletedItems(); Console.WriteLine("✓ Удаленные элементы отправлены"); }
                         catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки удаленных элементов"); Console.WriteLine($"✗ Удаленные: {ex.Message}"); progress?.Report("Этап 2 из 5: Ошибка удалений"); }
-#if DEBUG
-                        if (System.Diagnostics.Debugger.IsAttached)
-                        {
-                            System.Diagnostics.Debugger.Break();
-                        }
-#endif
+// #if DEBUG
+//                         if (System.Diagnostics.Debugger.IsAttached)
+//                         {
+//                             System.Diagnostics.Debugger.Break();
+//                         }
+// #endif
                         progress?.Report("Этап 3 из 5: Отправка марок (CDN)...");
                         try { ct.ThrowIfCancellationRequested(); await send_cdn_logs(); Console.WriteLine("✓ CDN логи отправлены"); }
                         catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки CDN логов"); Console.WriteLine($"✗ CDN: {ex.Message}"); progress?.Report("Этап 3 из 5: Ошибка CDN"); }
-#if DEBUG
-                        if (System.Diagnostics.Debugger.IsAttached)
-                        {
-                            System.Diagnostics.Debugger.Break();
-                        }
-#endif
+// #if DEBUG
+//                         if (System.Diagnostics.Debugger.IsAttached)
+//                         {
+//                             System.Diagnostics.Debugger.Break();
+//                         }
+// #endif
                         progress?.Report("Этап 4 из 5: Отправка логов ошибок...");
                         try { ct.ThrowIfCancellationRequested(); await UploadErrorsLog(); Console.WriteLine("✓ Логи ошибок отправлены"); }
                         catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки логов ошибок"); Console.WriteLine($"✗ Логи: {ex.Message}"); progress?.Report("Этап 4 из 5: Ошибка логов"); }
-#if DEBUG
-                        if (System.Diagnostics.Debugger.IsAttached)
-                        {
-                            System.Diagnostics.Debugger.Break();
-                        }
-#endif
+// #if DEBUG
+//                         if (System.Diagnostics.Debugger.IsAttached)
+//                         {
+//                             System.Diagnostics.Debugger.Break();
+//                         }
+// #endif
                         progress?.Report("Этап 5 из 5: Отправка данных о сменах...");
                         try { ct.ThrowIfCancellationRequested(); await sent_open_close_shop(); Console.WriteLine("✓ Данные о сменах отправлены"); }
                         catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки данных о сменах"); Console.WriteLine($"✗ Смены: {ex.Message}"); progress?.Report("Этап 5 из 5: Ошибка смен"); }
@@ -1480,12 +1479,12 @@ namespace Cash8Avalon
 
         private async Task CheckCorectClients()
         {
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
-            {
-                System.Diagnostics.Debugger.Break();
-            }
-#endif
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
 
             ClientsCompareResult compareResult = await CheckClientsCountSync();
 
@@ -2228,6 +2227,7 @@ namespace Cash8Avalon
 
         private async Task loadBonusClients()
         {
+            await CheckCorectClients();
             LoadDataWebService ld = new LoadDataWebService();
             await Task.Run(() => ld.load_bonus_clients(false));
         }

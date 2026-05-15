@@ -443,7 +443,7 @@
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"
                                    Margin="10,0,5,0"
-                                   Width="150"
+                                   Width="120"
                                    FontFamily="Segoe UI" />
                         
                         <TextBox Grid.Column="1"
@@ -454,11 +454,11 @@
                         
                         <!-- Дата загрузки карточек (в 3 строки) -->
                         <TextBlock Grid.Column="2"
-                                   Text="Дата последней загрузки&#x0a;карточекпокупателей:"
+                                   Text="Дата последней загрузки&#x0a;карточек покупателей:"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"
                                    Margin="10,0,5,0"
-                                   Width="180"
+                                   Width="150"
                                    FontFamily="Segoe UI" />
                         
                         <TextBox Grid.Column="3"
@@ -500,7 +500,8 @@
                         <TextBox Grid.Column="2"
                                  x:Name="txtB_piot_url"
                                  VerticalAlignment="Center"
-                                 Margin="5,0,10,0"
+                                 Margin="55,0,0,0"
+                                 Width="300"
                                  FontFamily="Segoe UI"
                                  ToolTip.Tip="URL для подключения к системе ПИот" />
                         
@@ -508,10 +509,10 @@
                         <Button Grid.Column="3"
                                 x:Name="btn_check_piot"
                                 Content="Проверить подключение"
-                                Width="220"
+                                Width="200"
                                 Height="35"
                                 VerticalAlignment="Center"
-                                Margin="5,0,5,0"
+                                Margin="55,0,5,0"
                                 FontFamily="Segoe UI"
                                 ToolTip.Tip="Проверить подключение и корректность настроек ПИот" />
                     </Grid>

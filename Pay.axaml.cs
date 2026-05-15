@@ -495,8 +495,23 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}\nStackTrace: {ex.StackTrace}", "PayWindow", cc?.numdoc.ToString() ?? "0");
-                await MessageBoxHelper.Show($"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.", "Сбой программы", MessageBoxButton.OK, MessageBoxType.Error, this);
+                //MainStaticClass.write_event_in_log($"CRITICAL ERROR button2_Click: {ex.Message}\nStackTrace: {ex.StackTrace}", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                //await MessageBoxHelper.Show($"Произошла ошибка при попытке оплаты:\n{ex.Message}\n\nПопробуйте отменить операцию на терминале.", "Сбой программы", MessageBoxButton.OK, MessageBoxType.Error, this);
+                //CalculateChange();
+                // ✅ Используем перегрузку с Exception — она запишет в БД полный JSON
+                // с типом исключения (например, NullReferenceException), стек-трейсом и InnerException.
+                // В description передаём контекст: номер чека (сколько смогли достать)
+                MainStaticClass.WriteRecordErrorLog(
+                    ex,
+                    cc?.numdoc ?? 0,
+                    MainStaticClass.CashDeskNumber,
+                    "Pay.button2_Click");
+
+                // ✅ Простое и понятное сообщение кассиру, без домыслов про терминал
+                await MessageBoxHelper.Show(
+                    $"Произошла ошибка при попытке оплаты:\n{ex.Message}",
+                    "Сбой программы", MessageBoxButton.OK, MessageBoxType.Error, this);
+
                 CalculateChange();
             }
         }
@@ -537,7 +552,7 @@ namespace Cash8Avalon
 
             if (total_paid < sum_on_document)
             {
-                await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты\r\n оплат внесено"+ total_paid.ToString(), "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return false;
             }
 
@@ -676,25 +691,25 @@ namespace Cash8Avalon
                 // Записываем лог для отладки
                 MainStaticClass.write_event_in_log($"[Pay] Snapshot created: {cc.LastPaymentSnapshot}", "PaymentSnapshot", cc.numdoc.ToString());
 
-                //=== ШАГ 1: Предварительная запись в БД ===
-                bool writeResult = await cc.write_new_document(
-                    this.CashSum, // Используем свойство
-                    sum_doc_str,
-                    remainder_str,
-                    bonus_money_str,
-                    false,
-                    sum_cash_pay,
-                    non_sum_cash_pay,
-                    sertificate_money_str,
-                    "2",
-                    false
-                );
+                ////=== ШАГ 1: Предварительная запись в БД ===
+                //bool writeResult = await cc.write_new_document(
+                //    this.CashSum, // Используем свойство
+                //    sum_doc_str,
+                //    remainder_str,
+                //    bonus_money_str,
+                //    false,
+                //    sum_cash_pay,
+                //    non_sum_cash_pay,
+                //    sertificate_money_str,
+                //    "0",
+                //    false
+                //);
 
-                if (!writeResult)
-                {
-                    await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return;
-                }
+                //if (!writeResult)
+                //{
+                //    await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
+                //    return;
+                //}
 
                 double notCashSum = get_non_cash_sum();
 
@@ -811,16 +826,16 @@ namespace Cash8Avalon
                 string remainder_str = this.Remainder.Replace(",", ".");
 
 
-                bool writeResult = await cc.write_new_document(
-                    this.CashSum, sum_doc_str, remainder_str, bonus_money_str,
-                    false, sum_cash_pay, non_sum_cash_pay, sertificate_money_str, "2", false
-                );
+                //bool writeResult = await cc.write_new_document(
+                //    this.CashSum, sum_doc_str, remainder_str, bonus_money_str,
+                //    false, sum_cash_pay, non_sum_cash_pay, sertificate_money_str, "0", false
+                //);
 
-                if (!writeResult)
-                {
-                    await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
-                    return;
-                }
+                //if (!writeResult)
+                //{
+                //    await MessageBoxHelper.Show("Не удалось сохранить документ. Оплата отменена.", "Ошибка записи", MessageBoxButton.OK, MessageBoxType.Error, this);
+                //    return;
+                //}
 
                 if (cc.check_type.SelectedIndex == 1 && get_non_cash_sum() < 1)
                 {
