@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Diagnostics.Metrics;
 using System.IO;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using static Cash8Avalon.CDN;
 using static Cash8Avalon.LoadDataWebService;
 using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
 
@@ -678,7 +680,10 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE public.errors_log    ADD COLUMN cash_desk_number smallint;");
             queries.Add("ALTER TABLE public.constants ADD COLUMN last_date_reset_bonus_clients TIMESTAMP;");
             queries.Add("ALTER TABLE public.clients ADD COLUMN last_server_sync TIMESTAMP;");
-
+            //queries.Add("CREATE INDEX IF NOT EXISTS idx_barcode_lookup ON barcode(barcode, tovar_code);");
+            queries.Add("CREATE INDEX IF NOT EXISTS idx_sertificates_lookup ON sertificates(code, code_tovar);");
+            //queries.Add("CREATE INDEX IF NOT EXISTS idx_action_table_lookup ON action_table(num_doc, code_tovar);");
+            queries.Add("ALTER TABLE checks_header ALTER COLUMN comment TYPE character varying(50);");
 
 
             //            Блок по созданию индексов для проверки кодов маркировки при офлайн проверке корректности кодов маркировки

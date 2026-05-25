@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Newtonsoft.Json;
 using Npgsql;
+using PiotIntegration;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -265,7 +266,7 @@ namespace Cash8Avalon
         private static DateTime last_send_last_successful_sending;
         private static DateTime last_write_check;
         private static DateTime min_date_work = new DateTime(2023, 09, 01);
-        private static DateTime min_date_work_logs = new DateTime(2025, 10, 01);
+        private static DateTime min_date_work_logs = new DateTime(2026, 03, 31);
         //private static bool use_old_processiing_actions = true;
         //private static int work_schema = 0;
         private static int version_fn = 0;
@@ -314,6 +315,7 @@ namespace Cash8Avalon
         private static int included_piot = -1;
         private static string piot_url = "0";
         private static bool piot_error_203 = false;
+        private static string dllChecksum = "";
 
         // === ПОЛЯ ДЛЯ КЭШИРОВАНИЯ ===
         private static string _lastWorkingServiceUrl = null;
@@ -359,7 +361,8 @@ namespace Cash8Avalon
                         mark_str_cdn = mark_str_cdn.Replace("'", "\'");
                         Dictionary<string, string> d_tovar = new Dictionary<string, string>();
                         d_tovar[productData.Name] = productData.Code.ToString();
-                        result = await piot.cdn_check_marker_code(codes, mark_str, check.numdoc, check.request, mark_str_cdn, d_tovar, check, productData);
+                        //result = await piot.cdn_check_marker_code(codes, mark_str, check.numdoc, check.request, mark_str_cdn, d_tovar, check, productData);
+                        result = await piot.cdn_check_marker_code(codes, mark_str, check.numdoc, mark_str_cdn, d_tovar, check, productData);
                     }
 
                 }
@@ -368,7 +371,10 @@ namespace Cash8Avalon
             return result;
         }
 
-        public static Piot.PiotInfo PiotInfo { get; set; }
+        //public static Piot.PiotInfo PiotInfo { get; set; }
+        public static PiotInfo PiotInfo { get; set; }
+        //public static PiotClient. Piot.PiotInfo PiotInfo { get; set; }
+
 
         private static readonly Lazy<bool> _includedPiotLazy = new Lazy<bool>(() =>
         {
@@ -3229,6 +3235,56 @@ namespace Cash8Avalon
             return versionStr;//костыль для веб сервиса предыдущей версии
         }
 
+        /// <summary>
+        /// Вычисляет SHA256 хэш (контрольную сумму) указанного файла
+        /// </summary>
+        private static string GetFileChecksum(string filePath)
+        {
+            // Если файла нет, возвращаем пустую строку или бросаем исключение
+            if (!File.Exists(filePath))
+            {
+                return "FILE_NOT_FOUND";
+            }
+
+            using (var sha256 = SHA256.Create())
+            using (var stream = File.OpenRead(filePath))
+            {
+                byte[] hashBytes = sha256.ComputeHash(stream);
+
+                // Преобразуем байты в читаемую hex-строку (например: "a2b4c6...")
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < hashBytes.Length; i++)
+                {
+                    builder.Append(hashBytes[i].ToString("x2")); // "x2" - формат hex в нижнем регистре
+                }
+                return builder.ToString();
+            }
+        }
+
+        public static string DllChecksum
+        {
+            get
+            {
+                // Проверяем на null и на пустую строку одновременно
+                if (string.IsNullOrEmpty(dllChecksum))
+                {
+                    // 1. ОПРЕДЕЛЯЕМ ПУТЬ К ПАПКЕ С ПРОГРАММОЙ
+                    string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+                    // 2. УКАЗЫВАЕМ ИМЯ ФАЙЛА
+                    string targetFileName = "Cash8Avalon.dll";
+                    // ПОТОМ ПОМЕНЯЕТЕ НА: string targetFileName = "PiotIntegration.dll";
+
+                    string fullFilePath = Path.Combine(appDirectory, targetFileName);
+
+                    dllChecksum = GetFileChecksum(fullFilePath);
+                }
+                return dllChecksum;
+            }
+        }
+
+
+
         private static string GetFileVersion()
         {
             try
@@ -3691,12 +3747,12 @@ namespace Cash8Avalon
         {
             bool result = true;
 
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
-            {
-                System.Diagnostics.Debugger.Break();
-            }
-#endif
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
 
 
             string count_day = CryptorEngine.get_count_day();
@@ -5983,13 +6039,42 @@ namespace Cash8Avalon
             return true;
         }
 
+        //// 3. Зона ответственности: Получение данных из ПИОТ
+        //private async static Task<PIOTData> GetPIOTData(Window owner)
+        //{
+        //    try
+        //    {
+        //        Piot piot = new Piot();
+        //        Piot.PiotInfo piotInfo = piot.GetPiotInfo();
+
+        //        return new PIOTData
+        //        {
+        //            KktSerial = piotInfo.kktSerial,
+        //            KktInn = piotInfo.kktInn,
+        //            FnSerial = piotInfo.fnSerial
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await MessageBoxHelper.Show(
+        //            $"При получении данных из ПИОТ произошла ошибка: {ex.Message}\r\nПроверка прервана!",
+        //            "Проверка ПИот", MessageBoxButton.OK, MessageBoxType.Error, owner);
+        //        return null;
+        //    }
+        //}
+
         // 3. Зона ответственности: Получение данных из ПИОТ
         private async static Task<PIOTData> GetPIOTData(Window owner)
         {
             try
             {
                 Piot piot = new Piot();
-                Piot.PiotInfo piotInfo = piot.GetPiotInfo();
+
+                // БЫЛО (синхронный вызов, который мы удалили): 
+                // PiotInfo piotInfo = piot.GetPiotInfo();
+
+                // СТАЛО (правильный асинхронный вызов):
+                PiotInfo piotInfo = await piot.GetPiotInfoAsync();
 
                 return new PIOTData
                 {

@@ -2237,7 +2237,7 @@ namespace Cash8Avalon
                 // Показываем информацию о чеках продажи
                 if (!string.IsNullOrEmpty(sale_id_transaction_terminal) || !string.IsNullOrEmpty(sale_code_authorization_terminal))
                 {
-                    Comment.Text = $"Возврат по чеку №{NumSales.Text} от {sale_date:dd.MM.yyyy HH:mm}";
+                    Comment.Text = $"По чеку №{NumSales.Text} от {sale_date:dd.MM.yyyy HH:mm}";
                 }
             }
             catch (Exception ex)
@@ -3272,6 +3272,101 @@ namespace Cash8Avalon
         //    }
         //}
 
+        /// <summary>
+        /// Проверяет наличие товаров с нулевым/отрицательным количеством.
+        /// Подсвечивает ошибки красным, показывает предупреждение и блокирует действие.
+        /// Возвращает true, если проверка пройдена, false - если найдены ошибки.
+        /// </summary>
+        private async Task<bool> ValidateZeroQuantitiesAsync()
+        {
+            bool hasZeroQuantity = false;
+            var zeroQuantityMessages = new StringBuilder();
+
+            for (int i = 0; i < _productsData.Count; i++)
+            {
+                var product = _productsData[i];
+
+                if (product.Quantity <= 0)
+                {
+                    hasZeroQuantity = true;
+
+                    // Логируем инцидент
+                    MainStaticClass.WriteRecordErrorLog(
+                        $"Обнаружен товар с нулевым/отрицательным количеством",
+                        "ValidateZeroQuantities",
+                        numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        $"Строка: {i + 1}, Код: {product.Code}, Товар: {product.Tovar}, Кол-во: {product.Quantity}");
+
+                    // Формируем сообщение
+                    zeroQuantityMessages.AppendLine($"• Строка {i + 1}: {product.Tovar} (кол-во: {product.Quantity})");
+
+                    // Подсвечиваем строку красным (метод из предыдущего ответа)
+                    HighlightRowAsError(i);
+                }
+            }
+
+            // Если были найдены нули
+            if (hasZeroQuantity)
+            {
+                // Показываем предупреждение кассиру
+                await MessageBoxHelper.Show(
+                    $"ВНИМАНИЕ! В чеке есть товары с нулевым/отрицательным количеством:\n\n" +
+                    $"{zeroQuantityMessages.ToString()}\n" +
+                    $"ДЕЙСТВИЕ ЗАБЛОКИРОВАНО!\n\n" +
+                    $"ОБЯЗАТЕЛЬНО исправьте количество (нажмите Enter на строке) " +
+                    $"или удалите эти товары (клавиша Delete).",
+                    "Ошибка: нулевое количество!",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Error,
+                    this);
+
+                // Выделяем первую проблемную строку
+                var firstError = _productsData.FirstOrDefault(p => p.Quantity <= 0);
+                if (firstError != null)
+                {
+                    int errorIndex = _productsData.IndexOf(firstError);
+                    SelectProductRow(errorIndex);
+                    _productsScrollViewer?.Focus();
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Подсвечивает строку товара красным цветом как ошибочную
+        /// </summary>
+        private void HighlightRowAsError(int dataIndex)
+        {
+            try
+            {
+                int gridRowIndex = dataIndex;
+
+                // Ищем Border строки и красим его в красный
+                foreach (Control child in _productsTableGrid.Children)
+                {
+                    if (child is Border border && Grid.GetRow(border) == gridRowIndex && Grid.GetColumnSpan(border) == 11)
+                    {
+                        border.Background = new SolidColorBrush(Color.FromArgb(80, 255, 0, 0)); // Полупрозрачный красный
+                        border.BorderBrush = Brushes.Red;
+                        border.BorderThickness = new Thickness(2);
+                        break;
+                    }
+                }
+
+                // Также можно мигнуть ячейкой количества для привлечения внимания
+                FlashCellBorder(gridRowIndex, 2, Brushes.Red, 3);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка подсветки строки: {ex.Message}");
+            }
+        }
+
+
         private async void show_pay_form()
         {
             // ═══════════════════════════════════════════════
@@ -3289,6 +3384,14 @@ namespace Cash8Avalon
 
             try
             {
+                // ★★★ ЗАЩИТА: Не пускаем в оплату с нулевым количеством ★★★
+                if (!await ValidateZeroQuantitiesAsync())
+                {
+                    // Если проверка не пройдена, выходим из метода.
+                    // Блок finally корректно сбросит флаги и вернет фокус.
+                    return;
+                }
+
                 if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
                 {
                     InputSearchProduct.Focus();
@@ -3336,7 +3439,7 @@ namespace Cash8Avalon
                 //    pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
                 //}
 
-                if (this.check_type.SelectedIndex == 0)
+                if (this.CheckType.SelectedIndex == 0)
                 {
                     MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
                     BackupProductsData();
@@ -3391,16 +3494,24 @@ namespace Cash8Avalon
 
                 await ModalWindowHelper.ShowModalWindow(this, pay_form, InputSearchProduct);
 
-                if (Convert.ToBoolean(pay_form.Tag) == true)
+                // ✅ ПРАВИЛЬНАЯ замена Task.Delay: 
+                // Ждём, пока UI-поток ТОЧНО закроет и дорисует всё, что нужно. 
+                // Это занимает ровно столько времени, сколько нужно (и на слабом, и на мощном ПК)
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+
+                // 🔥 ИСПРАВЛЕНО: Безопасная проверка Tag. Convert.ToBoolean может упасть, 
+                // если Tag = null или строка. Конструкция "is true" работает железобетонно.
+                if (pay_form.Tag is true)
                 {
+                    // Даем UI еще один цикл на подготовку к закрытию главного окна
+                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
                     this.Close();
                 }
                 else
                 {
-                    await Task.Delay(100);
+                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
                     StartFocusKeeper();
-                    // ❌ УБРАНО: pay_form = new Pay(); — больше не нужно!
-                    // Новый экземпляр создаётся в начале метода при следующем вызове
+                    // pay_form = new Pay(); - согласен, это здесь не нужно
                 }
             }
             finally
@@ -3410,6 +3521,8 @@ namespace Cash8Avalon
                 // Разрываем циклическую ссылку и очищаем
                 if (pay_form != null)
                 {
+                    // ⚠️ Никаких Task.Delay здесь не нужно! 
+                    // Присвоение ссылок = 0 тактов процессора
                     pay_form.cc = null;
                     pay_form = null;
                 }
@@ -3918,12 +4031,7 @@ namespace Cash8Avalon
                                                   bool last_rewrite, string cash_money, string non_cash_money,
                                                   string sertificate_money, string its_deleted, bool sendToScreen = true)
         {
-            //#if DEBUG
-            //            if (System.Diagnostics.Debugger.IsAttached)
-            //            {
-            //                System.Diagnostics.Debugger.Break();
-            //            }
-            //#endif
+            
             if ((sum_doc == "") || (sum_doc == "0"))
             {
                 sum_doc = calculation_of_the_sum_of_the_document().ToString();
@@ -3935,6 +4043,12 @@ namespace Cash8Avalon
             if (_productsData.Count == 0 && _certificatesData.Count == 0)
             {
                 return result;
+            }
+
+            // ★★★ ЗАЩИТА: Проверка на нулевое количество перед записью в БД ★★★
+            if (!await ValidateZeroQuantitiesAsync())
+            {
+                return result; // Прерываем запись документа, если есть нули
             }
 
             double[] sum1 = new double[3];
@@ -4062,6 +4176,11 @@ namespace Cash8Avalon
                 if (!string.IsNullOrEmpty(Comment.Text))
                 {
                     commentValue = Comment.Text.Trim().Replace("'", "");
+
+                    if (commentValue.Length > 50)
+                    {
+                        commentValue = commentValue.Substring(0, 50);
+                    }
                 }
                 command.Parameters.AddWithValue("comment", commentValue);
                 //command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc.Replace(",", ".")));
@@ -7160,6 +7279,27 @@ namespace Cash8Avalon
                                     {
                                         double newQuantity = result.Value;
                                         double oldQuantity = Convert.ToDouble(product.Quantity);
+                                        // ★★★ ЗАЩИТА: Количество всегда должно быть > 0 ★★★
+                                        if (newQuantity <= 0)
+                                        {
+                                            await MessageBoxHelper.Show(
+                                                "Количество товара не может быть равно нулю или быть отрицательным!",
+                                                "Проверка ввода",
+                                                MessageBoxButton.OK,
+                                                MessageBoxType.Error,
+                                                this);
+                                            cancelEdit = true;
+                                        }
+                                        else if (product.IsFractional && newQuantity < 0.001)
+                                        {
+                                            await MessageBoxHelper.Show(
+                                                "Вес товара не может быть меньше 0.001 кг!",
+                                                "Проверка ввода",
+                                                MessageBoxButton.OK,
+                                                MessageBoxType.Error,
+                                                this);
+                                            cancelEdit = true;
+                                        }
 
                                         // 2. Проверяем: ввели ли число МЕНЬШЕ текущего?
                                         if (newQuantity < oldQuantity)
@@ -10669,7 +10809,7 @@ namespace Cash8Avalon
                 {
                     if (_productsData.Count > 0)
                     {
-                        await MessageBoxHelper.Show("Тип чека необходимо выбирать перед добавлением строк");
+                        await MessageBoxHelper.Show("Тип чека необходимо выбирать перед добавлением строк","Выбор типа чека",MessageBoxButton.OK, MessageBoxType.Warning,this);
                         return;
                     }
                     BtnFillOnSales.IsVisible = true;

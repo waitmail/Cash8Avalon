@@ -1,5 +1,6 @@
 ﻿using Atol.Drivers10.Fptr;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using Cash8Avalon;
 using Npgsql;
 using System;
@@ -1144,7 +1145,7 @@ namespace Cash8Avalon
                 }
 
                 // Логика проверки маркировки для возвратов/коррекций
-                if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)
+                if (check.CheckType.SelectedIndex == 1 || check.CheckType.SelectedIndex == 2 || check.reopened)
                 {
                     ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
 
@@ -1172,7 +1173,7 @@ namespace Cash8Avalon
                                 }
                             }
 
-                            bool result_check_mark = await check_marking_code(marking_code, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                            bool result_check_mark = await check_marking_code(marking_code, check.numdoc.ToString(), check.cdn_markers_result_check, check.CheckType.SelectedIndex);
                             if (!result_check_mark)
                             {
                                 error = true;
@@ -1200,7 +1201,7 @@ namespace Cash8Avalon
                 //}
                 // Открытие чека
                 // Открытие чека
-                if (check.check_type.SelectedIndex == 0)
+                if (check.CheckType.SelectedIndex == 0)
                 {
                     // ✅ Печатаем картинки. Если там ошибка 155 (неверный формат), 
                     // она просто запишется в лог, ФР очистит буфер, и пойдет дальше.
@@ -1208,11 +1209,11 @@ namespace Cash8Avalon
 
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
                 }
-                else if (check.check_type.SelectedIndex == 1)
+                else if (check.CheckType.SelectedIndex == 1)
                 {
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
                 }
-                else if (check.check_type.SelectedIndex == 2)
+                else if (check.CheckType.SelectedIndex == 2)
                 {
                     fptr.setParam(1178, check.sale_date);
                     fptr.setParam(1179, "0");
@@ -1233,19 +1234,39 @@ namespace Cash8Avalon
                     }
                 }
 
-                // === ИСПРАВЛЕННАЯ ЛОГИКА ПРОВЕРКИ КОНТАКТОВ ===
-                if (check.txtB_email_telephone != null)
+                //// === ИСПРАВЛЕННАЯ ЛОГИКА ПРОВЕРКИ КОНТАКТОВ ===
+                //if (check.txtB_email_telephone != null)
+                //{
+                //    string contact = check.txtB_email_telephone.Text;
+                //    if (!string.IsNullOrWhiteSpace(contact) && contact.Trim().Length > 0)
+                //    {
+                //        fptr.setParam(1008, contact);
+                //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+                //    }
+                //}
+                //else
+                //{
+                //    MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_email_telephone is NULL. Client contact not printed.", "PrintCheck", check.numdoc.ToString());
+                //}
+
+                //bool hasInn = check.txtB_inn != null && !string.IsNullOrWhiteSpace(check.txtB_inn.Text);
+                //bool hasName = check.txtB_name != null && !string.IsNullOrWhiteSpace(check.txtB_name.Text);
+
+                //if (hasInn && hasName)
+                //{
+                //    fptr.setParam(1228, check.txtB_inn.Text);
+                //    fptr.setParam(1227, check.txtB_name.Text);
+                //}
+                //else
+                //{
+                //    //if (!hasInn) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_inn is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
+                //    //if (!hasName) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_name is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
+                //}
+
+                if (check.txtB_email_telephone != null && !string.IsNullOrWhiteSpace(check.txtB_email_telephone.Text))
                 {
-                    string contact = check.txtB_email_telephone.Text;
-                    if (!string.IsNullOrWhiteSpace(contact) && contact.Trim().Length > 0)
-                    {
-                        fptr.setParam(1008, contact);
-                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-                    }
-                }
-                else
-                {
-                    MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_email_telephone is NULL. Client contact not printed.", "PrintCheck", check.numdoc.ToString());
+                    fptr.setParam(1008, check.txtB_email_telephone.Text.Trim());
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
                 }
 
                 bool hasInn = check.txtB_inn != null && !string.IsNullOrWhiteSpace(check.txtB_inn.Text);
@@ -1253,14 +1274,9 @@ namespace Cash8Avalon
 
                 if (hasInn && hasName)
                 {
-                    fptr.setParam(1228, check.txtB_inn.Text);
-                    fptr.setParam(1227, check.txtB_name.Text);
+                    fptr.setParam(1228, check.txtB_inn.Text.Trim());
+                    fptr.setParam(1227, check.txtB_name.Text.Trim());
                 }
-                //else
-                //{
-                //    //if (!hasInn) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_inn is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
-                //    //if (!hasName) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_name is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
-                //}
 
                 if (MainStaticClass.SystemTaxation == 1)
                 {
@@ -1348,11 +1364,11 @@ namespace Cash8Avalon
 
                             fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE, mark);
                             fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_TYPE, AtolConstants.LIBFPTR_MCT12_AUTO);
-                            if ((check.check_type.SelectedIndex == 0) || (check.check_type.SelectedIndex == 2))
+                            if ((check.CheckType.SelectedIndex == 0) || (check.CheckType.SelectedIndex == 2))
                             {
                                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
                             }
-                            else if (check.check_type.SelectedIndex == 1)
+                            else if (check.CheckType.SelectedIndex == 1)
                             {
                                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_RETURN);
                             }
@@ -1416,7 +1432,7 @@ namespace Cash8Avalon
                         else if (await MainStaticClass.GetNdsIp(check) == 7) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
                     }
 
-                    if (check.check_type.SelectedIndex == 0)
+                    if (check.CheckType.SelectedIndex == 0)
                     {
                         if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim())) fptr.setParam(1214, 3);
                         else fptr.setParam(1214, 4);
@@ -1487,7 +1503,7 @@ namespace Cash8Avalon
                 }
 
                 string s = "";
-                if (check.check_type.SelectedIndex == 0 && check.Discount != 0)
+                if (check.CheckType.SelectedIndex == 0 && check.Discount != 0)
                 {
                     s = "Вами получена скидка " + check.calculation_of_the_discount_of_the_document().ToString().Replace(",", ".") + "руб. ";
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_TEXT, s);
@@ -1680,11 +1696,7 @@ namespace Cash8Avalon
                         "PrintGuard", check.numdoc.ToString());
                     await MessageBoxHelper.Show("Часть чека (с маркировкой) уже была распечатана.", "Информация", MessageBoxButton.OK, MessageBoxType.Info, check);
                     return true; // ✅ Успех, так как цель (чек напечатан) достигнута
-                }
-
-                // ═══════════════════════════════════════════════════
-                // ОСНОВНАЯ ЛОГИКА ПЕЧАТИ (БЕЗ ИЗМЕНЕНИЙ)
-                // ═══════════════════════════════════════════════════
+                }                
 
                 bool error = false;
 
@@ -1735,7 +1747,7 @@ namespace Cash8Avalon
                         return true; // Нечего печатать - это успех
                     }
 
-                    if (check.check_type.SelectedIndex == 1 || check.check_type.SelectedIndex == 2 || check.reopened)
+                    if (check.CheckType.SelectedIndex == 1 || check.CheckType.SelectedIndex == 2 || check.reopened)
                     {
                         ProductData productData = new ProductData(0, "", 0, ProductFlags.None);
 
@@ -1763,7 +1775,7 @@ namespace Cash8Avalon
                                     }
                                 }
 
-                                bool result_check_mark = await check_marking_code(marking_code, check.numdoc.ToString(), check.cdn_markers_result_check, check.check_type.SelectedIndex);
+                                bool result_check_mark = await check_marking_code(marking_code, check.numdoc.ToString(), check.cdn_markers_result_check, check.CheckType.SelectedIndex);
                                 if (!result_check_mark)
                                 {
                                     error = true;
@@ -1784,15 +1796,15 @@ namespace Cash8Avalon
 
                 print_terminal_check(fptr, check);
 
-                if (check.check_type.SelectedIndex == 0)
+                if (check.CheckType.SelectedIndex == 0)
                 {
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL);
                 }
-                else if (check.check_type.SelectedIndex == 1)
+                else if (check.CheckType.SelectedIndex == 1)
                 {
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_TYPE, AtolConstants.LIBFPTR_RT_SELL_RETURN);
                 }
-                else if (check.check_type.SelectedIndex == 2)
+                else if (check.CheckType.SelectedIndex == 2)
                 {
                     fptr.setParam(1178, check.sale_date);
                     fptr.setParam(1179, "0");
@@ -1813,19 +1825,34 @@ namespace Cash8Avalon
                     }
                 }
 
-                if (check.txtB_email_telephone.Text != null)
-                {
-                    if (check.txtB_email_telephone.Text.Trim().Length > 0)
-                    {
-                        fptr.setParam(1008, check.txtB_email_telephone.Text);
-                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-                    }
+                //if (check.txtB_email_telephone.Text != null)
+                //{
+                //    if (check.txtB_email_telephone.Text.Trim().Length > 0)
+                //    {
+                //        fptr.setParam(1008, check.txtB_email_telephone.Text);
+                //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+                //    }
 
-                    if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
-                    {
-                        fptr.setParam(1228, check.txtB_inn.Text);
-                        fptr.setParam(1227, check.txtB_name.Text);
-                    }
+                //    if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
+                //    {
+                //        fptr.setParam(1228, check.txtB_inn.Text);
+                //        fptr.setParam(1227, check.txtB_name.Text);
+                //    }
+                //}
+
+                if (check.txtB_email_telephone != null && !string.IsNullOrWhiteSpace(check.txtB_email_telephone.Text))
+                {
+                    fptr.setParam(1008, check.txtB_email_telephone.Text.Trim());
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
+                }
+
+                bool hasInn = check.txtB_inn != null && !string.IsNullOrWhiteSpace(check.txtB_inn.Text);
+                bool hasName = check.txtB_name != null && !string.IsNullOrWhiteSpace(check.txtB_name.Text);
+
+                if (hasInn && hasName)
+                {
+                    fptr.setParam(1228, check.txtB_inn.Text.Trim());
+                    fptr.setParam(1227, check.txtB_name.Text.Trim());
                 }
 
                 if (variant == 0)
@@ -1906,11 +1933,11 @@ namespace Cash8Avalon
 
                             fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE, mark);
                             fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_TYPE, AtolConstants.LIBFPTR_MCT12_AUTO);
-                            if ((check.check_type.SelectedIndex == 0) || (check.check_type.SelectedIndex == 2))
+                            if ((check.CheckType.SelectedIndex == 0) || (check.CheckType.SelectedIndex == 2))
                             {
                                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_SOLD);
                             }
-                            else if (check.check_type.SelectedIndex == 1)
+                            else if (check.CheckType.SelectedIndex == 1)
                             {
                                 fptr.setParam(AtolConstants.LIBFPTR_PARAM_MARKING_CODE_STATUS, AtolConstants.LIBFPTR_MES_PIECE_RETURN);
                             }
@@ -1958,7 +1985,7 @@ namespace Cash8Avalon
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
                     }
 
-                    if (check.check_type.SelectedIndex == 0)
+                    if (check.CheckType.SelectedIndex == 0)
                     {
                         if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
                         {
@@ -2041,7 +2068,7 @@ namespace Cash8Avalon
                     fptr.payment();
                 }
                 string s = "";
-                if (check.check_type.SelectedIndex == 0)
+                if (check.CheckType.SelectedIndex == 0)
                 {
                     if (check.Discount != 0)
                     {
@@ -3132,27 +3159,84 @@ namespace Cash8Avalon
             }
         }
 
+        //public async Task CheckTaxationTypes(Window owner)
+        //{
+        //    uint taxationTypes = 0;
+        //    try
+        //    {
+        //        IFptr fptr = MainStaticClass.FPTR;
+
+        //        if (!fptr.isOpened())
+        //        {
+        //            fptr.open();
+        //        }
+
+        //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_FN_DATA_TYPE, AtolConstants.LIBFPTR_FNDT_REG_INFO);
+        //        fptr.fnQueryData();
+
+        //        if (fptr.errorCode() != 0)
+        //        {
+        //            throw new Exception(fptr.errorDescription().ToString());
+        //        }
+
+        //        taxationTypes = fptr.getParamInt(1062);
+
+        //        var taxationMapping = new Dictionary<uint, int>
+        //{
+        //    { 1, 1 },   // ОСН
+        //    { 4, 2 },   // УСН Доходы - Расходы
+        //    { 36, 3 },  // (УСНДоходы - Расходы) + Патент
+        //    { 2, 4 },   // УСН Доходы
+        //    { 34, 5 }   // УСНДоходы + Патент            
+        //};
+
+        //        if (taxationMapping.TryGetValue(taxationTypes, out int expectedSystemTaxation) || (taxationTypes == 32))
+        //        {
+        //            if (MainStaticClass.SystemTaxation != expectedSystemTaxation)
+        //            {
+        //                await ShowTaxationMismatchMessage(taxationTypes, MainStaticClass.SystemTaxation, owner);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            await MessageBoxHelper.Show("Неизвестная система налогообложения в фискальном регистраторе. Свяжитесь с бухгалтерией.", "Проверка системы налогообложения", owner);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await MessageBoxHelper.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения", owner);
+        //    }
+        //}
+
         public async Task CheckTaxationTypes(Window owner)
         {
             uint taxationTypes = 0;
             try
             {
-                IFptr fptr = MainStaticClass.FPTR;
-
-                if (!fptr.isOpened())
+                // ✅ РЕШЕНИЕ: Выносим тяжелое общение с драйвером АТОЛ в фоновый поток!
+                // Чтобы UI не зависал, пока касса "думает"
+                taxationTypes = await Task.Run(() =>
                 {
-                    fptr.open();
-                }
+                    IFptr fptr = MainStaticClass.FPTR;
 
-                fptr.setParam(AtolConstants.LIBFPTR_PARAM_FN_DATA_TYPE, AtolConstants.LIBFPTR_FNDT_REG_INFO);
-                fptr.fnQueryData();
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
 
-                if (fptr.errorCode() != 0)
-                {
-                    throw new Exception(fptr.errorDescription().ToString());
-                }
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_FN_DATA_TYPE, AtolConstants.LIBFPTR_FNDT_REG_INFO);
+                    fptr.fnQueryData();
 
-                taxationTypes = fptr.getParamInt(1062);
+                    if (fptr.errorCode() != 0)
+                    {
+                        throw new Exception(fptr.errorDescription().ToString());
+                    }
+
+                    return fptr.getParamInt(1062);
+                });
+
+                // ✅ Даем UI-потоку обработать накопившиеся события после ожидания Task.Run
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
 
                 var taxationMapping = new Dictionary<uint, int>
         {
@@ -3177,6 +3261,8 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
+                // ✅ Тоже добавим пропуск очереди перед показом ошибки
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
                 await MessageBoxHelper.Show("Произошла ошибка при проверке системы налогообложения. Свяжитесь с поддержкой. " + ex.Message, "Проверка системы налогообложения", owner);
             }
         }

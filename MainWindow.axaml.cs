@@ -697,11 +697,29 @@ namespace Cash8Avalon
                             }
                             MainStaticClass.validate_date_time_with_fn(3, this);
 
+                            //if (MainStaticClass.SystemTaxation == 0)
+                            //{
+                            //    if (_isDisposed) return;
+                            //    await Task.Delay(250);
+                            //    await ShowSafeMessage("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!", "Проверка системы налогообложения", MessageBoxButton.OK, MessageBoxType.Error);
+                            //}
+
                             if (MainStaticClass.SystemTaxation == 0)
                             {
                                 if (_isDisposed) return;
-                                await Task.Delay(150);
-                                await ShowSafeMessage("У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!", "Проверка системы налогообложения", MessageBoxButton.OK, MessageBoxType.Error);
+
+                                // Даем UI потоку закончить отрисовку после окна логина
+                                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+
+                                await ShowSafeMessage(
+                                    "У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!",
+                                    "Проверка системы налогообложения",
+                                    MessageBoxButton.OK,
+                                    MessageBoxType.Error);
+
+                                // ⚠️ ОШИБКА ФАТАЛЬНАЯ - дальше идти нельзя, закрываем кассу!
+                                this.Close();
+                                return;
                             }
 
                             bool restart = false, error = false;
@@ -709,15 +727,15 @@ namespace Cash8Avalon
                             if (!error && restart)
                             {
                                 if (_isDisposed) return;
-                                await Task.Delay(150);
+                                await Task.Delay(250);
                                 await ShowSafeMessage("У вас неверно была установлена версия ФН, необходим перезапуск программы", "Проверка версии ФН", MessageBoxButton.OK, MessageBoxType.Error);
                                 this.Close();
                                 return;
                             }
-                        }
+                        //}
 
-                        if (MainStaticClass.CashDeskNumber != 9)
-                        {
+                        //if (MainStaticClass.CashDeskNumber != 9)
+                        //{
                             _= UploadPhoneClients();
                             //await CheckCorectClients();
                             //_= CheckCorectClients();
@@ -763,6 +781,8 @@ namespace Cash8Avalon
                         this.Close();
                     }
                 }
+
+                MainStaticClass.delete_all_events_in_log(MainStaticClass.GetMinDateWorkLogs);
             }
             else
             {
@@ -779,58 +799,129 @@ namespace Cash8Avalon
         }
         
 
+//        /// <summary>
+//        /// Исправление старого типа колонки 'action_num_doc'
+//        /// </summary>
+//        private async Task<bool> check_correct_type_column()
+//        {
+//            bool update = false;
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
+
+//            // 1. Используем using для гарантированного закрытия соединения
+//            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
+//            {
+//                try
+//                {
+//                    await conn.OpenAsync();
+//                }
+//                catch (InvalidOperationException) { /* Игнорируем, если уже открыто */ }
+
+//                try
+//                {
+//                    // 2. Транзакция убрана, так как это только чтение (SELECT)
+//                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'checks_header' AND column_name = 'comment'";
+
+//                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+//                    {
+//                        // 3. ExecuteScalar быстрее и проще, если нужно получить одно значение (тип данных)
+//                        // Если вернется null, значит колонки нет (но по логике проверяем тип)
+//                        var result = await command.ExecuteScalarAsync();
+
+//                        if (result != null && result.ToString() != "varchar(100)")
+//                        {
+//                            update = true;
+//                        }
+//                    }
+//                }
+//                catch (Exception ex)
+//                {
+//                    Console.WriteLine($"Ошибка при чтении типа колонки: {ex.Message}");
+//                    return false;
+//                }
+//            }
+//            // Соединение закрыто здесь
+
+//            // 4. Обновление запускаем ТОЛЬКО если чтение завершено и соединение освобождено
+//            if (update)
+//            {
+//                SettingConnect sc = new SettingConnect();
+//                await sc.AddField_Click(this);
+//                this.Close();
+//                return true;
+//            }
+
+//            return false;
+//        }
+
+
         /// <summary>
-        /// Исправление старого типа колонки 'action_num_doc'
+        /// Проверяет, что колонка "comment" в таблице "checks_header" имеет тип varchar(255).
+        /// Возвращает true, если тип корректен; false, если тип не соответствует или колонка отсутствует.
         /// </summary>
         private async Task<bool> check_correct_type_column()
         {
-            bool update = false;
+//#if DEBUG
+//            if (System.Diagnostics.Debugger.IsAttached)
+//            {
+//                System.Diagnostics.Debugger.Break();
+//            }
+//#endif
+            const string targetSchema = "public";          // укажите актуальную схему
+            const string targetTable = "checks_header";
+            const string targetColumn = "comment";
+            const string expectedType = "character varying";
+            const int expectedMaxLength = 50;
 
-            // 1. Используем using для гарантированного закрытия соединения
             using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
             {
-                try
-                {
-                    await conn.OpenAsync();
-                }
-                catch (InvalidOperationException) { /* Игнорируем, если уже открыто */ }
+                await conn.OpenAsync();   // исключение здесь – повод уронить метод, не подавляйте
 
-                try
-                {
-                    // 2. Транзакция убрана, так как это только чтение (SELECT)
-                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'constants' AND column_name = 'path_for_web_service'";
+                string query = @"
+            SELECT data_type, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = @schema
+              AND table_name = @table
+              AND column_name = @column";
 
-                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                {
+                    command.Parameters.AddWithValue("@schema", targetSchema);
+                    command.Parameters.AddWithValue("@table", targetTable);
+                    command.Parameters.AddWithValue("@column", targetColumn);
+
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        // 3. ExecuteScalar быстрее и проще, если нужно получить одно значение (тип данных)
-                        // Если вернется null, значит колонки нет (но по логике проверяем тип)
-                        var result = await command.ExecuteScalarAsync();
-
-                        if (result != null && result.ToString() != "ARRAY")
+                        if (!reader.HasRows)
                         {
-                            update = true;
+                            // Колонка не найдена – точно не корректный тип
+                            Console.WriteLine($"Колонка {targetSchema}.{targetTable}.{targetColumn} не существует.");
+                            return false;
                         }
+
+                        await reader.ReadAsync();
+                        string currentType = reader.GetString(0);
+                        // character_maximum_length может быть NULL для text и некоторых типов
+                        int? currentLength = reader.IsDBNull(1) ? null : reader.GetInt32(1);
+
+                        bool isCorrect = (currentType == expectedType && currentLength == expectedMaxLength);
+                        if (!isCorrect)
+                        {
+                            SettingConnect sc = new SettingConnect();
+                            await sc.AddField_Click(this);
+                            this.Close();
+                        }
+                        return isCorrect;
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Ошибка при чтении типа колонки: {ex.Message}");
-                    return false;
-                }
             }
-            // Соединение закрыто здесь
-
-            // 4. Обновление запускаем ТОЛЬКО если чтение завершено и соединение освобождено
-            if (update)
-            {
-                SettingConnect sc = new SettingConnect();
-                await sc.AddField_Click(this);
-                this.Close();
-                return true;
-            }
-
-            return false;
         }
+
+
         private async Task<bool> check_exists_column()
         {
             using (var conn = MainStaticClass.NpgsqlConn())

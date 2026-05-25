@@ -28,6 +28,7 @@ namespace Cash8Avalon
         private TextBlock _progressPercent;
         private TextBlock _timeInfoText;
         private StackPanel _progressPanel;
+        private TextBlock _lastUpdateText;
 
         // Состояние загрузки
         private CancellationTokenSource _cancellationTokenSource;
@@ -36,8 +37,18 @@ namespace Cash8Avalon
         private Timer _timer;
         private Stopwatch _stopwatch;
         private bool _userCancelled = false;
+        private TextBlock _workHintText;
 
-        public event EventHandler? RequestClose;
+        // ⬇⬇⬇ НОВЫЙ ФЛАГ — переключатель оптимизации штрихкодов ⬇⬇⬇
+        /// <summary>
+        /// true  — оптимизированная синхронизация (COPY + delta)
+        /// false — старый проверенный способ (DELETE ALL + INSERT по одному)
+        /// </summary>
+        private const bool USE_OPTIMIZED_SYNC = true;
+
+        public event EventHandler? RequestClose;      
+
+        
 
         public LoadDataWebService()
         {
@@ -58,6 +69,11 @@ namespace Cash8Avalon
             _progressPercent = this.FindControl<TextBlock>("progressPercent");
             _timeInfoText = this.FindControl<TextBlock>("timeInfoText");
             _progressPanel = this.FindControl<StackPanel>("progressPanel");
+
+            // ⬇⬇⬇ НОВОЕ ⬇⬇⬇
+            _lastUpdateText = this.FindControl<TextBlock>("lastUpdateText");
+            _workHintText = this.FindControl<TextBlock>("workHintText");
+            UpdateLastSyncDate(); // Сразу показываем дату последней загрузки при открытии окна
 
             if (_btn_new_load != null)
                 _btn_new_load.Click += Btn_new_load_Click;
@@ -237,6 +253,7 @@ namespace Cash8Avalon
             }
         }
 
+       
         #endregion
 
         #region Обработчики событий UI
@@ -247,6 +264,7 @@ namespace Cash8Avalon
         }
 
         #endregion
+
 
         #region Основная логика загрузки
 
@@ -274,11 +292,8 @@ namespace Cash8Avalon
 
             try
             {
-                SetLoadingState(true); // Кнопка станет зеленой
-
-                // Убираем временно обработчик клика
-                if (_btn_new_load != null)
-                    _btn_new_load.Click -= Btn_new_load_Click;
+                // Внутри SetLoadingState(true) уже отписывается _btn_new_load.Click -= Btn_new_load_Click;
+                SetLoadingState(true);
 
                 StartTimer();
 
@@ -324,11 +339,10 @@ namespace Cash8Avalon
             }
             finally
             {
-                SetLoadingState(false); // Кнопка станет синей
+                // Внутри SetLoadingState(false) уже подписывается _btn_new_load.Click += Btn_new_load_Click;
+                // Поэтому ручные += и -= здесь УДАЛЕНЫ!
 
-                // Возвращаем обработчик клика
-                if (_btn_new_load != null)
-                    _btn_new_load.Click += Btn_new_load_Click;
+                SetLoadingState(false);
 
                 StopTimer();
                 _stopwatch?.Stop();
@@ -419,6 +433,10 @@ namespace Cash8Avalon
                     return (false, "Операция отменена");
 
                 await UpdateProgressAsync("Готово", 100);
+
+                // ⬇⬇⬇ НОВОЕ: Обновляем дату на экране сразу после успеха ⬇⬇⬇
+                UpdateLastSyncDate();
+
 
                 return (true, "");
             }
@@ -584,14 +602,19 @@ namespace Cash8Avalon
             _timer?.Dispose();
             _timer = null;
 
-            if (_stopwatch != null && _stopwatch.IsRunning)
+            if (_stopwatch != null)
             {
+                _stopwatch.Stop(); // Останавливаем секундомер
                 var elapsed = _stopwatch.Elapsed;
 
+                // Выводим финальное время и ГАРАНТИРУЕМ, что оно останется видимым
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (_timeInfoText != null)
+                    {
                         _timeInfoText.Text = $"Общее время загрузки: {elapsed:mm\\:ss}";
+                        _timeInfoText.IsVisible = true; // Явно оставляем видимым!
+                    }
                 });
             }
         }
@@ -762,12 +785,124 @@ namespace Cash8Avalon
             }
         }
 
-        // Новая перегрузка метода с поддержкой прогресса
+        //// Новая перегрузка метода с поддержкой прогресса
+        //private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
+        //    LoadPacketData loadPacketData,
+        //    CancellationToken cancellationToken,
+        //    int startProgress,
+        //    int endProgress)
+        //{
+        //    NpgsqlConnection conn = null;
+        //    NpgsqlTransaction tran = null;
+        //    string queryActual = "";
+
+        //    try
+        //    {
+        //        conn = MainStaticClass.NpgsqlConn();
+        //        await conn.OpenAsync(cancellationToken);
+        //        tran = await conn.BeginTransactionAsync(cancellationToken);
+
+        //        var queries = new List<string>();
+        //        PrepareDatabaseQueries(loadPacketData, queries);
+
+        //        int totalQueries = queries.Count;
+        //        int completedQueries = 0;
+
+        //        // Рассчитываем прогресс для каждого запроса
+        //        int progressRange = endProgress - startProgress;
+
+        //        foreach (string query in queries)
+        //        {
+        //            cancellationToken.ThrowIfCancellationRequested();
+        //            queryActual = query;
+
+        //            using (var command = new NpgsqlCommand(query, conn))
+        //            {
+        //                command.Transaction = tran;
+        //                await command.ExecuteNonQueryAsync(cancellationToken);
+        //            }
+
+        //            completedQueries++;
+
+        //            // Рассчитываем текущий прогресс
+        //            double progressPercentage = (double)completedQueries / totalQueries;
+        //            int currentProgress = startProgress + (int)(progressPercentage * progressRange);
+
+        //            await UpdateProgressAsync($"Выполнение запросов ({completedQueries}/{totalQueries})...", currentProgress);
+        //        }
+
+        //        // Обновление даты последнего обновления
+        //        string updateQuery = "UPDATE date_sync SET tovar = @date";
+        //        using (var command = new NpgsqlCommand(updateQuery, conn))
+        //        {
+        //            command.Transaction = tran;
+        //            command.Parameters.AddWithValue("@date", DateTime.Now);
+        //            int rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        //            if (rowsAffected == 0)
+        //            {
+        //                updateQuery = "INSERT INTO date_sync(tovar) VALUES(@date)";
+        //                command.CommandText = updateQuery;
+        //                await command.ExecuteNonQueryAsync(cancellationToken);
+        //            }
+        //        }
+
+        //        await tran.CommitAsync(cancellationToken);
+
+        //        // Отправка подтверждения
+        //        try
+        //        {
+        //            if (!await MainStaticClass.SendResultGetData(this))
+        //            {
+        //                Console.WriteLine("WARNING: Не удалось отправить информацию об успешной загрузке");
+        //            }
+        //        }
+        //        catch { }
+
+        //        return (true, "");
+        //    }
+        //    catch (NpgsqlException ex)
+        //    {
+
+        //        string errorMsg = $"Ошибка базы данных: {ex.Message}";
+        //        Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
+        //        await MessageBox.Show($"Ошибка базы данных: {ex.Message}" + queryActual, "Ошибка при загрузке", MessageBoxButton.OK, MessageBoxType.Error, MainStaticClass.MainWindow);
+        //        if (tran != null)
+        //        {
+        //            try { await tran.RollbackAsync(cancellationToken); } catch { }
+        //        }
+
+        //        return (false, errorMsg);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string errorMsg = $"Ошибка при сохранении данных: {ex.Message}";
+        //        Console.WriteLine($"Ошибка: {ex.Message}");
+
+        //        if (tran != null)
+        //        {
+        //            try { await tran.RollbackAsync(cancellationToken); } catch { }
+        //        }
+
+        //        return (false, errorMsg);
+        //    }
+        //    finally
+        //    {
+        //        if (conn != null && conn.State == ConnectionState.Open)
+        //        {
+        //            try { await conn.CloseAsync(); } catch { }
+        //        }
+
+        //        conn?.Dispose();
+        //        tran?.Dispose();
+        //    }
+        //}
+
         private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
-            LoadPacketData loadPacketData,
-            CancellationToken cancellationToken,
-            int startProgress,
-            int endProgress)
+LoadPacketData loadPacketData,
+CancellationToken cancellationToken,
+int startProgress,
+int endProgress)
         {
             NpgsqlConnection conn = null;
             NpgsqlTransaction tran = null;
@@ -782,11 +917,62 @@ namespace Cash8Avalon
                 var queries = new List<string>();
                 PrepareDatabaseQueries(loadPacketData, queries);
 
+                // ═══════════════════════════════════════════════════
+                // Расчет распределения прогресса (5 этапов)
+                // ═══════════════════════════════════════════════════
+                int progressRange = endProgress - startProgress;
+
+                int tovarEndProgress;
+                int queryStartProgress, queryEndProgress;
+                int actionTableStartProgress, actionTableEndProgress;
+                int sertStartProgress, sertEndProgress;
+                int barcodeStartProgress, barcodeEndProgress;
+
+                if (USE_OPTIMIZED_SYNC)
+                {
+                    // 10% - Товары (COPY в tovar2)
+                    // 15% - Обычные запросы (шапки акций, реклама и т.д.)
+                    // 10% - Табличная часть акций (COPY)
+                    // 25% - Сертификаты (COPY + delta)
+                    // 40% - Штрихкоды (COPY + delta - самые тяжелые)
+                    tovarEndProgress = startProgress + (int)(progressRange * 0.10);
+                    queryStartProgress = tovarEndProgress;
+                    queryEndProgress = startProgress + (int)(progressRange * 0.25);
+                    actionTableStartProgress = queryEndProgress;
+                    actionTableEndProgress = startProgress + (int)(progressRange * 0.35);
+                    sertStartProgress = actionTableEndProgress;
+                    sertEndProgress = startProgress + (int)(progressRange * 0.60);
+                    barcodeStartProgress = sertEndProgress;
+                    barcodeEndProgress = endProgress;
+                }
+                else
+                {
+                    // 100% - Обычные запросы (всё по старому)
+                    tovarEndProgress = startProgress;
+                    queryStartProgress = startProgress;
+                    queryEndProgress = endProgress;
+                    actionTableStartProgress = actionTableEndProgress = endProgress;
+                    sertStartProgress = sertEndProgress = endProgress;
+                    barcodeStartProgress = barcodeEndProgress = endProgress;
+                }
+
+                int queryProgressRange = queryEndProgress - queryStartProgress;
+
+                // ── 1. Оптимизированная загрузка товаров (COPY в tovar2) ──
+                if (USE_OPTIMIZED_SYNC)
+                {
+                    await SyncTovarsAsync(
+                        loadPacketData.ListTovar,
+                        conn,
+                        tran,
+                        cancellationToken,
+                        startProgress,
+                        tovarEndProgress);
+                }
+
+                // ── 2. Выполнение обычных запросов ──
                 int totalQueries = queries.Count;
                 int completedQueries = 0;
-
-                // Рассчитываем прогресс для каждого запроса
-                int progressRange = endProgress - startProgress;
 
                 foreach (string query in queries)
                 {
@@ -800,15 +986,48 @@ namespace Cash8Avalon
                     }
 
                     completedQueries++;
-
-                    // Рассчитываем текущий прогресс
                     double progressPercentage = (double)completedQueries / totalQueries;
-                    int currentProgress = startProgress + (int)(progressPercentage * progressRange);
-
+                    int currentProgress = queryStartProgress + (int)(progressPercentage * queryProgressRange);
                     await UpdateProgressAsync($"Выполнение запросов ({completedQueries}/{totalQueries})...", currentProgress);
                 }
 
-                // Обновление даты последнего обновления
+                // ── 3. Оптимизированная загрузка табличной части акций ──
+                if (USE_OPTIMIZED_SYNC)
+                {
+                    await SyncActionTableAsync(
+                        loadPacketData.ListActionTable,
+                        conn,
+                        tran,
+                        cancellationToken,
+                        actionTableStartProgress,
+                        actionTableEndProgress);
+                }
+
+                // ── 4. Оптимизированная синхронизация сертификатов ──
+                if (USE_OPTIMIZED_SYNC)
+                {
+                    await SyncSertificatesAsync(
+                        loadPacketData.ListSertificate,
+                        conn,
+                        tran,
+                        cancellationToken,
+                        sertStartProgress,
+                        sertEndProgress);
+                }
+
+                // ── 5. Оптимизированная синхронизация штрихкодов ──
+                if (USE_OPTIMIZED_SYNC)
+                {
+                    await SyncBarcodesAsync(
+                        loadPacketData.ListBarcode,
+                        conn,
+                        tran,
+                        cancellationToken,
+                        barcodeStartProgress,
+                        barcodeEndProgress);
+                }
+
+                // ── 6. Обновление даты последнего обновления ──
                 string updateQuery = "UPDATE date_sync SET tovar = @date";
                 using (var command = new NpgsqlCommand(updateQuery, conn))
                 {
@@ -826,21 +1045,10 @@ namespace Cash8Avalon
 
                 await tran.CommitAsync(cancellationToken);
 
-                // Отправка подтверждения
-                try
-                {
-                    if (!await MainStaticClass.SendResultGetData(this))
-                    {
-                        Console.WriteLine("WARNING: Не удалось отправить информацию об успешной загрузке");
-                    }
-                }
-                catch { }
-
                 return (true, "");
             }
             catch (NpgsqlException ex)
             {
-
                 string errorMsg = $"Ошибка базы данных: {ex.Message}";
                 Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
                 await MessageBox.Show($"Ошибка базы данных: {ex.Message}" + queryActual, "Ошибка при загрузке", MessageBoxButton.OK, MessageBoxType.Error, MainStaticClass.MainWindow);
@@ -848,19 +1056,16 @@ namespace Cash8Avalon
                 {
                     try { await tran.RollbackAsync(cancellationToken); } catch { }
                 }
-
                 return (false, errorMsg);
             }
             catch (Exception ex)
             {
                 string errorMsg = $"Ошибка при сохранении данных: {ex.Message}";
                 Console.WriteLine($"Ошибка: {ex.Message}");
-
                 if (tran != null)
                 {
                     try { await tran.RollbackAsync(cancellationToken); } catch { }
                 }
-
                 return (false, errorMsg);
             }
             finally
@@ -869,20 +1074,175 @@ namespace Cash8Avalon
                 {
                     try { await conn.CloseAsync(); } catch { }
                 }
-
                 conn?.Dispose();
                 tran?.Dispose();
             }
         }
 
-        // Оригинальный метод для обратной совместимости
-        private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
-            LoadPacketData loadPacketData,
-            CancellationToken cancellationToken)
+        /// <summary>
+        /// Оптимизированная синхронизация сертификатов через COPY + delta.
+        /// </summary>
+        private async Task SyncSertificatesAsync(
+            List<Sertificate> packetSertificates,
+            NpgsqlConnection conn,
+            NpgsqlTransaction tran,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
         {
-            // Вызываем новую перегрузку со значениями по умолчанию
-            return await SaveDataToDatabaseAsync(loadPacketData, cancellationToken, 0, 100);
+            int progressRange = endProgress - startProgress;
+
+            // === Если сертификатов в пакете нет — очищаем таблицу полностью ===
+            if (packetSertificates == null || packetSertificates.Count == 0)
+            {
+                using var cmdDeleteAll = new NpgsqlCommand("DELETE FROM sertificates", conn, tran);
+                await cmdDeleteAll.ExecuteNonQueryAsync(cancellationToken);
+                Console.WriteLine("[SERT SYNC] Пакет пуст — все сертификаты удалены");
+                return;
+            }
+
+            // ─────────────────────────────────────────────────────
+            // ШАГ 1: Дедупликация в памяти перед COPY
+            // ─────────────────────────────────────────────────────
+            await UpdateProgressAsync("Сертификаты: дедупликация пакета...", startProgress);
+
+            // Уникальный ключ сертификата: (code, code_tovar)
+            var uniqueSertificates = packetSertificates
+                .Where(s => !string.IsNullOrWhiteSpace(s.Code) && !string.IsNullOrWhiteSpace(s.CodeTovar))
+                .GroupBy(s => new { s.Code, s.CodeTovar })
+                .Select(g => g.First())
+                .ToList();
+
+            if (uniqueSertificates.Count == 0)
+            {
+                using var cmdDeleteAll2 = new NpgsqlCommand("DELETE FROM sertificates", conn, tran);
+                await cmdDeleteAll2.ExecuteNonQueryAsync(cancellationToken);
+                Console.WriteLine("[SERT SYNC] После фильтрации пакет пуст — все сертификаты удалены");
+                return;
+            }
+
+            // ─────────────────────────────────────────────────────
+            // ШАГ 2: Создание временной таблицы
+            // ─────────────────────────────────────────────────────
+            await UpdateProgressAsync("Сертификаты: подготовка временной таблицы...",
+                startProgress + progressRange * 2 / 100);
+
+            using (var cmdCreateTemp = new NpgsqlCommand(@"
+        CREATE TEMP TABLE sertificates_temp (
+            code bigint,
+            code_tovar bigint,
+            rating numeric,
+            is_active smallint
+        ) ON COMMIT DROP", conn, tran))
+            {
+                await cmdCreateTemp.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            // ─────────────────────────────────────────────────────
+            // ШАГ 3: Bulk COPY
+            // ─────────────────────────────────────────────────────
+            await UpdateProgressAsync(
+                $"Сертификаты: загрузка {uniqueSertificates.Count} шт. во временную таблицу...",
+                startProgress + progressRange * 5 / 100);
+
+            using (var writer = conn.BeginBinaryImport(
+                "COPY sertificates_temp (code, code_tovar, rating, is_active) FROM STDIN (FORMAT BINARY)"))
+            {
+                foreach (var sert in uniqueSertificates)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    writer.StartRow();
+
+                    // code (bigint)
+                    if (long.TryParse(sert.Code, out long certCode))
+                        writer.Write(certCode, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    // code_tovar (bigint)
+                    if (long.TryParse(sert.CodeTovar, out long tovarCode))
+                        writer.Write(tovarCode, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    // rating (numeric)
+                    if (decimal.TryParse(sert.Rating, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal rating))
+                        writer.Write(rating, NpgsqlTypes.NpgsqlDbType.Numeric);
+                    else
+                        writer.Write(0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+
+                    // is_active (smallint) - используем уже готовый метод ParseSmallint из класса
+                    writer.Write(ParseSmallint(sert.IsActive), NpgsqlTypes.NpgsqlDbType.Smallint);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            // ─────────────────────────────────────────────────────
+            // ШАГ 4: Индекс на временной таблице
+            // ─────────────────────────────────────────────────────
+            await UpdateProgressAsync("Сертификаты: индексация временной таблицы...",
+                startProgress + progressRange * 55 / 100);
+
+            using (var cmdIndex = new NpgsqlCommand(
+                "CREATE INDEX idx_sertificates_temp ON sertificates_temp (code, code_tovar)", conn, tran))
+            {
+                await cmdIndex.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            // ─────────────────────────────────────────────────────
+            // ШАГ 5: Удаление сертификатов, которых НЕТ в пакете
+            // ─────────────────────────────────────────────────────
+            await UpdateProgressAsync("Сертификаты: удаление устаревших...",
+                startProgress + progressRange * 65 / 100);
+
+            int deleted;
+            using (var cmdDelete = new NpgsqlCommand(@"
+        DELETE FROM sertificates 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM sertificates_temp st 
+            WHERE st.code = sertificates.code 
+              AND st.code_tovar = sertificates.code_tovar
+        )", conn, tran))
+            {
+                deleted = await cmdDelete.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            // ─────────────────────────────────────────────────────
+            // ШАГ 6: Вставка только НОВЫХ сертификатов
+            // ─────────────────────────────────────────────────────
+            await UpdateProgressAsync("Сертификаты: добавление новых...",
+                startProgress + progressRange * 80 / 100);
+
+            int inserted;
+            using (var cmdInsert = new NpgsqlCommand(@"
+        INSERT INTO sertificates (code, code_tovar, rating, is_active)
+        SELECT st.code, st.code_tovar, st.rating, st.is_active 
+        FROM sertificates_temp st
+        WHERE NOT EXISTS (
+            SELECT 1 FROM sertificates s 
+            WHERE s.code = st.code 
+              AND s.code_tovar = st.code_tovar
+        )", conn, tran))
+            {
+                inserted = await cmdInsert.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            Console.WriteLine($"[SERT SYNC] Итого: " +
+                $"в пакете {uniqueSertificates.Count}, " +
+                $"удалено {deleted}, " +
+                $"добавлено {inserted}");
         }
+
+        //// Оригинальный метод для обратной совместимости
+        //private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
+        //    LoadPacketData loadPacketData,
+        //    CancellationToken cancellationToken)
+        //{
+        //    // Вызываем новую перегрузку со значениями по умолчанию
+        //    return await SaveDataToDatabaseAsync(loadPacketData, cancellationToken, 0, 100);
+        //}
 
         private void PrepareDatabaseQueries(LoadPacketData loadPacketData, List<string> queries)
         {
@@ -897,64 +1257,156 @@ namespace Cash8Avalon
                 queries.Add($"UPDATE constants SET cdn_token='{EscapeSql(loadPacketData.TokenMark)}'");
             }
 
-            // Создание временной таблицы для товаров
-            queries.Add("DELETE FROM tovar2");
+            //// Создание временной таблицы для товаров
+            //queries.Add("DELETE FROM tovar2");
 
-            // Вставка товаров во временную таблицу
-            if (loadPacketData.ListTovar?.Count > 0)
+            //// Вставка товаров во временную таблицу
+            //if (loadPacketData.ListTovar?.Count > 0)
+            //{
+            //    foreach (var tovar in loadPacketData.ListTovar)
+            //    {
+            //        queries.Add($@"
+            //            INSERT INTO tovar2(code,name,retail_price,its_deleted,nds,its_certificate,
+            //            percent_bonus,tnved,its_marked,its_excise,cdn_check,fractional,
+            //            refusal_of_marking,rr_not_control_owner) 
+            //            VALUES({tovar.Code},'{EscapeSql(tovar.Name)}',{tovar.RetailPrice},{tovar.ItsDeleted},
+            //            {tovar.Nds},{tovar.ItsCertificate},{tovar.PercentBonus},'{EscapeSql(tovar.TnVed)}',
+            //            {tovar.ItsMarked},{tovar.ItsExcise},{tovar.CdnCheck},{tovar.Fractional},
+            //            {tovar.RefusalOfMarking},{tovar.RrNotControlOwner})");
+            //    }
+            //}
+
+            //// Обновление основной таблицы товаров
+            //queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
+            //queries.Add(GetInsertQuery());
+            //queries.Add(GetUpdateQuery());
+            //queries.Add("DELETE FROM tovar2");
+
+            //queries.Add("DELETE FROM barcode");
+
+            //// Вставка штрихкодов
+            //if (loadPacketData.ListBarcode?.Count > 0)
+            //{
+            //    foreach (var barcode in loadPacketData.ListBarcode)
+            //    {
+            //        queries.Add($"INSERT INTO barcode(tovar_code,barcode) VALUES({barcode.TovarCode},'{EscapeSql(barcode.BarCode)}')");
+            //    }
+            //}
+
+            //queries.Add("DELETE FROM tovar2");
+
+            // Обновление токена
+            //if (!string.IsNullOrEmpty(loadPacketData.TokenMark))
+            //{
+            //    queries.Add($"UPDATE constants SET cdn_token='{EscapeSql(loadPacketData.TokenMark)}'");
+            //}
+
+            // ═══════════════════════════════════════════════════
+            // ТОВАРЫ: условное переключение
+            // ═══════════════════════════════════════════════════
+            if (USE_OPTIMIZED_SYNC)
             {
-                foreach (var tovar in loadPacketData.ListTovar)
+                // НОВЫЙ путь: tovar2 заполняется через COPY в SyncTovarsAsync
+                // Сразу добавляем запросы синхронизации с основной таблицей
+                queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
+                queries.Add(GetInsertQuery());
+                queries.Add(GetUpdateQuery());
+                queries.Add("DELETE FROM tovar2");
+            }
+            else
+            {
+                // СТАРЫЙ путь: INSERT по одному
+                queries.Add("DELETE FROM tovar2");
+
+                if (loadPacketData.ListTovar?.Count > 0)
                 {
-                    queries.Add($@"
-                        INSERT INTO tovar2(code,name,retail_price,its_deleted,nds,its_certificate,
-                        percent_bonus,tnved,its_marked,its_excise,cdn_check,fractional,
-                        refusal_of_marking,rr_not_control_owner) 
-                        VALUES({tovar.Code},'{EscapeSql(tovar.Name)}',{tovar.RetailPrice},{tovar.ItsDeleted},
-                        {tovar.Nds},{tovar.ItsCertificate},{tovar.PercentBonus},'{EscapeSql(tovar.TnVed)}',
-                        {tovar.ItsMarked},{tovar.ItsExcise},{tovar.CdnCheck},{tovar.Fractional},
-                        {tovar.RefusalOfMarking},{tovar.RrNotControlOwner})");
+                    foreach (var tovar in loadPacketData.ListTovar)
+                    {
+                        queries.Add($@"
+                            INSERT INTO tovar2(code,name,retail_price,its_deleted,nds,its_certificate,
+                            percent_bonus,tnved,its_marked,its_excise,cdn_check,fractional,
+                            refusal_of_marking,rr_not_control_owner) 
+                            VALUES({tovar.Code},'{EscapeSql(tovar.Name)}',{tovar.RetailPrice},{tovar.ItsDeleted},
+                            {tovar.Nds},{tovar.ItsCertificate},{tovar.PercentBonus},'{EscapeSql(tovar.TnVed)}',
+                            {tovar.ItsMarked},{tovar.ItsExcise},{tovar.CdnCheck},{tovar.Fractional},
+                            {tovar.RefusalOfMarking},{tovar.RrNotControlOwner})");
+                    }
+                }
+
+                queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
+                queries.Add(GetInsertQuery());
+                queries.Add(GetUpdateQuery());
+                queries.Add("DELETE FROM tovar2");
+            }
+
+            // ═══════════════════════════════════════════════════
+            // ШТРИХКОДЫ: условное переключение старого/нового метода
+            // ═══════════════════════════════════════════════════
+            if (USE_OPTIMIZED_SYNC)
+            {
+                // НОВЫЙ путь: штрихкоды обрабатываются отдельно в SaveDataToDatabaseAsync
+                // через SyncBarcodesAsync (COPY + delta). Здесь ничего не делаем.
+            }
+            else
+            {
+                // СТАРЫЙ путь: полный DELETE + INSERT по одному (проверенный, медленный)
+                queries.Add("DELETE FROM barcode");
+
+                if (loadPacketData.ListBarcode?.Count > 0)
+                {
+                    foreach (var barcode in loadPacketData.ListBarcode)
+                    {
+                        queries.Add($"INSERT INTO barcode(tovar_code,barcode) VALUES({barcode.TovarCode},'{EscapeSql(barcode.BarCode)}')");
+                    }
                 }
             }
 
-            // Обновление основной таблицы товаров
-            queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
-            queries.Add(GetInsertQuery());
-            queries.Add(GetUpdateQuery());
-            queries.Add("DELETE FROM tovar2");
-            queries.Add("DELETE FROM barcode");
-
-            // Вставка штрихкодов
-            if (loadPacketData.ListBarcode?.Count > 0)
-            {
-                foreach (var barcode in loadPacketData.ListBarcode)
-                {
-                    queries.Add($"INSERT INTO barcode(tovar_code,barcode) VALUES({barcode.TovarCode},'{EscapeSql(barcode.BarCode)}')");
-                }
-            }
-
-            // Вставка характеристик
-            if (loadPacketData.ListCharacteristic?.Count > 0)
-            {
-                queries.Add("DELETE FROM characteristic");
-                foreach (var characteristic in loadPacketData.ListCharacteristic)
-                {
-                    queries.Add($@"
-                        INSERT INTO characteristic(tovar_code, guid, name, retail_price_characteristic) 
-                        VALUES({characteristic.CodeTovar},'{EscapeSql(characteristic.Guid)}','{EscapeSql(characteristic.Name)}',
-                        {characteristic.RetailPrice})");
-                }
-            }
+            //// Вставка характеристик
+            //if (loadPacketData.ListCharacteristic?.Count > 0)
+            //{
+            //    queries.Add("DELETE FROM characteristic");
+            //    foreach (var characteristic in loadPacketData.ListCharacteristic)
+            //    {
+            //        queries.Add($@"
+            //            INSERT INTO characteristic(tovar_code, guid, name, retail_price_characteristic) 
+            //            VALUES({characteristic.CodeTovar},'{EscapeSql(characteristic.Guid)}','{EscapeSql(characteristic.Name)}',
+            //            {characteristic.RetailPrice})");
+            //    }
+            //}
 
             // Вставка сертификатов
-            queries.Add("DELETE FROM sertificates");
-            if (loadPacketData.ListSertificate?.Count > 0)
+            //queries.Add("DELETE FROM sertificates");
+            //if (loadPacketData.ListSertificate?.Count > 0)
+            //{
+            //    foreach (var sertificate in loadPacketData.ListSertificate)
+            //    {
+            //        queries.Add($@"
+            //            INSERT INTO sertificates(code, code_tovar, rating, is_active)
+            //            VALUES({sertificate.Code},{sertificate.CodeTovar},{sertificate.Rating},
+            //            {sertificate.IsActive})");
+            //    }
+            //}
+
+            // ═══════════════════════════════════════════════════
+            // СЕРТИФИКАТЫ
+            // ═══════════════════════════════════════════════════
+            if (USE_OPTIMIZED_SYNC)
             {
-                foreach (var sertificate in loadPacketData.ListSertificate)
+                // НОВЫЙ путь: обрабатывается отдельно через COPY + delta
+            }
+            else
+            {
+                // СТАРЫЙ путь: полный DELETE + INSERT по одному
+                queries.Add("DELETE FROM sertificates");
+                if (loadPacketData.ListSertificate?.Count > 0)
                 {
-                    queries.Add($@"
-                        INSERT INTO sertificates(code, code_tovar, rating, is_active)
-                        VALUES({sertificate.Code},{sertificate.CodeTovar},{sertificate.Rating},
-                        {sertificate.IsActive})");
+                    foreach (var sertificate in loadPacketData.ListSertificate)
+                    {
+                        queries.Add($@"
+                            INSERT INTO sertificates(code, code_tovar, rating, is_active)
+                            VALUES({sertificate.Code},{sertificate.CodeTovar},{sertificate.Rating},
+                            {sertificate.IsActive})");
+                    }
                 }
             }
 
@@ -997,15 +1449,38 @@ namespace Cash8Avalon
                 });
             }
 
-            // Вставка табличных данных акций
-            if (loadPacketData.ListActionTable?.Count > 0)
+            //// Вставка табличных данных акций
+            //if (loadPacketData.ListActionTable?.Count > 0)
+            //{
+            //    foreach (var actionTable in loadPacketData.ListActionTable)
+            //    {
+            //        queries.Add($@"
+            //            INSERT INTO action_table(num_doc, num_list, code_tovar, price)
+            //            VALUES({actionTable.NumDoc},{actionTable.NumList},{actionTable.CodeTovar},
+            //            {actionTable.Price})");
+            //    }
+            //}
+
+            // ═══════════════════════════════════════════════════
+            // ТАБЛИЧНАЯ ЧАСТЬ АКЦИЙ (action_table)
+            // ═══════════════════════════════════════════════════
+            if (USE_OPTIMIZED_SYNC)
             {
-                foreach (var actionTable in loadPacketData.ListActionTable)
+                // НОВЫЙ путь: COPY напрямую в action_table (она уже очищена DELETE выше)
+                // Обрабатывается в SaveDataToDatabaseAsync через SyncActionTableAsync
+            }
+            else
+            {
+                // СТАРЫЙ путь: INSERT по одному
+                if (loadPacketData.ListActionTable?.Count > 0)
                 {
-                    queries.Add($@"
-                        INSERT INTO action_table(num_doc, num_list, code_tovar, price)
-                        VALUES({actionTable.NumDoc},{actionTable.NumList},{actionTable.CodeTovar},
-                        {actionTable.Price})");
+                    foreach (var actionTable in loadPacketData.ListActionTable)
+                    {
+                        queries.Add($@"
+                            INSERT INTO action_table(num_doc, num_list, code_tovar, price)
+                            VALUES({actionTable.NumDoc},{actionTable.NumList},{actionTable.CodeTovar},
+                            {actionTable.Price})");
+                    }
                 }
             }
 
@@ -1031,6 +1506,230 @@ namespace Cash8Avalon
                         VALUES({actionClients.NumDoc},{actionClients.CodeClient})");
                 }
             }
+        }
+
+        /// <summary>
+        /// Оптимизированная загрузка условий акций через COPY.
+        /// Таблица action_table уже очищена перед этим, поэтому COPY идет напрямую в неё.
+        /// </summary>
+        private async Task SyncActionTableAsync(
+            List<ActionTable> packetActionTables,
+            NpgsqlConnection conn,
+            NpgsqlTransaction tran,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
+        {
+            int progressRange = endProgress - startProgress;
+
+            // Таблица уже очищена (DELETE FROM action_table)
+            if (packetActionTables == null || packetActionTables.Count == 0)
+            {
+                Console.WriteLine("[ACTION_TABLE SYNC] Пакет пуст");
+                return;
+            }
+
+            await UpdateProgressAsync(
+                $"Условия акций: загрузка {packetActionTables.Count} шт...",
+                startProgress + progressRange * 5 / 100);
+
+            using (var writer = conn.BeginBinaryImport(
+                "COPY action_table (num_doc, num_list, code_tovar, price) FROM STDIN (FORMAT BINARY)"))
+            {
+                foreach (var at in packetActionTables)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    writer.StartRow();
+
+                    // num_doc (integer)
+                    if (int.TryParse(at.NumDoc, out int numDoc))
+                        writer.Write(numDoc, NpgsqlTypes.NpgsqlDbType.Integer);
+                    else
+                        writer.WriteNull();
+
+                    // num_list (integer)
+                    if (int.TryParse(at.NumList, out int numList))
+                        writer.Write(numList, NpgsqlTypes.NpgsqlDbType.Integer);
+                    else
+                        writer.WriteNull();
+
+                    // code_tovar (bigint)
+                    if (long.TryParse(at.CodeTovar, out long codeTovar))
+                        writer.Write(codeTovar, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    // price (numeric)
+                    if (decimal.TryParse(at.Price, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal price))
+                        writer.Write(price, NpgsqlTypes.NpgsqlDbType.Numeric);
+                    else
+                        writer.Write(0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            Console.WriteLine($"[ACTION_TABLE SYNC] Загружено условий акций через COPY: {packetActionTables.Count}");
+        }
+
+        /// <summary>
+        /// Оптимизированная загрузка товаров во временную таблицу tovar2 через COPY.
+        /// </summary>
+        private async Task SyncTovarsAsync(
+            List<Tovar> packetTovars,
+            NpgsqlConnection conn,
+            NpgsqlTransaction tran,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
+        {
+            int progressRange = endProgress - startProgress;
+
+            // Таблица tovar2 уже создана и пуста (через check_temp_tables)
+            if (packetTovars == null || packetTovars.Count == 0)
+            {
+                Console.WriteLine("[TOVAR SYNC] Пакет товаров пуст");
+                return;
+            }
+
+            await UpdateProgressAsync(
+                $"Товары: загрузка {packetTovars.Count} шт. во временную таблицу...",
+                startProgress + progressRange * 5 / 100);
+
+            using (var writer = conn.BeginBinaryImport(
+                "COPY tovar2 (code, name, retail_price, its_deleted, nds, its_certificate, percent_bonus, tnved, its_marked, its_excise, cdn_check, fractional, refusal_of_marking, rr_not_control_owner) FROM STDIN (FORMAT BINARY)"))
+            {
+                foreach (var tovar in packetTovars)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    writer.StartRow();
+
+                    // code (bigint)
+                    writer.Write(long.TryParse(tovar.Code, out long code) ? code : 0L, NpgsqlTypes.NpgsqlDbType.Bigint);
+
+                    // name (character(100))
+                    writer.Write(tovar.Name ?? string.Empty, NpgsqlTypes.NpgsqlDbType.Varchar);
+
+                    // retail_price (numeric) - ИСПРАВЛЕНО: InvariantCulture для точки в JSON
+                    writer.Write(decimal.TryParse(tovar.RetailPrice, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal rp) ? rp : 0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+
+                    // its_deleted (numeric(1)) - ИСПРАВЛЕНО
+                    writer.Write(decimal.TryParse(tovar.ItsDeleted, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal del) ? del : 0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+
+                    // nds (integer)
+                    writer.Write(int.TryParse(tovar.Nds, out int nds) ? nds : 0, NpgsqlTypes.NpgsqlDbType.Integer);
+
+                    // its_certificate (smallint)
+                    writer.Write(short.TryParse(tovar.ItsCertificate, out short cert) ? cert : (short)0, NpgsqlTypes.NpgsqlDbType.Smallint);
+
+                    // percent_bonus (numeric) - ИСПРАВЛЕНО
+                    writer.Write(decimal.TryParse(tovar.PercentBonus, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal pb) ? pb : 0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+
+                    // tnved (varchar)
+                    writer.Write(tovar.TnVed ?? string.Empty, NpgsqlTypes.NpgsqlDbType.Varchar);
+
+                    // its_marked (smallint)
+                    writer.Write(short.TryParse(tovar.ItsMarked, out short marked) ? marked : (short)0, NpgsqlTypes.NpgsqlDbType.Smallint);
+
+                    // its_excise (smallint)
+                    writer.Write(short.TryParse(tovar.ItsExcise, out short excise) ? excise : (short)0, NpgsqlTypes.NpgsqlDbType.Smallint);
+
+                    // cdn_check (boolean)
+                    writer.Write(tovar.CdnCheck == "1" || tovar.CdnCheck?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
+
+                    // fractional (boolean)
+                    writer.Write(tovar.Fractional == "1" || tovar.Fractional?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
+
+                    // refusal_of_marking (boolean)
+                    writer.Write(tovar.RefusalOfMarking == "1" || tovar.RefusalOfMarking?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
+
+                    // rr_not_control_owner (boolean)
+                    writer.Write(tovar.RrNotControlOwner == "1" || tovar.RrNotControlOwner?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            Console.WriteLine($"[TOVAR SYNC] Загружено товаров через COPY: {packetTovars.Count}");
+        }
+
+        /// <summary>
+        /// Оптимизированная загрузка штрихкодов через полное обновление (DELETE ALL + COPY).
+        /// Поскольку пакет с сервера содержит актуальный срез всех штрихкодов,
+        /// вычислять дельту (разницу) не нужно — просто очищаем таблицу и заливаем заново.
+        /// </summary>
+        private async Task SyncBarcodesAsync(
+            List<Barcode> packetBarcodes,
+            NpgsqlConnection conn,
+            NpgsqlTransaction tran,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
+        {
+            int progressRange = endProgress - startProgress;
+
+            // ── ШАГ 1: Очистка таблицы штрихкодов ──
+            await UpdateProgressAsync("Штрихкоды: очистка старых данных...", startProgress);
+
+            using (var cmdDeleteAll = new NpgsqlCommand("DELETE FROM barcode", conn, tran))
+            {
+                await cmdDeleteAll.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            // Если пакет пуст — просто выходим (таблица уже очищена)
+            if (packetBarcodes == null || packetBarcodes.Count == 0)
+            {
+                Console.WriteLine("[BARCODE SYNC] Пакет пуст — таблица barcode очищена");
+                return;
+            }
+
+            // ── ШАГ 2: Дедупликация в памяти перед COPY (защита от дублей в JSON) ──
+            await UpdateProgressAsync("Штрихкоды: дедупликация пакета...",
+                startProgress + progressRange * 5 / 100);
+
+            var uniqueBarcodes = packetBarcodes
+                .Where(b => !string.IsNullOrWhiteSpace(b.TovarCode)
+                          && !string.IsNullOrWhiteSpace(b.BarCode))
+                .GroupBy(b => new { b.TovarCode, b.BarCode })
+                .Select(g => g.First())
+                .ToList();
+
+            if (uniqueBarcodes.Count == 0)
+            {
+                Console.WriteLine("[BARCODE SYNC] После фильтрации пакет пуст");
+                return;
+            }
+
+            // ── ШАГ 3: Прямой COPY в основную таблицу (без временных таблиц и индексов!) ──
+            await UpdateProgressAsync(
+                $"Штрихкоды: загрузка {uniqueBarcodes.Count} шт...",
+                startProgress + progressRange * 20 / 100);
+
+            using (var writer = conn.BeginBinaryImport(
+                "COPY barcode (tovar_code, barcode) FROM STDIN (FORMAT BINARY)"))
+            {
+                foreach (var barcode in uniqueBarcodes)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    writer.StartRow();
+
+                    if (long.TryParse(barcode.TovarCode, out long tovarCode))
+                        writer.Write(tovarCode, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    writer.Write(barcode.BarCode, NpgsqlTypes.NpgsqlDbType.Text);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            Console.WriteLine($"[BARCODE SYNC] Загружено штрихкодов через COPY: {uniqueBarcodes.Count}");
         }
 
         private string EscapeSql(string input)
@@ -2206,14 +2905,14 @@ namespace Cash8Avalon
                     {
                         _btn_new_load.Background = new SolidColorBrush(Color.Parse("#4CAF50"));
                         _btn_new_load.Content = "Идет загрузка...";
-                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Wait); // Курсор-часики
+                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Wait);
                         _btn_new_load.Click -= Btn_new_load_Click;
                     }
                     else
                     {
                         _btn_new_load.Background = new SolidColorBrush(Color.Parse("#2196F3"));
                         _btn_new_load.Content = "Начать загрузку данных";
-                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Hand); // Обычная рука
+                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Hand);
                         _btn_new_load.Click += Btn_new_load_Click;
                     }
                 }
@@ -2221,8 +2920,18 @@ namespace Cash8Avalon
                 if (_progressPanel != null)
                     _progressPanel.IsVisible = isLoading;
 
+                // ⬇⬇⬇ НОВОЕ: Показываем подсказку только во время загрузки ⬇⬇⬇
+                if (_workHintText != null)
+                    _workHintText.IsVisible = isLoading;
+
                 if (_timeInfoText != null)
-                    _timeInfoText.IsVisible = isLoading;
+                {
+                    if (isLoading)
+                    {
+                        _timeInfoText.Text = "Время загрузки: 00:00";
+                        _timeInfoText.IsVisible = true;
+                    }
+                }
 
                 if (isLoading)
                 {
@@ -2243,6 +2952,39 @@ namespace Cash8Avalon
                 }
             }).Wait();
         }
+
+        /// <summary>
+        /// Обновляет текст с датой последней успешной загрузки
+        /// </summary>
+        private void UpdateLastSyncDate()
+        {
+            try
+            {
+                // Используем уже существующий метод, который ходит в БД
+                DateTime lastDate = last_date_download_tovars();
+
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (_lastUpdateText != null)
+                    {
+                        // Проверяем, что дата не дефолтная (2000 год)
+                        if (lastDate > new DateTime(2001, 1, 1))
+                        {
+                            _lastUpdateText.Text = $"Последняя успешная загрузка: {lastDate:dd.MM.yyyy HH:mm}";
+                        }
+                        else
+                        {
+                            _lastUpdateText.Text = "Последняя загрузка: данные еще не загружались";
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка получения даты последней загрузки: {ex.Message}");
+            }
+        }
+
 
         private async Task UpdateProgressAsync(string message, int progress)
         {
