@@ -3272,8 +3272,9 @@ namespace Cash8Avalon
                     string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
                     // 2. УКАЗЫВАЕМ ИМЯ ФАЙЛА
-                    string targetFileName = "Cash8Avalon.dll";
+                    //string targetFileName = "Cash8Avalon.dll";
                     // ПОТОМ ПОМЕНЯЕТЕ НА: string targetFileName = "PiotIntegration.dll";
+                    string targetFileName = "PiotIntegration.dll";
 
                     string fullFilePath = Path.Combine(appDirectory, targetFileName);
 
@@ -6105,14 +6106,14 @@ namespace Cash8Avalon
             }
 
             // Сравнение ИНН
-            if (!string.Equals(frData.OrganizationVATIN, piotData.KktInn, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(frData.OrganizationVATIN.Trim(), piotData.KktInn.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 await ShowComparisonError("ИНН", frData.OrganizationVATIN, piotData.KktInn, owner);
                 complete = false;
             }
 
             // Сравнение серийных номеров ФН
-            if (!string.Equals(frData.SerialNumberFN, piotData.FnSerial, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(frData.SerialNumberFN.Trim(), piotData.FnSerial.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 await ShowComparisonError("Серийный номер ФН", frData.SerialNumberFN, piotData.FnSerial, owner);
                 complete = false;

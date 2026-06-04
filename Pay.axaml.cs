@@ -1126,6 +1126,7 @@ namespace Cash8Avalon
                     currentTrap = "9";
                     cashCheck.print_to_button = 0;
                     MainStaticClass.write_event_in_log($"[TRAP {currentTrap}] Вызов cc.it_is_paid...", logCtx, cashCheck.numdoc.ToString());
+                    
                     if (await cashCheck.it_is_paid(this.CashSum, sum_doc_str, remainder_str, bonus_money_str, true, sum_cash_pay, non_sum_cash_pay, sertSum.ToString().Replace(",", ".")))
                     {
                         MainStaticClass.write_event_in_log($"[TRAP {currentTrap}.1] Успех, закрываем окно.", logCtx, cashCheck.numdoc.ToString());

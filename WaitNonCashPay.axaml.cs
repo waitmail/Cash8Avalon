@@ -216,12 +216,12 @@ namespace Cash8Avalon
 
         #region HTTP запрос (Retry Logic)
 
+
         //private async Task<TerminalResult> SendRequestWithRetryAsync(CancellationToken cancellationToken)
         //{
         //    TerminalResult lastResult = null;
         //    var attemptErrors = new List<string>();
 
-        //    // ИСПРАВЛЕНО: Минимум 20 секунд на запрос
         //    int singleRequestTimeout = Math.Max(20, (_totalSeconds - (MaxRetryAttempts - 1) * (RetryDelayMs / 1000)) / MaxRetryAttempts);
 
         //    using var overallTimeoutCts = new CancellationTokenSource(_totalSeconds * 1000);
@@ -230,17 +230,33 @@ namespace Cash8Avalon
         //    for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
         //    {
         //        if (linkedCts.Token.IsCancellationRequested || _isClosed)
-        //            return TerminalResult.CreateError("Операция отменена");
+        //        {
+        //            var cancelResult = TerminalResult.CreateError("Операция отменена");
+        //            LogTerminalErrorToDb(cancelResult, "Retry_Cancel");
+        //            return cancelResult;
+        //        }
 
         //        _currentAttempt = attempt;
         //        UpdateAttemptDisplay(attempt, MaxRetryAttempts);
 
-        //        // Логирование попытки
         //        MainStaticClass.write_event_in_log($"Попытка {attempt}/{MaxRetryAttempts} отправки на {Url}", "Terminal", cc?.numdoc.ToString() ?? "0");
 
         //        try
         //        {
-        //            lastResult = await SendRequestAsync(Url, Data, singleRequestTimeout).ConfigureAwait(false);
+        //            // ★ РАСКОММЕНТИРОВАНА И ИСПРАВЛЕНА ЛОГИКА ДИНАМИЧЕСКОГО ТАЙМАУТА ★
+        //            int currentRequestTimeout = singleRequestTimeout;
+
+        //            // Если это не первая попытка И предыдущая ошибка была "мгновенной" (сеть мертва) — 
+        //            // жестко ставим 5 секунд на ВЕСЬ запрос. Нет смысла ждать 20 сек, если хост выключен.
+        //            if (attempt > 1 && lastResult != null && IsImmediateNetworkError(lastResult.ErrorMessage))
+        //            {
+        //                currentRequestTimeout = 5;
+        //                MainStaticClass.write_event_in_log(
+        //                    $"[Retry] Предыдущая ошибка мгновенная, сокращаю общий таймаут до {currentRequestTimeout} сек",
+        //                    "Terminal", cc?.numdoc.ToString() ?? "0");
+        //            }
+
+        //            lastResult = await SendRequestAsync(Url, Data, currentRequestTimeout).ConfigureAwait(false);
         //            lastResult.AttemptErrors = attemptErrors;
         //            lastResult.AttemptsCount = attempt;
 
@@ -254,40 +270,105 @@ namespace Cash8Avalon
 
         //            if (!IsRetryableError(lastResult))
         //            {
+        //                LogTerminalErrorToDb(lastResult, "Retry_BusinessError");
         //                InvokeCommandCompleted(lastResult);
         //                return lastResult;
         //            }
 
-        //            // Экспоненциальная задержка (1с, 2с, 3с)
         //            if (attempt < MaxRetryAttempts)
         //            {
-        //                try { await Task.Delay(RetryDelayMs * attempt, linkedCts.Token).ConfigureAwait(false); }
-        //                catch (OperationCanceledException) { return TerminalResult.CreateError("Превышено время ожидания"); }
+        //                int delayMs = RetryDelayMs; // Фиксированная пауза 3 секунды
+        //                int delaySec = delayMs / 1000;
+
+        //                string shortError = lastResult.ErrorMessage?.Split('\n').FirstOrDefault() ?? "Ошибка связи";
+        //                if (!string.IsNullOrEmpty(shortError) && shortError.Length > 60)
+        //                    shortError = shortError.Substring(0, 57) + "...";
+
+        //                Dispatcher.UIThread.Post(() =>
+        //                {
+        //                    if (StatusLabel != null)
+        //                    {
+        //                        StatusLabel.Text = $"Попытка {attempt} из {MaxRetryAttempts}: {shortError}\nПовтор через {delaySec} сек...";
+        //                        StatusLabel.Foreground = Brushes.Orange;
+        //                    }
+        //                });
+
+        //                try { await Task.Delay(delayMs, linkedCts.Token).ConfigureAwait(false); }
+        //                catch (OperationCanceledException)
+        //                {
+        //                    var delayCancelResult = TerminalResult.CreateError("Превышено время ожидания при задержке");
+        //                    LogTerminalErrorToDb(delayCancelResult, "Retry_DelayCancel");
+        //                    return delayCancelResult;
+        //                }
         //            }
         //        }
         //        catch (OperationCanceledException) when (overallTimeoutCts.Token.IsCancellationRequested)
         //        {
-        //            return TerminalResult.CreateError($"Превышено общее время ожидания ({_totalSeconds} сек).");
+        //            var overallTimeoutResult = TerminalResult.CreateError($"Превышено общее время ожидания ({_totalSeconds} сек).");
+        //            LogTerminalErrorToDb(overallTimeoutResult, "Retry_OverallTimeout");
+        //            return overallTimeoutResult;
         //        }
         //        catch (OperationCanceledException) { throw; }
         //        catch (Exception ex)
         //        {
         //            attemptErrors.Add($"Попытка {attempt}: {ex.Message}");
         //            lastResult = TerminalResult.CreateError(ex.Message);
+        //            lastResult.Exception = ex;
+
         //            if (attempt < MaxRetryAttempts)
         //            {
-        //                try { await Task.Delay(RetryDelayMs * attempt, linkedCts.Token).ConfigureAwait(false); }
-        //                catch (OperationCanceledException) { return TerminalResult.CreateError("Превышено время ожидания"); }
+        //                int delayMs = RetryDelayMs; // ★ ИСПРАВЛЕНО: Фиксированная пауза 3 секунды (было RetryDelayMs * attempt)
+        //                int delaySec = delayMs / 1000;
+
+        //                string shortError = ex.Message?.Split('\n').FirstOrDefault() ?? "Критическая ошибка";
+        //                if (!string.IsNullOrEmpty(shortError) && shortError.Length > 60)
+        //                    shortError = shortError.Substring(0, 57) + "...";
+
+        //                Dispatcher.UIThread.Post(() =>
+        //                {
+        //                    if (StatusLabel != null)
+        //                    {
+        //                        StatusLabel.Text = $"Попытка {attempt} из {MaxRetryAttempts}: {shortError}\nПовтор через {delaySec} сек...";
+        //                        StatusLabel.Foreground = Brushes.Orange;
+        //                    }
+        //                });
+
+        //                try { await Task.Delay(delayMs, linkedCts.Token).ConfigureAwait(false); }
+        //                catch (OperationCanceledException)
+        //                {
+        //                    var exceptionDelayResult = TerminalResult.CreateError("Превышено время ожидания");
+        //                    LogTerminalErrorToDb(exceptionDelayResult, "Retry_ExceptionDelayCancel");
+        //                    return exceptionDelayResult;
+        //                }
         //            }
         //        }
         //    }
 
         //    if (lastResult != null)
         //    {
+        //        LogTerminalErrorToDb(lastResult, "Retry_AllRetriesFailed");
+
         //        InvokeCommandCompleted(lastResult);
-        //        if (attemptErrors.Count > 1) lastResult.ErrorMessage = $"После {MaxRetryAttempts} попыток:\n\n{lastResult.ErrorMessage}";
+
+        //        if (attemptErrors.Count > 1)
+        //        {
+        //            var errorSummary = string.Join("\n", attemptErrors.Select((e, i) =>
+        //            {
+        //                string msg = e.Split('\n').FirstOrDefault() ?? e;
+        //                if (msg.Length > 80) msg = msg.Substring(0, 77) + "...";
+        //                return $"[{i + 1}] {msg}";
+        //            }));
+
+        //            lastResult.ErrorMessage = $"❌ Не удалось выполнить операцию после {MaxRetryAttempts} попыток.\n\n" +
+        //                                      $"Детали:\n{errorSummary}\n\n" +
+        //                                      $"Последняя ошибка:\n{lastResult.ErrorMessage}";
+        //        }
         //    }
-        //    else lastResult = TerminalResult.CreateError("Все попытки исчерпаны");
+        //    else
+        //    {
+        //        lastResult = TerminalResult.CreateError("Все попытки исчерпаны");
+        //        LogTerminalErrorToDb(lastResult, "Retry_UnknownFail");
+        //    }
 
         //    return lastResult;
         //}
@@ -318,18 +399,11 @@ namespace Cash8Avalon
 
                 try
                 {
-                    // ★ РАСКОММЕНТИРОВАНА И ИСПРАВЛЕНА ЛОГИКА ДИНАМИЧЕСКОГО ТАЙМАУТА ★
+                    // ★ ИСПРАВЛЕНО: Убрана логика сокращения таймаута до 5 секунд. ★
+                    // SocketsHttpHandler.ConnectTimeout (3 сек) уже защищает от долгого ожидания мертвого хоста.
+                    // Урезание client.Timeout до 5 сек лишало терминал времени на связь с банком (особенно при коде 34).
+                    // Теперь каждый запрос (включая повторные попытки) получает полный таймаут (20+ секунд).
                     int currentRequestTimeout = singleRequestTimeout;
-
-                    // Если это не первая попытка И предыдущая ошибка была "мгновенной" (сеть мертва) — 
-                    // жестко ставим 5 секунд на ВЕСЬ запрос. Нет смысла ждать 20 сек, если хост выключен.
-                    if (attempt > 1 && lastResult != null && IsImmediateNetworkError(lastResult.ErrorMessage))
-                    {
-                        currentRequestTimeout = 5;
-                        MainStaticClass.write_event_in_log(
-                            $"[Retry] Предыдущая ошибка мгновенная, сокращаю общий таймаут до {currentRequestTimeout} сек",
-                            "Terminal", cc?.numdoc.ToString() ?? "0");
-                    }
 
                     lastResult = await SendRequestAsync(Url, Data, currentRequestTimeout).ConfigureAwait(false);
                     lastResult.AttemptErrors = attemptErrors;
@@ -392,7 +466,7 @@ namespace Cash8Avalon
 
                     if (attempt < MaxRetryAttempts)
                     {
-                        int delayMs = RetryDelayMs; // ★ ИСПРАВЛЕНО: Фиксированная пауза 3 секунды (было RetryDelayMs * attempt)
+                        int delayMs = RetryDelayMs;
                         int delaySec = delayMs / 1000;
 
                         string shortError = ex.Message?.Split('\n').FirstOrDefault() ?? "Критическая ошибка";
@@ -628,26 +702,26 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Определяет, является ли ошибка сетевой и «мгновенной» (хост не доступен, соединение отклонено и т.п.)
-        /// Такие ошибки не требуют долгого ожидания ответа — можно сразу пробовать снова с коротким таймаутом.
-        /// </summary>
-        private static bool IsImmediateNetworkError(string errorMessage)
-        {
-            if (string.IsNullOrEmpty(errorMessage)) return false;
+        ///// <summary>
+        ///// Определяет, является ли ошибка сетевой и «мгновенной» (хост не доступен, соединение отклонено и т.п.)
+        ///// Такие ошибки не требуют долгого ожидания ответа — можно сразу пробовать снова с коротким таймаутом.
+        ///// </summary>
+        //private static bool IsImmediateNetworkError(string errorMessage)
+        //{
+        //    if (string.IsNullOrEmpty(errorMessage)) return false;
 
-            var error = errorMessage.ToLower();
+        //    var error = errorMessage.ToLower();
 
-            var immediatePhrases = new[] {
-                "connection refused", "не удалось подключиться", "нет соединения",
-                "не найден", "not found", "404", "name resolution failure",
-                "no such host", "host unreachable", "network unreachable",
-                "socketexception", "connectionreset", "forcibly closed"
-                // "терминал не отвечает" - УБРАНО! Если терминал найден, но тупит, даем ему 20 сек
-            };
+        //    var immediatePhrases = new[] {
+        //        "connection refused", "не удалось подключиться", "нет соединения",
+        //        "не найден", "not found", "404", "name resolution failure",
+        //        "no such host", "host unreachable", "network unreachable",
+        //        "socketexception", "connectionreset", "forcibly closed"
+        //        // "терминал не отвечает" - УБРАНО! Если терминал найден, но тупит, даем ему 20 сек
+        //    };
 
-            return immediatePhrases.Any(p => error.Contains(p));
-        }
+        //    return immediatePhrases.Any(p => error.Contains(p));
+        //}
 
         ///// <summary>
         ///// Определяет, стоит ли повторять запрос при данной ошибке.

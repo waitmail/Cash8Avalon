@@ -326,7 +326,8 @@ namespace Cash8Avalon
             public bool IsSertificate { get; set; } = false;//Это сертификат
             public bool IsFractional { get; set; } = false;//Весовой
             public bool IsMarked { get; set; } = false;//Маркированный            
-            public int MaxQuantity { get; set; } = 0;// Новое поле для хранения максимально допустимого количества для возврата
+            //public int MaxQuantity { get; set; } = 0;// Новое поле для хранения максимально допустимого количества для возврата
+            public decimal MaxQuantity { get; set; } = 0;  
         }
 
         // Классы данных для сертификатов
@@ -2154,6 +2155,7 @@ namespace Cash8Avalon
 
         private async void BtnFillOnSales_Click(object? sender, RoutedEventArgs e)
         {
+            await MessageBoxHelper.Show("Уменьшение количества происходит по нажатию на кнопку -(минус) на цифровой клавиатуре, увеличение + ", "Возврат товара", MessageBoxButton.OK, MessageBoxType.Info, this);
             await FillOnSalesAsync();
         }
 
@@ -2250,6 +2252,297 @@ namespace Cash8Avalon
                     this);
             }
         }
+
+        ///// <summary>
+        ///// Загрузка товаров из чека продажи с учетом возвратов
+        ///// </summary>
+        //private async Task LoadSalesItemsAsync(string documentNumber)
+        //{
+        //    MainStaticClass.write_event_in_log($"Загрузка товаров по чеку продажи №{documentNumber}",
+        //        "Документ чек",
+        //        numdoc.ToString());
+
+        //    NpgsqlConnection? conn = null;
+        //    try
+        //    {
+        //        conn = MainStaticClass.NpgsqlConn();
+        //        await conn.OpenAsync();
+
+        //        // 1. Получаем информацию о чеке продажи
+        //        string query = @"
+        //    SELECT id_transaction_terminal, code_authorization_terminal, date_time_write, 
+        //           non_cash_money, guid 
+        //    FROM checks_header 
+        //    WHERE document_number = @docNumber";
+
+        //        using (var cmd = new NpgsqlCommand(query, conn))
+        //        {
+        //            cmd.Parameters.AddWithValue("@docNumber", Convert.ToInt64(documentNumber));
+        //            using (var reader = await cmd.ExecuteReaderAsync())
+        //            {
+        //                if (await reader.ReadAsync())
+        //                {
+        //                    sale_id_transaction_terminal = reader["id_transaction_terminal"]?.ToString() ?? "";
+        //                    sale_code_authorization_terminal = reader["code_authorization_terminal"]?.ToString() ?? "";
+        //                    sale_date = Convert.ToDateTime(reader["date_time_write"]);
+        //                    sale_non_cash_money = Convert.ToDouble(reader["non_cash_money"]);
+        //                    id_sale = reader["guid"]?.ToString() ?? "";
+        //                }
+        //                else
+        //                {
+        //                    await MessageBoxHelper.Show($"Чек продажи №{documentNumber} не найден за последние 14 дней",
+        //                        "Информация",
+        //                        MessageBoxButton.OK,
+        //                        MessageBoxType.Warning,
+        //                        this);
+        //                    return;
+        //                }
+        //            }
+        //        }
+
+        //        // 2. Получаем товары из чека продажи и вычитаем возвращенные
+        //        query = @"
+        //    SELECT 
+        //        dt.tovar_code, 
+        //        dt.name,
+        //        SUM(dt.quantity) AS quantity,
+        //        dt.price, 
+        //        dt.price_at_a_discount, 
+        //        SUM(dt.sum) AS sum,
+        //        SUM(dt.sum_at_a_discount) AS sum_at_a_discount, 
+        //        dt.id_transaction,
+        //        dt.client,
+        //        dt.item_marker,
+        //        dt.fractional,
+        //        dt.its_marked,
+        //        dt.its_certificate
+        //    FROM (
+        //        -- Товары из чека продажи
+        //        SELECT 
+        //            ct.tovar_code, 
+        //            t.name,
+        //            ct.quantity AS quantity, 
+        //            ct.price, 
+        //            ct.price_at_a_discount, 
+        //            ct.sum, 
+        //            ct.sum_at_a_discount,
+        //            ch.id_transaction, 
+        //            ch.client, 
+        //            ct.item_marker,
+        //            t.fractional,
+        //            t.its_marked,
+        //            t.its_certificate
+        //        FROM checks_table ct
+        //        LEFT JOIN tovar t ON ct.tovar_code = t.code
+        //        LEFT JOIN checks_header ch ON ct.document_number = ch.document_number
+        //        WHERE ct.guid = @id_sale 
+        //          AND ch.check_type = 0 
+        //          AND ch.its_deleted = 0
+        //          AND ch.date_time_write BETWEEN @date_start AND @date_end
+
+        //        UNION ALL
+
+        //        -- Возвращенные товары (с минусом)
+        //        SELECT 
+        //            ct.tovar_code, 
+        //            t.name,
+        //            -ct.quantity, 
+        //            ct.price, 
+        //            ct.price_at_a_discount, 
+        //            -ct.sum, 
+        //            -ct.sum_at_a_discount, 
+        //            ch.id_transaction,
+        //            ch.client, 
+        //            ct.item_marker,
+        //            t.fractional,
+        //            t.its_marked,
+        //            t.its_certificate
+        //        FROM checks_table ct
+        //        LEFT JOIN tovar t ON ct.tovar_code = t.code
+        //        LEFT JOIN checks_header ch ON ct.document_number = ch.document_number
+        //        WHERE ch.id_sale = @id_sale 
+        //          AND ch.check_type = 1 
+        //          AND ch.its_deleted = 0
+        //          AND ch.date_time_write BETWEEN @date_start AND @date_end
+        //    ) AS dt
+        //    GROUP BY 
+        //        dt.tovar_code, 
+        //        dt.name, 
+        //        dt.price, 
+        //        dt.price_at_a_discount, 
+        //        dt.id_transaction,
+        //        dt.client,
+        //        dt.item_marker,
+        //        dt.fractional,
+        //        dt.its_marked,
+        //        dt.its_certificate
+        //    HAVING SUM(dt.quantity) > 0";
+
+        //        using (var cmd = new NpgsqlCommand(query, conn))
+        //        {
+        //            cmd.Parameters.AddWithValue("@id_sale", id_sale);
+        //            cmd.Parameters.AddWithValue("@date_start", DateTime.Now.AddDays(-14).Date);
+        //            cmd.Parameters.AddWithValue("@date_end", DateTime.Now.AddDays(1).Date);
+
+        //            using (var reader = await cmd.ExecuteReaderAsync())
+        //            {
+        //                bool hasItems = false;
+
+        //                while (await reader.ReadAsync())
+        //                {
+        //                    hasItems = true;
+
+        //                    // Получаем общее количество из чека продажи
+        //                    int saleQuantity = Convert.ToInt32(reader["quantity"]);
+
+        //                    // Проверяем, является ли товар сертификатом
+        //                    bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
+
+        //                    if (isCertificate)
+        //                    {
+        //                        // Добавляем сертификат (без ограничений)
+        //                        var certItem = new CertificateItem
+        //                        {
+        //                            Code = reader["tovar_code"].ToString(),
+        //                            Certificate = reader["name"].ToString().Trim(),
+        //                            Nominal = Math.Abs(Convert.ToDecimal(reader["sum_at_a_discount"])),
+        //                            Barcode = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
+        //                        };
+        //                        _certificatesData.Add(certItem);
+        //                    }
+        //                    else
+        //                    {
+        //                        // Получаем флаги товара
+        //                        ProductFlags flags = ProductFlags.None;
+        //                        if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
+        //                        if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
+        //                        if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
+
+        //                        // Создаем объект ProductData для получения имени
+        //                        var productData = new ProductData(
+        //                            Convert.ToInt64(reader["tovar_code"]),
+        //                            reader["name"].ToString().Trim(),
+        //                            Convert.ToDecimal(reader["price"]),
+        //                            flags
+        //                        );
+
+        //                        // Сохраняем id_transaction для связи
+        //                        if (string.IsNullOrEmpty(id_transaction_sale))
+        //                        {
+        //                            id_transaction_sale = reader["id_transaction"]?.ToString() ?? "";
+        //                        }
+
+        //                        // Если есть клиент в чеке продажи
+        //                        if (!string.IsNullOrEmpty(reader["client"]?.ToString()))
+        //                        {
+        //                            string clientCode = reader["client"].ToString().Trim();
+        //                            if (!string.IsNullOrEmpty(clientCode) && Client != null)
+        //                            {
+        //                                Client.Tag = clientCode;
+        //                                Client.Text = clientCode;
+        //                                if (ClientBarcodeOrPhone != null)
+        //                                    ClientBarcodeOrPhone.IsEnabled = false;
+        //                            }
+        //                        }
+
+        //                        // Добавляем товар в коллекцию с сохранением максимального количества
+        //                        var productItem = new ProductItem
+        //                        {
+        //                            Code = Convert.ToInt32(reader["tovar_code"]),
+        //                            Tovar = reader["name"].ToString().Trim(),
+        //                            Quantity = saleQuantity, // Текущее количество для возврата
+        //                            MaxQuantity = saleQuantity, // Максимально допустимое количество
+        //                            Price = Convert.ToDecimal(reader["price"]),
+        //                            PriceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]),
+        //                            Sum = Convert.ToDecimal(reader["sum"]),
+        //                            SumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]),
+        //                            Action = 0,
+        //                            Gift = 0,
+        //                            Action2 = 0,
+        //                            Mark = reader["item_marker"]?.ToString().Replace("vasya2021", "'").Trim() ?? "0",
+        //                            IsSertificate = false,
+        //                            IsFractional = Convert.ToBoolean(reader["fractional"]),
+        //                            IsMarked = Convert.ToBoolean(reader["its_marked"])
+        //                        };
+
+        //                        _productsData.Add(productItem);
+        //                        Console.WriteLine($"✓ Добавлен товар: {productItem.Tovar}, кол-во: {productItem.Quantity}, макс: {productItem.MaxQuantity}");
+        //                    }
+        //                }
+
+        //                if (!hasItems)
+        //                {
+        //                    await MessageBoxHelper.Show($"В чеке продажи №{documentNumber} нет доступных для возврата товаров",
+        //                        "Информация",
+        //                        MessageBoxButton.OK,
+        //                        MessageBoxType.Info,
+        //                        this);
+        //                }
+        //            }
+        //        }
+
+        //        // 3. Обновляем Grid товаров
+        //        if (_productsData.Count > 0 || _certificatesData.Count > 0)
+        //        {
+        //            RefreshProductsGrid();
+
+        //            // Обновляем Grid сертификатов
+        //            if (_certificatesData.Count > 0 && _certificatesTableGrid != null)
+        //            {
+        //                while (_certificatesTableGrid.RowDefinitions.Count > 1)
+        //                    _certificatesTableGrid.RowDefinitions.RemoveAt(_certificatesTableGrid.RowDefinitions.Count - 1);
+
+        //                var elementsToRemove = _certificatesTableGrid.Children
+        //                    .Where(c => Grid.GetRow(c) > 0)
+        //                    .ToList();
+
+        //                foreach (var element in elementsToRemove)
+        //                    _certificatesTableGrid.Children.Remove(element);
+
+        //                _certificatesCurrentRow = 1;
+        //                AddCertificatesGridRows(_certificatesTableGrid, ref _certificatesCurrentRow, _certificatesData);
+        //            }
+
+        //            //// Блокируем ввод новых товаров - ЭТО ВАЖНО!
+        //            //if (txtB_search_product != null)
+        //            //{
+        //            //    txtB_search_product.IsEnabled = false;
+        //            //    txtB_search_product.Text = string.Empty;
+        //            //}                   
+
+        //            if (InputSearchProduct != null)
+        //            {
+        //                InputSearchProduct.IsEnabled = false;
+        //                InputSearchProduct.Text = string.Empty;
+        //            }
+
+        //            // Блокируем кнопку повторного заполнения
+        //            if (btn_fill_on_sales != null)
+        //            {
+        //                btn_fill_on_sales.IsEnabled = false;
+        //            }
+
+        //            MainStaticClass.write_event_in_log($"Загружено товаров: {_productsData.Count}, сертификатов: {_certificatesData.Count}",
+        //                "Документ чек", numdoc.ToString());
+        //            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка БД: {ex.Message}");
+        //        await MessageBoxHelper.Show($"Ошибка базы данных: {ex.Message}",
+        //            "Ошибка",
+        //            MessageBoxButton.OK,
+        //            MessageBoxType.Error,
+        //            this);
+        //        throw;
+        //    }
+        //    finally
+        //    {
+        //        if (conn?.State == ConnectionState.Open)
+        //            await conn.CloseAsync();
+        //    }
+        //}
 
         /// <summary>
         /// Загрузка товаров из чека продажи с учетом возвратов
@@ -2390,47 +2683,55 @@ namespace Cash8Avalon
                         {
                             hasItems = true;
 
-                            // Получаем общее количество из чека продажи
-                            int saleQuantity = Convert.ToInt32(reader["quantity"]);
-
-                            // Проверяем, является ли товар сертификатом
+                            //int saleQuantity = Convert.ToInt32(reader["quantity"]);
+                            decimal saleQuantity = Convert.ToDecimal(reader["quantity"]);
                             bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
 
-                            if (isCertificate)
+                            // Получаем цены и суммы для проверки
+                            decimal priceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]);
+                            decimal price = Convert.ToDecimal(reader["price"]);
+                            decimal sum = Convert.ToDecimal(reader["sum"]);
+                            decimal sumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]);
+
+                            // ═══════════════════════════════════════════════════
+                            // РАЗДЕЛЕНИЕ СЕРТИФИКАТОВ:
+                            // Если это сертификат И цена/сумма отрицательные -> это сертификат ОПЛАТЫ (во вкладку сертификатов)
+                            // Если это сертификат И цена/сумма положительные -> это ПРОДАННЫЙ сертификат (в таблицу товаров как обычный товар)
+                            // ═══════════════════════════════════════════════════
+                            if (isCertificate && priceAtDiscount < 0)
                             {
-                                // Добавляем сертификат (без ограничений)
+                                // Это сертификат оплаты — добавляем во вкладку сертификатов
                                 var certItem = new CertificateItem
                                 {
                                     Code = reader["tovar_code"].ToString(),
                                     Certificate = reader["name"].ToString().Trim(),
-                                    Nominal = Math.Abs(Convert.ToDecimal(reader["sum_at_a_discount"])),
+                                    Nominal = Math.Abs(sumAtDiscount),
                                     Barcode = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
                                 };
                                 _certificatesData.Add(certItem);
                             }
                             else
                             {
-                                // Получаем флаги товара
+                                // Это обычный товар ИЛИ проданный сертификат (сумма > 0)
+                                // Проданные сертификаты возвращаются как обычные товары
+
                                 ProductFlags flags = ProductFlags.None;
-                                if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
+                                if (isCertificate) flags |= ProductFlags.Certificate;
                                 if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
                                 if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
 
-                                // Создаем объект ProductData для получения имени
                                 var productData = new ProductData(
                                     Convert.ToInt64(reader["tovar_code"]),
                                     reader["name"].ToString().Trim(),
-                                    Convert.ToDecimal(reader["price"]),
+                                    price,
                                     flags
                                 );
 
-                                // Сохраняем id_transaction для связи
                                 if (string.IsNullOrEmpty(id_transaction_sale))
                                 {
                                     id_transaction_sale = reader["id_transaction"]?.ToString() ?? "";
                                 }
 
-                                // Если есть клиент в чеке продажи
                                 if (!string.IsNullOrEmpty(reader["client"]?.ToString()))
                                 {
                                     string clientCode = reader["client"].ToString().Trim();
@@ -2443,28 +2744,27 @@ namespace Cash8Avalon
                                     }
                                 }
 
-                                // Добавляем товар в коллекцию с сохранением максимального количества
                                 var productItem = new ProductItem
                                 {
                                     Code = Convert.ToInt32(reader["tovar_code"]),
                                     Tovar = reader["name"].ToString().Trim(),
-                                    Quantity = saleQuantity, // Текущее количество для возврата
-                                    MaxQuantity = saleQuantity, // Максимально допустимое количество
-                                    Price = Convert.ToDecimal(reader["price"]),
-                                    PriceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]),
-                                    Sum = Convert.ToDecimal(reader["sum"]),
-                                    SumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]),
+                                    Quantity = saleQuantity,
+                                    MaxQuantity = saleQuantity,
+                                    Price = price,
+                                    PriceAtDiscount = priceAtDiscount,
+                                    Sum = sum,
+                                    SumAtDiscount = sumAtDiscount,
                                     Action = 0,
                                     Gift = 0,
                                     Action2 = 0,
                                     Mark = reader["item_marker"]?.ToString().Replace("vasya2021", "'").Trim() ?? "0",
-                                    IsSertificate = false,
+                                    IsSertificate = isCertificate, // Флаг сохраняется, чтобы логика чека понимала, что это сертификат
                                     IsFractional = Convert.ToBoolean(reader["fractional"]),
                                     IsMarked = Convert.ToBoolean(reader["its_marked"])
                                 };
 
                                 _productsData.Add(productItem);
-                                Console.WriteLine($"✓ Добавлен товар: {productItem.Tovar}, кол-во: {productItem.Quantity}, макс: {productItem.MaxQuantity}");
+                                Console.WriteLine($"✓ Добавлен товар: {productItem.Tovar}, кол-во: {productItem.Quantity}, сертификат: {productItem.IsSertificate}");
                             }
                         }
 
@@ -2479,12 +2779,11 @@ namespace Cash8Avalon
                     }
                 }
 
-                // 3. Обновляем Grid товаров
+                // 3. Обновляем Grid
                 if (_productsData.Count > 0 || _certificatesData.Count > 0)
                 {
                     RefreshProductsGrid();
 
-                    // Обновляем Grid сертификатов
                     if (_certificatesData.Count > 0 && _certificatesTableGrid != null)
                     {
                         while (_certificatesTableGrid.RowDefinitions.Count > 1)
@@ -2501,20 +2800,12 @@ namespace Cash8Avalon
                         AddCertificatesGridRows(_certificatesTableGrid, ref _certificatesCurrentRow, _certificatesData);
                     }
 
-                    //// Блокируем ввод новых товаров - ЭТО ВАЖНО!
-                    //if (txtB_search_product != null)
-                    //{
-                    //    txtB_search_product.IsEnabled = false;
-                    //    txtB_search_product.Text = string.Empty;
-                    //}                   
-
                     if (InputSearchProduct != null)
                     {
                         InputSearchProduct.IsEnabled = false;
                         InputSearchProduct.Text = string.Empty;
                     }
 
-                    // Блокируем кнопку повторного заполнения
                     if (btn_fill_on_sales != null)
                     {
                         btn_fill_on_sales.IsEnabled = false;
@@ -3367,6 +3658,130 @@ namespace Cash8Avalon
         }
 
 
+        /// <summary>
+        /// Проверяет и исправляет расхождение между SumAtDiscount в строках
+        /// и итоговой суммой документа (cash).
+        /// 
+        /// Проверки:
+        /// 1. Каждая строка: SumAtDiscount должно быть = Round(Quantity * PriceAtDiscount, 2)
+        /// 2. Итог: SUM(SumAtDiscount) должно совпадать с calculation_of_the_sum_of_the_document()
+        /// 3. При записи: cash должно совпадать с SUM(sum_at_a_discount) по товарам (без сертификатов)
+        /// 
+        /// Все расхождения логируются и автоматически исправляются.
+        /// </summary>
+        /// <param name="context">Описание места вызова (для логирования)</param>
+        /// <returns>true — расхождений нет или они исправлены; false — критическая ошибка</returns>
+        public bool ValidateAndFixSumConsistency(string context)
+        {
+            bool discrepancyFound = false;
+            bool anyLineFixed = false;
+            decimal totalDelta = 0;
+
+            try
+            {
+                // ═══════════════════════════════════════════
+                // ШАГ 1: Проверяем и исправляем КАЖДУЮ СТРОКУ
+                // SumAtDiscount должно быть = Round(Quantity * PriceAtDiscount, 2)
+                // ═══════════════════════════════════════════
+                for (int i = 0; i < _productsData.Count; i++)
+                {
+                    var product = _productsData[i];
+
+                    decimal expectedSumAtDiscount = Math.Round(
+                        product.Quantity * product.PriceAtDiscount,
+                        2,
+                        MidpointRounding.AwayFromZero);
+
+                    decimal expectedSum = Math.Round(
+                        product.Quantity * product.Price,
+                        2,
+                        MidpointRounding.AwayFromZero);
+
+                    // Проверяем SumAtDiscount
+                    if (product.SumAtDiscount != expectedSumAtDiscount)
+                    {
+                        decimal lineDelta = product.SumAtDiscount - expectedSumAtDiscount;
+                        totalDelta += lineDelta;
+
+                        MainStaticClass.WriteRecordErrorLog(
+                            $"Расхождение SumAtDiscount в строке #{i}",
+                            "ValidateAndFixSumConsistency",
+                            numdoc,
+                            MainStaticClass.CashDeskNumber,
+                            $"Контекст: {context}\n" +
+                            $"Код: {product.Code}, Товар: {product.Tovar}\n" +
+                            $"Quantity={product.Quantity}, PriceAtDiscount={product.PriceAtDiscount}\n" +
+                            $"Было: SumAtDiscount={product.SumAtDiscount}\n" +
+                            $"Должно быть: {expectedSumAtDiscount}\n" +
+                            $"Дельта строки: {lineDelta}");
+
+                        product.SumAtDiscount = expectedSumAtDiscount;
+                        anyLineFixed = true;
+                        discrepancyFound = true;
+                    }
+
+                    // Проверяем Sum (без скидки)
+                    if (product.Sum != expectedSum)
+                    {
+                        product.Sum = expectedSum;
+                        anyLineFixed = true;
+                    }
+                }
+
+                // ═══════════════════════════════════════════
+                // ШАГ 2: Проверяем ИТОГОВУЮ СУММУ
+                // ═══════════════════════════════════════════
+                decimal lineTotal = _productsData.Sum(p => p.SumAtDiscount);
+                decimal docSum = calculation_of_the_sum_of_the_document();
+
+                if (lineTotal != docSum)
+                {
+                    discrepancyFound = true;
+
+                    MainStaticClass.WriteRecordErrorLog(
+                        $"Расхождение итоговой суммы документа",
+                        "ValidateAndFixSumConsistency",
+                        numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        $"Контекст: {context}\n" +
+                        $"Сумма строк (пересчёт): {lineTotal}\n" +
+                        $"calculation_of_the_sum_of_the_document: {docSum}\n" +
+                        $"Дельта: {lineTotal - docSum}");
+                }
+
+                // ═══════════════════════════════════════════
+                // ШАГ 3: Обновляем UI если были исправления
+                // ═══════════════════════════════════════════
+                if (anyLineFixed)
+                {
+                    RefreshProductsGrid();
+                    UpdateTotalSum();
+
+                    MainStaticClass.write_event_in_log(
+                        $"Исправлено расхождение сумм. Дельта={totalDelta}. Контекст: {context}",
+                        "ValidateAndFixSumConsistency",
+                        numdoc.ToString());
+                }
+
+                if (!discrepancyFound)
+                {
+                    Console.WriteLine($"✓ ValidateAndFixSumConsistency [{context}]: расхождений нет");
+                }
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(
+                    ex,
+                    numdoc,
+                    MainStaticClass.CashDeskNumber,
+                    $"ValidateAndFixSumConsistency FAILED. Context: {context}");
+                return false;
+            }
+
+            return true;
+        }
+
+
         private async void show_pay_form()
         {
             // ═══════════════════════════════════════════════
@@ -3452,7 +3867,9 @@ namespace Cash8Avalon
                     _productsData = CreateProductsFromDataTable(dataTable);
                     await RecalculateAllProducts(true);
                     selection_goods = false;
-
+                    
+                    ValidateAndFixSumConsistency("show_pay_form (после обработки акций)");
+                    
                     MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
 
                     pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture); // ✅ ИСПРАВЛЕНО
@@ -3880,12 +4297,12 @@ namespace Cash8Avalon
                         sum_print += (double)product.SumAtDiscount;
                     }
                 }
-#if DEBUG
-                if (System.Diagnostics.Debugger.IsAttached)
-                {
-                    System.Diagnostics.Debugger.Break();
-                }
-#endif
+// #if DEBUG
+//                 if (System.Diagnostics.Debugger.IsAttached)
+//                 {
+//                     System.Diagnostics.Debugger.Break();
+//                 }
+// #endif
 
 
                 if (result[0] > 0)
@@ -4031,6 +4448,9 @@ namespace Cash8Avalon
                                                   bool last_rewrite, string cash_money, string non_cash_money,
                                                   string sertificate_money, string its_deleted, bool sendToScreen = true)
         {
+            
+            //ValidateAndFixSumConsistency("write_new_document (перед записью в БД)");            
+            //sum_doc = calculation_of_the_sum_of_the_document().ToString();
             
             if ((sum_doc == "") || (sum_doc == "0"))
             {
@@ -7264,8 +7684,6 @@ namespace Cash8Avalon
                                         MessageBoxButton.OK,
                                         MessageBoxType.Warning,
                                         this);
-                                    e.Handled = true;
-                                    // Не делаем return, чтобы finally корректно отработал
                                 }
                                 else
                                 {
@@ -7279,6 +7697,7 @@ namespace Cash8Avalon
                                     {
                                         double newQuantity = result.Value;
                                         double oldQuantity = Convert.ToDouble(product.Quantity);
+
                                         // ★★★ ЗАЩИТА: Количество всегда должно быть > 0 ★★★
                                         if (newQuantity <= 0)
                                         {
@@ -7301,43 +7720,74 @@ namespace Cash8Avalon
                                             cancelEdit = true;
                                         }
 
+                                        // ═══════════════════════════════════════════════════
                                         // 2. Проверяем: ввели ли число МЕНЬШЕ текущего?
-                                        if (newQuantity < oldQuantity)
+                                        // ═══════════════════════════════════════════════════
+                                        if (!cancelEdit && newQuantity < oldQuantity)
                                         {
                                             if (product.IsFractional)
                                             {
                                                 await MessageBox.Show("В весовом товаре нельзя уменьшать количество", "Проверка ввода", MessageBoxButton.OK, MessageBoxType.Error, this);
-                                                cancelEdit = true; // Вместо return
+                                                cancelEdit = true;
                                             }
                                             else
                                             {
-                                                // Показываем диалог причины
-                                                var reasonsDialog = new ReasonsDeletionCheck();
-                                                reasonsDialog.Title = "Уменьшение количества";
-
-                                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                                                // ★★★ ДОБАВЛЕНА АВТОРИЗАЦИЯ ПРИ УМЕНЬШЕНИИ ★★★
+                                                if (MainStaticClass.Code_right_of_user != 1)
                                                 {
-                                                    await Task.Delay(50);
+                                                    // Сбрасываем перед диалогом
+                                                    enable_delete = false;
+
+                                                    var interfaceSwitching = new Interface_switching();
+                                                    interfaceSwitching.caller_type = 3;
+                                                    interfaceSwitching.cc = this;
+                                                    interfaceSwitching.not_change_Cash_Operator = true;
+
+                                                    await interfaceSwitching.ShowDialog<bool?>(this);
+
+                                                    if (!enable_delete)
+                                                    {
+                                                        Console.WriteLine("⚠ Уменьшение через Enter: авторизация отклонена");
+                                                        await MessageBoxHelper.Show("Вам запрещено уменьшать количество",
+                                                                             "Права доступа",
+                                                                             MessageBoxButton.OK,
+                                                                             MessageBoxType.Warning, this);
+                                                        cancelEdit = true;
+                                                    }
+                                                    else
+                                                    {
+                                                        Console.WriteLine("✓ Уменьшение через Enter: пароль подтверждён");
+                                                    }
                                                 }
 
-                                                var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+                                                // Если авторизация пройдена (или пользователь админ) — запрашиваем причину
+                                                if (!cancelEdit)
+                                                {
+                                                    var reasonsDialog = new ReasonsDeletionCheck();
+                                                    reasonsDialog.Title = "Уменьшение количества";
 
-                                                // Если отменили или причину не выбрали
-                                                if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
-                                                {
-                                                    Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
-                                                    cancelEdit = true; // Вместо return
-                                                }
-                                                else
-                                                {
-                                                    // Записываем инцидент (сколько убрали)
-                                                    double delta = oldQuantity - newQuantity;
-                                                    await InsertIncidentRecordAsync(
-                                                        product.Code.ToString(),
-                                                        delta.ToString("F2"),
-                                                        "1",
-                                                        reasonsDialog.Reason
-                                                    );
+                                                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                                                    {
+                                                        await Task.Delay(50);
+                                                    }
+
+                                                    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                                                    if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                                                    {
+                                                        Console.WriteLine("⚠ Уменьшение количества отменено пользователем (не указана причина)");
+                                                        cancelEdit = true;
+                                                    }
+                                                    else
+                                                    {
+                                                        double delta = oldQuantity - newQuantity;
+                                                        await InsertIncidentRecordAsync(
+                                                            product.Code.ToString(),
+                                                            delta.ToString("F2"),
+                                                            "1",
+                                                            reasonsDialog.Reason
+                                                        );
+                                                    }
                                                 }
                                             }
                                         }
@@ -7349,14 +7799,88 @@ namespace Cash8Avalon
                                             RecalculateProductSums(product);
                                             UpdateProductRowInGrid(_selectedProductRowIndex);
                                             UpdateTotalSum();
-                                            needToWriteDoc = true; // Помечаем, что нужно сохранить в БД
+                                            needToWriteDoc = true;
                                         }
                                     }
                                 }
                             }
-                            else if (CheckType.SelectedIndex != 0)
+                             // else if (CheckType.SelectedIndex != 0)
+                             // {
+                             //     await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);
+                             // }
+                            // ✅ ИСПРАВЛЕНИЕ: Разрешить Enter для возвратов (для немаркированных товаров)
+                            else if (CheckType.SelectedIndex == 1) // Возврат
                             {
-                                await MessageBoxHelper.Show("Диалог ввода количества доступен только при продаже", "Проверки ввода", this);
+                                var product = _productsData[_selectedProductRowIndex];
+
+                                if (product.IsMarked)
+                                {
+                                    await MessageBoxHelper.Show(
+                                        "Нельзя изменить количество маркированного товара.\nКаждая единица маркировки должна быть возвращена отдельной строкой.",
+                                        "Проверка ввода",
+                                        MessageBoxButton.OK,
+                                        MessageBoxType.Warning,
+                                        this);
+                                }
+                                else
+                                {
+                                    StopFocusKeeper();
+
+                                    double? result = await ShowQuantityDialog(
+                                        product.Tovar,
+                                        Convert.ToDouble(product.Quantity),
+                                        product.IsFractional,
+                                        _selectedProductRowIndex);
+
+                                    if (result.HasValue)
+                                    {
+                                        double newQuantity = result.Value;
+
+                                        // Проверка минимального количества
+                                        decimal minimum = product.IsFractional ? 0.001m : 1m;
+                                        if (Convert.ToDecimal(newQuantity) < minimum)
+                                        {
+                                            string unit = product.IsFractional ? "кг" : "шт.";
+                                            await MessageBoxHelper.Show(
+                                                $"Количество не может быть меньше {minimum} {unit}",
+                                                "Проверка ввода",
+                                                MessageBoxButton.OK,
+                                                MessageBoxType.Error,
+                                                this);
+                                        }
+                                        // Проверка MaxQuantity для возврата
+                                        else if (product.MaxQuantity > 0 &&
+                                                 Convert.ToDecimal(newQuantity) > product.MaxQuantity)
+                                        {
+                                            string format = product.IsFractional ? "F3" : "F0";
+                                            string unit = product.IsFractional ? "кг" : "шт.";
+                                            await MessageBoxHelper.Show(
+                                                $"Нельзя вернуть больше {product.MaxQuantity.ToString(format)} {unit}",
+                                                "Проверка ввода",
+                                                MessageBoxButton.OK,
+                                                MessageBoxType.Error,
+                                                this);
+                                        }
+                                        else
+                                        {
+                                            product.Quantity = Convert.ToDecimal(newQuantity);
+                                            RecalculateProductSums(product);
+                                            UpdateProductRowInGrid(_selectedProductRowIndex);
+                                            UpdateTotalSum();
+
+                                            try
+                                            {
+                                                await write_new_document("0",
+                                                    calculation_of_the_sum_of_the_document().ToString(),
+                                                    "0", "0", false, "0", "0", "0", "0");
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Console.Error.WriteLine($"Ошибка записи документа: {ex.Message}");
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // 4. Выносим запись в БД из глубокой вложенности
@@ -7368,7 +7892,6 @@ namespace Cash8Avalon
                                 }
                                 catch (Exception ex)
                                 {
-                                    // Защита от падения при записи в БД
                                     Console.Error.WriteLine($"Ошибка записи документа: {ex.Message}");
                                     await MessageBoxHelper.Show($"Ошибка при сохранении документа:\n{ex.Message}", "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
                                 }
@@ -7376,20 +7899,16 @@ namespace Cash8Avalon
                         }
                         catch (Exception ex)
                         {
-                            // Глобальный перехват непредвиденных ошибок (например, окно не открылось)
                             MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "EnterKey_QuantityEdit");
                         }
                         finally
                         {
                             // 5. ГАРАНТИРОВАННОЕ восстановление состояния
-
-                            // Восстанавливаем фокус только если окно НЕ закрывается (используем вашу проверку с closing)
                             if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0 && closing)
                             {
                                 StartFocusKeeper();
                             }
 
-                            // Обязательно сбрасываем флаг блокировки!
                             IsShowingModal = false;
                         }
 
@@ -7566,36 +8085,98 @@ namespace Cash8Avalon
         /// <summary>
         /// Отображение предупреждения о превышении максимального количества для возврата
         /// </summary>
-        private void ShowQuantityLimitWarning(int dataIndex, int maxQuantity)
+        // private void ShowQuantityLimitWarning(int dataIndex, int maxQuantity)
+        // {
+        //     try
+        //     {
+        //         int gridRowIndex = dataIndex;
+        //
+        //         // Ищем ячейку количества (колонка 2)
+        //         foreach (Control child in _productsTableGrid.Children)
+        //         {
+        //             if (child is TextBlock textBlock &&
+        //                 Grid.GetRow(textBlock) == gridRowIndex &&
+        //                 Grid.GetColumn(textBlock) == 2)
+        //             {
+        //                 // Сохраняем оригинальные значения
+        //                 var originalForeground = textBlock.Foreground;
+        //                 var originalBackground = textBlock.Background;
+        //                 var originalText = textBlock.Text;
+        //
+        //                 // Устанавливаем эффект предупреждения
+        //                 textBlock.Foreground = Brushes.Red;
+        //                 textBlock.Background = Brushes.LightYellow;
+        //                 textBlock.FontWeight = FontWeight.Bold;
+        //                 //textBlock.Text = $"{_productsData[dataIndex].Quantity} (макс: {maxQuantity})";
+        //                 string format = _productsData[dataIndex].IsFractional ? "F3" : "F0";
+        //                 textBlock.Text = $"{_productsData[dataIndex].Quantity.ToString(format)} (макс: {maxQuantity.ToString(format)})";
+        //
+        //                 // Возвращаем оригинальный вид через 2 секунды
+        //                 DispatcherTimer timer = new DispatcherTimer
+        //                 {
+        //                     Interval = TimeSpan.FromMilliseconds(2000)
+        //                 };
+        //
+        //                 _activeTimers.Add(timer);
+        //
+        //                 timer.Tick += (s, e) =>
+        //                 {
+        //                     textBlock.Foreground = originalForeground;
+        //                     textBlock.Background = originalBackground;
+        //                     textBlock.FontWeight = FontWeight.Normal;
+        //                     textBlock.Text = _productsData[dataIndex].Quantity.ToString();
+        //                     timer.Stop();
+        //                     _activeTimers.Remove(timer);
+        //                 };
+        //
+        //                 timer.Start();
+        //                 break;
+        //             }
+        //         }
+        //
+        //         // Показываем всплывающее сообщение
+        //         ShowTooltip($"Нельзя вернуть больше {maxQuantity} шт.!", dataIndex);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}");
+        //         Dispatcher.UIThread.InvokeAsync(async () =>
+        //         {
+        //             await MessageBoxHelper.Show($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}", "ShowQuantityLimitWarning",
+        //                 MessageBoxButton.OK, MessageBoxType.Error, this);
+        //         });
+        //     }
+        // }
+
+        private void ShowQuantityLimitWarning(int dataIndex, decimal maxQuantity)
         {
             try
             {
                 int gridRowIndex = dataIndex;
 
-                // Ищем ячейку количества (колонка 2)
                 foreach (Control child in _productsTableGrid.Children)
                 {
                     if (child is TextBlock textBlock &&
                         Grid.GetRow(textBlock) == gridRowIndex &&
                         Grid.GetColumn(textBlock) == 2)
                     {
-                        // Сохраняем оригинальные значения
                         var originalForeground = textBlock.Foreground;
                         var originalBackground = textBlock.Background;
-                        var originalText = textBlock.Text;
 
-                        // Устанавливаем эффект предупреждения
                         textBlock.Foreground = Brushes.Red;
                         textBlock.Background = Brushes.LightYellow;
                         textBlock.FontWeight = FontWeight.Bold;
-                        textBlock.Text = $"{_productsData[dataIndex].Quantity} (макс: {maxQuantity})";
 
-                        // Возвращаем оригинальный вид через 2 секунды
+                        // Форматируем в зависимости от типа товара
+                        string format = _productsData[dataIndex].IsFractional ? "F3" : "F0";
+                        string unit = _productsData[dataIndex].IsFractional ? "кг" : "шт.";
+                        textBlock.Text =
+                            $"{_productsData[dataIndex].Quantity.ToString(format)} (макс: {maxQuantity.ToString(format)})";
+
                         DispatcherTimer timer = new DispatcherTimer
                         {
                             Interval = TimeSpan.FromMilliseconds(2000)
                         };
-
                         _activeTimers.Add(timer);
 
                         timer.Tick += (s, e) =>
@@ -7603,27 +8184,22 @@ namespace Cash8Avalon
                             textBlock.Foreground = originalForeground;
                             textBlock.Background = originalBackground;
                             textBlock.FontWeight = FontWeight.Normal;
-                            textBlock.Text = _productsData[dataIndex].Quantity.ToString();
+                            textBlock.Text = _productsData[dataIndex].Quantity.ToString(format);
                             timer.Stop();
                             _activeTimers.Remove(timer);
                         };
-
                         timer.Start();
                         break;
                     }
                 }
 
-                // Показываем всплывающее сообщение
-                ShowTooltip($"Нельзя вернуть больше {maxQuantity} шт.!", dataIndex);
+                string unit2 = _productsData[dataIndex].IsFractional ? "кг" : "шт.";
+                string format2 = _productsData[dataIndex].IsFractional ? "F3" : "F0";
+                ShowTooltip($"Нельзя вернуть больше {maxQuantity.ToString(format2)} {unit2}!", dataIndex);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await MessageBoxHelper.Show($"⚠ Ошибка в ShowQuantityLimitWarning: {ex.Message}", "ShowQuantityLimitWarning",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
-                });
             }
         }
 
@@ -7869,123 +8445,268 @@ namespace Cash8Avalon
         }
 
 
+        // // Метод для уменьшения количества        
+        // private async void DecreaseProductQuantity(int dataIndex)
+        // {
+        //     // 1. Защита от двойного вызова
+        //     if (IsShowingModal) return;
+        //     IsShowingModal = true;
+        //
+        //     bool cancelEdit = false; // Флаг отмены операции
+        //
+        //     try
+        //     {
+        //         if (dataIndex >= 0 && dataIndex < _productsData.Count)
+        //         {
+        //             var product = _productsData[dataIndex];
+        //
+        //             if (product.Quantity > 1)
+        //             {
+        //                 // Останавливаем фокус-кипер перед показом ЛЮБЫХ диалогов
+        //                 StopFocusKeeper();
+        //
+        //                 if (MainStaticClass.Code_right_of_user != 1)
+        //                 {
+        //                     enable_delete = false;
+        //                     var interfaceSwitching = new Interface_switching();
+        //                     interfaceSwitching.caller_type = 3;
+        //                     interfaceSwitching.cc = this;
+        //                     interfaceSwitching.not_change_Cash_Operator = true;
+        //
+        //                     var result = await interfaceSwitching.ShowDialog<bool?>(this);
+        //
+        //                     if (!enable_delete)
+        //                     {
+        //                         await MessageBoxHelper.Show("Вам запрещено уменьшать количество",
+        //                                              "Права доступа",
+        //                                              MessageBoxButton.OK,
+        //                                              MessageBoxType.Warning, this);
+        //                         cancelEdit = true; // Вместо return
+        //                     }
+        //                 }
+        //
+        //                 if (!cancelEdit && CheckType.SelectedIndex == 0) // Только продажа
+        //                 {
+        //                     var reasonsDialog = new ReasonsDeletionCheck();
+        //                     reasonsDialog.Title = "Уменьшение количества";
+        //
+        //                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //                     {
+        //                         await Task.Delay(50);
+        //                     }
+        //
+        //                     var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+        //
+        //                     if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+        //                     {
+        //                         Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
+        //                         cancelEdit = true; // Вместо return
+        //                     }
+        //                     else
+        //                     {
+        //                         // Записываем в лог только если причину выбрали
+        //                         await InsertIncidentRecordAsync(
+        //                             product.Code.ToString(),
+        //                             product.Quantity.ToString("F2"),
+        //                             "1",
+        //                             reasonsDialog.Reason
+        //                         );
+        //                     }
+        //                 }
+        //
+        //                 // Если нигде не отменили — применяем изменения
+        //                 if (!cancelEdit)
+        //                 {
+        //                     product.Quantity--;
+        //
+        //                     RecalculateProductSums(product);
+        //                     UpdateProductRowInGrid(dataIndex);
+        //                     UpdateTotalSum();
+        //
+        //                     ShowQuantityEffect(dataIndex, false);
+        //
+        //                     // 2. Безопасная запись в БД
+        //                     try
+        //                     {
+        //                         await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+        //                                       "0", "0", false, "0", "0", "0", "0");
+        //                         Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
+        //                     }
+        //                     catch (Exception dbEx)
+        //                     {
+        //                         Console.WriteLine($"✗ Ошибка БД при уменьшении количества: {dbEx.Message}");
+        //                         await MessageBoxHelper.Show($"Ошибка при сохранении документа:\n{dbEx.Message}", "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //                     }
+        //                 }
+        //             }
+        //             else
+        //             {
+        //                 Console.WriteLine("⚠ Невозможно уменьшить количество меньше 1");
+        //                 ShowQuantityEffect(dataIndex, false, true);
+        //             }
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"✗ Ошибка при уменьшении количества: {ex.Message}");
+        //         await MessageBoxHelper.Show($"✗ Ошибка при уменьшении количества: {ex.Message}", "DecreaseProductQuantity",
+        //             MessageBoxButton.OK, MessageBoxType.Error, this);
+        //     }
+        //     finally
+        //     {
+        //         // 3. ГАРАНТИРОВАННОЕ восстановление состояния
+        //         // Восстанавливаем фокус только если окно НЕ закрывается
+        //         if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0 && closing)
+        //         {
+        //             StartFocusKeeper();
+        //         }
+        //
+        //         // Обязательно сбрасываем флаг блокировки!
+        //         IsShowingModal = false;
+        //     }
+        // }
+        //}
+
+        // Метод для уменьшения количества        
         // Метод для уменьшения количества        
         private async void DecreaseProductQuantity(int dataIndex)
         {
-            // 1. Защита от двойного вызова
+            // ═══════════════════════════════════════════════════
+            // Защита от двойного вызова
+            // ═══════════════════════════════════════════════════
             if (IsShowingModal) return;
             IsShowingModal = true;
 
-            bool cancelEdit = false; // Флаг отмены операции
-
             try
             {
-                if (dataIndex >= 0 && dataIndex < _productsData.Count)
+                if (dataIndex < 0 || dataIndex >= _productsData.Count)
+                    return;
+
+                var product = _productsData[dataIndex];
+                
+                if (product.IsFractional)
                 {
-                    var product = _productsData[dataIndex];
+                    Console.WriteLine("⚠ Весовой товар: уменьшение только через Enter");
+                    ShowTooltip("Для весового товара нажмите Enter и введите вес", dataIndex);
+                    return;
+                }
 
-                    if (product.Quantity > 1)
+                // Нельзя уменьшить количество меньше 1
+                if (product.Quantity <= 1)
+                {
+                    Console.WriteLine("⚠ Невозможно уменьшить количество меньше 1");
+                    ShowQuantityEffect(dataIndex, false, true);
+                    return;
+                }
+
+                // Останавливаем фокус-кипер перед показом любых диалогов
+                StopFocusKeeper();
+
+                // ═══════════════════════════════════════════════════
+                // ПРОДАЖА (CheckType.SelectedIndex == 0):
+                // Обязательно: Авторизация + Причина
+                // ═══════════════════════════════════════════════════
+                if (CheckType.SelectedIndex == 0)
+                {
+                    // 1. Проверка прав (только для не-администраторов)
+                    if (MainStaticClass.Code_right_of_user != 1)
                     {
-                        // Останавливаем фокус-кипер перед показом ЛЮБЫХ диалогов
-                        StopFocusKeeper();
+                        // ВАЖНО: Сбрасываем ПЕРЕД показом диалога, чтобы исключить утечку true от другого метода
+                        enable_delete = false;
 
-                        if (MainStaticClass.Code_right_of_user != 1)
+                        var interfaceSwitching = new Interface_switching();
+                        interfaceSwitching.caller_type = 3;
+                        interfaceSwitching.cc = this;
+                        interfaceSwitching.not_change_Cash_Operator = true;
+
+                        // Показываем окно ввода пароля
+                        await interfaceSwitching.ShowDialog<bool?>(this);
+
+                        // Если после закрытия окна флаг НЕ стал true, значит пароль не введён или неверный
+                        if (!enable_delete)
                         {
-                            enable_delete = false;
-                            var interfaceSwitching = new Interface_switching();
-                            interfaceSwitching.caller_type = 3;
-                            interfaceSwitching.cc = this;
-                            interfaceSwitching.not_change_Cash_Operator = true;
-
-                            var result = await interfaceSwitching.ShowDialog<bool?>(this);
-
-                            if (!enable_delete)
-                            {
-                                await MessageBoxHelper.Show("Вам запрещено уменьшать количество",
-                                                     "Права доступа",
-                                                     MessageBoxButton.OK,
-                                                     MessageBoxType.Warning, this);
-                                cancelEdit = true; // Вместо return
-                            }
+                            Console.WriteLine("⚠ Уменьшение количества: авторизация отклонена (enable_delete = false)");
+                            await MessageBoxHelper.Show("Вам запрещено уменьшать количество",
+                                                 "Права доступа",
+                                                 MessageBoxButton.OK,
+                                                 MessageBoxType.Warning, this);
+                            return; // ← Выход: пароль не введён
                         }
 
-                        if (!cancelEdit && CheckType.SelectedIndex == 0) // Только продажа
-                        {
-                            var reasonsDialog = new ReasonsDeletionCheck();
-                            reasonsDialog.Title = "Уменьшение количества";
-
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                            {
-                                await Task.Delay(50);
-                            }
-
-                            var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
-
-                            if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
-                            {
-                                Console.WriteLine("⚠ Уменьшение количества отменено пользователем");
-                                cancelEdit = true; // Вместо return
-                            }
-                            else
-                            {
-                                // Записываем в лог только если причину выбрали
-                                await InsertIncidentRecordAsync(
-                                    product.Code.ToString(),
-                                    product.Quantity.ToString("F2"),
-                                    "1",
-                                    reasonsDialog.Reason
-                                );
-                            }
-                        }
-
-                        // Если нигде не отменили — применяем изменения
-                        if (!cancelEdit)
-                        {
-                            product.Quantity--;
-
-                            RecalculateProductSums(product);
-                            UpdateProductRowInGrid(dataIndex);
-                            UpdateTotalSum();
-
-                            ShowQuantityEffect(dataIndex, false);
-
-                            // 2. Безопасная запись в БД
-                            try
-                            {
-                                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                                              "0", "0", false, "0", "0", "0", "0");
-                                Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
-                            }
-                            catch (Exception dbEx)
-                            {
-                                Console.WriteLine($"✗ Ошибка БД при уменьшении количества: {dbEx.Message}");
-                                await MessageBoxHelper.Show($"Ошибка при сохранении документа:\n{dbEx.Message}", "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
-                            }
-                        }
+                        Console.WriteLine("✓ Уменьшение количества: пароль подтверждён");
                     }
-                    else
+
+                    // 2. Причина уменьшения (обязательно для продажи)
+                    var reasonsDialog = new ReasonsDeletionCheck();
+                    reasonsDialog.Title = "Уменьшение количества";
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
-                        Console.WriteLine("⚠ Невозможно уменьшить количество меньше 1");
-                        ShowQuantityEffect(dataIndex, false, true);
+                        await Task.Delay(50);
                     }
+
+                    var dialogResult = await reasonsDialog.ShowDialog<bool?>(this);
+
+                    if (dialogResult != true || string.IsNullOrEmpty(reasonsDialog.Reason))
+                    {
+                        Console.WriteLine("⚠ Уменьшение количества отменено пользователем (не указана причина)");
+                        return; // ← Выход: причина не указана
+                    }
+
+                    // Записываем причину в лог
+                    await InsertIncidentRecordAsync(
+                        product.Code.ToString(),
+                        product.Quantity.ToString("F2"),
+                        "1",
+                        reasonsDialog.Reason
+                    );
+                }
+                // ═══════════════════════════════════════════════════
+                // ВОЗВРАТ (CheckType.SelectedIndex == 1):
+                // Уменьшение разрешено без запросов — просто пропускаем
+                // ═══════════════════════════════════════════════════
+
+                // ═══════════════════════════════════════════════════
+                // Применяем изменение количества
+                // ═══════════════════════════════════════════════════
+                product.Quantity--;
+
+                RecalculateProductSums(product);
+                UpdateProductRowInGrid(dataIndex);
+                UpdateTotalSum();
+
+                ShowQuantityEffect(dataIndex, false);
+
+                // Безопасная запись в БД
+                try
+                {
+                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                                  "0", "0", false, "0", "0", "0", "0");
+                    Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
+                }
+                catch (Exception dbEx)
+                {
+                    Console.WriteLine($"✗ Ошибка БД при уменьшении количества: {dbEx.Message}");
+                    await MessageBoxHelper.Show($"Ошибка при сохранении документа:\n{dbEx.Message}",
+                        "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Ошибка при уменьшении количества: {ex.Message}");
-                await MessageBoxHelper.Show($"✗ Ошибка при уменьшении количества: {ex.Message}", "DecreaseProductQuantity",
+                await MessageBoxHelper.Show($"✗ Ошибка при уменьшении количества: {ex.Message}",
+                    "DecreaseProductQuantity",
                     MessageBoxButton.OK, MessageBoxType.Error, this);
             }
             finally
             {
-                // 3. ГАРАНТИРОВАННОЕ восстановление состояния
                 // Восстанавливаем фокус только если окно НЕ закрывается
                 if (IsNewCheck && (CheckType?.SelectedIndex ?? 0) == 0 && closing)
                 {
                     StartFocusKeeper();
                 }
 
-                // Обязательно сбрасываем флаг блокировки!
+                // Обязательно сбрасываем флаг блокировки
                 IsShowingModal = false;
             }
         }

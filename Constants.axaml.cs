@@ -1,4 +1,4 @@
-using Atol.Drivers10.Fptr;
+п»їusing Atol.Drivers10.Fptr;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -28,22 +28,22 @@ namespace Cash8Avalon
             btnCheckPiot = this.FindControl<Button>("btn_check_piot");
             btnCheckPiot.Click += BtnCheckPiot_Click;
 
-            // Устанавливаем шрифт для всего окна
+            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С€СЂРёС„С‚ РґР»СЏ РІСЃРµРіРѕ РѕРєРЅР°
             this.FontFamily = new FontFamily("Segoe UI");
 
-            // Заполняем ComboBox
+            // Р—Р°РїРѕР»РЅСЏРµРј ComboBox
             FillComboBoxes();
 
-            // Загружаем доступные порты
+            // Р—Р°РіСЂСѓР¶Р°РµРј РґРѕСЃС‚СѓРїРЅС‹Рµ РїРѕСЂС‚С‹
             LoadAvailablePorts();
 
-            // Загружаем настройки
+            // Р—Р°РіСЂСѓР¶Р°РµРј РЅР°СЃС‚СЂРѕР№РєРё
             LoadSettings();
 
-            // Подписываемся на события
+            // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёСЏ
             SubscribeToEvents();
 
-            // Устанавливаем владельца - главное окно
+            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІР»Р°РґРµР»СЊС†Р° - РіР»Р°РІРЅРѕРµ РѕРєРЅРѕ
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 if (desktop.MainWindow != null && desktop.MainWindow != this)
@@ -58,7 +58,7 @@ namespace Cash8Avalon
         {
             //if (await MainStaticClass.CheckPiotAvailable(this))
             //{
-            //    await MessageBoxHelper.Show("Пиот доступен, все настройки верны.","Проверка доступности ПИот");
+            //    await MessageBoxHelper.Show("РџРёРѕС‚ РґРѕСЃС‚СѓРїРµРЅ, РІСЃРµ РЅР°СЃС‚СЂРѕР№РєРё РІРµСЂРЅС‹.","РџСЂРѕРІРµСЂРєР° РґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё РџРРѕС‚");
             //}
 
             await MainStaticClass.CheckPiotAvailable(this);            
@@ -75,12 +75,12 @@ namespace Cash8Avalon
             if (comboBoxSystemTaxation != null)
             {
                 comboBoxSystemTaxation.Items.Clear();
-                comboBoxSystemTaxation.Items.Add("НЕ ВЫБРАНО");
-                comboBoxSystemTaxation.Items.Add("ОСН");
-                comboBoxSystemTaxation.Items.Add("УСН (ДОХОДЫ МИНУС РАСХОДЫ)");
-                comboBoxSystemTaxation.Items.Add("УСН (ДОХОДЫ МИНУС РАСХОДЫ) + ПАТЕНТ");
-                comboBoxSystemTaxation.Items.Add("УСН ДОХОДЫ");
-                comboBoxSystemTaxation.Items.Add("УСН ДОХОДЫ + ПАТЕНТ");
+                comboBoxSystemTaxation.Items.Add("РќР• Р’Р«Р‘Р РђРќРћ");
+                comboBoxSystemTaxation.Items.Add("РћРЎРќ");
+                comboBoxSystemTaxation.Items.Add("РЈРЎРќ (Р”РћРҐРћР”Р« РњРРќРЈРЎ Р РђРЎРҐРћР”Р«)");
+                comboBoxSystemTaxation.Items.Add("РЈРЎРќ (Р”РћРҐРћР”Р« РњРРќРЈРЎ Р РђРЎРҐРћР”Р«) + РџРђРўР•РќРў");
+                comboBoxSystemTaxation.Items.Add("РЈРЎРќ Р”РћРҐРћР”Р«");
+                comboBoxSystemTaxation.Items.Add("РЈРЎРќ Р”РћРҐРћР”Р« + РџРђРўР•РќРў");
                 comboBoxSystemTaxation.SelectedIndex = 0;
             }
 
@@ -88,7 +88,7 @@ namespace Cash8Avalon
             if (comboBoxNdsIp != null)
             {
                 comboBoxNdsIp.Items.Clear();
-                comboBoxNdsIp.Items.Add("Без НДС");
+                comboBoxNdsIp.Items.Add("Р‘РµР· РќР”РЎ");
                 comboBoxNdsIp.Items.Add("5");
                 comboBoxNdsIp.Items.Add("7");
                 comboBoxNdsIp.SelectedIndex = 0;
@@ -98,9 +98,9 @@ namespace Cash8Avalon
             if (comboBoxAcquiringBank != null)
             {
                 comboBoxAcquiringBank.Items.Clear();
-                comboBoxAcquiringBank.Items.Add("НЕ ВЫБРАНО");
-                comboBoxAcquiringBank.Items.Add("ВТБ");
-                comboBoxAcquiringBank.Items.Add("СБЕР");
+                comboBoxAcquiringBank.Items.Add("РќР• Р’Р«Р‘Р РђРќРћ");
+                comboBoxAcquiringBank.Items.Add("Р’РўР‘");
+                comboBoxAcquiringBank.Items.Add("РЎР‘Р•Р ");
                 comboBoxAcquiringBank.SelectedIndex = 0;
             }
 
@@ -173,7 +173,7 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при загрузке портов: {ex.Message}");
+                Console.WriteLine($"РћС€РёР±РєР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ РїРѕСЂС‚РѕРІ: {ex.Message}");
             }
         }
 
@@ -206,8 +206,8 @@ namespace Cash8Avalon
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка загрузки настроек: {ex.Message}");
-                await MessageBox.Show($"Не удалось загрузить настройки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
+                Console.WriteLine($"РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РЅР°СЃС‚СЂРѕРµРє: {ex.Message}");
+                await MessageBox.Show($"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё: {ex.Message}", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
         }
 
@@ -358,13 +358,13 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                Console.WriteLine($"Ошибка БД: {ex.Message}");
-                await MessageBox.Show(ex.Message, "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error,this);
+                Console.WriteLine($"РћС€РёР±РєР° Р‘Р”: {ex.Message}");
+                await MessageBox.Show(ex.Message, "РћС€РёР±РєР° Р‘Р”", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка: {ex.Message}");
-                await MessageBox.Show("Ошибка", ex.Message, MessageBoxButton.OK, MessageBoxType.Error,this);
+                Console.WriteLine($"РћС€РёР±РєР°: {ex.Message}");
+                await MessageBox.Show("РћС€РёР±РєР°", ex.Message, MessageBoxButton.OK, MessageBoxType.Error,this);
             }
             finally
             {
@@ -389,12 +389,12 @@ namespace Cash8Avalon
 
             if (string.IsNullOrEmpty(selectedPort))
             {
-                await MessageBox.Show("Порт весов не выбран!", "Ошибка",MessageBoxButton.OK,MessageBoxType.Error, this);
+                await MessageBox.Show("РџРѕСЂС‚ РІРµСЃРѕРІ РЅРµ РІС‹Р±СЂР°РЅ!", "РћС€РёР±РєР°",MessageBoxButton.OK,MessageBoxType.Error, this);
                 return;
             }
             double weight = await MainStaticClass.GetWeight();
             string formattedWeight = weight.ToString("F3");
-            await MessageBox.Show($"Вес получен с порта {selectedPort}\nВес: {formattedWeight} кг", "Вес",this);
+            await MessageBox.Show($"Р’РµСЃ РїРѕР»СѓС‡РµРЅ СЃ РїРѕСЂС‚Р° {selectedPort}\nР’РµСЃ: {formattedWeight} РєРі", "Р’РµСЃ",this);
         }
 
         private async void Btn_test_connection_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -406,11 +406,11 @@ namespace Cash8Avalon
             }
             if (fptr.printText() < 0)
             {
-                await MessageBox.Show($"Проверка подключения к ФН\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "Проверка", this);
+                await MessageBox.Show($"РџСЂРѕРІРµСЂРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р¤Рќ\nРћС€РёР±РєР° {fptr.errorCode()}: {fptr.errorDescription()}", "РџСЂРѕРІРµСЂРєР°", this);
             }
             else
             {
-                await MessageBox.Show($"Проверка подключения к ФН \nСтатус: Успешно", "Проверка", this);
+                await MessageBox.Show($"РџСЂРѕРІРµСЂРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р¤Рќ \nРЎС‚Р°С‚СѓСЃ: РЈСЃРїРµС€РЅРѕ", "РџСЂРѕРІРµСЂРєР°", this);
             }
         }
 
@@ -421,18 +421,18 @@ namespace Cash8Avalon
 
             if (string.IsNullOrEmpty(ip))
             {
-                await MessageBox.Show("IP адрес ЛМ ЧЗ не указан!", "Ошибка", this);
+                await MessageBox.Show("IP Р°РґСЂРµСЃ Р›Рњ Р§Р— РЅРµ СѓРєР°Р·Р°РЅ!", "РћС€РёР±РєР°", this);
                 return;
             }
 
-            await MessageBox.Show($"Проверка подключения к ЛМ ЧЗ по IP: {ip}\nСтатус: Успешно", "Проверка", this);
+            await MessageBox.Show($"РџСЂРѕРІРµСЂРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р›Рњ Р§Р— РїРѕ IP: {ip}\nРЎС‚Р°С‚СѓСЃ: РЈСЃРїРµС€РЅРѕ", "РџСЂРѕРІРµСЂРєР°", this);
         }
 
         private void ComboBox_variant_connect_fn_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             var comboBoxVariantConnectFn = sender as ComboBox;
             var variant = comboBoxVariantConnectFn?.SelectedItem?.ToString();
-            Console.WriteLine($"Выбран вариант подключения ФН: {variant}");
+            Console.WriteLine($"Р’С‹Р±СЂР°РЅ РІР°СЂРёР°РЅС‚ РїРѕРґРєР»СЋС‡РµРЅРёСЏ Р¤Рќ: {variant}");
         }
 
         private async Task<bool> check_ip_addr()
@@ -460,10 +460,10 @@ namespace Cash8Avalon
             if (!isValid)
             {
                 await MessageBox.Show(
-                    "Строка IP адрес:порт не соответствует формату!\n" +
-                    "Формат: XXX.XXX.XXX.XXX:PORT\n" +
-                    "Пример: 192.168.1.100:5555",
-                    "Проверка ввода IP адреса", this);
+                    "РЎС‚СЂРѕРєР° IP Р°РґСЂРµСЃ:РїРѕСЂС‚ РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ С„РѕСЂРјР°С‚Сѓ!\n" +
+                    "Р¤РѕСЂРјР°С‚: XXX.XXX.XXX.XXX:PORT\n" +
+                    "РџСЂРёРјРµСЂ: 192.168.1.100:5555",
+                    "РџСЂРѕРІРµСЂРєР° РІРІРѕРґР° IP Р°РґСЂРµСЃР°", this);
                 result = false;
             }
 
@@ -538,20 +538,20 @@ namespace Cash8Avalon
             if (cashDeskNumber == null || nickShop == null || unloadingPeriod == null ||
                 comboBoxSystemTaxation == null || txtB_version_fn == null)
             {
-                await MessageBox.Show("Не удалось найти элементы управления", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBox.Show("РќРµ СѓРґР°Р»РѕСЃСЊ РЅР°Р№С‚Рё СЌР»РµРјРµРЅС‚С‹ СѓРїСЂР°РІР»РµРЅРёСЏ", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error, this);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(cashDeskNumber.Text))
             {
-                await MessageBox.Show("Не заполнен номер кассы", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBox.Show("РќРµ Р·Р°РїРѕР»РЅРµРЅ РЅРѕРјРµСЂ РєР°СЃСЃС‹", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error, this);
                 cashDeskNumber.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(nickShop.Text))
             {
-                await MessageBox.Show("Не заполнен код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                await MessageBox.Show("РќРµ Р·Р°РїРѕР»РЅРµРЅ РєРѕРґ РјР°РіР°Р·РёРЅР°", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error, this);
                 nickShop.Focus();
                 return;
             }
@@ -562,7 +562,7 @@ namespace Cash8Avalon
                 {
                     if (await check_exists())
                     {
-                        await MessageBox.Show("За сегодня существуют чеки, номер кассы изменить невозможно", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                        await MessageBox.Show("Р—Р° СЃРµРіРѕРґРЅСЏ СЃСѓС‰РµСЃС‚РІСѓСЋС‚ С‡РµРєРё, РЅРѕРјРµСЂ РєР°СЃСЃС‹ РёР·РјРµРЅРёС‚СЊ РЅРµРІРѕР·РјРѕР¶РЅРѕ", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error, this);
                         return;
                     }
                 }
@@ -578,14 +578,14 @@ namespace Cash8Avalon
             {
                 if (!int.TryParse(periodText, out int periodValue))
                 {
-                    await MessageBox.Show("Период выгрузки должен быть числом", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBox.Show("РџРµСЂРёРѕРґ РІС‹РіСЂСѓР·РєРё РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ С‡РёСЃР»РѕРј", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error, this);
                     unloadingPeriod.Focus();
                     return;
                 }
 
                 if (periodValue != 0 && (periodValue < 1 || periodValue > 10))
                 {
-                    await MessageBox.Show("Период выгрузки может быть равен нулю или быть в диапазоне 1-10", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+                    await MessageBox.Show("РџРµСЂРёРѕРґ РІС‹РіСЂСѓР·РєРё РјРѕР¶РµС‚ Р±С‹С‚СЊ СЂР°РІРµРЅ РЅСѓР»СЋ РёР»Рё Р±С‹С‚СЊ РІ РґРёР°РїР°Р·РѕРЅРµ 1-10", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxType.Error, this);
                     unloadingPeriod.Focus();
                     return;
                 }
@@ -700,7 +700,7 @@ namespace Cash8Avalon
                 tran.Commit();
                 conn.Close();
 
-                MessageBoxResult result = await MessageBox.Show("Для применения новых параметров программа будет закрыта.", "", MessageBoxButton.OK, MessageBoxType.Info, this);
+                MessageBoxResult result = await MessageBox.Show("Р”Р»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ РЅРѕРІС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ РїСЂРѕРіСЂР°РјРјР° Р±СѓРґРµС‚ Р·Р°РєСЂС‹С‚Р°.", "", MessageBoxButton.OK, MessageBoxType.Info, this);
 
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
                 {
@@ -713,11 +713,11 @@ namespace Cash8Avalon
             }
             catch (NpgsqlException ex)
             {
-                await MessageBox.Show(ex.Message, "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error,this);
+                await MessageBox.Show(ex.Message, "РћС€РёР±РєР° Р‘Р”", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
             catch (Exception ex)
             {
-                await MessageBox.Show($"Ошибка сохранения: {ex.Message}", " Ошибка ", MessageBoxButton.OK, MessageBoxType.Error,this);
+                await MessageBox.Show($"РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ: {ex.Message}", " РћС€РёР±РєР° ", MessageBoxButton.OK, MessageBoxType.Error,this);
             }
         }
 

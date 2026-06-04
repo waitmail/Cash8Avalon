@@ -138,7 +138,7 @@ namespace Cash8Avalon
                 {
                     if (owner != null)
                     {
-                        await MessageBoxHelper.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА" + minutes.ToString() + " МИНУТ ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ " +
+                        await MessageBoxHelper.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА " + minutes.ToString() + " МИНУТ(Ы) ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ " +
                             "\r\nПосле отправки заявки вы можете продолжить работу в обычном режиме.    ", " Проверка даты и времени в фн ", owner);
                     }
                     MainStaticClass.write_event_in_log(" Не схождение даты и времени между ФР и компьютером больше чем на" + minutes.ToString() + " минут ", "Документ", "0");
@@ -3239,13 +3239,13 @@ namespace Cash8Avalon
                 await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
 
                 var taxationMapping = new Dictionary<uint, int>
-        {
-            { 1, 1 },   // ОСН
-            { 4, 2 },   // УСН Доходы - Расходы
-            { 36, 3 },  // (УСНДоходы - Расходы) + Патент
-            { 2, 4 },   // УСН Доходы
-            { 34, 5 }   // УСНДоходы + Патент            
-        };
+                {
+                    { 1, 1 },   // ОСН
+                    { 4, 2 },   // УСН Доходы - Расходы
+                    { 36, 3 },  // (УСНДоходы - Расходы) + Патент
+                    { 2, 4 },   // УСН Доходы
+                    { 34, 5 }   // УСНДоходы + Патент            
+                };
 
                 if (taxationMapping.TryGetValue(taxationTypes, out int expectedSystemTaxation) || (taxationTypes == 32))
                 {

@@ -63,6 +63,9 @@
     <Reference Include="Atol.Drivers10.Fptr">
       <HintPath>Atol.Drivers10.Fptr.dll</HintPath>
     </Reference>
+    <Reference Include="PiotIntegration">
+      <HintPath>PiotIntegration.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 
