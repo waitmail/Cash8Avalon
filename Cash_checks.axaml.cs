@@ -97,7 +97,7 @@ namespace Cash8Avalon
 
                 // 3. Подписываемся на события
                 InitializeEvents();
-                InitializeCloseButton();
+                //InitializeCloseButton();
 
                 // 4. Подписываемся на глобальные события клавиатуры
                 this.AddHandler(KeyDownEvent, OnGlobalKeyDown, RoutingStrategies.Tunnel);
@@ -197,11 +197,7 @@ namespace Cash8Avalon
 
                     if (_scrollChangedHandler != null)
                         _scrollViewer.ScrollChanged -= _scrollChangedHandler;
-                }
-
-                // ✅ 2. Отписываемся от кнопок
-                var closeButton = this.FindControl<Button>("btnClose");
-                if (closeButton != null) closeButton.Click -= CloseButton_Click;
+                }               
 
                 var button1 = this.FindControl<Button>("button1");
                 if (button1 != null) button1.Click -= Button1_Click;
@@ -366,40 +362,40 @@ namespace Cash8Avalon
             AvaloniaXamlLoader.Load(this);
         }
 
-        /// <summary>
-        /// Инициализация кнопки закрытия
-        /// </summary>
-        private void InitializeCloseButton()
-        {
-            try
-            {
-                // Находим кнопку закрытия
-                var closeButton = this.FindControl<Button>("btnClose");
-                if (closeButton != null)
-                {
-                    Console.WriteLine("✓ Кнопка закрытия найдена и инициализирована");
+        ///// <summary>
+        ///// Инициализация кнопки закрытия
+        ///// </summary>
+        //private void InitializeCloseButton()
+        //{
+        //    try
+        //    {
+        //        // Находим кнопку закрытия
+        //        //var closeButton = this.FindControl<Button>("btnClose");
+        //        //if (closeButton != null)
+        //        //{
+        //        //    Console.WriteLine("✓ Кнопка закрытия найдена и инициализирована");
 
-                    // Добавляем эффект при наведении
-                    closeButton.PointerEntered += (s, e) =>
-                    {
-                        closeButton.Foreground = Brushes.Red;
-                    };
+        //        //    // Добавляем эффект при наведении
+        //        //    closeButton.PointerEntered += (s, e) =>
+        //        //    {
+        //        //        closeButton.Foreground = Brushes.Red;
+        //        //    };
 
-                    closeButton.PointerExited += (s, e) =>
-                    {
-                        closeButton.Foreground = Brushes.Gray;
-                    };
-                }
-                else
-                {
-                    Console.WriteLine("⚠ Кнопка закрытия не найдена");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Ошибка при инициализации кнопки закрытия: {ex.Message}");
-            }
-        }
+        //        //    closeButton.PointerExited += (s, e) =>
+        //        //    {
+        //        //        closeButton.Foreground = Brushes.Gray;
+        //        //    };
+        //        //}
+        //        //else
+        //        //{
+        //        //    Console.WriteLine("⚠ Кнопка закрытия не найдена");
+        //        //}
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка при инициализации кнопки закрытия: {ex.Message}");
+        //    }
+        //}
 
         /// <summary>
         /// Инициализация значений контролов
@@ -2780,14 +2776,7 @@ namespace Cash8Avalon
                 if (image != null)
                 {
                     image.DoubleTapped += PictureBox_get_update_program_DoubleTapped;
-                }
-
-                // Кнопка закрытия в верхнем углу
-                var closeButton = this.FindControl<Button>("btnClose");
-                if (closeButton != null)
-                {
-                    closeButton.Click += CloseButton_Click;
-                }
+                }              
 
                 Console.WriteLine("✓ События инициализированы");
             }
@@ -2795,18 +2784,7 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"✗ Ошибка при инициализации событий: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Обработчик для кнопки "✕" в правом верхнем углу
-        /// </summary>
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            Console.WriteLine("Кнопка закрытия (✕) нажата");
-
-            // Вызываем событие закрытия
-            RequestClose?.Invoke(this, EventArgs.Empty);
-        }
+        }        
 
         private void Button1_Click(object sender, RoutedEventArgs e)
         {

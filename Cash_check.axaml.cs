@@ -203,6 +203,62 @@ namespace Cash8Avalon
 
         public bool IsShowingModal { get; set; } = false;
 
+        // Добавить в секцию полей класса Cash_check (где-то после public bool reopened = false;)
+
+        /// <summary>
+        /// Флаг: была попытка оплаты через банковский терминал.
+        /// После установки блокирует ВСЕ изменения чека.
+        /// Доступно только: повтор оплаты (F8) или удаление чека (F9).
+        /// </summary>
+        public bool PaymentAttempted { get; set; } = false;
+
+        /// <summary>
+        /// Проверяет, заблокирован ли чек от изменений.
+        /// Если да — показывает предупреждение и возвращает true.
+        /// </summary>
+        private async Task<bool> IsPaymentLockedAsync()
+        {
+            if (PaymentAttempted)
+            {
+                // Блокируем UI, чтобы кассир больше не мог кликнуть по этим полям
+                SetPaymentAttemptedUI();
+                await MessageBoxHelper.Show(
+                    "⚠ ЧЕК ЗАБЛОКИРОВАН ДЛЯ ИЗМЕНЕНИЙ!\n\n" +
+                    "Была попытка оплаты через банковский терминал.\n" +
+                    "Возможно, оплата прошла, но программа не получила подтверждение.\n\n" +
+                    "Доступные действия:\n" +
+                    "• Повторить оплату — F8\n" +
+                    "• Удалить чек — F9\n\n" +
+                    "Если оплата НЕ прошла — удалите чек и создайте новый.",
+                    "Блокировка чека",
+                    MessageBoxButton.OK,
+                    MessageBoxType.Warning,
+                    this);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Частичная блокировка интерфейса после попытки оплаты терминалом.
+        /// Разрешает только: F8 (Повтор оплаты), F9 (Удаление чека), Закрытие окна.
+        /// </summary>
+        public void SetPaymentAttemptedUI()
+        {
+            // Блокируем ввод товаров и смену типа чека
+            if (InputSearchProduct != null) InputSearchProduct.IsEnabled = false;
+            if (CheckType != null) CheckType.IsEnabled = false;
+            if (ClientBarcodeOrPhone != null) ClientBarcodeOrPhone.IsEnabled = false;
+            if (txtB_inn != null) txtB_inn.IsEnabled = false;
+            if (txtB_name != null) txtB_name.IsEnabled = false;
+            if (btn_get_name != null) btn_get_name.IsEnabled = false;
+            if (BtnFillOnSales != null) BtnFillOnSales.IsEnabled = false;
+
+            // Снимаем фокус с таблицы товаров, чтобы случайно не нажали +/-
+            InputSearchProduct?.Focus();
+        }
+
+
 
         /// <summary>
         /// Запускает таймер проверки фокуса (для Linux)
@@ -1753,6 +1809,7 @@ namespace Cash8Avalon
                 switch (e.Key)
                 {
                     case Key.F5:
+                        if (await IsPaymentLockedAsync()) { e.Handled = true; break; }
                         if ((IsNewCheck) && (CheckType.SelectedIndex == 0))
                         {
                             // Используем await, так как метод возвращает Task<bool?>
@@ -1762,6 +1819,7 @@ namespace Cash8Avalon
                         break;
 
                     case Key.F6:
+                        if (await IsPaymentLockedAsync()) { e.Handled = true; break; }
                         if ((IsNewCheck) && (CheckType.SelectedIndex == 0))
                         {
                             // Если этот метод async void, await не нужен, но если он Task - нужен await
@@ -3659,29 +3717,17 @@ namespace Cash8Avalon
 
 
         /// <summary>
-        /// Проверяет и исправляет расхождение между SumAtDiscount в строках
-        /// и итоговой суммой документа (cash).
-        /// 
-        /// Проверки:
-        /// 1. Каждая строка: SumAtDiscount должно быть = Round(Quantity * PriceAtDiscount, 2)
-        /// 2. Итог: SUM(SumAtDiscount) должно совпадать с calculation_of_the_sum_of_the_document()
-        /// 3. При записи: cash должно совпадать с SUM(sum_at_a_discount) по товарам (без сертификатов)
-        /// 
-        /// Все расхождения логируются и автоматически исправляются.
+        /// Проверяет математику в строках и возвращает достоверную сумму документа.
+        /// Логирует состояние при переходе в оплату.
         /// </summary>
-        /// <param name="context">Описание места вызова (для логирования)</param>
-        /// <returns>true — расхождений нет или они исправлены; false — критическая ошибка</returns>
-        public bool ValidateAndFixSumConsistency(string context)
+        public decimal ValidateAndFixSumConsistency(string context)
         {
-            bool discrepancyFound = false;
             bool anyLineFixed = false;
-            decimal totalDelta = 0;
 
             try
             {
                 // ═══════════════════════════════════════════
-                // ШАГ 1: Проверяем и исправляем КАЖДУЮ СТРОКУ
-                // SumAtDiscount должно быть = Round(Quantity * PriceAtDiscount, 2)
+                // ШАГ 1: Проверяем математику КАЖДОЙ СТРОКИ
                 // ═══════════════════════════════════════════
                 for (int i = 0; i < _productsData.Count; i++)
                 {
@@ -3689,38 +3735,26 @@ namespace Cash8Avalon
 
                     decimal expectedSumAtDiscount = Math.Round(
                         product.Quantity * product.PriceAtDiscount,
-                        2,
-                        MidpointRounding.AwayFromZero);
+                        2, MidpointRounding.AwayFromZero);
 
                     decimal expectedSum = Math.Round(
                         product.Quantity * product.Price,
-                        2,
-                        MidpointRounding.AwayFromZero);
+                        2, MidpointRounding.AwayFromZero);
 
-                    // Проверяем SumAtDiscount
                     if (product.SumAtDiscount != expectedSumAtDiscount)
                     {
-                        decimal lineDelta = product.SumAtDiscount - expectedSumAtDiscount;
-                        totalDelta += lineDelta;
-
                         MainStaticClass.WriteRecordErrorLog(
                             $"Расхождение SumAtDiscount в строке #{i}",
                             "ValidateAndFixSumConsistency",
-                            numdoc,
-                            MainStaticClass.CashDeskNumber,
+                            numdoc, MainStaticClass.CashDeskNumber,
                             $"Контекст: {context}\n" +
                             $"Код: {product.Code}, Товар: {product.Tovar}\n" +
-                            $"Quantity={product.Quantity}, PriceAtDiscount={product.PriceAtDiscount}\n" +
-                            $"Было: SumAtDiscount={product.SumAtDiscount}\n" +
-                            $"Должно быть: {expectedSumAtDiscount}\n" +
-                            $"Дельта строки: {lineDelta}");
+                            $"Было: {product.SumAtDiscount}, Должно: {expectedSumAtDiscount}");
 
                         product.SumAtDiscount = expectedSumAtDiscount;
                         anyLineFixed = true;
-                        discrepancyFound = true;
                     }
 
-                    // Проверяем Sum (без скидки)
                     if (product.Sum != expectedSum)
                     {
                         product.Sum = expectedSum;
@@ -3729,56 +3763,35 @@ namespace Cash8Avalon
                 }
 
                 // ═══════════════════════════════════════════
-                // ШАГ 2: Проверяем ИТОГОВУЮ СУММУ
+                // ШАГ 2: Считаем ИТОГОВУЮ СУММУ один раз
                 // ═══════════════════════════════════════════
-                decimal lineTotal = _productsData.Sum(p => p.SumAtDiscount);
-                decimal docSum = calculation_of_the_sum_of_the_document();
+                decimal actualTotal = _productsData.Sum(p => p.SumAtDiscount);
 
-                if (lineTotal != docSum)
-                {
-                    discrepancyFound = true;
-
-                    MainStaticClass.WriteRecordErrorLog(
-                        $"Расхождение итоговой суммы документа",
-                        "ValidateAndFixSumConsistency",
-                        numdoc,
-                        MainStaticClass.CashDeskNumber,
-                        $"Контекст: {context}\n" +
-                        $"Сумма строк (пересчёт): {lineTotal}\n" +
-                        $"calculation_of_the_sum_of_the_document: {docSum}\n" +
-                        $"Дельта: {lineTotal - docSum}");
-                }
-
-                // ═══════════════════════════════════════════
-                // ШАГ 3: Обновляем UI если были исправления
-                // ═══════════════════════════════════════════
                 if (anyLineFixed)
                 {
                     RefreshProductsGrid();
                     UpdateTotalSum();
-
                     MainStaticClass.write_event_in_log(
-                        $"Исправлено расхождение сумм. Дельта={totalDelta}. Контекст: {context}",
-                        "ValidateAndFixSumConsistency",
-                        numdoc.ToString());
+                        $"Исправлена математика в строках. Новая сумма: {actualTotal}. Контекст: {context}",
+                        "ValidateAndFixSumConsistency", numdoc.ToString());
+                }
+                else
+                {
+                    // ✅ ТОТ САМЫЙ ЛОГ: "При переходе в окно оплаты всё было гуд"
+                    MainStaticClass.write_event_in_log(
+                        $"✓ Проверка сумм пройдена. Сумма строк = {actualTotal}. Контекст: {context}",
+                        "ValidateAndFixSumConsistency", numdoc.ToString());
                 }
 
-                if (!discrepancyFound)
-                {
-                    Console.WriteLine($"✓ ValidateAndFixSumConsistency [{context}]: расхождений нет");
-                }
+                return actualTotal;
             }
             catch (Exception ex)
             {
-                MainStaticClass.WriteRecordErrorLog(
-                    ex,
-                    numdoc,
-                    MainStaticClass.CashDeskNumber,
+                MainStaticClass.WriteRecordErrorLog(ex, numdoc, MainStaticClass.CashDeskNumber,
                     $"ValidateAndFixSumConsistency FAILED. Context: {context}");
-                return false;
+                // В случае ошибки возвращаем то, что есть
+                return calculation_of_the_sum_of_the_document();
             }
-
-            return true;
         }
 
 
@@ -3813,71 +3826,63 @@ namespace Cash8Avalon
                 }
 
                 MainStaticClass.write_event_in_log("Попытка перейти в окно оплаты", "Документ чек", numdoc.ToString());
-
-                // ═══════════════════════════════════════════════
-                //  КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: ВСЕГДА новый экземпляр!
-                //  НЕ вызываем InitializeComponent() — конструктор уже это сделал!
-                // ═══════════════════════════════════════════════
+                                
                 pay_form = new Pay();
-                //pay_form.InitializeComponent();
-                //pay_form._bonusSumTextBox.Text = "0";
-                //pay_form._bonusSumTextBox.IsVisible = false;                
-                //pay_form._bonusSumTextBox.IsEnabled = false;
-                //pay_form._bonusManyTextBox.Text = "0";
+                
                 pay_form.SetBonusControlsState(isVisible: false, isEnabled: false);
                 pay_form.BonusSum = "0";
                 pay_form.BonusMany = "0";
                 pay_form.cc = this;
-
-                //if (this.check_type.SelectedIndex == 0)
-                //{
-                //    MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
-                //    BackupProductsData();
-
-                //    MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
-                //    DataTable dataTable = await to_define_the_action_dt(true);
-
-                //    // ★ Восстанавливаем маркировки в DataTable ПЕРЕД конвертацией в List<ProductItem>
-                //    dataTable = RestoreMarkingsAfterActions(dataTable, _productsDataBackup);
-
-                //    _productsData = CreateProductsFromDataTable(dataTable);
-                //    await RecalculateAllProducts(true);
-                //    selection_goods = false;
-
-                //    MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
-
-                //    pay_form._paySumTextBox.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
-                //    write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);
-                //}
-                //else
-                //{
-                //    pay_form.pay_sum.Text = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
-                //}
-
+                
                 if (this.CheckType.SelectedIndex == 0)
                 {
-                    MainStaticClass.write_event_in_log(" Копируем табличную часть один ListView в другой ", "Документ чек", numdoc.ToString());
-                    BackupProductsData();
+                    // ═══════════════════════════════════════════════════════════
+                    // РАЗДЕЛЕНИЕ ЛОГИКИ: Первичный вход vs Повторный вход (F8)
+                    // ═══════════════════════════════════════════════════════════
+                    if (PaymentAttempted)
+                    {
+                        // --- ПОВТОРНАЯ ПОПЫТКА ОПЛАТЫ ---
+                        // НЕ трогаем акции, НЕ пересчитываем товары, НЕ создаём бэкап!
+                        // Сумма берётся как есть из текущего состояния чека.
+                        Console.WriteLine("⚠ Повторный вход в оплату (PaymentAttempted=true). Акции НЕ пересчитываются!");
+                        MainStaticClass.write_event_in_log("Повторный вход в оплату. Акции НЕ пересчитываются", "Документ чек", numdoc.ToString());
+                    }
+                    else
+                    {
+                        // --- ПЕРВИЧНАЯ ОПЛАТА ---
+                        Console.WriteLine("✓ Первичный вход в оплату. Обработка акций и создание бэкапа");
+                        MainStaticClass.write_event_in_log("Копируем табличную часть в резервную копию", "Документ чек", numdoc.ToString());
+                        BackupProductsData();
 
-                    MainStaticClass.write_event_in_log(" Попытка обработать акции по штрихкодам ", "Документ чек", numdoc.ToString());
-                    DataTable dataTable = await to_define_the_action_dt(true);
+                        MainStaticClass.write_event_in_log("Попытка обработать акции по штрихкодам", "Документ чек", numdoc.ToString());
+                        DataTable dataTable = await to_define_the_action_dt(true);
+                        dataTable = RestoreMarkingsAfterActions(dataTable, _productsDataBackup);
 
-                    dataTable = RestoreMarkingsAfterActions(dataTable, _productsDataBackup);
+                        _productsData = CreateProductsFromDataTable(dataTable);
+                        await RecalculateAllProducts(true);
+                        selection_goods = false;
 
-                    _productsData = CreateProductsFromDataTable(dataTable);
-                    await RecalculateAllProducts(true);
-                    selection_goods = false;
-                    
-                    ValidateAndFixSumConsistency("show_pay_form (после обработки акций)");
-                    
-                    MainStaticClass.write_event_in_log(" Попытка пересчитать чек ", "Документ чек", numdoc.ToString());
+                        //ValidateAndFixSumConsistency("show_pay_form (после обработки акций)");
+                    }
 
-                    pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture); // ✅ ИСПРАВЛЕНО
-                    write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);
+                    //MainStaticClass.write_event_in_log("Попытка пересчитать чек", "Документ чек", numdoc.ToString());
+
+                    //pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+
+                    //// ✅ Запись в БД происходит В ЛЮБОМ СЛУЧАЕ (и при первичной, и при повторной оплате)
+                    //await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0", false);
+                    decimal verifiedSum = ValidateAndFixSumConsistency("show_pay_form (перед открытием оплаты)");
+                    string sumForPayAndDb = verifiedSum.ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
+
+                    // Передаём зафиксированную сумму в форму оплаты
+                    pay_form.PaySum = sumForPayAndDb;
+
+                    // Передаём зафиксированную сумму в БД (с await!)
+                    await write_new_document("0", verifiedSum.ToString(), "0", "0", false, "0", "0", "0", "0", false);
                 }
                 else
                 {
-                    pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture); // ✅ ИСПРАВЛЕНО
+                    pay_form.PaySum = calculation_of_the_sum_of_the_document().ToString("F2", System.Globalization.CultureInfo.CurrentCulture);
                 }
 
                 Console.WriteLine($"✓ Перед передачей на 2 экран : {_productsDataBackup.Count} записей");
@@ -3964,7 +3969,26 @@ namespace Cash8Avalon
 
             selection_goods = true;
 
-            RestoreProductsData();
+            //RestoreProductsData();
+            // ═══════════════════════════════════════════════════════════
+            // ВАЖНО: Если была попытка оплаты (PaymentAttempted),
+            // мы НЕ ДОЛЖНЫ восстанавливать товары из бэкапа!
+            // Иначе мы откатим чек в состояние ДО первой попытки,
+            // потеряв связь с возможной транзакцией банковского терминала.
+            // ═══════════════════════════════════════════════════════════
+            if (PaymentAttempted)
+            {
+                Console.WriteLine("⚠ Отмена оплаты при заблокированном чеке: восстановление из бэкапа ПРОПУЩЕНО");
+                MainStaticClass.write_event_in_log("Отмена оплаты при заблокированном чеке: восстановление ПРОПУЩЕНО", "Документ чек", numdoc.ToString());
+                // Товары остаются в текущем состоянии (с уже рассчитанными акциями)
+            }
+            else
+            {
+                // Стандартная логика: возвращаем чек к исходному состоянию до расчета акций
+                RestoreProductsData();
+            }
+
+
             await RecalculateAllProducts();
             if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
             {
@@ -5025,6 +5049,7 @@ namespace Cash8Avalon
         {
             if (e.Key == Key.Enter)
             {
+                if (await IsPaymentLockedAsync()) return;
                 MainStaticClass.write_event_in_log(" Перед началом поиска клиента ", "Документ чек", numdoc.ToString());
                 ProcessClientDiscount(ClientBarcodeOrPhone.Text.Trim());
             }
@@ -5285,11 +5310,17 @@ namespace Cash8Avalon
             }
         }
 
-        private void InputSearchProduct_KeyDown(object? sender, KeyEventArgs e)
+        private async void InputSearchProduct_KeyDown(object? sender, KeyEventArgs e)
         {
             switch (e.Key)
             {
                 case Key.Enter:
+                    // ✅ Единая проверка
+                    if (await IsPaymentLockedAsync())
+                    {
+                        e.Handled = true;
+                        return;
+                    }
                     Console.WriteLine("Enter нажат в поле поиска товара");
                     e.Handled = true;
                     FindProduct();
@@ -5433,6 +5464,9 @@ namespace Cash8Avalon
         {
             try
             {
+                // ✅ ЗАЩИТА: Блокировка после попытки оплаты
+                if (await IsPaymentLockedAsync()) return;
+
                 // ✅ Повторная проверка: если документ не новый — выходим
                 if (!IsNewCheck)
                 {
@@ -7153,7 +7187,10 @@ namespace Cash8Avalon
             // 2. Ячейки с данными
             rowElements.Add(CreateCell(0, gridRowIndex, product.Code.ToString(), HorizontalAlignment.Right));
             rowElements.Add(CreateCellWithWrap(1, gridRowIndex, product.Tovar, HorizontalAlignment.Left));
-            rowElements.Add(CreateCell(2, gridRowIndex, product.Quantity.ToString(), HorizontalAlignment.Right));
+            //rowElements.Add(CreateCell(2, gridRowIndex, product.Quantity.ToString(), HorizontalAlignment.Right));
+            rowElements.Add(CreateCell(2, gridRowIndex,
+            product.IsFractional ? product.Quantity.ToString("F3") : product.Quantity.ToString(),
+            HorizontalAlignment.Right));
             rowElements.Add(CreateCell(3, gridRowIndex, product.Price.ToString("N2"), HorizontalAlignment.Right));
             rowElements.Add(CreateCell(4, gridRowIndex, product.PriceAtDiscount.ToString("N2"), HorizontalAlignment.Right));
             rowElements.Add(CreateCell(5, gridRowIndex, product.Sum.ToString("N2"), HorizontalAlignment.Right));
@@ -7634,6 +7671,12 @@ namespace Cash8Avalon
                     if (IsNewCheck)
                         if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
                         {
+                            // ✅ ЗАЩИТА: Блокировка после попытки оплаты
+                            if (await IsPaymentLockedAsync())
+                            {
+                                e.Handled = true;
+                                break;
+                            }
                             IncreaseProductQuantity(_selectedProductRowIndex);
                             e.Handled = true;
                         }
@@ -7643,6 +7686,12 @@ namespace Cash8Avalon
                 case Key.OemMinus:
                     if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
                     {
+                        // ✅ ЗАЩИТА: Блокировка после попытки оплаты
+                        if (await IsPaymentLockedAsync())
+                        {
+                            e.Handled = true;
+                            break;
+                        }
                         DecreaseProductQuantity(_selectedProductRowIndex);
                         e.Handled = true;
                     }
@@ -7651,6 +7700,12 @@ namespace Cash8Avalon
                 case Key.Delete:
                     if (!isReadOnlyMode && _selectedProductRowIndex >= 0)
                     {
+                        // ✅ ЗАЩИТА: Блокировка после попытки оплаты
+                        if (await IsPaymentLockedAsync())
+                        {
+                            e.Handled = true;
+                            break;
+                        }
                         DeleteSelectedProduct();
                         e.Handled = true;
                     }
@@ -7659,6 +7714,12 @@ namespace Cash8Avalon
                 case Key.Enter:
                     // 1. Защита от двойного нажатия (если уже открыт диалог, игнорируем Enter)
                     if (IsShowingModal)
+                    {
+                        e.Handled = true;
+                        break;
+                    }
+                    // ✅ ЗАЩИТА: Блокировка после попытки оплаты
+                    if (await IsPaymentLockedAsync())
                     {
                         e.Handled = true;
                         break;
@@ -7834,11 +7895,15 @@ namespace Cash8Avalon
 
                                     if (result.HasValue)
                                     {
-                                        double newQuantity = result.Value;
+                                        // Округляем с учётом типа товара: 3 знака для весового, 0 для штучного
+                                        int decimals = product.IsFractional ? 3 : 0;
+                                        decimal newQuantityDecimal = Math.Round(
+                                            Convert.ToDecimal(result.Value),
+                                            decimals,
+                                            MidpointRounding.AwayFromZero);
 
-                                        // Проверка минимального количества
                                         decimal minimum = product.IsFractional ? 0.001m : 1m;
-                                        if (Convert.ToDecimal(newQuantity) < minimum)
+                                        if (newQuantityDecimal < minimum)
                                         {
                                             string unit = product.IsFractional ? "кг" : "шт.";
                                             await MessageBoxHelper.Show(
@@ -7848,9 +7913,7 @@ namespace Cash8Avalon
                                                 MessageBoxType.Error,
                                                 this);
                                         }
-                                        // Проверка MaxQuantity для возврата
-                                        else if (product.MaxQuantity > 0 &&
-                                                 Convert.ToDecimal(newQuantity) > product.MaxQuantity)
+                                        else if (product.MaxQuantity > 0 && newQuantityDecimal > product.MaxQuantity)
                                         {
                                             string format = product.IsFractional ? "F3" : "F0";
                                             string unit = product.IsFractional ? "кг" : "шт.";
@@ -7863,7 +7926,7 @@ namespace Cash8Avalon
                                         }
                                         else
                                         {
-                                            product.Quantity = Convert.ToDecimal(newQuantity);
+                                            product.Quantity = newQuantityDecimal;  // ← Теперь decimal с правильным округлением
                                             RecalculateProductSums(product);
                                             UpdateProductRowInGrid(_selectedProductRowIndex);
                                             UpdateTotalSum();
@@ -7954,6 +8017,7 @@ namespace Cash8Avalon
             }
             try
             {
+                if (await IsPaymentLockedAsync()) return;
                 System.Net.WebRequest req = System.Net.WebRequest.Create("https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party");
                 req.Method = "POST";
                 req.ContentType = "application/json";
@@ -8035,6 +8099,10 @@ namespace Cash8Avalon
         {
             try
             {
+
+                // ✅ Единая проверка
+                if (await IsPaymentLockedAsync()) return;
+
                 if (dataIndex >= 0 && dataIndex < _productsData.Count)
                 {
                     var product = _productsData[dataIndex];
@@ -8579,6 +8647,10 @@ namespace Cash8Avalon
 
             try
             {
+
+                // ✅ Единая проверка
+                if (await IsPaymentLockedAsync()) return;
+
                 if (dataIndex < 0 || dataIndex >= _productsData.Count)
                     return;
 
@@ -8740,6 +8812,9 @@ namespace Cash8Avalon
         {
             try
             {
+                // ✅ Единая проверка
+                if (await IsPaymentLockedAsync()) return;
+
                 if (this.IsShowingModal)
                 {
                     Console.WriteLine("⚠ DeleteProductWithConfirmation уже выполняется, пропуск.");
@@ -9392,7 +9467,11 @@ namespace Cash8Avalon
                 // Обновляем текст в существующих TextBlock'ах
                 UpdateTextBlockText(textBlocksByColumn, 0, product.Code.ToString());
                 UpdateTextBlockText(textBlocksByColumn, 1, product.Tovar);
-                UpdateTextBlockText(textBlocksByColumn, 2, product.Quantity.ToString());
+                //UpdateTextBlockText(textBlocksByColumn, 2, product.Quantity.ToString());
+                UpdateTextBlockText(textBlocksByColumn, 2,
+                product.IsFractional
+                ? product.Quantity.ToString("F3")   // 0.500 для весовых
+                : product.Quantity.ToString());      // 5 для штучных
                 UpdateTextBlockText(textBlocksByColumn, 3, product.Price.ToString("N2"));
                 UpdateTextBlockText(textBlocksByColumn, 4, product.PriceAtDiscount.ToString("N2"));
                 UpdateTextBlockText(textBlocksByColumn, 5, product.Sum.ToString("N2"));
@@ -9642,7 +9721,7 @@ namespace Cash8Avalon
             string format = isFractional ? "0.000" : "0";
             string watermark = isFractional ? "0.000" : "1";
             decimal increment = isFractional ? 0.001m : 1m;
-            decimal minimum = isFractional ? 0.001m : 0m;
+            decimal minimum = isFractional ? 0.001m : 1m;
 
             var dialog = new Window
             {
@@ -10677,68 +10756,68 @@ namespace Cash8Avalon
 
 
 
-        /// <summary>
-        /// Применяет изменения количества
-        /// </summary>
-        private async void ApplyQuantityChanges(ProductItem product, string quantityText, int dataIndex)
-        {
-            if (int.TryParse(quantityText, out int newQuantity) && newQuantity >= 1 && newQuantity <= 9999)
-            {
-                product.Quantity = newQuantity;
-                RecalculateProductSums(product);
-                UpdateProductRowInGrid(dataIndex);
-                UpdateTotalSum();
-                Console.WriteLine($"✓ Количество товара '{product.Tovar}' изменено на {product.Quantity}");
-                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
-                               "0", "0", false, "0", "0", "0", "0");
-            }
-            else
-            {
-                Console.WriteLine("⚠ Неверное количество товара");
-            }
-        }
+        ///// <summary>
+        ///// Применяет изменения количества
+        ///// </summary>
+        //private async void ApplyQuantityChanges(ProductItem product, string quantityText, int dataIndex)
+        //{
+        //    if (int.TryParse(quantityText, out int newQuantity) && newQuantity >= 1 && newQuantity <= 9999)
+        //    {
+        //        product.Quantity = newQuantity;
+        //        RecalculateProductSums(product);
+        //        UpdateProductRowInGrid(dataIndex);
+        //        UpdateTotalSum();
+        //        Console.WriteLine($"✓ Количество товара '{product.Tovar}' изменено на {product.Quantity}");
+        //        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+        //                       "0", "0", false, "0", "0", "0", "0");
+        //    }
+        //    else
+        //    {
+        //        Console.WriteLine("⚠ Неверное количество товара");
+        //    }
+        //}
 
-        /// <summary>
-        /// Корректно позиционирует диалоговое окно
-        /// </summary>
-        private void PositionDialogCorrectly(Window dialog)
-        {
-            try
-            {
-                // Получаем главное окно
-                var mainWindow = this.FindAncestorOfType<Window>();
-                if (mainWindow == null) return;
+        ///// <summary>
+        ///// Корректно позиционирует диалоговое окно
+        ///// </summary>
+        //private void PositionDialogCorrectly(Window dialog)
+        //{
+        //    try
+        //    {
+        //        // Получаем главное окно
+        //        var mainWindow = this.FindAncestorOfType<Window>();
+        //        if (mainWindow == null) return;
 
-                // Получаем экран
-                var screen = mainWindow.Screens.ScreenFromPoint(mainWindow.Position);
-                if (screen == null) return;
+        //        // Получаем экран
+        //        var screen = mainWindow.Screens.ScreenFromPoint(mainWindow.Position);
+        //        if (screen == null) return;
 
-                // Рабочая область экрана
-                var workingArea = screen.WorkingArea;
+        //        // Рабочая область экрана
+        //        var workingArea = screen.WorkingArea;
 
-                // Позиция в центре родительского окна
-                double targetX = mainWindow.Position.X + (mainWindow.Bounds.Width / 2) - (dialog.Bounds.Width / 2);
-                double targetY = mainWindow.Position.Y + (mainWindow.Bounds.Height / 2) - (dialog.Bounds.Height / 2);
+        //        // Позиция в центре родительского окна
+        //        double targetX = mainWindow.Position.X + (mainWindow.Bounds.Width / 2) - (dialog.Bounds.Width / 2);
+        //        double targetY = mainWindow.Position.Y + (mainWindow.Bounds.Height / 2) - (dialog.Bounds.Height / 2);
 
-                // Корректируем позицию
-                if (targetX < workingArea.X) targetX = workingArea.X + 10;
-                if (targetY < workingArea.Y) targetY = workingArea.Y + 10;
-                if (targetX + dialog.Bounds.Width > workingArea.Right) targetX = workingArea.Right - dialog.Bounds.Width - 10;
-                if (targetY + dialog.Bounds.Height > workingArea.Bottom) targetY = workingArea.Bottom - dialog.Bounds.Height - 50;
+        //        // Корректируем позицию
+        //        if (targetX < workingArea.X) targetX = workingArea.X + 10;
+        //        if (targetY < workingArea.Y) targetY = workingArea.Y + 10;
+        //        if (targetX + dialog.Bounds.Width > workingArea.Right) targetX = workingArea.Right - dialog.Bounds.Width - 10;
+        //        if (targetY + dialog.Bounds.Height > workingArea.Bottom) targetY = workingArea.Bottom - dialog.Bounds.Height - 50;
 
-                dialog.Position = new PixelPoint((int)targetX, (int)targetY);
-                dialog.Topmost = true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при позиционировании диалога: {ex.Message}");
-                Dispatcher.UIThread.InvokeAsync(async () =>
-                {
-                    await MessageBoxHelper.Show($"Ошибка при позиционировании диалога: {ex.Message}", "Позиционировании диалог",
-                        MessageBoxButton.OK, MessageBoxType.Error, this);
-                });
-            }
-        }
+        //        dialog.Position = new PixelPoint((int)targetX, (int)targetY);
+        //        dialog.Topmost = true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Ошибка при позиционировании диалога: {ex.Message}");
+        //        Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBoxHelper.Show($"Ошибка при позиционировании диалога: {ex.Message}", "Позиционировании диалог",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //    }
+        //}
 
         #endregion
 
@@ -11182,12 +11261,12 @@ namespace Cash8Avalon
             {
                 decimal totalProducts = _productsData.Sum(p => p.SumAtDiscount);
                 decimal totalCertificates = _certificatesData.Sum(c => c.Nominal);
-                decimal total = totalProducts + totalCertificates;
+                //decimal total = totalProducts + totalCertificates;
 
                 if (txtB_total_sum != null)
                 {
-                    txtB_total_sum.Text = total.ToString("N2");
-                    Console.WriteLine($"✓ Общая сумма обновлена: Товары={totalProducts:N2}, Сертификаты={totalCertificates:N2}, Итого={total:N2}");
+                    txtB_total_sum.Text = totalProducts.ToString("N2");// total.ToString("N2");
+                    Console.WriteLine($"✓ Общая сумма обновлена: Товары={totalProducts:N2}, Сертификаты={totalCertificates:N2}");
                 }
             }
             catch (Exception ex)
@@ -11404,6 +11483,7 @@ namespace Cash8Avalon
 
                 // Обновляем общую сумму
                 UpdateTotalSum();
+                //IsNewCheck = true;
             }
             catch (Exception ex)
             {

@@ -252,11 +252,13 @@
                        <CheckBox x:Name="checkBox_do_not_send_payment_to_the_terminal"
                                  Grid.Row="6" Grid.Column="8"
                                  Content="?"
+                                 FontSize="18"
+                                 FontWeight="Bold"
+                                 Foreground="#007ACC"
                                  VerticalAlignment="Center"
                                  HorizontalAlignment="Left"
-                                 Margin="10,15,0,15"
-                                 Width="32"
-                                 Height="17"
+                                 Margin="5,15,0,15"
+                                 Padding="0"
                                  Opacity="0"
                                  IsHitTestVisible="False"/>
                         

@@ -1353,9 +1353,84 @@ namespace Cash8Avalon
             return result;
         }
 
+        //private static async Task<double> TryGetWeight()
+        //{
+        //    //error = false;
+        //    double result = 0;
+        //    string portName = MainStaticClass.ScaleSerialPort;
+        //    int baudRate = 9600;
+
+        //    using (SerialPort serialPort = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One))
+        //    {
+        //        try
+        //        {
+        //            Thread.Sleep(100);
+        //            serialPort.Open();
+        //            //Console.WriteLine("Порт открыт успешно.");
+
+        //            byte[] data = { 0x02, 0x05, 0x3A, 0x30, 0x30, 0x33, 0x30, 0x3C }; // команда весам
+        //            serialPort.Write(data, 0, data.Length); // отправляем команду весам
+
+        //            serialPort.ReadTimeout = 1000; // ждем 1 секунду для получения ответа
+
+        //            byte[] buffer = new byte[15];
+        //            int bytesRead = serialPort.Read(buffer, 0, buffer.Length); // читаем ответ
+
+        //            if (bytesRead == 15)
+        //            {
+        //                // используем BitConverter для выделения нужных байт из ответного сообщения
+        //                int b = BitConverter.ToInt32(buffer, 7);
+        //                //result = b / 10000.0; // Перевод в килограммы
+        //                double constant_conversion_to_kilograms = get_constant_conversion_to_kilograms();
+        //                if (constant_conversion_to_kilograms == 0)
+        //                {
+        //                    result = b / 10000.0; // Перевод в килограммы
+        //                }
+        //                else
+        //                {
+        //                    result = b / constant_conversion_to_kilograms; // Перевод в килограммы
+        //                }
+        //            }
+        //            else
+        //            {
+        //                //error = true;                        
+        //                await MessageBox.Show("bytesRead = " + bytesRead.ToString(),"Весы сколько байт прочитано ",MainStaticClass.MainWindow);
+        //                if (bytesRead>7)
+        //                {
+        //                    int b = BitConverter.ToInt32(buffer, 7);
+        //                    await MessageBox.Show("Вес = " + b.ToString(), "Весы вес ", MainStaticClass.MainWindow);
+        //                }
+        //            }
+        //        }
+        //        catch (TimeoutException)
+        //        {
+        //            await MessageBox.Show("Время ожидания истекло.", "Получение веса", MainStaticClass.MainWindow);
+        //            //    Console.WriteLine("Время ожидания истекло.");
+        //            result = -1;
+        //            //error = true;
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            //MessageBox.Show("Ошибка " + ex.Message);
+        //            await MessageBox.Show("Ошибка " + ex.Message, "Получение веса", MainStaticClass.MainWindow);
+        //            //Console.WriteLine($"Ошибка: {ex.Message}");
+        //            result = -1;
+        //            //error = true;
+        //        }
+        //        finally
+        //        {
+        //            if (serialPort.IsOpen)
+        //            {
+        //                serialPort.Close();
+        //                //Console.WriteLine("Порт закрыт.");
+        //            }
+        //        }
+        //    }
+        //    return result;
+        //}
+
         private static async Task<double> TryGetWeight()
         {
-            //error = false;
             double result = 0;
             string portName = MainStaticClass.ScaleSerialPort;
             int baudRate = 9600;
@@ -1364,59 +1439,85 @@ namespace Cash8Avalon
             {
                 try
                 {
-                    Thread.Sleep(100);
                     serialPort.Open();
-                    //Console.WriteLine("Порт открыт успешно.");
+                    serialPort.DtrEnable = true;
+                    serialPort.RtsEnable = true;
 
-                    byte[] data = { 0x02, 0x05, 0x3A, 0x30, 0x30, 0x33, 0x30, 0x3C }; // команда весам
-                    serialPort.Write(data, 0, data.Length); // отправляем команду весам
+                    // Безопасная очистка буферов
+                    try
+                    {
+                        serialPort.DiscardOutBuffer();
+                        serialPort.DiscardInBuffer();
+                    }
+                    catch
+                    {
+                        // Игнорируем ошибки очистки в Linux
+                    }
 
-                    serialPort.ReadTimeout = 1000; // ждем 1 секунду для получения ответа
+                    await Task.Delay(20); // Неблокирующая пауза
+
+                    byte[] data = { 0x02, 0x05, 0x3A, 0x30, 0x30, 0x33, 0x30, 0x3C };
+                    serialPort.Write(data, 0, data.Length);
+
+                    serialPort.ReadTimeout = 1000;
 
                     byte[] buffer = new byte[15];
-                    int bytesRead = serialPort.Read(buffer, 0, buffer.Length); // читаем ответ
+                    int totalBytesRead = 0;
+                    DateTime startTime = DateTime.Now;
 
-                    if (bytesRead == 15)
+                    while (totalBytesRead < 15 && (DateTime.Now - startTime).TotalMilliseconds < 1000)
                     {
-                        // используем BitConverter для выделения нужных байт из ответного сообщения
-                        int b = BitConverter.ToInt32(buffer, 7);
-                        //result = b / 10000.0; // Перевод в килограммы
-                        double constant_conversion_to_kilograms = get_constant_conversion_to_kilograms();
-                        if (constant_conversion_to_kilograms == 0)
+                        if (serialPort.BytesToRead > 0)
                         {
-                            result = b / 10000.0; // Перевод в килограммы
+                            int bytesRead = serialPort.Read(buffer, totalBytesRead, 15 - totalBytesRead);
+                            totalBytesRead += bytesRead;
                         }
                         else
                         {
-                            result = b / constant_conversion_to_kilograms; // Перевод в килограммы
+                            await Task.Delay(20); // Неблокирующая пауза
+                        }
+                    }
+
+                    if (totalBytesRead == 15)
+                    {
+                        int b = BitConverter.ToInt32(buffer, 7);
+
+                        double constant_conversion_to_kilograms = get_constant_conversion_to_kilograms();
+                        if (constant_conversion_to_kilograms == 0)
+                        {
+                            result = b / 10000.0;
+                        }
+                        else
+                        {
+                            result = b / constant_conversion_to_kilograms;
                         }
                     }
                     //else
                     //{
-                    //    error = true;
+                    //    await MessageBox.Show("bytesRead = " + totalBytesRead.ToString(), "Весы сколько байт прочитано ", MainStaticClass.MainWindow);
+
+                    //    if (totalBytesRead >= 11)
+                    //    {
+                    //        int b = BitConverter.ToInt32(buffer, 7);
+                    //        await MessageBox.Show("Вес = " + b.ToString(), "Весы вес ", MainStaticClass.MainWindow);
+                    //    }
                     //}
                 }
                 catch (TimeoutException)
                 {
                     await MessageBox.Show("Время ожидания истекло.", "Получение веса", MainStaticClass.MainWindow);
-                    //    Console.WriteLine("Время ожидания истекло.");
                     result = -1;
-                    //error = true;
                 }
                 catch (Exception ex)
                 {
-                    //MessageBox.Show("Ошибка " + ex.Message);
                     await MessageBox.Show("Ошибка " + ex.Message, "Получение веса", MainStaticClass.MainWindow);
-                    //Console.WriteLine($"Ошибка: {ex.Message}");
                     result = -1;
-                    //error = true;
                 }
                 finally
                 {
                     if (serialPort.IsOpen)
                     {
                         serialPort.Close();
-                        //Console.WriteLine("Порт закрыт.");
                     }
                 }
             }

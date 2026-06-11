@@ -112,47 +112,188 @@ namespace Cash8Avalon
             return result;
         }
 
+        //public async Task<bool> validate_date_time_with_fn(int minutes, Window owner)
+        //{
+        //    bool result = true;
+
+        //    IFptr fptr = MainStaticClass.FPTR;
+        //    if (!fptr.isOpened())
+        //    {
+        //        fptr.open();
+        //    }
+        //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_DATE_TIME);
+        //    fptr.queryData();
+        //    if (fptr.errorCode() != 0)
+        //    {
+        //        if (owner != null)
+        //        {
+        //            await MessageBoxHelper.Show(" При проверке даты и времени в ФН произошла ошибка \r\n" + fptr.errorDescription(), " Проверка даты и времени в фн ", owner);
+        //        }
+        //        result = false;
+        //    }
+        //    else
+        //    {
+        //        DateTime dateTime = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_DATE_TIME);
+        //        int minutes_fr = Math.Abs((dateTime - DateTime.Now).Minutes);
+
+        //        if (minutes_fr > minutes)//Поскольку может быть как больше так и меньше 
+        //        {
+        //            if (minutes_fr - minutes < 15)
+        //            {
+        //                fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
+        //                fptr.queryData();
+        //                if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
+        //                {
+        //                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATE_TIME, DateTime.Now);
+        //                    fptr.writeDateTime();
+        //                    return result;                            
+        //                }
+        //            }
+
+        //            if (owner != null)
+        //            {
+        //                await MessageBoxHelper.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА " + minutes.ToString() + " МИНУТ(Ы) ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ " +
+        //                    "\r\nПосле отправки заявки вы можете продолжить работу в обычном режиме.    ", " Проверка даты и времени в фн ", owner);
+        //            }
+        //            MainStaticClass.write_event_in_log(" Не схождение даты и времени между ФР и компьютером больше чем на" + minutes.ToString() + " минут ", "Документ", "0");
+
+        //            result = false;
+        //        }
+        //    }
+
+
+        //    //if (MainStaticClass.GetVariantConnectFN == 1)
+        //    //{
+        //    //    fptr.close();
+        //    //}
+
+        //    return result;
+        //}
+
         public async Task<bool> validate_date_time_with_fn(int minutes, Window owner)
         {
             bool result = true;
-
             IFptr fptr = MainStaticClass.FPTR;
+
+            // "Магическое число" - максимальный порог, при котором мы еще доверяем компьютеру
+            // и разрешаем автокорректировку. Если расхождение больше (например, села батарейка
+            // на материнской плате и комп думает, что 2010 год) - время в ФР НЕ трогаем!
+            const double MAX_ALLOWED_AUTOCORRECT_MINUTES = 15.0;
+
+            // 1. Безопасное подключение
             if (!fptr.isOpened())
             {
                 fptr.open();
+                if (fptr.errorCode() != 0)
+                {
+                    if (owner != null)
+                        await MessageBoxHelper.Show("Не удалось подключиться к ФР:\r\n" + fptr.errorDescription(),
+                            "Ошибка связи с ФР", owner);
+                    return false;
+                }
             }
+
+            // 2. Получение времени из ФР
             fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_DATE_TIME);
             fptr.queryData();
+
             if (fptr.errorCode() != 0)
             {
                 if (owner != null)
-                {
-                    await MessageBoxHelper.Show(" При проверке даты и времени в ФН произошла ошибка \r\n" + fptr.errorDescription(), " Проверка даты и времени в фн ", owner);
-                }
-                result = false;
+                    await MessageBoxHelper.Show(
+                        "При проверке даты и времени в ФН произошла ошибка\r\n" + fptr.errorDescription(),
+                        "Проверка даты и времени в фн", owner);
+                return false;
             }
-            else
+
+            DateTime dateTime = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_DATE_TIME);
+
+            // ВАЖНО: Используем TotalMinutes, чтобы учитывались и часы, и годы!
+            double minutes_fr = Math.Abs((dateTime - DateTime.Now).TotalMinutes);
+
+            // 3. Если расхождение СЛИШКОМ БОЛЬШОЕ (больше 15 минут / часов / лет)
+            if (minutes_fr > MAX_ALLOWED_AUTOCORRECT_MINUTES)
             {
-                DateTime dateTime = fptr.getParamDateTime(AtolConstants.LIBFPTR_PARAM_DATE_TIME);
-                if (Math.Abs((dateTime - DateTime.Now).Minutes) > minutes)//Поскольку может быть как больше так и меньше 
+                MainStaticClass.write_event_in_log(
+                    $"КРИТИЧЕСКОЕ расхождение времени ФР и ПК: {minutes_fr:F1} мин. Автокоррекция ОТМЕНЕНА (вероятно сбой времени на ПК)!",
+                    "ФР", "0");
+
+                if (owner != null)
+                {
+                    await MessageBoxHelper.Show(
+                        $"У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ НА {minutes_fr:F1} МИНУТ(Ы)!\r\n" +
+                        "ВРЕМЯ АВТОМАТИЧЕСКИ НЕ ИСПРАВЛЕНО (возможно, сбилось время на компьютере).\r\n" +
+                        "ОБЯЗАТЕЛЬНО ОБРАТИТЕСЬ В ИТ-ОТДЕЛ.\r\n\r\n" +
+                        "После отправки заявки вы можете продолжить работу в обычном режиме.",
+                        "ВНИМАНИЕ! Расхождение времени", owner);
+                }
+
+                return result; // Разрешаем работать, но время в ФР не трогали
+            }
+
+            // 4. Если расхождение НЕБОЛЬШОЕ (от параметра minutes до 15 минут)
+            if (minutes_fr > minutes)
+            {
+                // Проверяем состояние смены
+                fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
+                fptr.queryData();
+
+                if (fptr.errorCode() != 0)
                 {
                     if (owner != null)
-                    {
-                        await MessageBoxHelper.Show(" У ВАС ОТЛИЧАЕТСЯ ВРЕМЯ МЕЖДУ КОМПЬЮТЕРОМ И ФИСКАЛЬНЫМ РЕГИСТРАТОРОМ БОЛЬШЕ ЧЕМ НА " + minutes.ToString() + " МИНУТ(Ы) ОТПРАВЬТЕ ЗАЯВКУ В ИТ ОТДЕЛ " +
-                            "\r\nПосле отправки заявки вы можете продолжить работу в обычном режиме.    ", " Проверка даты и времени в фн ", owner);
-                    }
-                    MainStaticClass.write_event_in_log(" Не схождение даты и времени между ФР и компьютером больше чем на" + minutes.ToString() + " минут ", "Документ", "0");
+                        await MessageBoxHelper.Show(
+                            "Не удалось получить состояние смены ФР:\r\n" + fptr.errorDescription(), "Ошибка ФР",
+                            owner);
+                    return false;
+                }
 
-                    result = false;
+                uint shiftState = fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE);
+
+                // 4.1. Смена ЗАКРЫТА — Автоматическая корректировка
+                if (shiftState == AtolConstants.LIBFPTR_SS_CLOSED)
+                {
+                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATE_TIME, DateTime.Now);
+                    fptr.writeDateTime();
+
+                    if (fptr.errorCode() == 0)
+                    {
+                        MainStaticClass.write_event_in_log(
+                            $"Время на ФР автоматически скорректировано. Рассинхрон был: {minutes_fr:F1} мин.", "ФР",
+                            "0");
+                        return result;
+                    }
+                    else
+                    {
+                        MainStaticClass.write_event_in_log(
+                            $"ОШИБКА автокорректировки времени ФР: {fptr.errorDescription()}", "ФР ОШИБКА", "0");
+                        if (owner != null)
+                            await MessageBoxHelper.Show(
+                                "Не удалось автоматически скорректировать время на ФР:\r\n" + fptr.errorDescription(),
+                                "Ошибка ФР", owner);
+                        return false;
+                    }
+                }
+                // 4.2. Смена ОТКРЫТА — Предупреждение кассира
+                else
+                {
+                    MainStaticClass.write_event_in_log(
+                        $"Расхождение времени ФР и ПК: {minutes_fr:F1} мин. Смена открыта, автокоррекция невозможна.",
+                        "ФР", "0");
+
+                    if (owner != null)
+                    {
+                        await MessageBoxHelper.Show(
+                            $"Время в ФР отличается на {minutes_fr:F1} минут.\r\n\r\n" +
+                            "Закройте смену, перезайдите в кассовую программу и, если необходимо, снова откройте смену.\r\n\r\n" +
+                            "(Время скорректируется автоматически при закрытой смене)",
+                            "Расхождение времени ФР", owner);
+                    }
+
+                    return result;
                 }
             }
-        
-            
-            //if (MainStaticClass.GetVariantConnectFN == 1)
-            //{
-            //    fptr.close();
-            //}
 
+            // 5. Если расхождение МЕНЕЕ параметра minutes - всё в порядке, ничего не делаем
             return result;
         }
 
@@ -1414,7 +1555,8 @@ namespace Cash8Avalon
                         {
                             fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, DateTime.Now.Year >= 2026 ? AtolConstants.LIBFPTR_TAX_VAT22 : AtolConstants.LIBFPTR_TAX_VAT20);
                         }
-                        else if (stavka_nds == 22) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
+                        else if (stavka_nds == 22) 
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
                         else
                         {
                             await MessageBoxHelper.Show("Неизвестная ставка ндс", "Проверка ставки ндс", MessageBoxButton.OK, MessageBoxType.Error, check);
