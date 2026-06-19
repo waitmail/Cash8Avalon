@@ -21,7 +21,7 @@ namespace Cash8Avalon;
 
 public partial class FPTK22 : Window
 {
-    private bool complete = false;
+    //private bool complete = false;
     private string recharge_note = "";
     private DateTime dateTimeEnd;
 

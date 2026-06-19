@@ -171,6 +171,58 @@ namespace Cash8Avalon
             return await dialog._tcs.Task;
         }
 
+        // private async Task<TerminalResult> SendCommandAsync()
+        // {
+        //     try
+        //     {
+        //         TerminalResult result;
+        //
+        //         // Если передана кастомная операция (Сбер), выполняем её
+        //         if (CustomOperation != null)
+        //         {
+        //             // Обновляем статус
+        //             Dispatcher.UIThread.Post(() => { if (StatusLabel != null) StatusLabel.Text = "Выполнение команды на терминале..."; });
+        //
+        //             result = await CustomOperation(_cts.Token).ConfigureAwait(false);
+        //             
+        //             // ★ ДОБАВИТЬ: Логирование результата кастомной операции (Сбер) ★
+        //             MainStaticClass.write_event_in_log(
+        //                 $"[Сбер] Результат кастомной операции: IsSuccess={result.IsSuccess}, " +
+        //                 $"Code39='{result.CodeResponse}', Code15='{result.CodeResponse15}', " +
+        //                 $"AuthCode='{result.AuthorizationCode}', RefNum='{result.ReferenceNumber}', " +
+        //                 $"Error='{result.ErrorMessage}'",
+        //                 "TerminalResponse",
+        //                 cc?.numdoc.ToString() ?? "0"
+        //             );
+        //             
+        //         }
+        //         else
+        //         {
+        //             // Иначе стандартная логика РНКБ (HTTP с ретраями)
+        //             result = await SendRequestWithRetryAsync(_cts.Token).ConfigureAwait(false);
+        //         }
+        //
+        //         if (!_isClosed)
+        //         {
+        //             await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result));
+        //             await WaitForWindowCloseAsync();
+        //         }
+        //         return result;
+        //     }
+        //     catch (OperationCanceledException)
+        //     {
+        //         var result = TerminalResult.CreateError("Операция отменена");
+        //         if (!_isClosed) { await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result)); await WaitForWindowCloseAsync(); }
+        //         return result;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         var result = TerminalResult.CreateError($"Ошибка: {ex.Message}");
+        //         if (!_isClosed) { await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result)); await WaitForWindowCloseAsync(); }
+        //         return result;
+        //     }
+        // }
+
         private async Task<TerminalResult> SendCommandAsync()
         {
             try
@@ -181,9 +233,28 @@ namespace Cash8Avalon
                 if (CustomOperation != null)
                 {
                     // Обновляем статус
-                    Dispatcher.UIThread.Post(() => { if (StatusLabel != null) StatusLabel.Text = "Выполнение команды на терминале..."; });
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (StatusLabel != null) StatusLabel.Text = "Выполнение команды на терминале...";
+                    });
 
                     result = await CustomOperation(_cts.Token).ConfigureAwait(false);
+
+                    // ★ ДОБАВЛЕНО РАНЕЕ: Логирование результата в текстовый лог ★
+                    MainStaticClass.write_event_in_log(
+                        $"[Сбер] Результат кастомной операции: IsSuccess={result.IsSuccess}, " +
+                        $"Code39='{result.CodeResponse}', Code15='{result.CodeResponse15}', " +
+                        $"AuthCode='{result.AuthorizationCode}', RefNum='{result.ReferenceNumber}', " +
+                        $"Error='{result.ErrorMessage}'",
+                        "TerminalResponse",
+                        cc?.numdoc.ToString() ?? "0"
+                    );
+
+                    // ★ НОВОЕ: Логирование ошибки в БД (Error Log) для Сбера ★
+                    if (!result.IsSuccess)
+                    {
+                        LogTerminalErrorToDb(result, "Sber_CustomError");
+                    }
                 }
                 else
                 {
@@ -196,18 +267,37 @@ namespace Cash8Avalon
                     await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result));
                     await WaitForWindowCloseAsync();
                 }
+
                 return result;
             }
             catch (OperationCanceledException)
             {
                 var result = TerminalResult.CreateError("Операция отменена");
-                if (!_isClosed) { await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result)); await WaitForWindowCloseAsync(); }
+                // ★ НОВОЕ: Логируем отмену от Сбера в БД ★
+                LogTerminalErrorToDb(result, "Sber_OperationCanceled");
+
+                if (!_isClosed)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result));
+                    await WaitForWindowCloseAsync();
+                }
+
                 return result;
             }
             catch (Exception ex)
             {
                 var result = TerminalResult.CreateError($"Ошибка: {ex.Message}");
-                if (!_isClosed) { await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result)); await WaitForWindowCloseAsync(); }
+
+                // ★ НОВОЕ: Сохраняем исключение и логируем критический сбой Сбера в БД ★
+                result.Exception = ex; // Чтобы в БД записался полный StackTrace
+                LogTerminalErrorToDb(result, "Sber_FatalException");
+
+                if (!_isClosed)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => CloseWithResult(result));
+                    await WaitForWindowCloseAsync();
+                }
+
                 return result;
             }
         }
@@ -1062,10 +1152,72 @@ namespace Cash8Avalon
             CloseWithResult(TerminalResult.CreateError("Операция отменена пользователем."));
         }
 
+        // private void CloseWithResult(TerminalResult result)
+        // {
+        //     if (_isClosed) return;
+        //     _isClosed = true;
+        //
+        //     UpdateLocalCommandResult(result);
+        //
+        //     _tcs.TrySetResult(result);
+        //     PaymentCompleted?.Invoke(this, result.IsSuccess);
+        //
+        //     Dispatcher.UIThread.Post(() =>
+        //     {
+        //         this.Tag = result.IsSuccess;
+        //         this.Close();
+        //         _windowClosedTcs.TrySetResult(true);
+        //     });
+        // }
+
         private void CloseWithResult(TerminalResult result)
         {
             if (_isClosed) return;
             _isClosed = true;
+
+            // ★ НОВОЕ: Разблокировка чека при БИЗНЕС-ошибках терминала ★
+            if (cc != null && !result.IsSuccess)
+            {
+                string code = result.CodeResponse ?? "";
+                string errorText = (result.ErrorMessage ?? "").ToLower(); // Добавили чтение текста
+
+                bool isRefused = false; // Общий флаг отказа
+
+                // 1. Проверяем по коду (Это для ВТБ)
+                if (code == "16" || // Отклонено
+                    code == "53" || // Операция прервана
+                    code == "55" || // Неверный ПИН-код
+                    code == "61" || // Превышен лимит
+                    code == "54" || // Срок действия карты истек
+                    code == "58" || // Терминал не поддерживает операцию
+                    code == "96" || // Системная ошибка банка
+                    // На будущее, если добавите конвертацию кодов Сбера:
+                    code == "4451" || code == "4452" || code == "2000" || code == "7400")
+                {
+                    isRefused = true;
+                }
+                // 2. Фоллбэк по тексту (Это спасет Сбера прямо сейчас!)
+                else if (string.IsNullOrEmpty(code) &&
+                         (errorText.Contains("отклонено") ||
+                          errorText.Contains("недостаточно средств") ||
+                          errorText.Contains("операция не прошла") ||
+                          errorText.Contains("заблокирована") ||
+                          errorText.Contains("пинпад не подключен") ||
+                          errorText.Contains("отказано")))
+                {
+                    isRefused = true;
+                }
+
+                // Если любой из проверок сработал — разблокируем чек
+                if (isRefused)
+                {
+                    cc.PaymentAttempted = false;
+
+                    MainStaticClass.write_event_in_log(
+                        $"[Terminal] Получен четкий отказ (Code:{code}), чек разблокирован для изменений",
+                        "Terminal", cc.numdoc.ToString() ?? "0");
+                }
+            }
 
             UpdateLocalCommandResult(result);
 

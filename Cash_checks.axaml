@@ -221,9 +221,6 @@
                 <LineBreak/>
                 <Run FontWeight="SemiBold" Text="Enter"/>
                 <Run Text=" — открытие старого чека (просмотр)"/>
-                <LineBreak/>
-                <Run FontWeight="SemiBold" Text="+ / - (NumPad)"/>
-                <Run Text=" — увеличение / уменьшение количества (при вкл. NumLock)"/>
             </TextBlock>
             
             <!-- Правая часть: Кнопка закрытия -->

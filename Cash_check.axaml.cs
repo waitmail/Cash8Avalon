@@ -147,6 +147,9 @@ namespace Cash8Avalon
 
         List<int> qr_code_lenght = new List<int>();
 
+        // Временно отключаем Keeper для отладки
+        private bool _isFocusKeeperEnabled = false;
+
         // Событие для закрытия формы
         //public event EventHandler Closed;
 
@@ -265,19 +268,21 @@ namespace Cash8Avalon
         /// </summary>
         private void StartFocusKeeper()
         {
+            // Если флаг выключен - просто не запускаем
+            if (!_isFocusKeeperEnabled) return;
+
             if (_focusKeeperTimer == null)
             {
                 _focusKeeperTimer = new DispatcherTimer
                 {
-                    Interval = TimeSpan.FromMilliseconds(700) // Проверка раз в 700мс
+                    Interval = TimeSpan.FromMilliseconds(2000)
                 };
                 _focusKeeperTimer.Tick += FocusKeeper_Tick;
             }
 
-            // Запускаем только если окно видимо, это новый чек и таймер не работает
             if (this.IsVisible && IsNewCheck && !_focusKeeperTimer.IsEnabled)
             {
-                _lastFocusRestore = DateTime.MinValue; // Сброс времени при старте
+                _lastFocusRestore = DateTime.MinValue;
                 _focusKeeperTimer.Start();
                 Console.WriteLine("✓ Таймер фокуса запущен");
             }
@@ -1832,7 +1837,10 @@ namespace Cash8Avalon
                     case Key.F7:
                         // Просто возврат фокуса
                         e.Handled = true;
-                        InputSearchProduct.Focus();
+                        if (IsNewCheck)
+                        {
+                            InputSearchProduct.Focus();
+                        }
                         break;
 
                     case Key.Escape:
@@ -1851,7 +1859,10 @@ namespace Cash8Avalon
                         break;
 
                     case Key.F9:
-                        DeletedThisDocument();
+                        if (IsNewCheck)
+                        {
+                            DeletedThisDocument();
+                        }
                         e.Handled = true;
                         break;
                 }
@@ -5321,9 +5332,11 @@ namespace Cash8Avalon
                         e.Handled = true;
                         return;
                     }
+            
                     Console.WriteLine("Enter нажат в поле поиска товара");
                     e.Handled = true;
                     FindProduct();
+                    
                     break;
             }
         }
@@ -5923,7 +5936,8 @@ namespace Cash8Avalon
                 UpdateTotalSum();
                 await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
                 SelectProductRow(_productsData.Count - 1);
-                await RestoreFocusLinux_productsScrollViewerAsync();
+                //await RestoreFocusLinux_productsScrollViewerAsync();
+                await RestoreFocusToSearchBoxAsync();
             }
             catch (Exception ex)
             {
@@ -5946,6 +5960,49 @@ namespace Cash8Avalon
                 }
             }
         }
+        
+        /// <summary>
+        /// Надёжно возвращает фокус в поле ввода штрихкода ПОСЛЕ добавления товара.
+        /// Ждет, пока Avalonia отрисует новую строку в таблице, и только потом забирает фокус.
+        /// </summary>
+        private async Task RestoreFocusToSearchBoxAsync()
+        {
+            // 1. Пауза, чтобы Avalonia успела создать визуальные элементы новой строки
+            await Task.Delay(100);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_isDisposed || !this.IsVisible || InputSearchProduct == null || PaymentAttempted) return;
+
+                try
+                {
+                    // 2. "Ядерный трюк" для Linux (если он вам нужен был раньше, оставляем)
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        this.Topmost = true;
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            try { this.Topmost = false; }
+                            catch { }
+                        }, DispatcherPriority.ApplicationIdle);
+                    }
+
+                    // 3. ЦЕЛЕВОЙ ФОКУС: Возвращаем фокус в поле ввода
+                    InputSearchProduct.Focus();
+            
+                    // 4. КРИТИЧЕСКИ ВАЖНО: Ставим каретку в конец, чтобы следующий штрихкод печатался нормально
+                    InputSearchProduct.CaretIndex = InputSearchProduct.Text?.Length ?? 0;
+            
+                    Console.WriteLine("[Focus] Фокус принудительно возвращен в поле ввода товара");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Focus] Предупреждение: не удалось вернуть фокус: {ex.Message}");
+                    StopFocusKeeper();
+                }
+            }, DispatcherPriority.Render); // Render гарантирует, что это сработает ПОСЛЕ отрисовки таблицы
+        }
+        
 
         /// <summary>
         /// Надёжно восстанавливает фокус на таблицу товаров (Grid).

@@ -1,306 +1,4 @@
-﻿//using System;
-//using System.Diagnostics;
-//using System.IO;
-//using System.Runtime.InteropServices;
-//using System.Threading;
-//using System.Threading.Tasks;
-
-//namespace Cash8Avalon
-//{
-//    public class SberPaymentService
-//    {
-//        private readonly string _sberPath;
-//        private readonly string _exeName;
-
-//        public SberPaymentService()
-//        {
-//            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-
-//            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-//            {
-//                _sberPath = Path.Combine(baseDir, "Sber", "Windows");
-//                _exeName = "sb_pilot.exe";
-//            }
-//            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-//            {
-//                _sberPath = Path.Combine(baseDir, "Sber", "Linux");
-//                _exeName = "sb_pilot";
-//            }
-//            else
-//            {
-//                throw new PlatformNotSupportedException("Данная операционная система не поддерживается.");
-//            }
-//        }
-
-//        /// <summary>
-//        /// Запуск оплаты или возврата через sb_pilot
-//        /// </summary>
-//        public async Task<PaymentResult> PayAsync(int amountInKopecks, int command = 1, string rrn = null, CancellationToken cancellationToken = default)
-//        {
-//            string args = $"{command} {amountInKopecks} 0";
-//            if (!string.IsNullOrEmpty(rrn))
-//            {
-//                args += $" QSELECT {rrn.Trim()}";
-//            }
-
-//            return await ExecuteCommandAsync(args, cancellationToken);
-//        }
-
-//        /// <summary>
-//        /// Печать краткого отчета (Контрольная лента). Команда 9, тип 0 (краткий)
-//        /// </summary>
-//        public async Task<PaymentResult> GetShortReportAsync(CancellationToken cancellationToken = default)
-//        {
-//            // По документации: 9 0 0 (9 - команда, 0 - обязательный параметр, 0 - краткий отчет)
-//            string args = "9 0 0";
-
-//            MainStaticClass.write_event_in_log($"Запуск краткого отчета: {args}", "Terminal", "0");
-
-//            return await ExecuteCommandAsync(args, cancellationToken);
-//        }
-
-//        /// <summary>
-//        /// Печать полного отчета (Контрольная лента). Команда 9, тип 1 (полный)
-//        /// </summary>
-//        public async Task<PaymentResult> GetFullReportAsync(CancellationToken cancellationToken = default)
-//        {
-//            // По документации: 9 0 1 (9 - команда, 0 - обязательный параметр, 1 - полный отчет)
-//            string args = "9 0 1";
-
-//            MainStaticClass.write_event_in_log($"Запуск полного отчета: {args}", "Terminal", "0");
-
-//            return await ExecuteCommandAsync(args, cancellationToken);
-//        }
-
-//        /// <summary>
-//        /// Сверка итогов / Закрытие дня (Аналог старого CloseDay). Команда 7 без параметров.
-//        /// </summary>
-//        public async Task<PaymentResult> CloseShiftAsync(CancellationToken cancellationToken = default)
-//        {
-//            // Строго как было в старой программе - просто "7"
-//            string args = "7";
-
-//            MainStaticClass.write_event_in_log($"Запуск сверки итогов (CloseDay): {args}", "Terminal", "0");
-
-//            return await ExecuteCommandAsync(args, cancellationToken);
-//        }
-
-//        /// <summary>
-//        /// Общий метод для выполнения любой команды sb_pilot
-//        /// </summary>
-//        private async Task<PaymentResult> ExecuteCommandAsync(string args, CancellationToken cancellationToken)
-//        {
-//            var result = new PaymentResult();
-
-//            string exeFullPath = Path.Combine(_sberPath, _exeName);
-//            string fileE = Path.Combine(_sberPath, "e");
-//            string fileP = Path.Combine(_sberPath, "p");
-
-//            if (!File.Exists(exeFullPath))
-//            {
-//                result.IsSuccess = false;
-//                result.ErrorMessage = "Файл пилота не найден по пути: " + exeFullPath;
-//                return result;
-//            }
-
-//            try
-//            {
-//                if (File.Exists(fileE)) File.Delete(fileE);
-//                if (File.Exists(fileP)) File.Delete(fileP);
-//            }
-//            catch (Exception ex)
-//            {
-//                MainStaticClass.write_event_in_log($"Предупреждение: не удалось удалить старые файлы: {ex.Message}", "Terminal", "0");
-//            }
-
-//            Process process = null;
-//            try
-//            {
-//                var startInfo = new ProcessStartInfo
-//                {
-//                    WorkingDirectory = _sberPath,
-//                    UseShellExecute = false,
-//                    WindowStyle = ProcessWindowStyle.Hidden
-//                };
-
-//                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-//                {
-//                    startInfo.FileName = "x-terminal-emulator";
-//                    startInfo.Arguments = $"--minimize -e \"{exeFullPath} {args}\"";
-//                    startInfo.CreateNoWindow = true;
-//                    startInfo.RedirectStandardOutput = false;
-//                    startInfo.RedirectStandardError = false;
-//                }
-//                else // WINDOWS
-//                {
-//                    startInfo.FileName = exeFullPath;
-//                    startInfo.Arguments = args;
-//                    startInfo.CreateNoWindow = true;
-//                    startInfo.RedirectStandardOutput = true;
-//                    startInfo.RedirectStandardError = true;
-
-//                    MainStaticClass.write_event_in_log($"Windows Run: {exeFullPath} {args}", "Terminal", "0");
-//                }
-
-//                process = new Process { StartInfo = startInfo };
-//                process.Start();
-
-//                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-//                {
-//                    int timeoutMs = 120000;
-//                    int elapsed = 0;
-
-//                    while (!File.Exists(fileE) && elapsed < timeoutMs)
-//                    {
-//                        if (cancellationToken.IsCancellationRequested) break;
-//                        await Task.Delay(500, cancellationToken);
-//                        elapsed += 500;
-//                    }
-//                }
-//                else
-//                {
-//                    var stdOutTask = process.StandardOutput.ReadToEndAsync();
-//                    var stdErrTask = process.StandardError.ReadToEndAsync();
-//                    await process.WaitForExitAsync(cancellationToken);
-
-//                    string stdOut = await stdOutTask;
-//                    string stdErr = await stdErrTask;
-
-//                    if (!string.IsNullOrEmpty(stdErr))
-//                        MainStaticClass.write_event_in_log($"sb_pilot ERROR: {stdErr}", "Terminal", "0");
-
-//                    result.ExitCode = process.ExitCode;
-//                }
-
-//                // Пауза перед чтением файла
-//                if (!File.Exists(fileE))
-//                {
-//                    await Task.Delay(200);
-//                }
-
-//                if (File.Exists(fileE))
-//                {
-//                    string eContent = File.ReadAllText(fileE, System.Text.Encoding.GetEncoding(866));
-//                    ParseFileE(eContent, result);
-//                }
-//                else
-//                {
-//                    result.IsSuccess = false;
-//                    result.ErrorMessage = "Файл результата 'e' не был создан. Возможно, терминал был закрыт или таймаут.";
-//                }
-
-//                if (result.IsSuccess && File.Exists(fileP))
-//                {
-//                    result.SlipContent = File.ReadAllText(fileP, System.Text.Encoding.GetEncoding(866));
-//                }
-//            }
-//            catch (OperationCanceledException)
-//            {
-//                result.IsSuccess = false;
-//                result.ErrorMessage = "Операция отменена пользователем.";
-//                if (process != null && !process.HasExited)
-//                {
-//                    try { process.Kill(); }
-//                    catch { }
-//                }
-//            }
-//            catch (System.ComponentModel.Win32Exception ex)
-//            {
-//                result.IsSuccess = false;
-//                result.ErrorMessage = $"Ошибка запуска x-terminal-emulator: {ex.Message}. Проверьте, установлен ли эмулятор терминала.";
-//                MainStaticClass.write_event_in_log($"Win32Exception: {ex.Message}", "Terminal", "0");
-//            }
-//            catch (Exception ex)
-//            {
-//                result.IsSuccess = false;
-//                result.ErrorMessage = $"Ошибка при выполнении: {ex.Message}";
-//                MainStaticClass.write_event_in_log($"Exception: {ex.Message}", "Terminal", "0");
-//            }
-//            finally
-//            {
-//                process?.Dispose();
-//            }
-
-//            return result;
-//        }
-
-//        private void ParseFileE(string content, PaymentResult result)
-//        {
-//            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-
-//            if (lines.Length == 0)
-//            {
-//                result.IsSuccess = false;
-//                result.ErrorMessage = "Файл результата 'e' пуст.";
-//                return;
-//            }
-
-//            string firstLine = lines[0];
-//            var parts = firstLine.Split(',');
-
-//            if (parts.Length >= 1)
-//            {
-//                string codeStr = parts[0].Trim();
-
-//                if (int.TryParse(codeStr, out int errorCode))
-//                {
-//                    if (errorCode == 0)
-//                    {
-//                        result.IsSuccess = true;
-//                        result.ErrorMessage = parts.Length > 1 ? parts[1].Trim() : "Успешно";
-
-//                        if (lines.Length > 3) result.AuthorizationCode = lines[3].Trim();
-//                        if (lines.Length > 7) result.TerminalId = lines[7].Trim();
-//                        if (lines.Length > 9) result.ReferenceNumber = lines[9].Trim();
-//                    }
-//                    else
-//                    {
-//                        result.IsSuccess = false;
-//                        result.ErrorCode = errorCode;
-//                        string fileMessage = parts.Length > 1 ? parts[1].Trim() : string.Empty;
-//                        result.ErrorMessage = !string.IsNullOrEmpty(fileMessage) ? fileMessage : GetErrorDescription(errorCode);
-//                    }
-//                }
-//                else
-//                {
-//                    result.IsSuccess = false;
-//                    result.ErrorMessage = $"Некорректный формат ответа терминала: {firstLine}";
-//                }
-//            }
-//        }
-
-//        private string GetErrorDescription(int code)
-//        {
-//            return code switch
-//            {
-//                99 => "Пинпад не подключен",
-//                5 => "Подождать с ответом. Скорее всего терминал выполняет перезагрузку",
-//                2000 => "Повторите операцию, возможно на пинпаде нажата отмена",
-//                7400 => "Операция заблокирована для пользователя",
-//                4451 => "Недостаточно средств",
-//                4452 => "Операция не прошла",
-//                _ => $"Код ошибки {code}"
-//            };
-//        }
-//    }
-
-//    public class PaymentResult
-//    {
-//        public bool IsSuccess { get; set; }
-//        public string ErrorMessage { get; set; }
-//        public int ErrorCode { get; set; }
-//        public int ExitCode { get; set; }
-
-//        // При сверке итогов здесь будет текст Z-отчета (контрольной ленты)
-//        public string SlipContent { get; set; }
-
-//        public string AuthorizationCode { get; set; }
-//        public string TerminalId { get; set; }
-//        public string ReferenceNumber { get; set; }
-//    }
-//}
-
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -380,6 +78,310 @@ namespace Cash8Avalon
             return await ExecuteCommandAsync(args, cancellationToken);
         }
 
+        // /// <summary>
+        // /// Общий метод для выполнения любой команды sb_pilot
+        // /// </summary>
+        // private async Task<PaymentResult> ExecuteCommandAsync(string args, CancellationToken cancellationToken)
+        // {
+        //     var result = new PaymentResult();
+        //
+        //     string exeFullPath = Path.Combine(_sberPath, _exeName);
+        //     string fileE = Path.Combine(_sberPath, "e");
+        //     string fileP = Path.Combine(_sberPath, "p");
+        //
+        //     if (!File.Exists(exeFullPath))
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = "Файл пилота не найден по пути: " + exeFullPath;
+        //         return result;
+        //     }
+        //
+        //     try
+        //     {
+        //         if (File.Exists(fileE)) File.Delete(fileE);
+        //         if (File.Exists(fileP)) File.Delete(fileP);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         MainStaticClass.write_event_in_log($"Предупреждение: не удалось удалить старые файлы: {ex.Message}", "Terminal", "0");
+        //     }
+        //
+        //     Process process = null;
+        //     try
+        //     {
+        //         var startInfo = new ProcessStartInfo
+        //         {
+        //             WorkingDirectory = _sberPath,
+        //             UseShellExecute = false,
+        //             WindowStyle = ProcessWindowStyle.Hidden
+        //         };
+        //
+        //         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //         {
+        //             startInfo.FileName = "x-terminal-emulator";
+        //             startInfo.Arguments = $"--minimize -e \"{exeFullPath} {args}\"";
+        //             startInfo.CreateNoWindow = true;
+        //             startInfo.RedirectStandardOutput = false;
+        //             startInfo.RedirectStandardError = false;
+        //         }
+        //         else // WINDOWS
+        //         {
+        //             startInfo.FileName = exeFullPath;
+        //             startInfo.Arguments = args;
+        //             startInfo.CreateNoWindow = true;
+        //             startInfo.RedirectStandardOutput = true;
+        //             startInfo.RedirectStandardError = true;
+        //
+        //             MainStaticClass.write_event_in_log($"Windows Run: {exeFullPath} {args}", "Terminal", "0");
+        //         }
+        //
+        //         process = new Process { StartInfo = startInfo };
+        //         process.Start();
+        //
+        //         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //         {
+        //             int timeoutMs = 120000;
+        //             int elapsed = 0;
+        //
+        //             while (!File.Exists(fileE) && elapsed < timeoutMs)
+        //             {
+        //                 if (cancellationToken.IsCancellationRequested) break;
+        //                 await Task.Delay(500, cancellationToken);
+        //                 elapsed += 500;
+        //             }
+        //         }
+        //         else
+        //         {
+        //             var stdOutTask = process.StandardOutput.ReadToEndAsync();
+        //             var stdErrTask = process.StandardError.ReadToEndAsync();
+        //             await process.WaitForExitAsync(cancellationToken);
+        //
+        //             string stdOut = await stdOutTask;
+        //             string stdErr = await stdErrTask;
+        //
+        //             if (!string.IsNullOrEmpty(stdErr))
+        //                 MainStaticClass.write_event_in_log($"sb_pilot ERROR: {stdErr}", "Terminal", "0");
+        //
+        //             result.ExitCode = process.ExitCode;
+        //         }
+        //
+        //         // Пауза перед чтением файла
+        //         if (!File.Exists(fileE))
+        //         {
+        //             await Task.Delay(200);
+        //         }
+        //
+        //         // ИЗМЕНЕНО ЗДЕСЬ: Читаем файл 'e' с умным определением кодировки (KOI8-R, UTF-8, 866)
+        //         if (File.Exists(fileE))
+        //         {
+        //             string eContent = ReadTextFileSafe(File.ReadAllBytes(fileE));
+        //             ParseFileE(eContent, result);
+        //         }
+        //         else
+        //         {
+        //             result.IsSuccess = false;
+        //             result.ErrorMessage = "Файл результата 'e' не был создан. Возможно, терминал был закрыт или таймаут.";
+        //         }
+        //
+        //         // ИЗМЕНЕНО ЗДЕСЬ: Читаем файл 'p' (сам чек) с умным определением кодировки
+        //         if (result.IsSuccess && File.Exists(fileP))
+        //         {
+        //             result.SlipContent = ReadTextFileSafe(File.ReadAllBytes(fileP));
+        //         }
+        //     }
+        //     catch (OperationCanceledException)
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = "Операция отменена пользователем.";
+        //         if (process != null && !process.HasExited)
+        //         {
+        //             try { process.Kill(); }
+        //             catch { }
+        //         }
+        //     }
+        //     catch (System.ComponentModel.Win32Exception ex)
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = $"Ошибка запуска x-terminal-emulator: {ex.Message}. Проверьте, установлен ли эмулятор терминала.";
+        //         MainStaticClass.write_event_in_log($"Win32Exception: {ex.Message}", "Terminal", "0");
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = $"Ошибка при выполнении: {ex.Message}";
+        //         MainStaticClass.write_event_in_log($"Exception: {ex.Message}", "Terminal", "0");
+        //     }
+        //     finally
+        //     {
+        //         process?.Dispose();
+        //     }
+        //
+        //     return result;
+        // }
+        
+        // /// <summary>
+        // /// Общий метод для выполнения любой команды sb_pilot
+        // /// </summary>
+        // private async Task<PaymentResult> ExecuteCommandAsync(string args, CancellationToken cancellationToken)
+        // {
+        //     var result = new PaymentResult();
+        //
+        //     string exeFullPath = Path.Combine(_sberPath, _exeName);
+        //     string fileE = Path.Combine(_sberPath, "e");
+        //     string fileP = Path.Combine(_sberPath, "p");
+        //
+        //     if (!File.Exists(exeFullPath))
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = "Файл пилота не найден по пути: " + exeFullPath;
+        //         return result;
+        //     }
+        //
+        //     try
+        //     {
+        //         if (File.Exists(fileE)) File.Delete(fileE);
+        //         if (File.Exists(fileP)) File.Delete(fileP);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         MainStaticClass.write_event_in_log($"Предупреждение: не удалось удалить старые файлы: {ex.Message}", "Terminal", "0");
+        //     }
+        //
+        //     Process process = null;
+        //     try
+        //     {
+        //         var startInfo = new ProcessStartInfo
+        //         {
+        //             WorkingDirectory = _sberPath,
+        //             UseShellExecute = false,
+        //             WindowStyle = ProcessWindowStyle.Hidden
+        //         };
+        //
+        //         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //         {
+        //             startInfo.FileName = "x-terminal-emulator";
+        //             startInfo.Arguments = $"--minimize -e \"{exeFullPath} {args}\"";
+        //             startInfo.CreateNoWindow = true;
+        //             startInfo.RedirectStandardOutput = false;
+        //             startInfo.RedirectStandardError = false;
+        //         }
+        //         else // WINDOWS
+        //         {
+        //             startInfo.FileName = exeFullPath;
+        //             startInfo.Arguments = args;
+        //             startInfo.CreateNoWindow = true;
+        //             startInfo.RedirectStandardOutput = true;
+        //             startInfo.RedirectStandardError = true;
+        //
+        //             MainStaticClass.write_event_in_log($"Windows Run: {exeFullPath} {args}", "Terminal", "0");
+        //         }
+        //
+        //         process = new Process { StartInfo = startInfo };
+        //         process.Start();
+        //
+        //         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //         {
+        //             int timeoutMs = 120000;
+        //             int elapsed = 0;
+        //
+        //             while (!File.Exists(fileE) && elapsed < timeoutMs)
+        //             {
+        //                 if (cancellationToken.IsCancellationRequested) break;
+        //                 await Task.Delay(500, cancellationToken);
+        //                 elapsed += 500;
+        //             }
+        //         }
+        //         else
+        //         {
+        //             var stdOutTask = process.StandardOutput.ReadToEndAsync();
+        //             var stdErrTask = process.StandardError.ReadToEndAsync();
+        //             await process.WaitForExitAsync(cancellationToken);
+        //
+        //             string stdOut = await stdOutTask;
+        //             string stdErr = await stdErrTask;
+        //
+        //             if (!string.IsNullOrEmpty(stdErr))
+        //                 MainStaticClass.write_event_in_log($"sb_pilot ERROR: {stdErr}", "Terminal", "0");
+        //
+        //             result.ExitCode = process.ExitCode;
+        //         }
+        //
+        //         // Пауза перед чтением файла
+        //         if (!File.Exists(fileE))
+        //         {
+        //             await Task.Delay(200);
+        //         }
+        //
+        //         // Читаем и логируем файл 'e' (результат операции)
+        //         if (File.Exists(fileE))
+        //         {
+        //             byte[] eBytes = File.ReadAllBytes(fileE);
+        //             string eContent = ReadTextFileSafe(eBytes);
+        //
+        //             // =====================================================================
+        //             // ПАТЧ: Логирование сырого ответа файла 'e' (аналогично ВТБ)
+        //             // =====================================================================
+        //             MainStaticClass.write_event_in_log(
+        //                 $"Сырой ответ Сбера (файл 'e'): {(eContent ?? "NULL")}",
+        //                 "TerminalResponse",
+        //                 "0"
+        //             );
+        //
+        //             ParseFileE(eContent, result);
+        //         }
+        //         else
+        //         {
+        //             result.IsSuccess = false;
+        //             result.ErrorMessage = "Файл результата 'e' не был создан. Возможно, терминал был закрыт или таймаут.";
+        //         }
+        //
+        //         // Читаем и логируем файл 'p' (чек / слип)
+        //         if (result.IsSuccess && File.Exists(fileP))
+        //         {
+        //             byte[] pBytes = File.ReadAllBytes(fileP);
+        //             result.SlipContent = ReadTextFileSafe(pBytes);
+        //
+        //             // =====================================================================
+        //             // ПАТЧ: Логирование сырого ответа файла 'p' (чек)
+        //             // =====================================================================
+        //             MainStaticClass.write_event_in_log(
+        //                 $"Сырой ответ Сбера (файл 'p' - чек):\n{result.SlipContent}",
+        //                 "TerminalResponse",
+        //                 "0"
+        //             );
+        //         }
+        //     }
+        //     catch (OperationCanceledException)
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = "Операция отменена пользователем.";
+        //         if (process != null && !process.HasExited)
+        //         {
+        //             try { process.Kill(); }
+        //             catch { }
+        //         }
+        //     }
+        //     catch (System.ComponentModel.Win32Exception ex)
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = $"Ошибка запуска x-terminal-emulator: {ex.Message}. Проверьте, установлен ли эмулятор терминала.";
+        //         MainStaticClass.write_event_in_log($"Win32Exception: {ex.Message}", "Terminal", "0");
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         result.IsSuccess = false;
+        //         result.ErrorMessage = $"Ошибка при выполнении: {ex.Message}";
+        //         MainStaticClass.write_event_in_log($"Exception: {ex.Message}", "Terminal", "0");
+        //     }
+        //     finally
+        //     {
+        //         process?.Dispose();
+        //     }
+        //
+        //     return result;
+        // }
+        
+        
         /// <summary>
         /// Общий метод для выполнения любой команды sb_pilot
         /// </summary>
@@ -395,6 +397,8 @@ namespace Cash8Avalon
             {
                 result.IsSuccess = false;
                 result.ErrorMessage = "Файл пилота не найден по пути: " + exeFullPath;
+                // Пишем ошибку в БД
+                MainStaticClass.WriteRecordErrorLog(result.ErrorMessage, "SberPaymentService_FileNotFound", 0, MainStaticClass.CashDeskNumber, "Файл sb_pilot не найден");
                 return result;
             }
 
@@ -462,7 +466,13 @@ namespace Cash8Avalon
                     string stdErr = await stdErrTask;
 
                     if (!string.IsNullOrEmpty(stdErr))
+                    {
+                        // Логируем стандартную ошибку процесса в текстовый лог
                         MainStaticClass.write_event_in_log($"sb_pilot ERROR: {stdErr}", "Terminal", "0");
+                        
+                        // И в БД (как ошибку выполнения)
+                        MainStaticClass.WriteRecordErrorLog(stdErr, "SberPaymentService_StdError", 0, MainStaticClass.CashDeskNumber, $"sb_pilot вернул ошибку: {args}");
+                    }
 
                     result.ExitCode = process.ExitCode;
                 }
@@ -473,25 +483,60 @@ namespace Cash8Avalon
                     await Task.Delay(200);
                 }
 
-                // ИЗМЕНЕНО ЗДЕСЬ: Читаем файл 'e' с умным определением кодировки (KOI8-R, UTF-8, 866)
+                // Читаем и логируем файл 'e' (результат операции)
                 if (File.Exists(fileE))
                 {
-                    string eContent = ReadTextFileSafe(File.ReadAllBytes(fileE));
+                    byte[] eBytes = File.ReadAllBytes(fileE);
+                    string eContent = ReadTextFileSafe(eBytes);
+
+                    // Логирование сырого ответа в текстовый лог
+                    MainStaticClass.write_event_in_log(
+                        $"Сырой ответ Сбера (файл 'e'): {(eContent ?? "NULL")}",
+                        "TerminalResponse",
+                        "0"
+                    );
+
                     ParseFileE(eContent, result);
                 }
                 else
                 {
                     result.IsSuccess = false;
                     result.ErrorMessage = "Файл результата 'e' не был создан. Возможно, терминал был закрыт или таймаут.";
+                    // Пишем в БД, если файл результата не создался
+                    MainStaticClass.WriteRecordErrorLog(result.ErrorMessage, "SberPaymentService_NoFileE", 0, MainStaticClass.CashDeskNumber, "Таймаут или ручное закрытие терминала");
                 }
 
-                // ИЗМЕНЕНО ЗДЕСЬ: Читаем файл 'p' (сам чек) с умным определением кодировки
+                // Читаем и логируем файл 'p' (чек / слип)
                 if (result.IsSuccess && File.Exists(fileP))
                 {
-                    result.SlipContent = ReadTextFileSafe(File.ReadAllBytes(fileP));
+                    byte[] pBytes = File.ReadAllBytes(fileP);
+                    result.SlipContent = ReadTextFileSafe(pBytes);
+
+                    MainStaticClass.write_event_in_log(
+                        $"Сырой ответ Сбера (файл 'p' - чек):\n{result.SlipContent}",
+                        "TerminalResponse",
+                        "0"
+                    );
+                }
+
+                // =====================================================================
+                // НОВОЕ: Если терминал вернул бизнес-ошибку (отказ банка, нет связи и т.д.)
+                // Пишем её в БД через WriteRecordErrorLog
+                // =====================================================================
+                if (!result.IsSuccess && result.ErrorCode != 0)
+                {
+                    string shortError = result.ErrorMessage?.Split('\n').FirstOrDefault() ?? "Неизвестная ошибка";
+                    if (shortError.Length > 255) shortError = shortError.Substring(0, 252) + "...";
+
+                    MainStaticClass.WriteRecordErrorLog(
+                        shortError, 
+                        "SberPaymentService_TerminalError", 
+                        0, 
+                        MainStaticClass.CashDeskNumber, 
+                        $"Код ошибки: {result.ErrorCode}");
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 result.IsSuccess = false;
                 result.ErrorMessage = "Операция отменена пользователем.";
@@ -500,18 +545,24 @@ namespace Cash8Avalon
                     try { process.Kill(); }
                     catch { }
                 }
+                // Логируем отмену в БД
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Sber_OperationCanceled");
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
                 result.IsSuccess = false;
                 result.ErrorMessage = $"Ошибка запуска x-terminal-emulator: {ex.Message}. Проверьте, установлен ли эмулятор терминала.";
-                MainStaticClass.write_event_in_log($"Win32Exception: {ex.Message}", "Terminal", "0");
+                
+                // Логируем критическое исключение в БД с полным StackTrace
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Sber_Win32Exception");
             }
             catch (Exception ex)
             {
                 result.IsSuccess = false;
                 result.ErrorMessage = $"Ошибка при выполнении: {ex.Message}";
-                MainStaticClass.write_event_in_log($"Exception: {ex.Message}", "Terminal", "0");
+                
+                // Логируем общее исключение в БД с полным StackTrace
+                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Sber_ExecuteCommandAsync_Exception");
             }
             finally
             {
