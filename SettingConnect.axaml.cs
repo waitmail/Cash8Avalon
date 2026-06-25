@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using static Cash8Avalon.CDN;
 using static Cash8Avalon.LoadDataWebService;
 using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Cash8Avalon
 {
@@ -680,8 +681,10 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE public.errors_log    ADD COLUMN cash_desk_number smallint;");
             queries.Add("ALTER TABLE public.constants ADD COLUMN last_date_reset_bonus_clients TIMESTAMP;");
             queries.Add("ALTER TABLE public.clients ADD COLUMN last_server_sync TIMESTAMP;");
-            //queries.Add("CREATE INDEX IF NOT EXISTS idx_barcode_lookup ON barcode(barcode, tovar_code);");
-            queries.Add("CREATE INDEX IF NOT EXISTS idx_sertificates_lookup ON sertificates(code, code_tovar);");
+            queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN offline boolean NOT NULL DEFAULT false;");
+            queries.Add("ALTER TABLE IF EXISTS public.checks_header ADD COLUMN extra boolean NOT NULL DEFAULT false;");
+        //queries.Add("CREATE INDEX IF NOT EXISTS idx_barcode_lookup ON barcode(barcode, tovar_code);");
+        queries.Add("CREATE INDEX IF NOT EXISTS idx_sertificates_lookup ON sertificates(code, code_tovar);");
             //queries.Add("CREATE INDEX IF NOT EXISTS idx_action_table_lookup ON action_table(num_doc, code_tovar);");
             queries.Add("ALTER TABLE checks_header ALTER COLUMN comment TYPE character varying(50);");
 

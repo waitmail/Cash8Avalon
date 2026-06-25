@@ -80,7 +80,7 @@
                       ColumnDefinitions="Auto,*,Auto,Auto"
                       RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     
-                    <!-- ===== НАЗВАНИЕ МАГАЗИНА, НОМЕР КАССЫ и ВКЛЮЧИТЬ ПИОТ НА ОДНОЙ СТРОКЕ ===== -->
+                    <!-- ===== НАЗВАНИЕ МАГАЗИНА, НОМЕР КАССЫ, ВЕРСИЯ ФН И ОФЛАЙН НА ОДНОЙ СТРОКЕ ===== -->
                     <Grid Grid.Row="0"
                           Grid.Column="0"
                           Grid.ColumnSpan="4">
@@ -89,9 +89,10 @@
                             <ColumnDefinition Width="40" />    <!-- Поле магазина (3 символа) -->
                             <ColumnDefinition Width="Auto" />  <!-- № Кассы текст -->
                             <ColumnDefinition Width="40" />    <!-- Поле № Кассы -->
-                            <ColumnDefinition Width="Auto" />  <!-- Включить ПИот -->
+                            <ColumnDefinition Width="Auto" />  <!-- Включить ПИот (оставлено для совместимости) -->
                             <ColumnDefinition Width="Auto" />  <!-- Версия ФН текст -->
                             <ColumnDefinition Width="70" />    <!-- Поле версии -->
+                            <ColumnDefinition Width="Auto" />  <!-- ★ НОВОЕ: Чекбокс Офлайн ★ -->
                         </Grid.ColumnDefinitions>
                         
                         <!-- Название магазина -->
@@ -136,6 +137,14 @@
                                  Margin="5"
                                  Width="70"
                                  FontFamily="Segoe UI" />
+
+                        <!-- ★ НОВЫЙ ЧЕКБОКС ОФЛАЙН ★ -->
+                        <CheckBox Grid.Column="7"
+                                  x:Name="checkBox_offline"
+                                  Content="офлайн"
+                                  VerticalAlignment="Center"
+                                  Margin="20,5,5,5"
+                                  FontFamily="Segoe UI" />
                     </Grid>
                     
                     <!-- ===== СИСТЕМА НАЛОГООБЛОЖЕНИЯ И НДС НА ОДНОЙ СТРОКЕ ===== -->

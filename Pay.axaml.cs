@@ -64,6 +64,8 @@ namespace Cash8Avalon
         private TextBox _remainderTextBox;
         private CheckBox _checkBoxPaymentBySbp;
         private CheckBox _checkBoxDoNotSendPaymentToTheTerminal;
+        private CheckBox _extra;
+
         private Button _buttonPay;
         private Button _button1;
 
@@ -92,6 +94,7 @@ namespace Cash8Avalon
             _checkBoxDoNotSendPaymentToTheTerminal = this.FindControl<CheckBox>("checkBox_do_not_send_payment_to_the_terminal");
             _buttonPay = this.FindControl<Button>("button_pay");
             _button1 = this.FindControl<Button>("button1");
+            _extra   = this.FindControl<CheckBox>("checkBox_extra");
         }
 
         private void Pay_Loaded(object? sender, RoutedEventArgs e)
@@ -1937,18 +1940,22 @@ namespace Cash8Avalon
             decimal nonCashTotal = nonCashRub + nonCashKop / 100m;
 
             // 3. Попытка записи
-            bool preWriteOk = await cc.write_new_document(
-                this.PaySum, // pay (не используется в методе, но требует сигнатура)
-                this.PaySum, // sum_doc
-                this.Remainder, // remainder
-                "0", // pay_bonus_many
-                false, // last_rewrite = false (черновик)
-                this.CashSum, // cash_money
-                nonCashTotal.ToString(), // non_cash_money
-                this.CertificatesSum, // sertificate_money
-                "2", // its_deleted = 2 (не финальный)
-                false
-            );
+            bool preWriteOk = true;
+            if (this.cc.IsNewCheck)//Здесь все таки убрал перезапись потому как если чек финально записан уже был и не является новым то теперь вопрос только в печати остался.
+            {
+                preWriteOk = await cc.write_new_document(
+                    this.PaySum, // pay (не используется в методе, но требует сигнатура)
+                    this.PaySum, // sum_doc
+                    this.Remainder, // remainder
+                    "0", // pay_bonus_many
+                    false, // last_rewrite = false (черновик)
+                    this.CashSum, // cash_money
+                    nonCashTotal.ToString(), // non_cash_money
+                    this.CertificatesSum, // sertificate_money
+                    "2", // its_deleted = 2 (не финальный)
+                    false
+                );
+            }
 
             // 4. Обработка неудачи
             if (!preWriteOk)
@@ -2001,15 +2008,20 @@ namespace Cash8Avalon
                 {
                     return; // Ошибка уже обработана внутри метода (MessageBox + ErrorLog)
                 }
-                
+
                 // ═══════════════════════════════════════════════════════════════
                 // ВАЖНО: СРАЗУ ВКЛЮЧАЕМ ФЛАГ ПОПЫТКИ ОПЛАТЫ (БЛОКИРОВКА ЧЕКА)
                 // По логике: F12 нажата -> чек заблокирован от пересчета акций и удалений.
                 // Разблокировка происходит только при закрытии окна.
                 // ═══════════════════════════════════════════════════════════════
-               
-               cashCheck.PaymentAttempted = true;
-               
+                if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
+                {
+                    cashCheck.PaymentAttempted = true;
+                }
+
+                //cashCheck.Extra = this._extra.IsChecked;
+                cashCheck.Extra = this._extra.IsChecked ?? false;
+
 
                 currentTrap = "0.1";
                 MainStaticClass.write_event_in_log(
@@ -2780,6 +2792,7 @@ namespace Cash8Avalon
         public string BonusMany { get => _bonusManyTextBox?.Text ?? string.Empty; set { if (_bonusManyTextBox != null) _bonusManyTextBox.Text = value; } }
         public string Remainder { get => _remainderTextBox?.Text ?? string.Empty; set { if (_remainderTextBox != null) _remainderTextBox.Text = value; } }
         public bool IsSbpPayment { get => _checkBoxPaymentBySbp?.IsChecked ?? false; set { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsChecked = value; } }
+        public bool Extra { get => _extra?.IsChecked ?? false; set { if (_extra != null) _extra.IsChecked = value; } }
         public void ShowSbpControls(bool show) { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsVisible = false; if (_checkBoxDoNotSendPaymentToTheTerminal != null) _checkBoxDoNotSendPaymentToTheTerminal.IsVisible = show; }
 
         #endregion

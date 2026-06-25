@@ -227,7 +227,7 @@ namespace Cash8Avalon
                         get_weight_automatically, scale_serial_port,
                         variant_connect_fn, fn_ipaddr, acquiring_bank, 
                         constant_conversion_to_kilograms, nds_ip, ip_adress_local_ch_z,
-                        include_piot,piot_url FROM constants LIMIT 1";
+                        include_piot,piot_url,offline FROM constants LIMIT 1";
 
                 using (var command = new NpgsqlCommand(query, conn))
                 using (var reader = command.ExecuteReader())
@@ -256,6 +256,7 @@ namespace Cash8Avalon
                         var txtPiotUrl = this.FindControl<TextBox>("txtB_piot_url");
 
                         var comboBoxNdsIp = this.FindControl<ComboBox>("comboBox_nds_ip");
+                        var checkBoxOffline = this.FindControl<CheckBox>("checkBox_offline");
 
 
                         if (nickShop != null) nickShop.Text = reader["nick_shop"].ToString();
@@ -349,8 +350,8 @@ namespace Cash8Avalon
                             }
                         }
 
-                        
 
+                        checkBoxOffline.IsChecked = Convert.ToBoolean(reader["offline"]);
 
                         txtPiotUrl.Text = reader["piot_url"].ToString();
                     }
@@ -532,6 +533,7 @@ namespace Cash8Avalon
             var txtConstantConversion = this.FindControl<TextBox>("txtB_constant_conversion_to_kilograms");
 
             var txtPiotUrl = this.FindControl<TextBox>("txtB_piot_url");
+            var checkBoxOffline = this.FindControl<CheckBox>("checkBox_offline"); 
 
 
 
@@ -618,6 +620,7 @@ namespace Cash8Avalon
             string versionFn = txtB_version_fn.Text;
             string acquiringBank = comboBoxAcquiringBank?.SelectedIndex.ToString() ?? "0";
             string lastDateDownload = txtB_last_date_download_bonus_clients?.Text ?? "";
+            string offline = (checkBoxOffline.IsChecked == true) ? "true" : "false";
 
             try
             {
@@ -645,7 +648,8 @@ namespace Cash8Avalon
                     "nds_ip=" + nds_ip + "," +
                     "ip_adress_local_ch_z='" + ipAddrLmChZ + "'," +
                     "include_piot=" + include_piot + "," +
-                    "piot_url='" + txtPiotUrl.Text.Trim() + "'";
+                    "piot_url='" + txtPiotUrl.Text.Trim() + "',"+
+                    "offline='"+ offline+"'";
 
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 int resul_update = command.ExecuteNonQuery();
@@ -671,7 +675,8 @@ namespace Cash8Avalon
                         "nds_ip," +
                         "ip_adress_local_ch_z," +
                         "include_piot," +
-                        "piot_url) VALUES(" +
+                        "piot_url,"+
+                        "offline) VALUES(" +
                         cashDeskNumber.Text + ",'" +
                         nickShop.Text + "'," +
                         periodText + ",'" +
@@ -691,7 +696,8 @@ namespace Cash8Avalon
                         nds_ip + ",'" +
                         ipAddrLmChZ + "'," +
                         include_piot + ",'"+
-                        piot_url+"')";
+                        piot_url+"','"+
+                        "offline')";
 
                     command = new NpgsqlCommand(query, conn);
                     command.ExecuteNonQuery();

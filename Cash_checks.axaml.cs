@@ -31,6 +31,7 @@ namespace Cash8Avalon
         public string DocumentNumber { get; set; } = string.Empty;
         public bool ItsPrint { get; set; }
         public bool ItsPrintP { get; set; }
+        public bool Extra { get; set; }
     }
 
     public partial class Cash_checks : UserControl
@@ -491,7 +492,8 @@ namespace Cash8Avalon
             new GridLength(0.7, GridUnitType.Star), // 6: Тип
             new GridLength(0.8, GridUnitType.Star), // 7: Номер
             new GridLength(0.4, GridUnitType.Star), // 8: Напечатан
-            new GridLength(0.4, GridUnitType.Star)  // 9: ПечатьП
+            new GridLength(0.4, GridUnitType.Star), // 9: ПечатьП
+            new GridLength(0.4, GridUnitType.Star)  // 10: ЧС
         };
                 foreach (var width in columnWidths)
                 {
@@ -687,7 +689,7 @@ namespace Cash8Avalon
                 mainContainer.Children.Add(dotsContainer);
                 mainContainer.Children.Add(infoText);
 
-                Grid.SetColumnSpan(mainContainer, 10);
+                Grid.SetColumnSpan(mainContainer, 11);
                 Grid.SetRow(mainContainer, _currentRow);
                 _tableGrid.Children.Add(mainContainer);
 
@@ -720,7 +722,7 @@ namespace Cash8Avalon
         {
             try
             {
-                var headers = new[] { "Статус", "Дата", "Клиент", "Сумма", "Сдача", "Комментарий", "Тип", "Номер", "Напечатан", "ПечатьП" };
+                var headers = new[] { "Статус", "Дата", "Клиент", "Сумма", "Сдача", "Комментарий", "Тип", "Номер", "Напечатан", "ПечатьП", "ЧС" };
 
                 // Добавляем строку в шапку (она там всего одна)
                 _headerGrid.RowDefinitions.Add(new RowDefinition(35, GridUnitType.Pixel));
@@ -811,7 +813,7 @@ namespace Cash8Avalon
                 {
                     bool needHighlight = !(item.ItsPrint && item.ItsPrintP);
 
-                    if (needHighlight)
+                    if (needHighlight && !item.Extra)
                     {
                         rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый
                         fontSize = baseScaledFontSize * 1.1;
@@ -830,7 +832,7 @@ namespace Cash8Avalon
                 };
                 rowBorder.PointerPressed += OnRowPointerPressed;
 
-                Grid.SetColumnSpan(rowBorder, 10);
+                Grid.SetColumnSpan(rowBorder, 11);
                 Grid.SetRow(rowBorder, gridRowIndex);
                 _tableGrid.Children.Add(rowBorder);
 
@@ -871,6 +873,7 @@ namespace Cash8Avalon
                 // CheckBox с масштабированием
                 AddCheckBoxCell(8, gridRowIndex, item.ItsPrint, fontSize);
                 AddCheckBoxCell(9, gridRowIndex, item.ItsPrintP, fontSize);
+                AddCheckBoxCell(10, gridRowIndex, item.Extra, fontSize);
 
                 _currentRow++;
             }
@@ -1154,7 +1157,7 @@ namespace Cash8Avalon
                                 needHighlight = true;
                             }
 
-                            if (needHighlight)
+                            if (needHighlight && !checkItem.Extra)
                             {
                                 originalBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый
                             }
@@ -2052,7 +2055,7 @@ namespace Cash8Avalon
                 }
 
                 // Проверка времени с ФН
-                MainStaticClass.validate_date_time_with_fn(5, MainStaticClass.MainWindow);
+                await MainStaticClass.validate_date_time_with_fn(5, MainStaticClass.MainWindow);
 
                 // Создаем окно для нового чека
                 var checkWindow = new Cash_check();
@@ -2364,25 +2367,30 @@ namespace Cash8Avalon
                             conn.Open();
                             Console.WriteLine("✓ Соединение с БД установлено");
 
-                            //    string myQuery = @"
-                            //SELECT checks_header.its_deleted,
-                            //       checks_header.date_time_write,
-                            //       clients.name,
-                            //       checks_header.cash,
-                            //       checks_header.remainder,
-                            //       checks_header.comment,
-                            //       checks_header.its_print,
-                            //       checks_header.check_type,
-                            //       checks_header.document_number,
-                            //       checks_header.its_print_p  
-                            //FROM checks_header 
-                            ////LEFT JOIN clients ON checks_header.client = clients.code 
-                            //LEFT JOIN clients ON checks_header.client = clients.code 
-                            //AND clients.code IS NOT NULL 
-                            //AND clients.code <> ''
-                            //WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
-                            //  AND its_deleted < 2 
-                            //ORDER BY checks_header.date_time_write";
+
+                            //string myQuery = @"
+                            //    SELECT checks_header.its_deleted,
+                            //           checks_header.date_time_write,
+                            //           CASE 
+                            //               WHEN checks_header.client IS NULL 
+                            //                    OR TRIM(checks_header.client) = '' 
+                            //               THEN NULL 
+                            //               ELSE clients.name 
+                            //           END as client_name,
+                            //           checks_header.cash,
+                            //           checks_header.remainder,
+                            //           checks_header.comment,
+                            //           checks_header.its_print,
+                            //           checks_header.check_type,
+                            //           checks_header.document_number,
+                            //           checks_header.its_print_p  
+                            //    FROM checks_header 
+                            //    LEFT JOIN clients ON checks_header.client = clients.code 
+                            //                     AND clients.code IS NOT NULL 
+                            //                     AND TRIM(clients.code) <> ''
+                            //    WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
+                            //      AND its_deleted < 2 
+                            //    ORDER BY checks_header.date_time_write";
 
                             string myQuery = @"
                                 SELECT checks_header.its_deleted,
@@ -2399,7 +2407,8 @@ namespace Cash8Avalon
                                        checks_header.its_print,
                                        checks_header.check_type,
                                        checks_header.document_number,
-                                       checks_header.its_print_p  
+                                       checks_header.its_print_p,
+                                       checks_header.extra  -- ★★★ ДОБАВЛЕНО
                                 FROM checks_header 
                                 LEFT JOIN clients ON checks_header.client = clients.code 
                                                  AND clients.code IS NOT NULL 
@@ -2434,7 +2443,8 @@ namespace Cash8Avalon
                                         ItsPrint = reader.GetOrdinal("its_print"),
                                         CheckType = reader.GetOrdinal("check_type"),
                                         DocumentNumber = reader.GetOrdinal("document_number"),
-                                        ItsPrintP = reader.GetOrdinal("its_print_p")
+                                        ItsPrintP = reader.GetOrdinal("its_print_p"),
+                                        Extra = reader.GetOrdinal("extra")
                                     };
 
                                     int count = 0;
@@ -2517,6 +2527,10 @@ namespace Cash8Avalon
                                         checkItem.ItsPrintP = reader.IsDBNull(ordinals.ItsPrintP)
                                             ? false
                                             : Convert.ToBoolean(reader.GetValue(ordinals.ItsPrintP));
+
+                                        checkItem.Extra = reader.IsDBNull(ordinals.Extra)
+                                            ? false
+                                            : Convert.ToBoolean(reader.GetValue(ordinals.Extra));
 
                                         items.Add(checkItem);
                                         Console.WriteLine($"  - Чек #{checkItem.DocumentNumber}: {checkItem.ClientName}, сумма: {checkItem.Cash}");
@@ -2717,7 +2731,7 @@ namespace Cash8Avalon
                     Foreground = Brushes.Gray
                 };
 
-                Grid.SetColumnSpan(messageText, 10);
+                Grid.SetColumnSpan(messageText, 11);
                 Grid.SetRow(messageText, _currentRow);
                 _tableGrid.Children.Add(messageText);
 

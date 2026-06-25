@@ -310,6 +310,9 @@ namespace Cash8Avalon
         //private static int do_not_prompt_marking_code = -1;
         private static int nds_ip = -1;
         private static bool fiscals_forbidden = true;
+        // Поле для кэширования результата
+        private static bool? _offline = null;
+
         private static string ip_addr_lm_ch_z = "0";
         private static string kitchen_print = "0";
         private static int included_piot = -1;
@@ -445,6 +448,68 @@ namespace Cash8Avalon
                 return piot_url;
             }
         }
+
+        
+
+        /// <summary>
+        /// Асинхронный метод для получения статуса Offline из БД.
+        /// При первом вызове обращается к БД и кэширует результат. 
+        /// При последующих вызовах возвращает кэшированное значение без обращения к БД.
+        /// </summary>
+        public static async Task<bool> GetOfflineAsync()
+        {
+            // Если значение уже загружено ранее, сразу возвращаем его
+            if (_offline.HasValue)
+            {
+                return _offline.Value;
+            }
+
+            NpgsqlConnection conn = null;
+            NpgsqlCommand command = null;
+
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                await conn.OpenAsync(); // Используем асинхронное открытие соединения
+
+                string query = "SELECT offline FROM constants";
+                command = new NpgsqlCommand(query, conn);
+
+                object result = await command.ExecuteScalarAsync();
+
+                // Защита от DBNull, если в базе поле пустое
+                _offline = result != null && result != DBNull.Value && Convert.ToBoolean(result);
+            }
+            catch (Exception ex)
+            {
+                // Теперь await здесь абсолютно легален и работает
+                await MessageBox.Show("Ошибка при чтении offline: " + ex.Message, "Чтение свойства", MainStaticClass.MainWindow);
+                _offline = false; // В случае ошибки устанавливаем безопасное значение по умолчанию
+            }
+            finally
+            {
+                if (conn != null && conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return _offline.Value;
+        }
+
+        /// <summary>
+        /// Свойство для быстрого доступа к уже загруженному значению.
+        /// Возвращает false, если метод GetOfflineAsync() еще ни разу не вызывался.
+        /// </summary>
+        //public static bool Offline => _offline ?? false;
+
+        ///// <summary>
+        ///// Позволяет принудительно задать значение (например, когда кассир поставил галочку в настройках)
+        ///// </summary>
+        //public static void SetOffline(bool value)
+        //{
+        //    _offline = value;
+        //}
 
         /// <summary>
         /// Возвращает piot_url        
@@ -785,7 +850,7 @@ namespace Cash8Avalon
             }
         }
 
-        public static async void validate_date_time_with_fn(int minutes, Window owner)
+        public static async Task validate_date_time_with_fn(int minutes, Window owner)
         {
             if (MainStaticClass.CashDeskNumber != 9)
             {

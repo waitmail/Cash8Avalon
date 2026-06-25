@@ -299,7 +299,7 @@
                                 Height="56"
                                 Margin="0,15,0,15"
                                 TextAlignment="Right"
-								IsReadOnly="True"
+                                IsReadOnly="True"
                                 Padding="0,0,10,0"/>
                         
                         <Grid Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="10"
@@ -340,6 +340,16 @@
                                    Width="320" 
                                    Height="60"
                                    HorizontalAlignment="Left"/>
+
+                            <!-- ★ НОВЫЙ ЧЕКБОКС ЧС ★ -->
+                            <CheckBox x:Name="checkBox_extra"
+                                      Grid.Column="4"
+                                      Content="ЧС"
+                                      FontSize="21.75"
+                                      FontWeight="Bold"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left"
+                                      Margin="25,0,0,0"/>
                         </Grid>
                         
                         <Rectangle Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="10"

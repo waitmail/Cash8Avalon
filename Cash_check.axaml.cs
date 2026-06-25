@@ -143,6 +143,8 @@ namespace Cash8Avalon
 
         public bool reopened = false;
         public bool print_promo_picture = false;
+        public bool PrintFailed = false;
+
 
 
         List<int> qr_code_lenght = new List<int>();
@@ -214,6 +216,11 @@ namespace Cash8Avalon
         /// Доступно только: повтор оплаты (F8) или удаление чека (F9).
         /// </summary>
         public bool PaymentAttempted { get; set; } = false;
+
+        /// <summary>
+        /// Специальный флаг
+        /// </summary>
+        public bool Extra { get; set; } = false;
 
         /// <summary>
         /// Проверяет, заблокирован ли чек от изменений.
@@ -3179,6 +3186,7 @@ namespace Cash8Avalon
 
         /// <summary>
         /// Восстанавливает маркировки в DataTable после обработки акций.
+        /// Строго запрещено создавать новые строки, если они не являются результатом разделения схлопнувшейся строки.
         /// </summary>
         private DataTable RestoreMarkingsAfterActions(DataTable dtProcessed, List<ProductItem> backup)
         {
@@ -3212,7 +3220,7 @@ namespace Cash8Avalon
             if (backupMarkingsByCode.Count == 0)
                 return dtFixed;
 
-            // 2. Собираем текущие маркировки из обработанной таблицы
+            // 2. Собираем текущие маркировки из обработанной таблицы (с защитой от дубликатов)
             var currentMarkingsByCode = new Dictionary<int, List<string>>();
             foreach (DataRow row in dtFixed.Rows)
             {
@@ -3226,7 +3234,22 @@ namespace Cash8Avalon
                         list = new List<string>();
                         currentMarkingsByCode[code] = list;
                     }
-                    list.Add(marking);
+
+                    // ВАЖНО: Добавляем только если такого кода еще нет (игнорируем дубликаты, созданные акциями)
+                    if (!list.Contains(marking))
+                    {
+                        list.Add(marking);
+                    }
+                    else
+                    {
+                        // Если нашли дубликат, логируем это как аномалию
+                        MainStaticClass.WriteRecordErrorLog(
+                            "Обнаружен дубликат маркировки при восстановлении",
+                            "RestoreMarkingsAfterActions",
+                            this.numdoc,
+                            MainStaticClass.CashDeskNumber,
+                            $"Код: {code}, Марк: {marking}");
+                    }
                 }
             }
 
@@ -3246,10 +3269,7 @@ namespace Cash8Avalon
             if (missingMarkingsQueues.Count == 0)
                 return dtFixed;
 
-            // ═══════════════════════════════════════════════════════════════
-            // ВНИМАНИЕ: Обнаружены потерянные маркировки! 
-            // Сохраняем первичный порядок чека из бэкапа в файл для разбора полетов.
-            // ═══════════════════════════════════════════════════════════════
+            // Сохраняем первичный порядок чека из бэкапа в файл для разбора полетов
             SaveBackupToFile(backup, this.numdoc, MainStaticClass.CashDeskNumber);
 
             // 4. Восстановление: идём снизу вверх
@@ -3294,7 +3314,7 @@ namespace Cash8Avalon
                     {
                         string missingMark = queue.Dequeue();
                         DataRow newRow = dtFixed.NewRow();
-                        newRow.ItemArray = row.ItemArray;
+                        newRow.ItemArray = row.ItemArray; // Копируем ВСЕ данные, включая правильную акцию и цену!
                         newRow["quantity"] = 1m;
                         newRow["sum_full"] = Math.Round(1m * priceFull, 2);
                         newRow["sum_at_discount"] = Math.Round(1m * priceDisc, 2);
@@ -3346,7 +3366,7 @@ namespace Cash8Avalon
                         {
                             string missingMark = queue.Dequeue();
                             DataRow newRow = dtFixed.NewRow();
-                            newRow.ItemArray = row.ItemArray;
+                            newRow.ItemArray = row.ItemArray; // Копируем ВСЕ данные, включая правильную акцию и цену!
                             newRow["quantity"] = 1m;
                             newRow["sum_full"] = Math.Round(1m * priceFull, 2);
                             newRow["sum_at_discount"] = Math.Round(1m * priceDisc, 2);
@@ -3372,78 +3392,37 @@ namespace Cash8Avalon
             foreach (var row in rowsToRemove)
                 dtFixed.Rows.Remove(row);
 
-            // 5. Экстренный fallback
+            // 5. БЕЗОПАСНЫЙ ЛОГГИНГ: Если маркировки всё ещё потеряны, просто фиксируем это.
+            // МЫ БОЛЬШЕ НЕ СОЗДАЕМ НОВЫЕ СТРОКИ ИЗ БЭКАПА!
             foreach (var kvp in missingMarkingsQueues)
             {
                 int code = kvp.Key;
                 Queue<string> marks = kvp.Value;
                 if (marks.Count == 0) continue;
 
-                DataRow refRow = dtFixed.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["tovar_code"]) == code);
-                ProductItem refBackup = backup.FirstOrDefault(p => p.Code == code);
-
-                if (refRow == null && refBackup == null)
-                {
-                    MainStaticClass.WriteRecordErrorLog(
-                        $"Не удалось восстановить маркировки для товара {code}: нет исходных данных.",
-                        "RestoreMarkingsAfterActions",
-                        this.numdoc,
-                        MainStaticClass.CashDeskNumber,
-                        "В таблице нет строки для прикрепления потерянной маркировки");
-                    continue;
-                }
-
-                while (marks.Count > 0)
-                {
-                    string mark = marks.Dequeue();
-                    DataRow forcedRow = dtFixed.NewRow();
-
-                    if (refRow != null)
-                    {
-                        forcedRow.ItemArray = refRow.ItemArray;
-                    }
-                    else
-                    {
-                        forcedRow["tovar_code"] = code;
-                        forcedRow["tovar_name"] = refBackup?.Tovar ?? "";
-                        forcedRow["characteristic_code"] = DBNull.Value;
-                        forcedRow["characteristic_name"] = DBNull.Value;
-                        forcedRow["price"] = refBackup?.Price ?? 0m;
-                        forcedRow["price_at_discount"] = refBackup?.PriceAtDiscount ?? 0m;
-                        forcedRow["action"] = refBackup?.Action ?? 0;
-                        forcedRow["gift"] = refBackup?.Gift ?? 0;
-                        forcedRow["action2"] = refBackup?.Action2 ?? 0;
-                    }
-
-                    forcedRow["quantity"] = 1m;
-                    forcedRow["marking"] = mark;
-
-                    decimal fPrice = refRow != null ? Convert.ToDecimal(refRow["price"]) : (refBackup?.Price ?? 0m);
-                    decimal fPriceDisc = refRow != null ? Convert.ToDecimal(refRow["price_at_discount"]) : (refBackup?.PriceAtDiscount ?? 0m);
-
-                    forcedRow["sum_full"] = Math.Round(fPrice, 2);
-                    forcedRow["sum_at_discount"] = Math.Round(fPriceDisc, 2);
-
-                    forcedRow["bonus_reg"] = 0;
-                    forcedRow["bonus_action"] = 0;
-                    forcedRow["bonus_action_b"] = 0;
-
-                    dtFixed.Rows.Add(forcedRow);
-
-                    MainStaticClass.WriteRecordErrorLog(
-                        "Экстренный fallback: создана новая строка для потерянной маркировки",
-                        "RestoreMarkingsAfterActions",
-                        this.numdoc,
-                        MainStaticClass.CashDeskNumber,
-                        $"Код: {code}, Маркировка: {mark}");
-                }
+                string lostMarks = string.Join(", ", marks);
+                MainStaticClass.WriteRecordErrorLog(
+                    $"Не удалось восстановить маркировки для товара {code}. В таблице нет подходящих строк для их прикрепления.",
+                    "RestoreMarkingsAfterActions",
+                    this.numdoc,
+                    MainStaticClass.CashDeskNumber,
+                    $"Потерянные маркировки: {lostMarks}");
             }
 
             // 6. Очистка нулевых строк
             for (int i = dtFixed.Rows.Count - 1; i >= 0; i--)
             {
                 if (Convert.ToDecimal(dtFixed.Rows[i]["quantity"]) == 0)
+                {
+                    MainStaticClass.WriteRecordErrorLog(
+                        "Удаление строки с нулевым количеством при восстановлении маркировок",
+                        "RestoreMarkingsAfterActions",
+                        this.numdoc,
+                        MainStaticClass.CashDeskNumber,
+                        $"Код товара: {dtFixed.Rows[i]["tovar_code"]}");
+
                     dtFixed.Rows.RemoveAt(i);
+                }
             }
 
             return dtFixed;
@@ -3805,6 +3784,30 @@ namespace Cash8Avalon
             }
         }
 
+        /// <summary>
+        /// ГЛОБАЛЬНАЯ ПРОВЕРКА: Сравнивает общее количество товаров до и после акций.
+        /// </summary>
+        private async Task<bool> ValidateGlobalIntegrityAsync()
+        {
+            decimal backupTotalQty = _productsDataBackup.Sum(p => p.Quantity);
+            decimal currentTotalQty = _productsData.Sum(p => p.Quantity);
+
+            if (backupTotalQty != currentTotalQty)
+            {
+                string errorMsg = $"КРИТИЧЕСКАЯ ОШИБКА ЦЕЛОСТНОСТИ ЧЕКА!\n\n" +
+                                  $"Количество товара ДО акций: {backupTotalQty}\n" +
+                                  $"Количество товара ПОСЛЕ акций: {currentTotalQty}\n\n" +
+                                  $"Оплата ЗАБЛОКИРОВАНА. Товары были потеряны при расчете акций. " +
+                                  $"Отмените оплату и вызовите системного администратора.";
+
+                MainStaticClass.WriteRecordErrorLog(errorMsg, "ValidateGlobalIntegrityAsync", numdoc, MainStaticClass.CashDeskNumber, "Потеря строк");
+
+                await MessageBoxHelper.Show(errorMsg, "СБОЙ ОБРАБОТКИ АКЦИЙ", MessageBoxButton.OK, MessageBoxType.Error, this);
+                return false;
+            }
+            return true;
+        }
+
 
         private async void show_pay_form()
         {
@@ -3830,6 +3833,8 @@ namespace Cash8Avalon
                     // Блок finally корректно сбросит флаги и вернет фокус.
                     return;
                 }
+
+                
 
                 if ((CheckType.SelectedIndex == 0) && (IsNewCheck))
                 {
@@ -3865,13 +3870,25 @@ namespace Cash8Avalon
                         MainStaticClass.write_event_in_log("Копируем табличную часть в резервную копию", "Документ чек", numdoc.ToString());
                         BackupProductsData();
 
+                        // ЛОГ 1: Состояние до расчета акций
+                        LogProductsState("1. До расчета акций (Backup)");
+
                         MainStaticClass.write_event_in_log("Попытка обработать акции по штрихкодам", "Документ чек", numdoc.ToString());
                         DataTable dataTable = await to_define_the_action_dt(true);
                         dataTable = RestoreMarkingsAfterActions(dataTable, _productsDataBackup);
 
+                        // ЛОГ 3: Состояние после восстановления маркировок
+                        LogProductsState("2. После RestoreMarkingsAfterActions");
+
                         _productsData = CreateProductsFromDataTable(dataTable);
                         await RecalculateAllProducts(true);
                         selection_goods = false;
+
+                        if (!await ValidateGlobalIntegrityAsync())
+                        {
+                            StartFocusKeeper();
+                            return;
+                        }
 
                         //ValidateAndFixSumConsistency("show_pay_form (после обработки акций)");
                     }
@@ -4016,6 +4033,29 @@ namespace Cash8Avalon
                         // textBox.SelectAll(); // Можно раскомментировать, если нужно выделять всё
                     }
                 }, DispatcherPriority.ApplicationIdle); // Приоритет "когда приложение свободно"
+            }
+        }
+
+        private void LogProductsState(string context)
+        {
+            try
+            {
+                // Сериализуем текущее состояние товаров в компактный JSON (одной строкой)
+                string json = JsonConvert.SerializeObject(_productsData, Formatting.None);
+
+                // Обрезаем, если лог не рассчитан на огромные тексты (оставляем 3900 символов)
+                //if (json.Length > 3900)
+                //    json = json.Substring(0, 3900) + "...";
+
+                // Пишем в event_log
+                MainStaticClass.write_event_in_log(
+                    $"Снапшот ТЧ [{context}]: {json}",
+                    "Состояние чека (JSON)",
+                    numdoc.ToString());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка логирования состояния: {ex.Message}");
             }
         }
 
@@ -4263,26 +4303,31 @@ namespace Cash8Avalon
 
         public async Task<bool> it_is_paid(string pay, string sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
         {
-            //Здесь необходимо добавить проверку на то что документ уже не новый
             bool result = true;
 
-            if (IsNewCheck)
+            // ИЗМЕНЕНИЕ ЗДЕСЬ: добавляем || last_rewrite
+            //Это необходимо если при печати закончилась бумага и затем из окна оплаты происходит повторные попытки печати
+            //и получалось что когда чек уже не новый из окна оплаты предварительная запись шла ,
+            //а здесь уже нет и чек оставался во втором статусе, а это не правильно  
+            if (IsNewCheck || last_rewrite)//По идее это будет актуально для сбера, но потом уберу.            
             {
                 MainStaticClass.write_event_in_log(" Финальная запись документа ", "Документ чек", numdoc.ToString());
                 result = await write_new_document(pay, sum_doc, remainder, pay_bonus_many, last_rewrite, cash_money, non_cash_money, sertificate_money, "0");
             }
 
-            if (result)
+            if (!this.Extra)
             {
-                if (MainStaticClass.Use_Fiscall_Print)
+                if (result)
                 {
-                    MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
-                    result = await fiscall_print_pay(pay);
+                    if (MainStaticClass.Use_Fiscall_Print)
+                    {
+                        MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
+                        result = await fiscall_print_pay(pay);
+                    }
                 }
             }
 
             return result;
-
         }
 
         public decimal calculation_of_the_sum_of_the_document()
@@ -4580,7 +4625,8 @@ namespace Cash8Avalon
                                         "sertificate_money1," +
                                         "guid," +
                                         //"guid1," +
-                                        "payment_by_sbp) VALUES(" +
+                                        "payment_by_sbp," +
+                                        "Extra) VALUES(" +
 
                                         "@document_number," +
                                         "@date_time_start," +
@@ -4620,7 +4666,8 @@ namespace Cash8Avalon
                                         "@sertificate_money1," +
                                         "@guid," +
                                         //"@guid1," +
-                                        "@payment_by_sbp)", conn);
+                                        "@payment_by_sbp," +
+                                        "@extra)", conn);
 
                 // Заполнение параметров заголовка (оставить как было)
                 command.Parameters.AddWithValue("document_number", numdoc);
@@ -4681,6 +4728,7 @@ namespace Cash8Avalon
                 //command.Parameters.AddWithValue("guid1", guid1);
                 command.Parameters.AddWithValue("payment_by_sbp", payment_by_sbp);
                 command.Parameters.AddWithValue("sent_to_processing_center", 0);
+                command.Parameters.AddWithValue("extra", this.Extra);
 
                 command.Transaction = tran;
                 command.ExecuteNonQuery();
@@ -5549,39 +5597,49 @@ namespace Cash8Avalon
                 }
 
                 // ✅ Проверка маркированного товара
-                if (productData.IsMarked())
+                if (!await MainStaticClass.GetOfflineAsync())
                 {
-                    bool error = false;
-
-                    if (string.IsNullOrEmpty(marking_code))
+                    if (productData.IsMarked())
                     {
-                        var dialog = new InputActionBarcode
+                        bool error = false;
+
+                        if (string.IsNullOrEmpty(marking_code))
                         {
-                            call_type = 6,
-                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                            CanResize = false,
-                            SystemDecorations = SystemDecorations.None
-                        };
-
-                        bool? result = await dialog.ShowModalBlocking(this as Window);
-                        await ActivateWindow(this);
-
-                        if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
-                        {
-                            marking_code = CleanQrCodeString(dialog.EnteredBarcode);
-
-                            if (!qr_code_lenght.Contains(marking_code.Length))
+                            var dialog = new InputActionBarcode
                             {
-                                await MessageBoxHelper.Show(
-                                    $"{marking_code}\r\nВаш код маркировки имеет длину {marking_code.Length} символов, " +
-                                    "при этом он не входит в допустимый диапазон.",
-                                    "Проверка qr-кода",
-                                    MessageBoxButton.OK,
-                                    MessageBoxType.Error,
-                                    this);
-                                error = true;
+                                call_type = 6,
+                                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                                CanResize = false,
+                                SystemDecorations = SystemDecorations.None
+                            };
+
+                            bool? result = await dialog.ShowModalBlocking(this as Window);
+                            await ActivateWindow(this);
+
+                            if (result == true && !string.IsNullOrEmpty(dialog.EnteredBarcode))
+                            {
+                                marking_code = CleanQrCodeString(dialog.EnteredBarcode);
+
+                                if (!qr_code_lenght.Contains(marking_code.Length))
+                                {
+                                    await MessageBoxHelper.Show(
+                                        $"{marking_code}\r\nВаш код маркировки имеет длину {marking_code.Length} символов, " +
+                                        "при этом он не входит в допустимый диапазон.",
+                                        "Проверка qr-кода",
+                                        MessageBoxButton.OK,
+                                        MessageBoxType.Error,
+                                        this);
+                                    error = true;
+                                }
+                                else if (string.IsNullOrEmpty(marking_code))
+                                {
+                                    if (!productData.IsRefusalMarking())
+                                    {
+                                        error = true;
+                                    }
+                                }
                             }
-                            else if (string.IsNullOrEmpty(marking_code))
+                            else
                             {
                                 if (!productData.IsRefusalMarking())
                                 {
@@ -5589,82 +5647,81 @@ namespace Cash8Avalon
                                 }
                             }
                         }
+
+                        if (error)
+                        {
+                            LastTovar.Text = barcode;
+                            await ShowTovarNotFoundWindow(this);
+                            this.Focus();
+                            return;
+                        }
+
+                        //if (!MainStaticClass.Offline)
+                        //{
+                        if (marking_code.Trim() !=
+                            "") //Может быть пустой если стоит признак пропускать маркировку и отказались от ввода кода 
+                        {
+                            marking_code = add_gs1(marking_code);
+
+                            if (!string.IsNullOrEmpty(marking_code))
+                            {
+                                if (CheckMarkingExists(marking_code))
+                                {
+                                    await MessageBoxHelper.Show(
+                                        "Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.",
+                                        "Проверка маркировки",
+                                        MessageBoxButton.OK,
+                                        MessageBoxType.Error,
+                                        this);
+                                    return;
+                                }
+                            }
+
+                            if (productData.IsCDNCheck())
+                            {
+                                bool cdnOk = MainStaticClass.IncludedPiot
+                                    ? await MainStaticClass.piot_cdn_check(productData, marking_code, this)
+                                    : await MainStaticClass.cdn_check(productData, marking_code, this);
+
+                                if (!cdnOk)
+                                {
+                                    if (!productData.IsRefusalMarking())
+                                    {
+                                        await ShowTovarNotFoundWindow(this);
+                                        this.Focus();
+                                        await ActivateWindow(this);
+                                    }
+
+                                    return;
+                                }
+
+                                await ActivateWindow(this);
+                            }
+
+                            var printingUsingLibraries = new PrintingUsingLibraries();
+                            if (!await printingUsingLibraries.check_marking_code(
+                                    marking_code,
+                                    this.numdoc.ToString(),
+                                    this.cdn_markers_result_check,
+                                    this.check_type.SelectedIndex))
+                            {
+                                LastTovar.Text = barcode;
+                                await ShowTovarNotFoundWindow(this);
+                                this.Focus();
+                                return;
+                            }
+                        }
                         else
                         {
                             if (!productData.IsRefusalMarking())
                             {
-                                error = true;
-                            }
-                        }
-                    }
-
-                    if (error)
-                    {
-                        LastTovar.Text = barcode;
-                        await ShowTovarNotFoundWindow(this);
-                        this.Focus();
-                        return;
-                    }
-
-                    if (marking_code.Trim() != "")//Может быть пустой если стоит признак пропускать маркировку и отказались от ввода кода 
-                    {
-                        marking_code = add_gs1(marking_code);
-
-                        if (!string.IsNullOrEmpty(marking_code))
-                        {
-                            if (CheckMarkingExists(marking_code))
-                            {
-                                await MessageBoxHelper.Show(
-                                    "Маркировка этого товара уже добавлена в чек. Нельзя добавить одну и ту же маркировку дважды.",
-                                    "Проверка маркировки",
-                                    MessageBoxButton.OK,
-                                    MessageBoxType.Error,
-                                    this);
+                                LastTovar.Text = barcode;
+                                await ShowTovarNotFoundWindow(this);
+                                this.Focus();
                                 return;
                             }
                         }
-
-                        if (productData.IsCDNCheck())
-                        {
-                            bool cdnOk = MainStaticClass.IncludedPiot
-                                ? await MainStaticClass.piot_cdn_check(productData, marking_code, this)
-                                : await MainStaticClass.cdn_check(productData, marking_code, this);
-
-                            if (!cdnOk)
-                            {
-                                if (!productData.IsRefusalMarking())
-                                {
-                                    await ShowTovarNotFoundWindow(this);
-                                    this.Focus();
-                                    await ActivateWindow(this);
-                                }
-                                return;
-                            }
-                            await ActivateWindow(this);
-                        }
-
-                        var printingUsingLibraries = new PrintingUsingLibraries();
-                        if (!await printingUsingLibraries.check_marking_code(
-                            marking_code,
-                            this.numdoc.ToString(),
-                            this.cdn_markers_result_check,
-                            this.check_type.SelectedIndex))
-                        {
-                            LastTovar.Text = barcode;
-                            await ShowTovarNotFoundWindow(this);
-                            this.Focus();
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        if (!productData.IsRefusalMarking())
-                        {
-                            LastTovar.Text = barcode;
-                            await ShowTovarNotFoundWindow(this);
-                            this.Focus();
-                            return;
-                        }
+                        //}
                     }
                 }
 
@@ -5807,7 +5864,8 @@ namespace Cash8Avalon
                     UpdateTotalSum();
                     ShowQuantityEffect(productIndex, true);
                     SelectProductRow(productIndex);
-                    _productsScrollViewer?.Focus();
+                    //_productsScrollViewer?.Focus();
+                    await RestoreFocusToSearchBoxAsync();
                     return;
                 }
 
@@ -5846,9 +5904,55 @@ namespace Cash8Avalon
                 // ✅ Диалог количества для весового товара
                 //if (productItem.IsFractional)
                 //{
+                //    double initialQuantity = 0.001; // Значение по умолчанию
+
+                //    // === НОВАЯ ЛОГИКА ВЕСОВ ===
+                //    try
+                //    {
+                //        // Проверяем настройку (предполагаем, что метод GetWeightAutomatically есть в MainStaticClass)
+                //        // Если его нет, просто закомментируйте эту проверку или замените на свою переменную
+                //        if (await MainStaticClass.GetWeightAutomaticallyAsync() == 1)
+                //        {
+                //            // Спрашиваем пользователя
+                //            var dialogResult = await MessageBoxHelper.Show(
+                //                "Ввод веса будет из весов?",
+                //                "Источник веса",
+                //                MessageBoxButton.YesNo,
+                //                MessageBoxType.Question,
+                //                this);
+
+                //            if (dialogResult == MessageBoxResult.Yes)
+                //            {
+                //                // Получаем вес (предполагаем, что метод GetWeight есть в MainStaticClass)
+                //                double weightFromScales = await MainStaticClass.GetWeight();
+
+                //                if (weightFromScales > 0)
+                //                {
+                //                    initialQuantity = weightFromScales;
+                //                    Console.WriteLine($"✓ Получен вес с весов: {initialQuantity}");
+                //                }
+                //                else
+                //                {
+                //                    await MessageBoxHelper.Show(
+                //                        "Не удалось получить стабильный вес с весов (вес = 0). Введите вручную.",
+                //                        "Внимание",
+                //                        MessageBoxButton.OK,
+                //                        MessageBoxType.Warning,
+                //                        this);
+                //                }
+                //            }
+                //        }
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        Console.WriteLine($"✗ Ошибка при опросе весов: {ex.Message}");
+                //        // Если произошла ошибка связи с весами, просто пропускаем и открываем диалог с 0.001
+                //    }
+                //    // ==========================
+
                 //    double? result = await ShowQuantityDialog(
                 //        productItem.Tovar,
-                //        0.001,
+                //        initialQuantity, // Передаем полученный вес или 0.001
                 //        productItem.IsFractional,
                 //        0);
 
@@ -5866,66 +5970,71 @@ namespace Cash8Avalon
                 // ✅ Диалог количества для весового товара
                 if (productItem.IsFractional)
                 {
-                    double initialQuantity = 0.001; // Значение по умолчанию
-
-                    // === НОВАЯ ЛОГИКА ВЕСОВ ===
-                    try
+                    // ✅ ИСПРАВЛЕНИЕ: Если вес уже был получен из штрихкода (23...), используем его!
+                    if (ProductFromScales && WeightFromScales > 0)
                     {
-                        // Проверяем настройку (предполагаем, что метод GetWeightAutomatically есть в MainStaticClass)
-                        // Если его нет, просто закомментируйте эту проверку или замените на свою переменную
-                        if (await MainStaticClass.GetWeightAutomaticallyAsync() == 1)
-                        {
-                            // Спрашиваем пользователя
-                            var dialogResult = await MessageBoxHelper.Show(
-                                "Ввод веса будет из весов?",
-                                "Источник веса",
-                                MessageBoxButton.YesNo,
-                                MessageBoxType.Question,
-                                this);
-
-                            if (dialogResult == MessageBoxResult.Yes)
-                            {
-                                // Получаем вес (предполагаем, что метод GetWeight есть в MainStaticClass)
-                                double weightFromScales = await MainStaticClass.GetWeight();
-
-                                if (weightFromScales > 0)
-                                {
-                                    initialQuantity = weightFromScales;
-                                    Console.WriteLine($"✓ Получен вес с весов: {initialQuantity}");
-                                }
-                                else
-                                {
-                                    await MessageBoxHelper.Show(
-                                        "Не удалось получить стабильный вес с весов (вес = 0). Введите вручную.",
-                                        "Внимание",
-                                        MessageBoxButton.OK,
-                                        MessageBoxType.Warning,
-                                        this);
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"✗ Ошибка при опросе весов: {ex.Message}");
-                        // Если произошла ошибка связи с весами, просто пропускаем и открываем диалог с 0.001
-                    }
-                    // ==========================
-
-                    double? result = await ShowQuantityDialog(
-                        productItem.Tovar,
-                        initialQuantity, // Передаем полученный вес или 0.001
-                        productItem.IsFractional,
-                        0);
-
-                    if (result != null)
-                    {
-                        productItem.Quantity = Convert.ToDecimal(result);
+                        productItem.Quantity = Convert.ToDecimal(WeightFromScales);
+                        Console.WriteLine($"✓ Вес получен из штрихкода: {WeightFromScales}");
                     }
                     else
                     {
-                        await ShowTovarNotFoundWindow(this);
-                        return;
+                        // Стандартная логика, если штрихкод был обычным (не весовым)
+                        double initialQuantity = 0.001; // Значение по умолчанию
+
+                        // === НОВАЯ ЛОГИКА ВЕСОВ ===
+                        try
+                        {
+                            if (await MainStaticClass.GetWeightAutomaticallyAsync() == 1)
+                            {
+                                var dialogResult = await MessageBoxHelper.Show(
+                                    "Ввод веса будет из весов?",
+                                    "Источник веса",
+                                    MessageBoxButton.YesNo,
+                                    MessageBoxType.Question,
+                                    this);
+
+                                if (dialogResult == MessageBoxResult.Yes)
+                                {
+                                    double weightFromScales = await MainStaticClass.GetWeight();
+
+                                    if (weightFromScales > 0)
+                                    {
+                                        initialQuantity = weightFromScales;
+                                        Console.WriteLine($"✓ Получен вес с весов: {initialQuantity}");
+                                    }
+                                    else
+                                    {
+                                        await MessageBoxHelper.Show(
+                                            "Не удалось получить стабильный вес с весов (вес = 0). Введите вручную.",
+                                            "Внимание",
+                                            MessageBoxButton.OK,
+                                            MessageBoxType.Warning,
+                                            this);
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"✗ Ошибка при опросе весов: {ex.Message}");
+                        }
+                        // ==========================
+
+                        double? result = await ShowQuantityDialog(
+                            productItem.Tovar,
+                            initialQuantity,
+                            productItem.IsFractional,
+                            0);
+
+                        if (result != null)
+                        {
+                            productItem.Quantity = Convert.ToDecimal(result);
+                        }
+                        else
+                        {
+                            await ShowTovarNotFoundWindow(this);
+                            return;
+                        }
                     }
                 }
 
@@ -5934,6 +6043,8 @@ namespace Cash8Avalon
                 _productsData.Add(productItem);
                 await AddSingleProductToGrid(productItem);
                 UpdateTotalSum();
+                // ЛОГ 3: Состояние при добавлении нового товара
+                LogProductsState($"3. При добавлении товара {barcode}");
                 await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
                 SelectProductRow(_productsData.Count - 1);
                 //await RestoreFocusLinux_productsScrollViewerAsync();
@@ -5960,15 +6071,53 @@ namespace Cash8Avalon
                 }
             }
         }
-        
+
         /// <summary>
         /// Надёжно возвращает фокус в поле ввода штрихкода ПОСЛЕ добавления товара.
         /// Ждет, пока Avalonia отрисует новую строку в таблице, и только потом забирает фокус.
         /// </summary>
+        //private async Task RestoreFocusToSearchBoxAsync()
+        //{
+        //    // 1. Пауза, чтобы Avalonia успела создать визуальные элементы новой строки
+        //    await Task.Delay(100);
+
+        //    await Dispatcher.UIThread.InvokeAsync(() =>
+        //    {
+        //        if (_isDisposed || !this.IsVisible || InputSearchProduct == null || PaymentAttempted) return;
+
+        //        try
+        //        {
+        //            // 2. "Ядерный трюк" для Linux (если он вам нужен был раньше, оставляем)
+        //            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        //            {
+        //                this.Topmost = true;
+        //                Dispatcher.UIThread.Post(() =>
+        //                {
+        //                    try { this.Topmost = false; }
+        //                    catch { }
+        //                }, DispatcherPriority.ApplicationIdle);
+        //            }
+
+        //            // 3. ЦЕЛЕВОЙ ФОКУС: Возвращаем фокус в поле ввода
+        //            InputSearchProduct.Focus();
+
+        //            // 4. КРИТИЧЕСКИ ВАЖНО: Ставим каретку в конец, чтобы следующий штрихкод печатался нормально
+        //            InputSearchProduct.CaretIndex = InputSearchProduct.Text?.Length ?? 0;
+
+        //            Console.WriteLine("[Focus] Фокус принудительно возвращен в поле ввода товара");
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine($"[Focus] Предупреждение: не удалось вернуть фокус: {ex.Message}");
+        //            StopFocusKeeper();
+        //        }
+        //    }, DispatcherPriority.Render); // Render гарантирует, что это сработает ПОСЛЕ отрисовки таблицы
+        //}
+
         private async Task RestoreFocusToSearchBoxAsync()
         {
-            // 1. Пауза, чтобы Avalonia успела создать визуальные элементы новой строки
-            await Task.Delay(100);
+            // ✅ Ждем не по таймеру, а пока UI-поток реально освободится и отрисует таблицу
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -5976,7 +6125,6 @@ namespace Cash8Avalon
 
                 try
                 {
-                    // 2. "Ядерный трюк" для Linux (если он вам нужен был раньше, оставляем)
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
                         this.Topmost = true;
@@ -5987,22 +6135,22 @@ namespace Cash8Avalon
                         }, DispatcherPriority.ApplicationIdle);
                     }
 
-                    // 3. ЦЕЛЕВОЙ ФОКУС: Возвращаем фокус в поле ввода
+                    // Снимаем фокус с таблицы принудительно перед тем как отдать полю
+                    this.FocusManager?.ClearFocus();
+
                     InputSearchProduct.Focus();
-            
-                    // 4. КРИТИЧЕСКИ ВАЖНО: Ставим каретку в конец, чтобы следующий штрихкод печатался нормально
                     InputSearchProduct.CaretIndex = InputSearchProduct.Text?.Length ?? 0;
-            
-                    Console.WriteLine("[Focus] Фокус принудительно возвращен в поле ввода товара");
+
+                    Console.WriteLine("[Focus] Фокус возвращен в поле ввода");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[Focus] Предупреждение: не удалось вернуть фокус: {ex.Message}");
+                    Console.WriteLine($"[Focus] Ошибка: {ex.Message}");
                     StopFocusKeeper();
                 }
-            }, DispatcherPriority.Render); // Render гарантирует, что это сработает ПОСЛЕ отрисовки таблицы
+            }, DispatcherPriority.Render);
         }
-        
+
 
         /// <summary>
         /// Надёжно восстанавливает фокус на таблицу товаров (Grid).
