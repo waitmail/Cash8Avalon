@@ -68,6 +68,8 @@ namespace Cash8Avalon
 
         private Button _buttonPay;
         private Button _button1;
+        
+        private bool _isPaymentInProgress = false;
 
 
         public Pay()
@@ -346,7 +348,11 @@ namespace Cash8Avalon
             switch (e.Key)
             {
                 case Key.F5: e.Handled = true; Button1_Click(sender, e); break;
-                case Key.F12: e.Handled = true; button2_Click(null, null); break;
+                case Key.F12: 
+                    e.Handled = true;
+                    if (_isPaymentInProgress) return; 
+                    button2_Click(null, null);
+                    break;
                 case Key.Y: e.Handled = true; this.CashSum = this.PaySum; ClearNonCash(); _cashSumTextBox?.Focus(); break;
                 //case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); this.FindControl<TextBox>("non_cash_sum")?.Focus(); break;
                 case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); _nonCashSumTextBox?.Focus(); break;
@@ -475,6 +481,15 @@ namespace Cash8Avalon
                     MainStaticClass.write_event_in_log("[Pay.button2_Click] Button disabled, exiting.", "PayWindow", cc?.numdoc.ToString() ?? "0");
                     return;
                 }
+                
+                // ★ Защита от двойного клика / F12
+                if (_isPaymentInProgress)
+                {
+                    MainStaticClass.write_event_in_log("[Pay.button2_Click] Повторный вызов заблокирован!", "PayWindow", cc?.numdoc.ToString() ?? "0");
+                    return;
+                }
+
+                _isPaymentInProgress = true;
 
                 // Проверка ввода копеек
                 if (!await copFilledCorrectly()) { CalculateChange(); return; }
@@ -518,96 +533,17 @@ namespace Cash8Avalon
 
                 CalculateChange();
             }
+            finally
+            {
+                // Разблокируем только если оплата не увенчалась успехом. 
+                // Если it_is_paid закрыла окно (this.Close()), то этот код всё равно выполнится, 
+                // но форма уже будет закрываться.
+                _isPaymentInProgress = false;
+                CalculateChange(); // Внутри вызывается _buttonPay.IsEnabled = totalPaid >= paySum;
+            }
         }
 
-        // private async Task<bool> ValidateInputs()
-        // {
-        //     // Вспомогательная функция безопасного парсинга
-        //     double Parse(string text)
-        //     {
-        //         if (string.IsNullOrWhiteSpace(text)) return 0.0;
-        //         if (double.TryParse(text, out double res)) return res;
-        //         if (double.TryParse(text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out res)) return res;
-        //         return 0.0;
-        //     }
-        //
-        //     if (cc == null)
-        //     {
-        //         MainStaticClass.write_event_in_log($"[Pay.ValidateInputs] Error: cc is null", "PayWindow", "0");
-        //         return false;
-        //     }
-        //
-        //     // ИСПОЛЬЗУЕМ СВОЙСТВА (Properties)
-        //     string paySumStr = this.PaySum;
-        //     string changeStr = this.Remainder;
-        //     string certSumStr = this.CertificatesSum;
-        //     string bonusManyStr = this.BonusMany;
-        //     string cashSumStr = this.CashSum;
-        //
-        //     // Парсим значения
-        //     double cash_money = Math.Round(Parse(cashSumStr), 2);
-        //     double non_cash_money = Math.Round(get_non_cash_sum(), 2);
-        //     double sertificate_money = Math.Round(Parse(certSumStr), 2);
-        //     double bonus_money = Math.Round(Parse(bonusManyStr), 2);
-        //     double sum_on_document = Math.Round(Parse(paySumStr), 2);
-        //     double remainderVal = Parse(changeStr);
-        //
-        //     double total_paid = cash_money + non_cash_money + sertificate_money + bonus_money;
-        //
-        //     if (total_paid < sum_on_document)
-        //     {
-        //         await MessageBoxHelper.Show("Проверьте сумму внесенной оплаты\r\n оплат внесено"+ total_paid.ToString(), "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //         return false;
-        //     }
-        //
-        //     if (remainderVal > 0 && cc.check_type.SelectedIndex != 0)
-        //     {
-        //         await MessageBoxHelper.Show(" Сумма возврата должна быть равна сумме оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //         return false;
-        //     }
-        //
-        //     if (bonus_money > 0)
-        //     {
-        //         if (!string.IsNullOrEmpty(this.BonusSum)) this.BonusSum = "0";
-        //         if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
-        //         {
-        //             await MessageBoxHelper.Show("Сумма сертификатов + карта + бонусы превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //             return false;
-        //         }
-        //     }
-        //     else
-        //     {
-        //         if (non_cash_money + sertificate_money > sum_on_document)
-        //         {
-        //             await MessageBoxHelper.Show(" Сумма сертификатов + карта превышает сумму чека ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //             return false;
-        //         }
-        //     }
-        //
-        //     if ((MainStaticClass.GetWorkSchema == 1) || (MainStaticClass.GetWorkSchema == 3) || (MainStaticClass.GetWorkSchema == 4))
-        //     {
-        //         double cash_final = cash_money - remainderVal;
-        //         double sum_doc_calc = Convert.ToDouble(cc.calculation_of_the_sum_of_the_document());
-        //
-        //         if (Math.Round(sum_doc_calc, 2) != Math.Round((cash_final + non_cash_money + sertificate_money + bonus_money), 2))
-        //         {
-        //             await MessageBoxHelper.Show(" Повторно внесите суммы оплаты, обнаружено не схождение в окне оплаты ", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //             return false;
-        //         }
-        //     }
-        //
-        //     if (cc.check_type.SelectedIndex == 1)
-        //     {
-        //         double cash_final = cash_money - remainderVal;
-        //         if (!MainStaticClass.validate_cash_sum_non_cash_sum_on_return(cc.id_sale, cash_final, non_cash_money))
-        //         {
-        //             return false;
-        //         }
-        //     }
-        //
-        //     return true;
-        // }
-
+        
         private async Task<bool> ValidateInputs()
         {
             // Вспомогательная функция безопасного парсинга в decimal (вместо double)
@@ -665,7 +601,7 @@ namespace Cash8Avalon
             {
                 // ⚠️ ВНИМАНИЕ: Эта строка сбрасывала бонусы на форме прямо во время валидации! 
                 // Если это не задумано, её нужно убрать!
-                if (!string.IsNullOrEmpty(this.BonusSum)) this.BonusSum = "0"; 
+                if (!string.IsNullOrEmpty(this.BonusSum)) this.BonusSum = "0";
 
                 if (non_cash_money + sertificate_money + bonus_money > sum_on_document)
                 {
@@ -2000,7 +1936,7 @@ namespace Cash8Avalon
 
                 MainStaticClass.write_event_in_log($"[TRAP {currentTrap}] Вход в it_is_paid", logCtx,
                     cashCheck?.numdoc.ToString() ?? "0");
-                
+
                 // ═══════════════════════════════════════════════════════════════
                 // ШАГ 1: Предварительная запись черновика в БД
                 // ═══════════════════════════════════════════════════════════════
@@ -2012,17 +1948,33 @@ namespace Cash8Avalon
                 // ═══════════════════════════════════════════════════════════════
                 // ВАЖНО: СРАЗУ ВКЛЮЧАЕМ ФЛАГ ПОПЫТКИ ОПЛАТЫ (БЛОКИРОВКА ЧЕКА)
                 // По логике: F12 нажата -> чек заблокирован от пересчета акций и удалений.
-                // Разблокировка происходит только при закрытии окна.
+                // Разблокировка происходит только при закрытии окна,
+                // Либо если не хватает средств на карте
                 // ═══════════════════════════════════════════════════════════════
-                if (MainStaticClass.GetAcquiringBank == 1)//ВТБ
+                cashCheck.PaymentAttempted = true;
+                
+                decimal ParseDecimal(string text) { if (string.IsNullOrWhiteSpace(text)) return 0m; text = text.Replace(",", "."); return decimal.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture); }
+                int ParseInt(string text) { if (string.IsNullOrWhiteSpace(text)) return 0; return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture); }
+
+                decimal nonCashSum = 0;
+                if (_nonCashSumTextBox != null)
                 {
-                    cashCheck.PaymentAttempted = true;
+                    nonCashSum = ParseDecimal(_nonCashSumTextBox.Text);
+                    if (_nonCashSumKopTextBox != null) nonCashSum += ParseInt(_nonCashSumKopTextBox.Text) / 100m;
+                }
+                else
+                {
+                    MessageBox.Show("Не удалось посчитать сумму по карте _nonCashSumTextBox==null", "Проверка ЧС",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
                 }
 
-                //cashCheck.Extra = this._extra.IsChecked;
+                if ( nonCashSum > 0 )
+                {
+                    _extra.IsChecked = false;
+                }
+                
                 cashCheck.Extra = this._extra.IsChecked ?? false;
-
-
+                
                 currentTrap = "0.1";
                 MainStaticClass.write_event_in_log(
                     $"[TRAP {currentTrap}] Controls init: " +
@@ -2702,9 +2654,47 @@ namespace Cash8Avalon
             }
         }
 
+        //private void CalculateChange()
+        //{
+
+        //    if (_paySumTextBox != null && _cashSumTextBox != null && _remainderTextBox != null)
+        //    {
+        //        try
+        //        {
+        //            decimal ParseDecimal(string text) { if (string.IsNullOrWhiteSpace(text)) return 0m; text = text.Replace(",", "."); return decimal.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture); }
+        //            int ParseInt(string text) { if (string.IsNullOrWhiteSpace(text)) return 0; return int.Parse(text, NumberStyles.Any, CultureInfo.InvariantCulture); }
+
+        //            decimal paySum = ParseDecimal(_paySumTextBox.Text);
+        //            decimal cashSum = ParseDecimal(_cashSumTextBox.Text);
+        //            decimal nonCashSum = 0;
+        //            if (_nonCashSumTextBox != null) { nonCashSum = ParseDecimal(_nonCashSumTextBox.Text); if (_nonCashSumKopTextBox != null) nonCashSum += ParseInt(_nonCashSumKopTextBox.Text) / 100m; }
+        //            decimal certificatesSum = _sertificatesSumTextBox != null ? ParseDecimal(_sertificatesSumTextBox.Text) : 0;
+        //            decimal bonusSum = _bonusManyTextBox != null ? ParseDecimal(_bonusManyTextBox.Text) : 0;
+
+        //            decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
+        //            decimal remainder = totalPaid - paySum;
+        //            _remainderTextBox.Text = remainder.ToString("F2");
+
+        //            if (remainder < 0 || remainder > cashSum) _remainderTextBox.Foreground = Brushes.Red;
+        //            else _remainderTextBox.Foreground = Brushes.Green;
+
+        //            //var buttonPay = this.FindControl<Button>("button_pay");
+        //            if (_buttonPay != null) _buttonPay.IsEnabled = totalPaid >= paySum;
+        //        }
+        //        catch
+        //        {
+        //            _remainderTextBox.Text = "0.00";
+        //            _remainderTextBox.Foreground = Brushes.Green;                    
+        //            if (_buttonPay != null)
+        //            {
+        //                _buttonPay.IsEnabled = false;
+        //            }
+        //        }            
+        //    }
+        //}
+
         private void CalculateChange()
         {
-
             if (_paySumTextBox != null && _cashSumTextBox != null && _remainderTextBox != null)
             {
                 try
@@ -2715,9 +2705,25 @@ namespace Cash8Avalon
                     decimal paySum = ParseDecimal(_paySumTextBox.Text);
                     decimal cashSum = ParseDecimal(_cashSumTextBox.Text);
                     decimal nonCashSum = 0;
-                    if (_nonCashSumTextBox != null) { nonCashSum = ParseDecimal(_nonCashSumTextBox.Text); if (_nonCashSumKopTextBox != null) nonCashSum += ParseInt(_nonCashSumKopTextBox.Text) / 100m; }
+                    if (_nonCashSumTextBox != null)
+                    {
+                        nonCashSum = ParseDecimal(_nonCashSumTextBox.Text);
+                        if (_nonCashSumKopTextBox != null) nonCashSum += ParseInt(_nonCashSumKopTextBox.Text) / 100m;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Не удалось посчитать сумму по карте _nonCashSumTextBox==null", "Проверка ЧС",
+                            MessageBoxButton.OK, MessageBoxType.Error, this);
+                    }
                     decimal certificatesSum = _sertificatesSumTextBox != null ? ParseDecimal(_sertificatesSumTextBox.Text) : 0;
                     decimal bonusSum = _bonusManyTextBox != null ? ParseDecimal(_bonusManyTextBox.Text) : 0;
+
+                    // ★★★ НОВОЕ УСЛОВИЕ: Если введена сумма по карте, снимаем галочку ЧС ★★★
+                    if (nonCashSum > 0 && _extra != null && _extra.IsChecked == true) 
+                    //if ( nonCashSum > 0 )
+                    {
+                        _extra.IsChecked = false;
+                    }
 
                     decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
                     decimal remainder = totalPaid - paySum;
@@ -2726,23 +2732,22 @@ namespace Cash8Avalon
                     if (remainder < 0 || remainder > cashSum) _remainderTextBox.Foreground = Brushes.Red;
                     else _remainderTextBox.Foreground = Brushes.Green;
 
-                    //var buttonPay = this.FindControl<Button>("button_pay");
                     if (_buttonPay != null) _buttonPay.IsEnabled = totalPaid >= paySum;
                 }
                 catch
                 {
                     _remainderTextBox.Text = "0.00";
-                    _remainderTextBox.Foreground = Brushes.Green;                    
+                    _remainderTextBox.Foreground = Brushes.Green;
                     if (_buttonPay != null)
                     {
                         _buttonPay.IsEnabled = false;
                     }
-                }            
+                }
             }
         }
 
         //#region Свойства доступа к UI
-        
+
 
         ///// <summary>
         ///// Управляет видимостью и доступностью элементов управления бонусами

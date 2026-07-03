@@ -9,12 +9,85 @@ using Avalonia.VisualTree;
 using Npgsql;
 using System;
 using System.Data;
+using System.Drawing;
+using System.IO;
 using System.IO.Ports;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using QRCoder;
+using FontFamily = Avalonia.Media.FontFamily;
+using Image = Avalonia.Controls.Image;
 
 namespace Cash8Avalon
 {
+    
+    public class AesQrCrypto
+    {
+        // Секретный ключ (ровно 32 символа для AES-256)
+        private const string SecretKey = "MySuperSecretKey2024ForQRCodes!!";
+
+        public static string Encrypt(string plainText)
+        {
+            byte[] keyBytes = Encoding.UTF8.GetBytes(SecretKey);
+            byte[] iv = new byte[16];
+
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(iv);
+            }
+
+            using (var aes = Aes.Create())
+            {
+                aes.Key = keyBytes;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using (var encryptor = aes.CreateEncryptor())
+                using (var ms = new MemoryStream())
+                {
+                    ms.Write(iv, 0, iv.Length);
+                    using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                    using (var sw = new StreamWriter(cs))
+                    {
+                        sw.Write(plainText);
+                    }
+                    return Convert.ToBase64String(ms.ToArray());
+                }
+            }
+        }
+
+        public static string Decrypt(string base64CipherText)
+        {
+            byte[] fullBytes = Convert.FromBase64String(base64CipherText);
+            byte[] keyBytes = Encoding.UTF8.GetBytes(SecretKey);
+
+            byte[] iv = new byte[16];
+            Buffer.BlockCopy(fullBytes, 0, iv, 0, 16);
+
+            byte[] cipherBytes = new byte[fullBytes.Length - 16];
+            Buffer.BlockCopy(fullBytes, 16, cipherBytes, 0, cipherBytes.Length);
+
+            using (var aes = Aes.Create())
+            {
+                aes.Key = keyBytes;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using (var decryptor = aes.CreateDecryptor())
+                using (var ms = new MemoryStream(cipherBytes))
+                using (var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                using (var sr = new StreamReader(cs))
+                {
+                    return sr.ReadToEnd();
+                }
+            }
+        }
+    }
     public partial class Constants : Window
     {
         private int m_cash_desk_number = 0;
@@ -208,6 +281,70 @@ namespace Cash8Avalon
             {
                 Console.WriteLine($"Ошибка загрузки настроек: {ex.Message}");
                 await MessageBox.Show($"Не удалось загрузить настройки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
+            }
+        }
+        
+        // Класс для наших данных (оставьте его, он нам пригодится, если захотите вернуть JSON)
+        public class StoreConfig
+        {
+            public string Guid { get; set; }
+            public string Nick { get; set; }
+            public long ExpireTimestamp { get; set; }
+        }
+
+        private async void GenerateQrButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // 1. Собираем данные 
+                string guid = MainStaticClass.Code_Shop;
+                string nick = MainStaticClass.Nick_Shop;
+
+                if (string.IsNullOrEmpty(nick)) nick = "Shop";
+
+                // 2. Формируем JSON строку
+                long expireTime = DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds();
+                string jsonString = $"{{\"guid\":\"{guid}\",\"nick\":\"{nick}\",\"exp\":{expireTime}}}";
+
+                // 3. Шифруем
+                string encryptedBase64 = AesQrCrypto.Encrypt(jsonString);
+
+                // 4. Генерируем QR-код
+                using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+                using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(encryptedBase64, QRCodeGenerator.ECCLevel.Q))
+                using (PngByteQRCode qrCode = new PngByteQRCode(qrCodeData))
+                {
+                    byte[] qrCodeImage = qrCode.GetGraphic(20);
+
+                    // 5. Превращаем массив байтов в картинку Avalonia
+                    using (var stream = new MemoryStream(qrCodeImage))
+                    {
+                        // ★ РЕШЕНИЕ: Явно указываем Avalonia.Media.Imaging.Bitmap ★
+                        Avalonia.Media.Imaging.Bitmap qrBitmap = new Avalonia.Media.Imaging.Bitmap(stream);
+
+                        // 6. Создаем окно с картинкой
+                        var qrWindow = new Window
+                        {
+                            Title = "QR-код для настройки планшета",
+                            Width = 320,
+                            Height = 380,
+                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                            Content = new Image
+                            {
+                                Source = qrBitmap,
+                                Stretch = Avalonia.Media.Stretch.Uniform, // Явно указываем Stretch от Avalonia
+                                Margin = new Avalonia.Thickness(10)
+                            }
+                        };
+
+                        // Показываем окно как диалог
+                        await qrWindow.ShowDialog(this);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ошибка генерации: " + ex.Message);
             }
         }
 

@@ -38,17 +38,12 @@ namespace Cash8Avalon
         private Stopwatch _stopwatch;
         private bool _userCancelled = false;
         private TextBlock _workHintText;
+        //private const bool USE_OPTIMIZED_SYNC = true;
+        private CheckBox _useOptimizedSyncCheckBox;
 
-        // ⬇⬇⬇ НОВЫЙ ФЛАГ — переключатель оптимизации штрихкодов ⬇⬇⬇
-        /// <summary>
-        /// true  — оптимизированная синхронизация (COPY + delta)
-        /// false — старый проверенный способ (DELETE ALL + INSERT по одному)
-        /// </summary>
-        private const bool USE_OPTIMIZED_SYNC = true;
+        private bool _useOptimizedSync = true;
 
         public event EventHandler? RequestClose;      
-
-        
 
         public LoadDataWebService()
         {
@@ -70,15 +65,17 @@ namespace Cash8Avalon
             _timeInfoText = this.FindControl<TextBlock>("timeInfoText");
             _progressPanel = this.FindControl<StackPanel>("progressPanel");
 
-            // ⬇⬇⬇ НОВОЕ ⬇⬇⬇
             _lastUpdateText = this.FindControl<TextBlock>("lastUpdateText");
             _workHintText = this.FindControl<TextBlock>("workHintText");
-            UpdateLastSyncDate(); // Сразу показываем дату последней загрузки при открытии окна
+
+            // ⬇⬇⬇ ДОБАВИТЬ ЭТУ СТРОКУ ⬇⬇⬇
+            _useOptimizedSyncCheckBox = this.FindControl<CheckBox>("useOptimizedSyncCheckBox");
+
+            UpdateLastSyncDate();
 
             if (_btn_new_load != null)
                 _btn_new_load.Click += Btn_new_load_Click;
 
-            // Скрываем панель прогресса при старте
             if (_progressPanel != null)
                 _progressPanel.IsVisible = false;
 
@@ -247,13 +244,8 @@ namespace Cash8Avalon
             public string LastDateDownloadTovar { get; set; }
             public string NumCash { get; set; }
 
-            public void Dispose()
-            {
-                // Освобождение ресурсов
-            }
+            public void Dispose() { }
         }
-
-       
         #endregion
 
         #region Обработчики событий UI
@@ -264,7 +256,6 @@ namespace Cash8Avalon
         }
 
         #endregion
-
 
         #region Основная логика загрузки
 
@@ -286,15 +277,17 @@ namespace Cash8Avalon
             if (result != MessageBoxResult.Yes)
                 return;
 
+            // ⬇⬇⬇ ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ ⬇⬇⬇
+            if (_useOptimizedSyncCheckBox != null)
+                _useOptimizedSync = _useOptimizedSyncCheckBox.IsChecked ?? true;
+
             _userCancelled = false;
             _cancellationTokenSource = new CancellationTokenSource();
             _stopwatch = Stopwatch.StartNew();
 
             try
             {
-                // Внутри SetLoadingState(true) уже отписывается _btn_new_load.Click -= Btn_new_load_Click;
-                SetLoadingState(true);
-
+                await SetLoadingStateAsync(true);
                 StartTimer();
 
                 var loadTask = Task.Run(async () =>
@@ -339,16 +332,75 @@ namespace Cash8Avalon
             }
             finally
             {
-                // Внутри SetLoadingState(false) уже подписывается _btn_new_load.Click += Btn_new_load_Click;
-                // Поэтому ручные += и -= здесь УДАЛЕНЫ!
-
-                SetLoadingState(false);
-
+                await SetLoadingStateAsync(false);
                 StopTimer();
                 _stopwatch?.Stop();
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
             }
+        }
+
+        private async Task SetLoadingStateAsync(bool isLoading)
+        {
+            _isLoading = isLoading;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_btn_new_load != null)
+                {
+                    if (isLoading)
+                    {
+                        _btn_new_load.Background = new SolidColorBrush(Color.Parse("#4CAF50"));
+                        _btn_new_load.Content = "Идет загрузка...";
+                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Wait);
+                        _btn_new_load.Click -= Btn_new_load_Click;
+                    }
+                    else
+                    {
+                        _btn_new_load.Background = new SolidColorBrush(Color.Parse("#2196F3"));
+                        _btn_new_load.Content = "Начать загрузку данных";
+                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Hand);
+                        _btn_new_load.Click += Btn_new_load_Click;
+                    }
+                }
+
+                if (_progressPanel != null)
+                    _progressPanel.IsVisible = isLoading;
+
+                if (_workHintText != null)
+                    _workHintText.IsVisible = isLoading;
+
+                // ⬇⬇⬇ ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ ⬇⬇⬇
+                if (_useOptimizedSyncCheckBox != null)
+                    _useOptimizedSyncCheckBox.IsEnabled = !isLoading;
+
+                if (_timeInfoText != null)
+                {
+                    if (isLoading)
+                    {
+                        _timeInfoText.Text = "Время загрузки: 00:00";
+                        _timeInfoText.IsVisible = true;
+                    }
+                }
+
+                if (isLoading)
+                {
+                    this.CanResize = false;
+                }
+                else
+                {
+                    this.CanResize = true;
+                    if (_progressBar1 != null)
+                    {
+                        _progressBar1.Value = 0;
+                        _progressBar1.IsIndeterminate = false;
+                    }
+                    if (_statusText != null)
+                        _statusText.Text = "";
+                    if (_progressPercent != null)
+                        _progressPercent.Text = "0%";
+                }
+            });
         }
 
         private async Task<(bool success, string errorMessage)> PerformFullLoadAsync(CancellationToken cancellationToken)
@@ -357,14 +409,12 @@ namespace Cash8Avalon
 
             try
             {
-                // Этап 1: Подготовка (без очистки памяти!)
                 await UpdateProgressAsync("Подготовка к загрузке...", 0);
                 await PrepareForLoadAsync(cancellationToken, skipClearMemory: true);
 
                 if (cancellationToken.IsCancellationRequested)
                     return (false, "Операция отменена");
 
-                // Этап 2: Проверка сервиса
                 await UpdateProgressAsync("Проверка соединения с веб-сервисом...", 5);
                 if (!await CheckServiceAvailabilityAsync(cancellationToken))
                 {
@@ -374,14 +424,12 @@ namespace Cash8Avalon
                 if (cancellationToken.IsCancellationRequested)
                     return (false, "Операция отменена");
 
-                // Этап 3: Создание временных таблиц
                 await UpdateProgressAsync("Подготовка временных таблиц...", 10);
                 await CreateTempTablesAsync(cancellationToken);
 
                 if (cancellationToken.IsCancellationRequested)
                     return (false, "Операция отменена");
 
-                // Этап 4: Получение данных с сервера
                 await UpdateProgressAsync("Получение данных с сервера...", 15);
                 var serverData = await GetDataFromServerAsync(cancellationToken);
                 if (!serverData.success)
@@ -395,10 +443,8 @@ namespace Cash8Avalon
                 if (cancellationToken.IsCancellationRequested)
                     return (false, "Операция отменена");
 
-                // Теперь прогресс 20%, готовимся к вставке данных в БД
                 await UpdateProgressAsync("Подготовка к сохранению данных...", 20);
 
-                // Этап 5: Сохранение данных в БД - здесь прогресс будет идти от 20% до 80%
                 var saveResult = await SaveDataToDatabaseAsync(serverData.data, cancellationToken, 20, 80);
                 if (!saveResult.success)
                 {
@@ -408,23 +454,22 @@ namespace Cash8Avalon
                 if (cancellationToken.IsCancellationRequested)
                     return (false, "Операция отменена");
 
-                // Этап 6: Финализация операций с БД
                 await UpdateProgressAsync("Завершение операций с базой данных...", 85);
                 await FinalizeLoadAsync(cancellationToken);
 
-                // ТОЛЬКО ПОСЛЕ УСПЕШНОЙ ЗАГРУЗКИ В БД:
-                // Этап 7: Очистка и перезаполнение памяти
-                if (!await MainStaticClass.SendResultGetData(MainStaticClass.MainWindow))
+                if (MainStaticClass.CashDeskNumber != 9)
                 {
-                    //MessageBox.Show("Не удалось отправить информацию об успешной загрузке");
-                    MainStaticClass.write_event_in_log("Не удалось отправить информацию об успешной загрузке ", "Загрузка данных", "0");
+                    if (!await MainStaticClass.SendResultGetData(MainStaticClass.MainWindow))
+                    {
+                        MainStaticClass.write_event_in_log("Не удалось отправить информацию об успешной загрузке ",
+                            "Загрузка данных", "0");
+                    }
                 }
 
                 await UpdateProgressAsync("Обновление данных в памяти...", 90);
                 var memoryResult = await RefreshMemoryDataAsync(cancellationToken);
                 if (!memoryResult.success)
                 {
-                    // Это предупреждение, но не критическая ошибка
                     errorMessage = memoryResult.errorMessage;
                     Console.WriteLine($"Предупреждение при обновлении памяти: {errorMessage}");
                 }
@@ -433,10 +478,7 @@ namespace Cash8Avalon
                     return (false, "Операция отменена");
 
                 await UpdateProgressAsync("Готово", 100);
-
-                // ⬇⬇⬇ НОВОЕ: Обновляем дату на экране сразу после успеха ⬇⬇⬇
                 UpdateLastSyncDate();
-
 
                 return (true, "");
             }
@@ -451,17 +493,12 @@ namespace Cash8Avalon
         {
             try
             {
-                // 0. Устанавливаем владельца для InventoryManager
                 InventoryManager.SetOwnerWindow(this);
-
-                // 1. Очищаем кэш в памяти
                 await UpdateProgressAsync("Очистка кэша в памяти...", 85);
                 InventoryManager.ClearDictionaryProductData();
 
-                // 2. Ждем немного для стабилизации
                 await Task.Delay(100, cancellationToken);
 
-                // 3. Заполняем товары
                 await UpdateProgressAsync("Загрузка товаров в память...", 90);
                 try
                 {
@@ -472,7 +509,6 @@ namespace Cash8Avalon
                     return (false, $"Ошибка при загрузке товаров в память: {ex.Message}");
                 }
 
-                // 4. Загружаем цены подарков (в фоне, не блокируя UI)
                 await UpdateProgressAsync("Загрузка цен подарков...", 93);
                 try
                 {
@@ -480,7 +516,6 @@ namespace Cash8Avalon
                     {
                         try
                         {
-                            // УБРАЛИ var _ = (нам не нужен результат, только сам факт вызова)
                             var _ = InventoryManager.DictionaryPriceGiftAction;
                         }
                         catch (Exception ex)
@@ -494,14 +529,12 @@ namespace Cash8Avalon
                     Console.WriteLine($"Предупреждение при фоновой загрузке цен: {ex.Message}");
                 }
 
-                // 5. Проверяем, что основной кэш товаров загружен
                 await Task.Delay(200, cancellationToken);
                 if (!InventoryManager.IsDictionaryValid)
                 {
                     return (false, "Кэш товаров не был успешно загружен");
                 }
 
-                // 6. Принудительная безопасная загрузка условий акций (в фоне)
                 await UpdateProgressAsync("Загрузка условий акций...", 96);
                 try
                 {
@@ -509,11 +542,7 @@ namespace Cash8Avalon
                     {
                         try
                         {
-                            // 1. Поднимаем "заградительный конус". 
                             LoadActionDataInMemory.StartRefresh();
-
-                            // 2. Заставляем свойства сходить в базу и подтянуть свежие данные
-                            // УБРАЛИ var _ = (вызываем свойства напрямую, чтобы не было конфликта имен)
                             _ = LoadActionDataInMemory.AllActionData1;
                             _ = LoadActionDataInMemory.AllActionData2;
                         }
@@ -523,7 +552,6 @@ namespace Cash8Avalon
                         }
                         finally
                         {
-                            // 3. Убираем "заградительный конус" в ЛЮБОМ случае
                             LoadActionDataInMemory.FinishRefresh();
                         }
                     }, cancellationToken);
@@ -546,12 +574,10 @@ namespace Cash8Avalon
         {
             try
             {
-                // Очищаем память только если явно не указано пропустить
                 if (!skipClearMemory)
                 {
                     try
                     {
-                        // Убрал Dispatcher - это не UI операция
                         InventoryManager.ClearDictionaryProductData();
                     }
                     catch (Exception ex)
@@ -560,7 +586,6 @@ namespace Cash8Avalon
                     }
                 }
 
-                // Сборка мусора
                 await Task.Run(() =>
                 {
                     try
@@ -604,16 +629,15 @@ namespace Cash8Avalon
 
             if (_stopwatch != null)
             {
-                _stopwatch.Stop(); // Останавливаем секундомер
+                _stopwatch.Stop();
                 var elapsed = _stopwatch.Elapsed;
 
-                // Выводим финальное время и ГАРАНТИРУЕМ, что оно останется видимым
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (_timeInfoText != null)
                     {
                         _timeInfoText.Text = $"Общее время загрузки: {elapsed:mm\\:ss}";
-                        _timeInfoText.IsVisible = true; // Явно оставляем видимым!
+                        _timeInfoText.IsVisible = true;
                     }
                 });
             }
@@ -646,73 +670,6 @@ namespace Cash8Avalon
                 Console.WriteLine($"Ошибка при создании временных таблиц: {ex.Message}");
             }
         }
-
-        //private async Task<(bool success, LoadPacketData data, string errorMessage)> GetDataFromServerAsync(CancellationToken cancellationToken)
-        //{
-        //    return await Task.Run(() =>
-        //    {
-        //        try
-        //        {
-        //            string nick_shop = MainStaticClass.Nick_Shop?.Trim();
-        //            if (string.IsNullOrEmpty(nick_shop))
-        //            {
-        //                return (false, null, "Не удалось получить название магазина");
-        //            }
-
-        //            string code_shop = MainStaticClass.Code_Shop?.Trim();
-        //            if (string.IsNullOrEmpty(code_shop))
-        //            {
-        //                return (false, null, "Не удалось получить код магазина");
-        //            }
-
-        //            string count_day = CryptorEngine.get_count_day();
-        //            string key = nick_shop + count_day + code_shop;
-
-        //            using (var queryPacketData = new QueryPacketData())
-        //            {
-        //                queryPacketData.NickShop = nick_shop;
-        //                queryPacketData.CodeShop = code_shop;
-        //                queryPacketData.LastDateDownloadTovar = last_date_download_tovars().ToString("dd-MM-yyyy");
-        //                queryPacketData.NumCash = MainStaticClass.CashDeskNumber.ToString();
-        //                queryPacketData.Version = MainStaticClass.version().Replace(".", "");
-
-        //                string data = JsonConvert.SerializeObject(queryPacketData,
-        //                    Formatting.Indented,
-        //                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-
-        //                string data_encrypt = CryptorEngine.Encrypt(data, true, key);
-
-        //                cancellationToken.ThrowIfCancellationRequested();
-
-        //                var loadPacketData = await getLoadPacketDataFullAsync(nick_shop, data_encrypt, key);
-
-        //                if (loadPacketData == null)
-        //                {
-        //                    return (false, null, "Не удалось получить данные с сервера (null результат)");
-        //                }
-
-        //                if (!loadPacketData.PacketIsFull)
-        //                {
-        //                    string errorMsg = "Пакет данных не полный";
-        //                    if (!string.IsNullOrEmpty(loadPacketData.Exception))
-        //                        errorMsg += $": {loadPacketData.Exception}";
-        //                    return (false, null, errorMsg);
-        //                }
-
-        //                if (loadPacketData.Exchange)
-        //                {
-        //                    return (false, null, "Пакет данных получен во время обновления данных на сервере");
-        //                }
-
-        //                return (true, loadPacketData, "");
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            return (false, null, $"Ошибка при получении данных с сервера: {ex.Message}");
-        //        }
-        //    }, cancellationToken);
-        //}
 
         private async Task<(bool success, LoadPacketData data, string errorMessage)> GetDataFromServerAsync(CancellationToken cancellationToken)
         {
@@ -747,10 +704,8 @@ namespace Cash8Avalon
 
                     string data_encrypt = CryptorEngine.Encrypt(data, true, key);
 
-                    // Проверяем отмену
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    // Вызываем чистый асинхронный метод напрямую, без Task.Run!
                     var loadPacketData = await getLoadPacketDataFullAsync(nick_shop, data_encrypt, key);
 
                     if (loadPacketData == null)
@@ -776,7 +731,6 @@ namespace Cash8Avalon
             }
             catch (OperationCanceledException)
             {
-                // Корректная обработка отмены задачи (если нажали "Отмена")
                 return (false, null, "Операция отменена пользователем");
             }
             catch (Exception ex)
@@ -785,124 +739,11 @@ namespace Cash8Avalon
             }
         }
 
-        //// Новая перегрузка метода с поддержкой прогресса
-        //private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
-        //    LoadPacketData loadPacketData,
-        //    CancellationToken cancellationToken,
-        //    int startProgress,
-        //    int endProgress)
-        //{
-        //    NpgsqlConnection conn = null;
-        //    NpgsqlTransaction tran = null;
-        //    string queryActual = "";
-
-        //    try
-        //    {
-        //        conn = MainStaticClass.NpgsqlConn();
-        //        await conn.OpenAsync(cancellationToken);
-        //        tran = await conn.BeginTransactionAsync(cancellationToken);
-
-        //        var queries = new List<string>();
-        //        PrepareDatabaseQueries(loadPacketData, queries);
-
-        //        int totalQueries = queries.Count;
-        //        int completedQueries = 0;
-
-        //        // Рассчитываем прогресс для каждого запроса
-        //        int progressRange = endProgress - startProgress;
-
-        //        foreach (string query in queries)
-        //        {
-        //            cancellationToken.ThrowIfCancellationRequested();
-        //            queryActual = query;
-
-        //            using (var command = new NpgsqlCommand(query, conn))
-        //            {
-        //                command.Transaction = tran;
-        //                await command.ExecuteNonQueryAsync(cancellationToken);
-        //            }
-
-        //            completedQueries++;
-
-        //            // Рассчитываем текущий прогресс
-        //            double progressPercentage = (double)completedQueries / totalQueries;
-        //            int currentProgress = startProgress + (int)(progressPercentage * progressRange);
-
-        //            await UpdateProgressAsync($"Выполнение запросов ({completedQueries}/{totalQueries})...", currentProgress);
-        //        }
-
-        //        // Обновление даты последнего обновления
-        //        string updateQuery = "UPDATE date_sync SET tovar = @date";
-        //        using (var command = new NpgsqlCommand(updateQuery, conn))
-        //        {
-        //            command.Transaction = tran;
-        //            command.Parameters.AddWithValue("@date", DateTime.Now);
-        //            int rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
-
-        //            if (rowsAffected == 0)
-        //            {
-        //                updateQuery = "INSERT INTO date_sync(tovar) VALUES(@date)";
-        //                command.CommandText = updateQuery;
-        //                await command.ExecuteNonQueryAsync(cancellationToken);
-        //            }
-        //        }
-
-        //        await tran.CommitAsync(cancellationToken);
-
-        //        // Отправка подтверждения
-        //        try
-        //        {
-        //            if (!await MainStaticClass.SendResultGetData(this))
-        //            {
-        //                Console.WriteLine("WARNING: Не удалось отправить информацию об успешной загрузке");
-        //            }
-        //        }
-        //        catch { }
-
-        //        return (true, "");
-        //    }
-        //    catch (NpgsqlException ex)
-        //    {
-
-        //        string errorMsg = $"Ошибка базы данных: {ex.Message}";
-        //        Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
-        //        await MessageBox.Show($"Ошибка базы данных: {ex.Message}" + queryActual, "Ошибка при загрузке", MessageBoxButton.OK, MessageBoxType.Error, MainStaticClass.MainWindow);
-        //        if (tran != null)
-        //        {
-        //            try { await tran.RollbackAsync(cancellationToken); } catch { }
-        //        }
-
-        //        return (false, errorMsg);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        string errorMsg = $"Ошибка при сохранении данных: {ex.Message}";
-        //        Console.WriteLine($"Ошибка: {ex.Message}");
-
-        //        if (tran != null)
-        //        {
-        //            try { await tran.RollbackAsync(cancellationToken); } catch { }
-        //        }
-
-        //        return (false, errorMsg);
-        //    }
-        //    finally
-        //    {
-        //        if (conn != null && conn.State == ConnectionState.Open)
-        //        {
-        //            try { await conn.CloseAsync(); } catch { }
-        //        }
-
-        //        conn?.Dispose();
-        //        tran?.Dispose();
-        //    }
-        //}
-
         private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
-LoadPacketData loadPacketData,
-CancellationToken cancellationToken,
-int startProgress,
-int endProgress)
+            LoadPacketData loadPacketData,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
         {
             NpgsqlConnection conn = null;
             NpgsqlTransaction tran = null;
@@ -917,9 +758,6 @@ int endProgress)
                 var queries = new List<string>();
                 PrepareDatabaseQueries(loadPacketData, queries);
 
-                // ═══════════════════════════════════════════════════
-                // Расчет распределения прогресса (5 этапов)
-                // ═══════════════════════════════════════════════════
                 int progressRange = endProgress - startProgress;
 
                 int tovarEndProgress;
@@ -928,13 +766,8 @@ int endProgress)
                 int sertStartProgress, sertEndProgress;
                 int barcodeStartProgress, barcodeEndProgress;
 
-                if (USE_OPTIMIZED_SYNC)
+                if (_useOptimizedSync)
                 {
-                    // 10% - Товары (COPY в tovar2)
-                    // 15% - Обычные запросы (шапки акций, реклама и т.д.)
-                    // 10% - Табличная часть акций (COPY)
-                    // 25% - Сертификаты (COPY + delta)
-                    // 40% - Штрихкоды (COPY + delta - самые тяжелые)
                     tovarEndProgress = startProgress + (int)(progressRange * 0.10);
                     queryStartProgress = tovarEndProgress;
                     queryEndProgress = startProgress + (int)(progressRange * 0.25);
@@ -947,7 +780,6 @@ int endProgress)
                 }
                 else
                 {
-                    // 100% - Обычные запросы (всё по старому)
                     tovarEndProgress = startProgress;
                     queryStartProgress = startProgress;
                     queryEndProgress = endProgress;
@@ -958,8 +790,7 @@ int endProgress)
 
                 int queryProgressRange = queryEndProgress - queryStartProgress;
 
-                // ── 1. Оптимизированная загрузка товаров (COPY в tovar2) ──
-                if (USE_OPTIMIZED_SYNC)
+                if (_useOptimizedSync)
                 {
                     await SyncTovarsAsync(
                         loadPacketData.ListTovar,
@@ -970,7 +801,6 @@ int endProgress)
                         tovarEndProgress);
                 }
 
-                // ── 2. Выполнение обычных запросов ──
                 int totalQueries = queries.Count;
                 int completedQueries = 0;
 
@@ -991,8 +821,7 @@ int endProgress)
                     await UpdateProgressAsync($"Выполнение запросов ({completedQueries}/{totalQueries})...", currentProgress);
                 }
 
-                // ── 3. Оптимизированная загрузка табличной части акций ──
-                if (USE_OPTIMIZED_SYNC)
+                if (_useOptimizedSync)
                 {
                     await SyncActionTableAsync(
                         loadPacketData.ListActionTable,
@@ -1003,8 +832,7 @@ int endProgress)
                         actionTableEndProgress);
                 }
 
-                // ── 4. Оптимизированная синхронизация сертификатов ──
-                if (USE_OPTIMIZED_SYNC)
+                if (_useOptimizedSync)
                 {
                     await SyncSertificatesAsync(
                         loadPacketData.ListSertificate,
@@ -1015,8 +843,7 @@ int endProgress)
                         sertEndProgress);
                 }
 
-                // ── 5. Оптимизированная синхронизация штрихкодов ──
-                if (USE_OPTIMIZED_SYNC)
+                if (_useOptimizedSync)
                 {
                     await SyncBarcodesAsync(
                         loadPacketData.ListBarcode,
@@ -1027,7 +854,6 @@ int endProgress)
                         barcodeEndProgress);
                 }
 
-                // ── 6. Обновление даты последнего обновления ──
                 string updateQuery = "UPDATE date_sync SET tovar = @date";
                 using (var command = new NpgsqlCommand(updateQuery, conn))
                 {
@@ -1051,7 +877,14 @@ int endProgress)
             {
                 string errorMsg = $"Ошибка базы данных: {ex.Message}";
                 Console.WriteLine($"Ошибка Npgsql: {ex.Message}");
-                await MessageBox.Show($"Ошибка базы данных: {ex.Message}" + queryActual, "Ошибка при загрузке", MessageBoxButton.OK, MessageBoxType.Error, MainStaticClass.MainWindow);
+                Console.WriteLine($"Query: {queryActual}");
+
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await MessageBox.Show($"Ошибка базы данных: {ex.Message}\n\nQuery: {queryActual}", 
+                        "Ошибка при загрузке", MessageBoxButton.OK, MessageBoxType.Error, MainStaticClass.MainWindow);
+                });
+
                 if (tran != null)
                 {
                     try { await tran.RollbackAsync(cancellationToken); } catch { }
@@ -1062,6 +895,7 @@ int endProgress)
             {
                 string errorMsg = $"Ошибка при сохранении данных: {ex.Message}";
                 Console.WriteLine($"Ошибка: {ex.Message}");
+                
                 if (tran != null)
                 {
                     try { await tran.RollbackAsync(cancellationToken); } catch { }
@@ -1079,235 +913,19 @@ int endProgress)
             }
         }
 
-        /// <summary>
-        /// Оптимизированная синхронизация сертификатов через COPY + delta.
-        /// </summary>
-        private async Task SyncSertificatesAsync(
-            List<Sertificate> packetSertificates,
-            NpgsqlConnection conn,
-            NpgsqlTransaction tran,
-            CancellationToken cancellationToken,
-            int startProgress,
-            int endProgress)
-        {
-            int progressRange = endProgress - startProgress;
-
-            // === Если сертификатов в пакете нет — очищаем таблицу полностью ===
-            if (packetSertificates == null || packetSertificates.Count == 0)
-            {
-                using var cmdDeleteAll = new NpgsqlCommand("DELETE FROM sertificates", conn, tran);
-                await cmdDeleteAll.ExecuteNonQueryAsync(cancellationToken);
-                Console.WriteLine("[SERT SYNC] Пакет пуст — все сертификаты удалены");
-                return;
-            }
-
-            // ─────────────────────────────────────────────────────
-            // ШАГ 1: Дедупликация в памяти перед COPY
-            // ─────────────────────────────────────────────────────
-            await UpdateProgressAsync("Сертификаты: дедупликация пакета...", startProgress);
-
-            // Уникальный ключ сертификата: (code, code_tovar)
-            var uniqueSertificates = packetSertificates
-                .Where(s => !string.IsNullOrWhiteSpace(s.Code) && !string.IsNullOrWhiteSpace(s.CodeTovar))
-                .GroupBy(s => new { s.Code, s.CodeTovar })
-                .Select(g => g.First())
-                .ToList();
-
-            if (uniqueSertificates.Count == 0)
-            {
-                using var cmdDeleteAll2 = new NpgsqlCommand("DELETE FROM sertificates", conn, tran);
-                await cmdDeleteAll2.ExecuteNonQueryAsync(cancellationToken);
-                Console.WriteLine("[SERT SYNC] После фильтрации пакет пуст — все сертификаты удалены");
-                return;
-            }
-
-            // ─────────────────────────────────────────────────────
-            // ШАГ 2: Создание временной таблицы
-            // ─────────────────────────────────────────────────────
-            await UpdateProgressAsync("Сертификаты: подготовка временной таблицы...",
-                startProgress + progressRange * 2 / 100);
-
-            using (var cmdCreateTemp = new NpgsqlCommand(@"
-        CREATE TEMP TABLE sertificates_temp (
-            code bigint,
-            code_tovar bigint,
-            rating numeric,
-            is_active smallint
-        ) ON COMMIT DROP", conn, tran))
-            {
-                await cmdCreateTemp.ExecuteNonQueryAsync(cancellationToken);
-            }
-
-            // ─────────────────────────────────────────────────────
-            // ШАГ 3: Bulk COPY
-            // ─────────────────────────────────────────────────────
-            await UpdateProgressAsync(
-                $"Сертификаты: загрузка {uniqueSertificates.Count} шт. во временную таблицу...",
-                startProgress + progressRange * 5 / 100);
-
-            using (var writer = conn.BeginBinaryImport(
-                "COPY sertificates_temp (code, code_tovar, rating, is_active) FROM STDIN (FORMAT BINARY)"))
-            {
-                foreach (var sert in uniqueSertificates)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    writer.StartRow();
-
-                    // code (bigint)
-                    if (long.TryParse(sert.Code, out long certCode))
-                        writer.Write(certCode, NpgsqlTypes.NpgsqlDbType.Bigint);
-                    else
-                        writer.WriteNull();
-
-                    // code_tovar (bigint)
-                    if (long.TryParse(sert.CodeTovar, out long tovarCode))
-                        writer.Write(tovarCode, NpgsqlTypes.NpgsqlDbType.Bigint);
-                    else
-                        writer.WriteNull();
-
-                    // rating (numeric)
-                    if (decimal.TryParse(sert.Rating, System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out decimal rating))
-                        writer.Write(rating, NpgsqlTypes.NpgsqlDbType.Numeric);
-                    else
-                        writer.Write(0m, NpgsqlTypes.NpgsqlDbType.Numeric);
-
-                    // is_active (smallint) - используем уже готовый метод ParseSmallint из класса
-                    writer.Write(ParseSmallint(sert.IsActive), NpgsqlTypes.NpgsqlDbType.Smallint);
-                }
-
-                await writer.CompleteAsync();
-            }
-
-            // ─────────────────────────────────────────────────────
-            // ШАГ 4: Индекс на временной таблице
-            // ─────────────────────────────────────────────────────
-            await UpdateProgressAsync("Сертификаты: индексация временной таблицы...",
-                startProgress + progressRange * 55 / 100);
-
-            using (var cmdIndex = new NpgsqlCommand(
-                "CREATE INDEX idx_sertificates_temp ON sertificates_temp (code, code_tovar)", conn, tran))
-            {
-                await cmdIndex.ExecuteNonQueryAsync(cancellationToken);
-            }
-
-            // ─────────────────────────────────────────────────────
-            // ШАГ 5: Удаление сертификатов, которых НЕТ в пакете
-            // ─────────────────────────────────────────────────────
-            await UpdateProgressAsync("Сертификаты: удаление устаревших...",
-                startProgress + progressRange * 65 / 100);
-
-            int deleted;
-            using (var cmdDelete = new NpgsqlCommand(@"
-        DELETE FROM sertificates 
-        WHERE NOT EXISTS (
-            SELECT 1 FROM sertificates_temp st 
-            WHERE st.code = sertificates.code 
-              AND st.code_tovar = sertificates.code_tovar
-        )", conn, tran))
-            {
-                deleted = await cmdDelete.ExecuteNonQueryAsync(cancellationToken);
-            }
-
-            // ─────────────────────────────────────────────────────
-            // ШАГ 6: Вставка только НОВЫХ сертификатов
-            // ─────────────────────────────────────────────────────
-            await UpdateProgressAsync("Сертификаты: добавление новых...",
-                startProgress + progressRange * 80 / 100);
-
-            int inserted;
-            using (var cmdInsert = new NpgsqlCommand(@"
-        INSERT INTO sertificates (code, code_tovar, rating, is_active)
-        SELECT st.code, st.code_tovar, st.rating, st.is_active 
-        FROM sertificates_temp st
-        WHERE NOT EXISTS (
-            SELECT 1 FROM sertificates s 
-            WHERE s.code = st.code 
-              AND s.code_tovar = st.code_tovar
-        )", conn, tran))
-            {
-                inserted = await cmdInsert.ExecuteNonQueryAsync(cancellationToken);
-            }
-
-            Console.WriteLine($"[SERT SYNC] Итого: " +
-                $"в пакете {uniqueSertificates.Count}, " +
-                $"удалено {deleted}, " +
-                $"добавлено {inserted}");
-        }
-
-        //// Оригинальный метод для обратной совместимости
-        //private async Task<(bool success, string errorMessage)> SaveDataToDatabaseAsync(
-        //    LoadPacketData loadPacketData,
-        //    CancellationToken cancellationToken)
-        //{
-        //    // Вызываем новую перегрузку со значениями по умолчанию
-        //    return await SaveDataToDatabaseAsync(loadPacketData, cancellationToken, 0, 100);
-        //}
-
         private void PrepareDatabaseQueries(LoadPacketData loadPacketData, List<string> queries)
         {
-            // Очистка таблиц
             queries.Add("DELETE FROM action_table");
             queries.Add("DELETE FROM action_header");
             queries.Add("DELETE FROM advertisement");
 
-            // Обновление токена
             if (!string.IsNullOrEmpty(loadPacketData.TokenMark))
             {
                 queries.Add($"UPDATE constants SET cdn_token='{EscapeSql(loadPacketData.TokenMark)}'");
             }
 
-            //// Создание временной таблицы для товаров
-            //queries.Add("DELETE FROM tovar2");
-
-            //// Вставка товаров во временную таблицу
-            //if (loadPacketData.ListTovar?.Count > 0)
-            //{
-            //    foreach (var tovar in loadPacketData.ListTovar)
-            //    {
-            //        queries.Add($@"
-            //            INSERT INTO tovar2(code,name,retail_price,its_deleted,nds,its_certificate,
-            //            percent_bonus,tnved,its_marked,its_excise,cdn_check,fractional,
-            //            refusal_of_marking,rr_not_control_owner) 
-            //            VALUES({tovar.Code},'{EscapeSql(tovar.Name)}',{tovar.RetailPrice},{tovar.ItsDeleted},
-            //            {tovar.Nds},{tovar.ItsCertificate},{tovar.PercentBonus},'{EscapeSql(tovar.TnVed)}',
-            //            {tovar.ItsMarked},{tovar.ItsExcise},{tovar.CdnCheck},{tovar.Fractional},
-            //            {tovar.RefusalOfMarking},{tovar.RrNotControlOwner})");
-            //    }
-            //}
-
-            //// Обновление основной таблицы товаров
-            //queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
-            //queries.Add(GetInsertQuery());
-            //queries.Add(GetUpdateQuery());
-            //queries.Add("DELETE FROM tovar2");
-
-            //queries.Add("DELETE FROM barcode");
-
-            //// Вставка штрихкодов
-            //if (loadPacketData.ListBarcode?.Count > 0)
-            //{
-            //    foreach (var barcode in loadPacketData.ListBarcode)
-            //    {
-            //        queries.Add($"INSERT INTO barcode(tovar_code,barcode) VALUES({barcode.TovarCode},'{EscapeSql(barcode.BarCode)}')");
-            //    }
-            //}
-
-            //queries.Add("DELETE FROM tovar2");
-
-            // Обновление токена
-            //if (!string.IsNullOrEmpty(loadPacketData.TokenMark))
-            //{
-            //    queries.Add($"UPDATE constants SET cdn_token='{EscapeSql(loadPacketData.TokenMark)}'");
-            //}
-
-            // ═══════════════════════════════════════════════════
-            // ТОВАРЫ: условное переключение
-            // ═══════════════════════════════════════════════════
-            if (USE_OPTIMIZED_SYNC)
+            if (_useOptimizedSync)
             {
-                // НОВЫЙ путь: tovar2 заполняется через COPY в SyncTovarsAsync
-                // Сразу добавляем запросы синхронизации с основной таблицей
                 queries.Add("UPDATE tovar SET its_deleted=1, retail_price=0");
                 queries.Add(GetInsertQuery());
                 queries.Add(GetUpdateQuery());
@@ -1315,7 +933,6 @@ int endProgress)
             }
             else
             {
-                // СТАРЫЙ путь: INSERT по одному
                 queries.Add("DELETE FROM tovar2");
 
                 if (loadPacketData.ListTovar?.Count > 0)
@@ -1339,17 +956,12 @@ int endProgress)
                 queries.Add("DELETE FROM tovar2");
             }
 
-            // ═══════════════════════════════════════════════════
-            // ШТРИХКОДЫ: условное переключение старого/нового метода
-            // ═══════════════════════════════════════════════════
-            if (USE_OPTIMIZED_SYNC)
+            if (_useOptimizedSync)
             {
-                // НОВЫЙ путь: штрихкоды обрабатываются отдельно в SaveDataToDatabaseAsync
-                // через SyncBarcodesAsync (COPY + delta). Здесь ничего не делаем.
+                // Обрабатывается в SaveDataToDatabaseAsync
             }
             else
             {
-                // СТАРЫЙ путь: полный DELETE + INSERT по одному (проверенный, медленный)
                 queries.Add("DELETE FROM barcode");
 
                 if (loadPacketData.ListBarcode?.Count > 0)
@@ -1361,42 +973,12 @@ int endProgress)
                 }
             }
 
-            //// Вставка характеристик
-            //if (loadPacketData.ListCharacteristic?.Count > 0)
-            //{
-            //    queries.Add("DELETE FROM characteristic");
-            //    foreach (var characteristic in loadPacketData.ListCharacteristic)
-            //    {
-            //        queries.Add($@"
-            //            INSERT INTO characteristic(tovar_code, guid, name, retail_price_characteristic) 
-            //            VALUES({characteristic.CodeTovar},'{EscapeSql(characteristic.Guid)}','{EscapeSql(characteristic.Name)}',
-            //            {characteristic.RetailPrice})");
-            //    }
-            //}
-
-            // Вставка сертификатов
-            //queries.Add("DELETE FROM sertificates");
-            //if (loadPacketData.ListSertificate?.Count > 0)
-            //{
-            //    foreach (var sertificate in loadPacketData.ListSertificate)
-            //    {
-            //        queries.Add($@"
-            //            INSERT INTO sertificates(code, code_tovar, rating, is_active)
-            //            VALUES({sertificate.Code},{sertificate.CodeTovar},{sertificate.Rating},
-            //            {sertificate.IsActive})");
-            //    }
-            //}
-
-            // ═══════════════════════════════════════════════════
-            // СЕРТИФИКАТЫ
-            // ═══════════════════════════════════════════════════
-            if (USE_OPTIMIZED_SYNC)
+            if (_useOptimizedSync)
             {
-                // НОВЫЙ путь: обрабатывается отдельно через COPY + delta
+                // Обрабатывается в SaveDataToDatabaseAsync
             }
             else
             {
-                // СТАРЫЙ путь: полный DELETE + INSERT по одному
                 queries.Add("DELETE FROM sertificates");
                 if (loadPacketData.ListSertificate?.Count > 0)
                 {
@@ -1410,7 +992,6 @@ int endProgress)
                 }
             }
 
-            // Вставка акций
             if (loadPacketData.ListActionHeader?.Count > 0)
             {
                 foreach (var actionHeader in loadPacketData.ListActionHeader)
@@ -1433,45 +1014,30 @@ int endProgress)
             }
             else
             {
-                // Уведомление показывается через MessageBox.Show
                 _ = Task.Run(async () =>
                 {
-                    try
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBox.Show(
-                            "Нет данных по акциям",
-                            "Проверка наличия акций",
-                            MessageBoxButton.OK,
-                            MessageBoxType.Info,
-                            this);
-                    }
-                    catch { }
+                        try
+                        {
+                            await MessageBox.Show(
+                                "Нет данных по акциям",
+                                "Проверка наличия акций",
+                                MessageBoxButton.OK,
+                                MessageBoxType.Info,
+                                this);
+                        }
+                        catch { }
+                    });
                 });
             }
 
-            //// Вставка табличных данных акций
-            //if (loadPacketData.ListActionTable?.Count > 0)
-            //{
-            //    foreach (var actionTable in loadPacketData.ListActionTable)
-            //    {
-            //        queries.Add($@"
-            //            INSERT INTO action_table(num_doc, num_list, code_tovar, price)
-            //            VALUES({actionTable.NumDoc},{actionTable.NumList},{actionTable.CodeTovar},
-            //            {actionTable.Price})");
-            //    }
-            //}
-
-            // ═══════════════════════════════════════════════════
-            // ТАБЛИЧНАЯ ЧАСТЬ АКЦИЙ (action_table)
-            // ═══════════════════════════════════════════════════
-            if (USE_OPTIMIZED_SYNC)
+            if (_useOptimizedSync)
             {
-                // НОВЫЙ путь: COPY напрямую в action_table (она уже очищена DELETE выше)
-                // Обрабатывается в SaveDataToDatabaseAsync через SyncActionTableAsync
+                // Обрабатывается в SaveDataToDatabaseAsync
             }
             else
             {
-                // СТАРЫЙ путь: INSERT по одному
                 if (loadPacketData.ListActionTable?.Count > 0)
                 {
                     foreach (var actionTable in loadPacketData.ListActionTable)
@@ -1484,7 +1050,6 @@ int endProgress)
                 }
             }
 
-            // Вставка рекламных текстов
             if (loadPacketData.ListPromoText?.Count > 0)
             {
                 foreach (var promoText in loadPacketData.ListPromoText)
@@ -1495,7 +1060,6 @@ int endProgress)
                 }
             }
 
-            // Вставка клиентов акций
             queries.Add("DELETE FROM action_clients");
             if (loadPacketData.ListActionClients?.Count > 0)
             {
@@ -1508,74 +1072,6 @@ int endProgress)
             }
         }
 
-        /// <summary>
-        /// Оптимизированная загрузка условий акций через COPY.
-        /// Таблица action_table уже очищена перед этим, поэтому COPY идет напрямую в неё.
-        /// </summary>
-        private async Task SyncActionTableAsync(
-            List<ActionTable> packetActionTables,
-            NpgsqlConnection conn,
-            NpgsqlTransaction tran,
-            CancellationToken cancellationToken,
-            int startProgress,
-            int endProgress)
-        {
-            int progressRange = endProgress - startProgress;
-
-            // Таблица уже очищена (DELETE FROM action_table)
-            if (packetActionTables == null || packetActionTables.Count == 0)
-            {
-                Console.WriteLine("[ACTION_TABLE SYNC] Пакет пуст");
-                return;
-            }
-
-            await UpdateProgressAsync(
-                $"Условия акций: загрузка {packetActionTables.Count} шт...",
-                startProgress + progressRange * 5 / 100);
-
-            using (var writer = conn.BeginBinaryImport(
-                "COPY action_table (num_doc, num_list, code_tovar, price) FROM STDIN (FORMAT BINARY)"))
-            {
-                foreach (var at in packetActionTables)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    writer.StartRow();
-
-                    // num_doc (integer)
-                    if (int.TryParse(at.NumDoc, out int numDoc))
-                        writer.Write(numDoc, NpgsqlTypes.NpgsqlDbType.Integer);
-                    else
-                        writer.WriteNull();
-
-                    // num_list (integer)
-                    if (int.TryParse(at.NumList, out int numList))
-                        writer.Write(numList, NpgsqlTypes.NpgsqlDbType.Integer);
-                    else
-                        writer.WriteNull();
-
-                    // code_tovar (bigint)
-                    if (long.TryParse(at.CodeTovar, out long codeTovar))
-                        writer.Write(codeTovar, NpgsqlTypes.NpgsqlDbType.Bigint);
-                    else
-                        writer.WriteNull();
-
-                    // price (numeric)
-                    if (decimal.TryParse(at.Price, System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out decimal price))
-                        writer.Write(price, NpgsqlTypes.NpgsqlDbType.Numeric);
-                    else
-                        writer.Write(0m, NpgsqlTypes.NpgsqlDbType.Numeric);
-                }
-
-                await writer.CompleteAsync();
-            }
-
-            Console.WriteLine($"[ACTION_TABLE SYNC] Загружено условий акций через COPY: {packetActionTables.Count}");
-        }
-
-        /// <summary>
-        /// Оптимизированная загрузка товаров во временную таблицу tovar2 через COPY.
-        /// </summary>
         private async Task SyncTovarsAsync(
             List<Tovar> packetTovars,
             NpgsqlConnection conn,
@@ -1586,7 +1082,6 @@ int endProgress)
         {
             int progressRange = endProgress - startProgress;
 
-            // Таблица tovar2 уже создана и пуста (через check_temp_tables)
             if (packetTovars == null || packetTovars.Count == 0)
             {
                 Console.WriteLine("[TOVAR SYNC] Пакет товаров пуст");
@@ -1597,71 +1092,221 @@ int endProgress)
                 $"Товары: загрузка {packetTovars.Count} шт. во временную таблицу...",
                 startProgress + progressRange * 5 / 100);
 
-            using (var writer = conn.BeginBinaryImport(
-                "COPY tovar2 (code, name, retail_price, its_deleted, nds, its_certificate, percent_bonus, tnved, its_marked, its_excise, cdn_check, fractional, refusal_of_marking, rr_not_control_owner) FROM STDIN (FORMAT BINARY)"))
+            using (var writer = await conn.BeginBinaryImportAsync(
+                "COPY tovar2 (code, name, retail_price, its_deleted, nds, its_certificate, percent_bonus, tnved, its_marked, its_excise, cdn_check, fractional, refusal_of_marking, rr_not_control_owner) FROM STDIN (FORMAT BINARY)", cancellationToken))
             {
                 foreach (var tovar in packetTovars)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     writer.StartRow();
 
-                    // code (bigint)
                     writer.Write(long.TryParse(tovar.Code, out long code) ? code : 0L, NpgsqlTypes.NpgsqlDbType.Bigint);
-
-                    // name (character(100))
                     writer.Write(tovar.Name ?? string.Empty, NpgsqlTypes.NpgsqlDbType.Varchar);
-
-                    // retail_price (numeric) - ИСПРАВЛЕНО: InvariantCulture для точки в JSON
                     writer.Write(decimal.TryParse(tovar.RetailPrice, System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out decimal rp) ? rp : 0m, NpgsqlTypes.NpgsqlDbType.Numeric);
-
-                    // its_deleted (numeric(1)) - ИСПРАВЛЕНО
                     writer.Write(decimal.TryParse(tovar.ItsDeleted, System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out decimal del) ? del : 0m, NpgsqlTypes.NpgsqlDbType.Numeric);
-
-                    // nds (integer)
                     writer.Write(int.TryParse(tovar.Nds, out int nds) ? nds : 0, NpgsqlTypes.NpgsqlDbType.Integer);
-
-                    // its_certificate (smallint)
                     writer.Write(short.TryParse(tovar.ItsCertificate, out short cert) ? cert : (short)0, NpgsqlTypes.NpgsqlDbType.Smallint);
-
-                    // percent_bonus (numeric) - ИСПРАВЛЕНО
                     writer.Write(decimal.TryParse(tovar.PercentBonus, System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out decimal pb) ? pb : 0m, NpgsqlTypes.NpgsqlDbType.Numeric);
-
-                    // tnved (varchar)
                     writer.Write(tovar.TnVed ?? string.Empty, NpgsqlTypes.NpgsqlDbType.Varchar);
-
-                    // its_marked (smallint)
                     writer.Write(short.TryParse(tovar.ItsMarked, out short marked) ? marked : (short)0, NpgsqlTypes.NpgsqlDbType.Smallint);
-
-                    // its_excise (smallint)
                     writer.Write(short.TryParse(tovar.ItsExcise, out short excise) ? excise : (short)0, NpgsqlTypes.NpgsqlDbType.Smallint);
-
-                    // cdn_check (boolean)
                     writer.Write(tovar.CdnCheck == "1" || tovar.CdnCheck?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
-
-                    // fractional (boolean)
                     writer.Write(tovar.Fractional == "1" || tovar.Fractional?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
-
-                    // refusal_of_marking (boolean)
                     writer.Write(tovar.RefusalOfMarking == "1" || tovar.RefusalOfMarking?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
-
-                    // rr_not_control_owner (boolean)
                     writer.Write(tovar.RrNotControlOwner == "1" || tovar.RrNotControlOwner?.ToLower() == "true", NpgsqlTypes.NpgsqlDbType.Boolean);
                 }
 
-                await writer.CompleteAsync();
+                await writer.CompleteAsync(cancellationToken);
             }
 
             Console.WriteLine($"[TOVAR SYNC] Загружено товаров через COPY: {packetTovars.Count}");
         }
 
-        /// <summary>
-        /// Оптимизированная загрузка штрихкодов через полное обновление (DELETE ALL + COPY).
-        /// Поскольку пакет с сервера содержит актуальный срез всех штрихкодов,
-        /// вычислять дельту (разницу) не нужно — просто очищаем таблицу и заливаем заново.
-        /// </summary>
+        private async Task SyncActionTableAsync(
+            List<ActionTable> packetActionTables,
+            NpgsqlConnection conn,
+            NpgsqlTransaction tran,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
+        {
+            int progressRange = endProgress - startProgress;
+
+            if (packetActionTables == null || packetActionTables.Count == 0)
+            {
+                Console.WriteLine("[ACTION_TABLE SYNC] Пакет пуст");
+                return;
+            }
+
+            await UpdateProgressAsync(
+                $"Условия акций: загрузка {packetActionTables.Count} шт...",
+                startProgress + progressRange * 5 / 100);
+
+            using (var writer = await conn.BeginBinaryImportAsync(
+                "COPY action_table (num_doc, num_list, code_tovar, price) FROM STDIN (FORMAT BINARY)", cancellationToken))
+            {
+                foreach (var at in packetActionTables)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    writer.StartRow();
+
+                    if (int.TryParse(at.NumDoc, out int numDoc))
+                        writer.Write(numDoc, NpgsqlTypes.NpgsqlDbType.Integer);
+                    else
+                        writer.WriteNull();
+
+                    if (int.TryParse(at.NumList, out int numList))
+                        writer.Write(numList, NpgsqlTypes.NpgsqlDbType.Integer);
+                    else
+                        writer.WriteNull();
+
+                    if (long.TryParse(at.CodeTovar, out long codeTovar))
+                        writer.Write(codeTovar, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    if (decimal.TryParse(at.Price, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal price))
+                        writer.Write(price, NpgsqlTypes.NpgsqlDbType.Numeric);
+                    else
+                        writer.Write(0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+                }
+
+                await writer.CompleteAsync(cancellationToken);
+            }
+
+            Console.WriteLine($"[ACTION_TABLE SYNC] Загружено условий акций через COPY: {packetActionTables.Count}");
+        }
+
+        private async Task SyncSertificatesAsync(
+            List<Sertificate> packetSertificates,
+            NpgsqlConnection conn,
+            NpgsqlTransaction tran,
+            CancellationToken cancellationToken,
+            int startProgress,
+            int endProgress)
+        {
+            int progressRange = endProgress - startProgress;
+
+            if (packetSertificates == null || packetSertificates.Count == 0)
+            {
+                using var cmdDeleteAll = new NpgsqlCommand("DELETE FROM sertificates", conn, tran);
+                await cmdDeleteAll.ExecuteNonQueryAsync(cancellationToken);
+                Console.WriteLine("[SERT SYNC] Пакет пуст — все сертификаты удалены");
+                return;
+            }
+
+            await UpdateProgressAsync("Сертификаты: дедупликация пакета...", startProgress);
+
+            var uniqueSertificates = packetSertificates
+                .Where(s => !string.IsNullOrWhiteSpace(s.Code) && !string.IsNullOrWhiteSpace(s.CodeTovar))
+                .GroupBy(s => new { s.Code, s.CodeTovar })
+                .Select(g => g.First())
+                .ToList();
+
+            if (uniqueSertificates.Count == 0)
+            {
+                using var cmdDeleteAll2 = new NpgsqlCommand("DELETE FROM sertificates", conn, tran);
+                await cmdDeleteAll2.ExecuteNonQueryAsync(cancellationToken);
+                Console.WriteLine("[SERT SYNC] После фильтрации пакет пуст — все сертификаты удалены");
+                return;
+            }
+
+            await UpdateProgressAsync("Сертификаты: подготовка временной таблицы...",
+                startProgress + progressRange * 2 / 100);
+
+            using (var cmdCreateTemp = new NpgsqlCommand(@"
+        CREATE TEMP TABLE sertificates_temp (
+            code bigint,
+            code_tovar bigint,
+            rating numeric,
+            is_active smallint
+        ) ON COMMIT DROP", conn, tran))
+            {
+                await cmdCreateTemp.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await UpdateProgressAsync(
+                $"Сертификаты: загрузка {uniqueSertificates.Count} шт. во временную таблицу...",
+                startProgress + progressRange * 5 / 100);
+
+            using (var writer = await conn.BeginBinaryImportAsync(
+                "COPY sertificates_temp (code, code_tovar, rating, is_active) FROM STDIN (FORMAT BINARY)", cancellationToken))
+            {
+                foreach (var sert in uniqueSertificates)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    writer.StartRow();
+
+                    if (long.TryParse(sert.Code, out long certCode))
+                        writer.Write(certCode, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    if (long.TryParse(sert.CodeTovar, out long tovarCode))
+                        writer.Write(tovarCode, NpgsqlTypes.NpgsqlDbType.Bigint);
+                    else
+                        writer.WriteNull();
+
+                    if (decimal.TryParse(sert.Rating, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal rating))
+                        writer.Write(rating, NpgsqlTypes.NpgsqlDbType.Numeric);
+                    else
+                        writer.Write(0m, NpgsqlTypes.NpgsqlDbType.Numeric);
+
+                    writer.Write(ParseSmallint(sert.IsActive), NpgsqlTypes.NpgsqlDbType.Smallint);
+                }
+
+                await writer.CompleteAsync(cancellationToken);
+            }
+
+            await UpdateProgressAsync("Сертификаты: индексация временной таблицы...",
+                startProgress + progressRange * 55 / 100);
+
+            using (var cmdIndex = new NpgsqlCommand(
+                "CREATE INDEX idx_sertificates_temp ON sertificates_temp (code, code_tovar)", conn, tran))
+            {
+                await cmdIndex.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await UpdateProgressAsync("Сертификаты: удаление устаревших...",
+                startProgress + progressRange * 65 / 100);
+
+            int deleted;
+            using (var cmdDelete = new NpgsqlCommand(@"
+        DELETE FROM sertificates 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM sertificates_temp st 
+            WHERE st.code = sertificates.code 
+              AND st.code_tovar = sertificates.code_tovar
+        )", conn, tran))
+            {
+                deleted = await cmdDelete.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await UpdateProgressAsync("Сертификаты: добавление новых...",
+                startProgress + progressRange * 80 / 100);
+
+            int inserted;
+            using (var cmdInsert = new NpgsqlCommand(@"
+        INSERT INTO sertificates (code, code_tovar, rating, is_active)
+        SELECT st.code, st.code_tovar, st.rating, st.is_active 
+        FROM sertificates_temp st
+        WHERE NOT EXISTS (
+            SELECT 1 FROM sertificates s 
+            WHERE s.code = st.code 
+              AND s.code_tovar = st.code_tovar
+        )", conn, tran))
+            {
+                inserted = await cmdInsert.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            Console.WriteLine($"[SERT SYNC] Итого: в пакете {uniqueSertificates.Count}, удалено {deleted}, добавлено {inserted}");
+        }
+
         private async Task SyncBarcodesAsync(
             List<Barcode> packetBarcodes,
             NpgsqlConnection conn,
@@ -1672,7 +1317,6 @@ int endProgress)
         {
             int progressRange = endProgress - startProgress;
 
-            // ── ШАГ 1: Очистка таблицы штрихкодов ──
             await UpdateProgressAsync("Штрихкоды: очистка старых данных...", startProgress);
 
             using (var cmdDeleteAll = new NpgsqlCommand("DELETE FROM barcode", conn, tran))
@@ -1680,14 +1324,12 @@ int endProgress)
                 await cmdDeleteAll.ExecuteNonQueryAsync(cancellationToken);
             }
 
-            // Если пакет пуст — просто выходим (таблица уже очищена)
             if (packetBarcodes == null || packetBarcodes.Count == 0)
             {
                 Console.WriteLine("[BARCODE SYNC] Пакет пуст — таблица barcode очищена");
                 return;
             }
 
-            // ── ШАГ 2: Дедупликация в памяти перед COPY (защита от дублей в JSON) ──
             await UpdateProgressAsync("Штрихкоды: дедупликация пакета...",
                 startProgress + progressRange * 5 / 100);
 
@@ -1704,18 +1346,16 @@ int endProgress)
                 return;
             }
 
-            // ── ШАГ 3: Прямой COPY в основную таблицу (без временных таблиц и индексов!) ──
             await UpdateProgressAsync(
                 $"Штрихкоды: загрузка {uniqueBarcodes.Count} шт...",
                 startProgress + progressRange * 20 / 100);
 
-            using (var writer = conn.BeginBinaryImport(
-                "COPY barcode (tovar_code, barcode) FROM STDIN (FORMAT BINARY)"))
+            using (var writer = await conn.BeginBinaryImportAsync(
+                       "COPY barcode (tovar_code, barcode) FROM STDIN (FORMAT BINARY)", cancellationToken))
             {
                 foreach (var barcode in uniqueBarcodes)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
                     writer.StartRow();
 
                     if (long.TryParse(barcode.TovarCode, out long tovarCode))
@@ -1726,7 +1366,7 @@ int endProgress)
                     writer.Write(barcode.BarCode, NpgsqlTypes.NpgsqlDbType.Text);
                 }
 
-                await writer.CompleteAsync();
+                await writer.CompleteAsync(cancellationToken);
             }
 
             Console.WriteLine($"[BARCODE SYNC] Загружено штрихкодов через COPY: {uniqueBarcodes.Count}");
@@ -1748,7 +1388,6 @@ int endProgress)
 
                 if (CheckFirstLoadData())
                 {
-                    // Убрал Dispatcher - MessageBox.Show сам обрабатывает UI поток
                     await MessageBox.Show(
                         "Это была первая загрузка данных. Для применения новых параметров программа будет перезапущена.",
                         "Первая загрузка",
@@ -1774,441 +1413,10 @@ int endProgress)
 
         #region Метод load_bonus_clients
 
-        //public async Task load_bonus_clients(bool show_message)
-        //{
-        //    await Task.Run(() => load_bonus_clients_internal(show_message));
-        //}
-
-        //private async Task load_bonus_clients_internal(bool show_message)
-        //{
-        //    try
-        //    {
-        //        if (!MainStaticClass.service_is_worker())
-        //        {
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show("Веб сервис недоступен", "Ошибка", owner: this);
-        //            }
-        //            return;
-        //        }
-
-        //        DS ds = MainStaticClass.get_ds();
-        //        ds.Timeout = 60000;
-
-        //        string nick_shop = MainStaticClass.Nick_Shop.Trim();
-        //        if (nick_shop.Trim().Length == 0)
-        //        {
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show("Не удалось получить название магазина", "Ошибка", owner: this);
-        //            }
-        //            return;
-        //        }
-
-        //        string code_shop = MainStaticClass.Code_Shop.Trim();
-        //        if (code_shop.Trim().Length == 0)
-        //        {
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show("Не удалось получить код магазина", "Ошибка", owner: this);
-        //            }
-        //            return;
-        //        }
-
-        //        string count_day = CryptorEngine.get_count_day();
-        //        string key = nick_shop.Trim() + count_day.Trim() + code_shop.Trim();
-        //        DateTime dt = last_date_download_bonus_clients();
-
-        //        string data = CryptorEngine.Encrypt(nick_shop + "|" + dt.Ticks.ToString() + "|" + code_shop, true, key);
-
-        //        string result_query = "-1";
-        //        try
-        //        {
-        //            result_query = ds.GetDiscountClientsV8DateTime_NEW(nick_shop, data, "4");
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            await MessageBox.Show(ex.Message, "Ошибка", owner: this);
-        //        }
-
-        //        if (result_query == "-1")
-        //        {
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show("При обработке запроса на сервере произошли ошибки", "Ошибка", owner: this);
-        //            }
-        //            return;
-        //        }
-
-        //        string result_query_decrypt = CryptorEngine.Decrypt(result_query, true, key);
-        //        Clients clients = JsonConvert.DeserializeObject<Clients>(result_query_decrypt);
-
-        //        if (clients.list_clients.Count == 0)
-        //        {
-        //            return;
-        //        }
-
-        //        NpgsqlConnection conn = null;
-        //        NpgsqlTransaction tran = null;
-        //        string query = "";
-
-        //        try
-        //        {
-        //            conn = MainStaticClass.NpgsqlConn();
-        //            conn.Open();
-        //            tran = conn.BeginTransaction();
-        //            NpgsqlCommand command = null;
-        //            string local_last_date_download_bonus_clients = "";
-
-        //            foreach (Client client in clients.list_clients)
-        //            {
-        //                query = "UPDATE clients SET " +
-        //                    " phone='" + client.phone + "'," +
-        //                    " name='" + client.name + "'," +
-        //                    " date_of_birth='" + client.holiday + "'," +
-        //                    " its_work='" + client.use_blocked + "'," +
-        //                    " reason_for_blocking='" + client.reason_for_blocking + "'," +
-        //                    " notify_security='" + client.notify_security + "' " +
-        //                    " WHERE code='" + client.code + "';";
-
-        //                local_last_date_download_bonus_clients = client.datetime_update;
-
-        //                command = new NpgsqlCommand(query, conn);
-        //                command.Transaction = tran;
-        //                int rowsaffected = command.ExecuteNonQuery();
-        //                if (rowsaffected == 0)
-        //                {
-        //                    query = "INSERT INTO clients(code,phone,name, date_of_birth,its_work,reason_for_blocking,notify_security)VALUES('" +
-        //                        client.code + "','" +
-        //                        client.phone + "','" +
-        //                        client.name + "','" +
-        //                        client.holiday + "','" +
-        //                        client.use_blocked + "','" +
-        //                        client.reason_for_blocking + "','" +
-        //                        client.notify_security + "')";
-        //                    command = new NpgsqlCommand(query, conn);
-        //                    command.Transaction = tran;
-        //                    command.ExecuteNonQuery();
-        //                }
-        //            }
-
-        //            query = "UPDATE constants SET last_date_download_bonus_clients='" + local_last_date_download_bonus_clients + "';"+
-        //                "UPDATE date_sync SET client='" + local_last_date_download_bonus_clients + "'"; ;
-        //            command = new NpgsqlCommand(query, conn);
-        //            command.Transaction = tran;
-        //            command.ExecuteNonQuery();
-
-        //            tran.Commit();
-        //            conn.Close();
-
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show("Клиенты успешно загружены", "Успех", owner: this);
-        //            }
-        //        }
-        //        catch (NpgsqlException ex)
-        //        {
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show(query + "\n" + ex.Message, "Ошибка при импорте данных", owner: this);
-        //            }
-        //            if (tran != null)
-        //            {
-        //                tran.Rollback();
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            if (show_message)
-        //            {
-        //                await MessageBox.Show(query + "\n" + ex.Message, "Ошибка при импорте данных", owner: this);
-        //            }
-        //            if (tran != null)
-        //            {
-        //                tran.Rollback();
-        //            }
-        //        }
-        //        finally
-        //        {
-        //            if (conn != null && conn.State == ConnectionState.Open)
-        //            {
-        //                conn.Close();
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Ошибка в load_bonus_clients: {ex.Message}");
-        //    }
-        //}
-
-        //public async Task load_bonus_clients(bool show_message)
-        //{
-        //    await Task.Run(() => load_bonus_clients_internal(show_message));
-        //}
-
         public async Task load_bonus_clients(bool show_message)
         {
-            // Просто вызываем метод. Вся асинхронность работает через await внутри него.
-            // Task.Run здесь не нужен и вреден!
             await load_bonus_clients_internal(show_message);
         }
-
-        //        private async Task load_bonus_clients_internal(bool show_message)
-        //        {
-        //            try
-        //            {
-        //                //if (!MainStaticClass.service_is_worker())
-        //                //{
-        //                //    if (show_message) await MessageBox.Show("Веб сервис недоступен", "Ошибка", owner: this);
-        //                //    return;
-        //                //}
-
-        //#if DEBUG
-        //                if (System.Diagnostics.Debugger.IsAttached)
-        //                {
-        //                    System.Diagnostics.Debugger.Break();
-        //                }
-        //#endif
-
-
-        //                //DS ds = MainStaticClass.get_ds();
-        //                DS ds = await ServiceLocator.DsAsync();
-        //                ds.Timeout = 60000;
-
-        //                string nick_shop = MainStaticClass.Nick_Shop.Trim();
-        //                if (string.IsNullOrWhiteSpace(nick_shop))
-        //                {
-        //                    if (show_message) await MessageBox.Show("Не удалось получить название магазина", "Ошибка", owner: this);
-        //                    return;
-        //                }
-
-        //                string code_shop = MainStaticClass.Code_Shop.Trim();
-        //                if (string.IsNullOrWhiteSpace(code_shop))
-        //                {
-        //                    if (show_message) await MessageBox.Show("Не удалось получить код магазина", "Ошибка", owner: this);
-        //                    return;
-        //                }
-
-        //                string count_day = CryptorEngine.get_count_day();
-        //                string key = nick_shop + count_day + code_shop;
-
-        //                bool needToLoadMore = true;
-        //                int portionNumber = 1;
-
-        //                while (needToLoadMore)
-        //                {
-        //                    Console.WriteLine($"--- Запрос порции № {portionNumber} ---");
-
-        //                    DateTime dt = last_date_download_bonus_clients();
-        //                    string data = CryptorEngine.Encrypt($"{nick_shop}|{dt.Ticks}|{code_shop}", true, key);
-
-        //                    string result_query = "-1";
-        //                    try
-        //                    {
-        //                        result_query = ds.GetDiscountClientsV8DateTime_NEW(nick_shop, data, "4");
-        //                    }
-        //                    catch (Exception ex)
-        //                    {
-        //                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (веб-сервис)");
-        //                        if (show_message) await MessageBox.Show(ex.Message, "Ошибка", owner: this);
-        //                        break;
-        //                    }
-
-        //                    if (result_query == "-1")
-        //                    {
-        //                        Console.WriteLine("Веб-сервис вернул -1. Остановка.");
-        //                        if (show_message) await MessageBox.Show("При обработке запроса на сервере произошли ошибки", "Ошибка", owner: this);
-        //                        break;
-        //                    }
-
-        //                    string result_query_decrypt = CryptorEngine.Decrypt(result_query, true, key);
-        //                    Clients clients = JsonConvert.DeserializeObject<Clients>(result_query_decrypt);
-
-        //                    // ИСПРАВЛЕНО: Безопасная проверка на null и пустоту
-        //                    if (clients?.list_clients == null || clients.list_clients.Count == 0)
-        //                    {
-        //                        Console.WriteLine("Список клиентов пуст. Загрузка завершена.");
-        //                        break;
-        //                    }
-
-        //                    Console.WriteLine($"Получено клиентов: {clients.list_clients.Count}");
-
-        //                    // === БД: параметризованные запросы ===
-        //                    NpgsqlConnection conn = null;
-        //                    NpgsqlTransaction tran = null;
-        //                    Client failedClient = null;
-
-        //                    try
-        //                    {
-        //                        conn = MainStaticClass.NpgsqlConn();
-        //                        await conn.OpenAsync();
-        //                        tran = await conn.BeginTransactionAsync();
-
-        //                        string local_last_date_download_bonus_clients = string.Empty;
-
-        //                        // === Подготовленные команды (создаём ОДИН раз на порцию) ===
-
-        //                        // UPDATE
-        //                        const string updateQuery = @"
-        //                    UPDATE clients SET 
-        //                        phone = @phone,
-        //                        name = @name,
-        //                        date_of_birth = @date_of_birth,
-        //                        its_work = @its_work,
-        //                        reason_for_blocking = @reason_for_blocking,
-        //                        notify_security = @notify_security
-        //                    WHERE code = @code";
-
-        //                        using var cmdUpdate = new NpgsqlCommand(updateQuery, conn, tran);
-        //                        AddClientParameters(cmdUpdate);
-
-        //                        // INSERT
-        //                        const string insertQuery = @"
-        //                    INSERT INTO clients (
-        //                        code, phone, name, date_of_birth, its_work, reason_for_blocking, notify_security
-        //                    ) VALUES (
-        //                        @code, @phone, @name, @date_of_birth, @its_work, @reason_for_blocking, @notify_security
-        //                    )";
-
-        //                        using var cmdInsert = new NpgsqlCommand(insertQuery, conn, tran);
-        //                        AddClientParameters(cmdInsert);
-
-
-        //                        // === Обработка клиентов ===
-        //                        foreach (Client client in clients.list_clients)
-        //                        {
-        //                            failedClient = client;
-        //                            SetClientParameters(cmdUpdate, client);
-        //                            int rowsAffected = await cmdUpdate.ExecuteNonQueryAsync();
-
-        //                            if (rowsAffected == 0)
-        //                            {
-        //                                SetClientParameters(cmdInsert, client);
-        //                                await cmdInsert.ExecuteNonQueryAsync();
-        //                            }
-
-        //                            if (!string.IsNullOrWhiteSpace(client.datetime_update))
-        //                                local_last_date_download_bonus_clients = client.datetime_update;
-        //                        }
-
-        //                        // === Обновление метаданных ===
-        //                        const string updateConstantsQuery = @"
-        //                    UPDATE constants SET last_date_download_bonus_clients = @last_date;
-        //                    UPDATE date_sync SET client = @last_date";
-
-        //                        using var cmdConstants = new NpgsqlCommand(updateConstantsQuery, conn, tran);
-
-        //                        // ИСПРАВЛЕНО: Тип Timestamp вместо Varchar
-        //                        cmdConstants.Parameters.Add("@last_date", NpgsqlTypes.NpgsqlDbType.Timestamp);
-
-        //                        // ИСПРАВЛЕНО: Парсинг строки в DateTime (с сохранением времени, в отличие от Date)
-        //                        object lastDateValue = DBNull.Value;
-        //                        if (!string.IsNullOrWhiteSpace(local_last_date_download_bonus_clients) &&
-        //                            DateTime.TryParse(local_last_date_download_bonus_clients, out DateTime parsedLastDate))
-        //                        {
-        //                            lastDateValue = parsedLastDate; // Передаем полный DateTime (дата + время)
-        //                        }
-
-        //                        cmdConstants.Parameters["@last_date"].Value = lastDateValue;
-
-        //                        await cmdConstants.ExecuteNonQueryAsync();
-
-        //                        await tran.CommitAsync();
-        //                        Console.WriteLine("Транзакция успешно закоммичена.");
-
-        //                        // === Проверка: последняя порция? ===
-        //                        if (clients.list_clients.Count < 50000)
-        //                        {
-        //                            Console.WriteLine("Порция меньше 50000. Это были последние данные.");
-        //                            needToLoadMore = false;
-        //                        }
-        //                        else
-        //                        {
-        //                            portionNumber++;
-        //                        }
-        //                    }
-        //                    catch (NpgsqlException ex)
-        //                    {
-        //                        string errorType = "Ошибка БД (Npgsql)";
-        //                        string detailedMessage = FormatExceptionMessage(ex, failedClient, errorType);
-
-        //                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients | {detailedMessage}");
-        //                        Console.WriteLine($"!!! {errorType}: {detailedMessage}");
-
-        //                        if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
-
-        //                        if (tran != null) await tran.RollbackAsync();
-
-        //                        // 🔥 Гибкая реакция на ошибку БД: 
-        //                        // Если это просто дубликат или нарушение констрейнта - можем попробовать продолжить (continue)
-        //                        // Если это смерть коннекта - обязательно прерываем (break)
-        //                        if (ex.IsTransient) // Встроенный метод Npgsql для сетевых/временных ошибок
-        //                        {
-        //                            Console.WriteLine("Транзиентная ошибка БД (сеть/таймаут). Остановка порции.");
-        //                            break;
-        //                        }
-        //                        else
-        //                        {
-        //                            Console.WriteLine("Ошибка целостности данных. Пропуск клиента.");
-        //                            continue; // Пробуем следующий клиент
-        //                        }
-        //                    }
-        //                    catch (System.Net.WebException ex)
-        //                    {
-        //                        // Сбрасываем кэш ТОЛЬКО если упали по таймауту или не смогли подключиться
-        //                        if (ex.Status == System.Net.WebExceptionStatus.Timeout ||
-        //                            ex.Status == System.Net.WebExceptionStatus.ConnectFailure)
-        //                        {
-        //                            await ServiceLocator.ResetDsCacheAsync();
-        //                        }
-        //                        else
-        //                        {
-        //                            // Сервер ответил (например, 500 ошибкой), но сеть работает. Кэш не трогаем.
-        //                            MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients (WebException: {ex.Status})");
-        //                        }
-
-        //                        if (show_message)
-        //                            await MessageBox.Show("Ошибка связи с сервером при загрузке клиентов.", "Ошибка сети", owner: this);
-
-        //                        break; // Сеть упала - нет смысла запрашивать следующие порции
-        //                    }
-        //                    catch (Exception ex)
-        //                    {
-        //                        string errorType = "Критическая ошибка логики";
-        //                        string detailedMessage = FormatExceptionMessage(ex, failedClient, errorType);
-
-        //                        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, $"load_bonus_clients | {detailedMessage}");
-        //                        Console.WriteLine($"!!! {errorType}: {detailedMessage}");
-
-        //                        if (show_message) await MessageBox.Show(detailedMessage, "Ошибка при импорте данных", owner: this);
-
-        //                        if (tran != null) await tran.RollbackAsync();
-
-        //                        // 🔥 Жесткая реакция: если упал код (NullRef, Format и т.д.), продолжать цикл БЕССМЫСЛЕННО
-        //                        break;
-        //                    }
-        //                    finally
-        //                    {
-        //                        if (conn != null && conn.State == System.Data.ConnectionState.Open)
-        //                        {
-        //                            conn.Close();
-        //                        }
-        //                        conn?.Dispose();
-        //                        tran?.Dispose();
-        //                    }
-        //                }
-
-        //                if (show_message)
-        //                    await MessageBox.Show("Загрузка клиентов полностью завершена", "Успех", owner: this);
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "load_bonus_clients (Критическая ошибка)");
-        //                Console.WriteLine($"Критическая ошибка в load_bonus_clients: {ex}");
-        //            }
-        //        }
-
 
         private DateTime last_date_reset_bonus_clients()
         {
@@ -2236,18 +1444,10 @@ int endProgress)
             return result;
         }
 
-
         private async Task load_bonus_clients_internal(bool show_message)
         {
             try
             {
-//#if DEBUG
-//                if (System.Diagnostics.Debugger.IsAttached)
-//                {
-//                    System.Diagnostics.Debugger.Break();
-//                }
-//#endif
-
                 DS ds = await ServiceLocator.DsAsync();
                 ds.Timeout = 60000;
 
@@ -2271,13 +1471,8 @@ int endProgress)
                 bool needToLoadMore = true;
                 int portionNumber = 1;
                 
-                // Читаем дату сброса из базы. 
                 DateTime resetDate = last_date_reset_bonus_clients();
-
-                // Разрешаем очистку, если сброс инициирован в течение последних 3-х суток 
-                // (сегодня, вчера или позавчера). Это защищает от случайных удалений при 
-                // многократных перезапусках программы, но дает время кассе докачать данные.
-                DateTime threeDaysAgo = DateTime.Today.AddDays(-2); // -2 дня означает: сегодня + вчера + позавчера = 3 суток
+                DateTime threeDaysAgo = DateTime.Today.AddDays(-2);
                 bool isFullSyncRequested = (resetDate >= threeDaysAgo);
 
                 while (needToLoadMore)
@@ -2453,9 +1648,6 @@ int endProgress)
                 if (show_message)
                     await MessageBox.Show("Загрузка клиентов полностью завершена", "Успех", owner: this);
 
-                // === ОЧИСТКА МУСОРА ===
-                // Запускаем ТОЛЬКО если это была полная синхронизация (сегодня был сброс даты)
-                // И цикл завершился естественным путем (needToLoadMore == false)
                 if (!needToLoadMore && isFullSyncRequested)
                 {
                     await CleanUpOrphanClients(resetDate);
@@ -2468,7 +1660,6 @@ int endProgress)
             }
         }
 
-        // Вспомогательный метод форматирования (без изменений)
         private string FormatExceptionMessage(Exception ex, Client failedClient, string errorType)
         {
             string clientInfo = failedClient != null
@@ -2482,13 +1673,10 @@ int endProgress)
                    $"Стек: {stackTrace}";
         }
 
-        // Вспомогательный метод для очистки клиентов, которых нет на сервере
         private async Task CleanUpOrphanClients(DateTime syncThresholdTime)
         {
             try
             {
-                // === ЭШЕЛОН ЗАЩИТЫ 1: Время из будущего ===
-                // Если пороговое время почему-то оказалось в будущем, останавливаемся
                 if (syncThresholdTime > DateTime.Now.AddMinutes(1))
                 {
                     string errorMsg = $"[ОЧИСТКА МУСОРА] ОТМЕНА! Пороговое время синхронизации ({syncThresholdTime}) находится в будущем.";
@@ -2501,17 +1689,13 @@ int endProgress)
                 {
                     await conn.OpenAsync();
 
-                    // === ЭШЕЛОН ЗАЩИТЫ 2 И 3: Подсчет жертв перед удалением ===
-
-                    // 1. Считаем общее количество клиентов
                     string countTotalQuery = "SELECT COUNT(1) FROM clients";
                     using (NpgsqlCommand cmdTotal = new NpgsqlCommand(countTotalQuery, conn))
                     {
                         long totalClients = (long)await cmdTotal.ExecuteScalarAsync();
 
-                        if (totalClients == 0) return; // База пуста, делать нечего
+                        if (totalClients == 0) return;
 
-                        // 2. Считаем сколько клиентов попадает под удаление
                         string countToDeleteQuery = @"
                     SELECT COUNT(1) FROM clients 
                     WHERE last_server_sync IS NULL 
@@ -2522,16 +1706,13 @@ int endProgress)
                             cmdCountDelete.Parameters.AddWithValue("@syncThresholdTime", syncThresholdTime);
                             long clientsToDelete = (long)await cmdCountDelete.ExecuteScalarAsync();
 
-                            if (clientsToDelete == 0) return; // Нечего удалять
+                            if (clientsToDelete == 0) return;
 
-                            // Вычисляем процент удаляемых клиентов
                             decimal deletePercentage = (decimal)clientsToDelete / totalClients;
 
-                            // Настройки безопасности (можно менять под ваши реалии)
-                            const decimal MAX_ALLOWED_PERCENTAGE = 0.30m; // Максимально допустимый процент удаления (30%)
-                            const int MAX_ALLOWED_ABSOLUTE = 300000;       // Максимально допустимое число удаляемых записей за раз
+                            const decimal MAX_ALLOWED_PERCENTAGE = 0.30m; 
+                            const int MAX_ALLOWED_ABSOLUTE = 300000;       
 
-                            // Если попытка удалить больше 30% ИЛИ больше 5000 клиентов сразу — это АНОМАЛИЯ
                             if (deletePercentage > MAX_ALLOWED_PERCENTAGE || clientsToDelete > MAX_ALLOWED_ABSOLUTE)
                             {
                                 string errorMsg = $"[ОЧИСТКА МУСОРА] ОТМЕНА! Попытка удалить аномальное количество данных. " +
@@ -2540,10 +1721,9 @@ int endProgress)
 
                                 Console.WriteLine(errorMsg);
                                 MainStaticClass.WriteRecordErrorLog(errorMsg, "CleanUpOrphanClients", 0, MainStaticClass.CashDeskNumber, "ОШИБКА БЕЗОПАСНОСТИ");
-                                return; // АВАРИЙНАЯ ОСТАНОВКА ОЧИСТКИ
+                                return;
                             }
 
-                            // === Если все проверки пройдены — безопасное удаление ===
                             string deleteQuery = @"
                         DELETE FROM clients 
                         WHERE last_server_sync IS NULL 
@@ -2570,51 +1750,28 @@ int endProgress)
             }
         }
 
-
-        // === Вспомогательные методы ===
-
-        /// <summary>
-        /// Добавляет параметры в команду (вызывается один раз при создании)
-        /// </summary>
         private static void AddClientParameters(NpgsqlCommand cmd)
         {
-            // ⚠️ Укажите реальные размеры под вашу схему БД (здесь стоят предполагаемые)!
             cmd.Parameters.Add("@code", NpgsqlTypes.NpgsqlDbType.Varchar, 50);
             cmd.Parameters.Add("@phone", NpgsqlTypes.NpgsqlDbType.Varchar, 20);
             cmd.Parameters.Add("@name", NpgsqlTypes.NpgsqlDbType.Varchar, 100);
             cmd.Parameters.Add("@date_of_birth", NpgsqlTypes.NpgsqlDbType.Date);
-
-            // ИСПРАВЛЕНО: Smallint вместо Boolean (БД ждет 0 или 1)
             cmd.Parameters.Add("@its_work", NpgsqlTypes.NpgsqlDbType.Smallint);
             cmd.Parameters.Add("@reason_for_blocking", NpgsqlTypes.NpgsqlDbType.Varchar, 255);
-
-            // ИСПРАВЛЕНО: Smallint вместо Varchar (БД ждет 0 или 1)
             cmd.Parameters.Add("@notify_security", NpgsqlTypes.NpgsqlDbType.Smallint);
         }
 
-        /// <summary>
-        /// Устанавливает значения параметров для конкретного клиента
-        /// </summary>
         private static void SetClientParameters(NpgsqlCommand cmd, Client client)
         {
             cmd.Parameters["@code"].Value = (object)client.code ?? DBNull.Value;
             cmd.Parameters["@phone"].Value = string.IsNullOrWhiteSpace(client.phone) ? DBNull.Value : client.phone;
-            //cmd.Parameters["@name"].Value = string.IsNullOrWhiteSpace(client.name) ? DBNull.Value : client.name;
             cmd.Parameters["@name"].Value = string.IsNullOrWhiteSpace(client.name) ? client.phone : client.name;
             cmd.Parameters["@date_of_birth"].Value = ParseDateForDb(client.holiday);
-
-            // ИСПРАВЛЕНО: Вызов метода, возвращающего Smallint
             cmd.Parameters["@its_work"].Value = ParseSmallint(client.use_blocked);
-
             cmd.Parameters["@reason_for_blocking"].Value = string.IsNullOrWhiteSpace(client.reason_for_blocking) ? DBNull.Value : client.reason_for_blocking;
-
-            // ИСПРАВЛЕНО: Вызов метода, возвращающего Smallint
             cmd.Parameters["@notify_security"].Value = ParseSmallint(client.notify_security);
         }
 
-        /// <summary>
-        /// Безопасная конвертация строки даты в объект для БД
-        /// </summary>
         private static object ParseDateForDb(string dateStr)
         {
             if (string.IsNullOrWhiteSpace(dateStr)) return DBNull.Value;
@@ -2622,21 +1779,17 @@ int endProgress)
             return DBNull.Value;
         }
 
-        /// <summary>
-        /// Конвертация строковых флагов в smallint (0 или 1) для PostgreSQL
-        /// </summary>
         private static object ParseSmallint(string value)
         {
-            if (string.IsNullOrWhiteSpace(value)) return (short)0; // По умолчанию 0
+            if (string.IsNullOrWhiteSpace(value)) return (short)0;
 
             string val = value.Trim().ToLowerInvariant();
             if (val is "1" or "true" or "да" or "y") return (short)1;
             if (val is "0" or "false" or "нет" or "n") return (short)0;
 
-            // Если пришло какое-то другое число (например, статус "2")
             if (short.TryParse(val, out short parsedShort)) return parsedShort;
 
-            return (short)0; // Если распознать не удалось
+            return (short)0;
         }
 
         private DateTime last_date_download_bonus_clients()
@@ -2708,7 +1861,6 @@ int endProgress)
                 Console.WriteLine($"Ошибка при создании таблицы tovar2: {ex.Message}");
             }
         }
-              
 
         private async Task<LoadPacketData> getLoadPacketDataFullAsync(string nick_shop, string data_encrypt, string key)
         {
@@ -2720,12 +1872,9 @@ int endProgress)
 
             try
             {
-
                 DS ds = await ServiceLocator.DsAsync();
+                ds.Timeout = 60000;
 
-                ds.Timeout = 60000; // 60 секунд на скачивание большого пакета
-
-                // Ждем скачивания байтов (UI в это время не виснет!)
                 byte[] result_query_byte = await ds.GetDataForCasheV8JasonAvalonAsync(
                     nick_shop,
                     data_encrypt,
@@ -2738,9 +1887,7 @@ int endProgress)
             }
             catch (Exception ex)
             {
-                // ВАЖНО: При падении скачивания сбрасываем кэш адреса!
                 await ServiceLocator.ResetDsCacheAsync();
-
                 loadPacketData.Exception = ex.Message;
                 loadPacketData.PacketIsFull = false;
             }
@@ -2803,8 +1950,6 @@ int endProgress)
             WHERE tovar.code = t2.code;";
         }
 
-
-
         public static DateTime last_date_download_tovars()
         {
             DateTime result = new DateTime(2000, 1, 1);
@@ -2821,19 +1966,16 @@ int endProgress)
 
                     if (query_result != null && query_result != DBNull.Value)
                     {
-                        // ✅ Вариант 1: Если пришёл DateOnly (.NET 6+)
                         if (query_result is DateOnly dateOnly)
                         {
                             result = dateOnly.ToDateTime(TimeOnly.MinValue);
                             Console.WriteLine($"[DEBUG] Конвертировано из DateOnly: {result}");
                         }
-                        // ✅ Вариант 2: Если пришёл DateTime
                         else if (query_result is DateTime dateTime)
                         {
                             result = dateTime;
                             Console.WriteLine($"[DEBUG] Получено DateTime: {result}");
                         }
-                        // ✅ Вариант 3: Универсальное преобразование
                         else
                         {
                             result = Convert.ToDateTime(query_result);
@@ -2893,81 +2035,16 @@ int endProgress)
 
         #region Методы для работы с UI
 
-        private void SetLoadingState(bool isLoading)
-        {
-            _isLoading = isLoading;
-
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (_btn_new_load != null)
-                {
-                    if (isLoading)
-                    {
-                        _btn_new_load.Background = new SolidColorBrush(Color.Parse("#4CAF50"));
-                        _btn_new_load.Content = "Идет загрузка...";
-                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Wait);
-                        _btn_new_load.Click -= Btn_new_load_Click;
-                    }
-                    else
-                    {
-                        _btn_new_load.Background = new SolidColorBrush(Color.Parse("#2196F3"));
-                        _btn_new_load.Content = "Начать загрузку данных";
-                        _btn_new_load.Cursor = new Cursor(StandardCursorType.Hand);
-                        _btn_new_load.Click += Btn_new_load_Click;
-                    }
-                }
-
-                if (_progressPanel != null)
-                    _progressPanel.IsVisible = isLoading;
-
-                // ⬇⬇⬇ НОВОЕ: Показываем подсказку только во время загрузки ⬇⬇⬇
-                if (_workHintText != null)
-                    _workHintText.IsVisible = isLoading;
-
-                if (_timeInfoText != null)
-                {
-                    if (isLoading)
-                    {
-                        _timeInfoText.Text = "Время загрузки: 00:00";
-                        _timeInfoText.IsVisible = true;
-                    }
-                }
-
-                if (isLoading)
-                {
-                    this.CanResize = false;
-                }
-                else
-                {
-                    this.CanResize = true;
-                    if (_progressBar1 != null)
-                    {
-                        _progressBar1.Value = 0;
-                        _progressBar1.IsIndeterminate = false;
-                    }
-                    if (_statusText != null)
-                        _statusText.Text = "";
-                    if (_progressPercent != null)
-                        _progressPercent.Text = "0%";
-                }
-            }).Wait();
-        }
-
-        /// <summary>
-        /// Обновляет текст с датой последней успешной загрузки
-        /// </summary>
         private void UpdateLastSyncDate()
         {
             try
             {
-                // Используем уже существующий метод, который ходит в БД
                 DateTime lastDate = last_date_download_tovars();
 
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (_lastUpdateText != null)
                     {
-                        // Проверяем, что дата не дефолтная (2000 год)
                         if (lastDate > new DateTime(2001, 1, 1))
                         {
                             _lastUpdateText.Text = $"Последняя успешная загрузка: {lastDate:dd.MM.yyyy HH:mm}";
@@ -2984,7 +2061,6 @@ int endProgress)
                 Console.WriteLine($"Ошибка получения даты последней загрузки: {ex.Message}");
             }
         }
-
 
         private async Task UpdateProgressAsync(string message, int progress)
         {
@@ -3047,8 +2123,6 @@ int endProgress)
             base.OnClosing(e);
         }
 
-
-
         private async void ShowCancelDialog()
         {
             var result = await MessageBox.Show(
@@ -3063,7 +2137,6 @@ int endProgress)
                 _userCancelled = true;
                 _cancellationTokenSource?.Cancel();
 
-                // Закрываем окно после небольшой задержки для корректной отмены
                 await Task.Delay(100);
                 RequestClose?.Invoke(this, EventArgs.Empty);
             }
@@ -3071,6 +2144,6 @@ int endProgress)
 
         #endregion
 
-        #endregion
+        #endregion // Закрывает "Основная логика загрузки"
     }
 }

@@ -434,7 +434,7 @@
                                 FontFamily="Segoe UI" />
                     </Grid>
                     
-                    <!-- Период выгрузки и дата загрузки -->
+                                        <!-- Период выгрузки и дата загрузки -->
                     <Grid Grid.Row="6"
                           Grid.Column="0"
                           Grid.ColumnSpan="4"
@@ -445,6 +445,8 @@
                             <ColumnDefinition Width="140" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="196" />
+                            <!-- ★ НОВАЯ КОЛОНКА ДЛЯ КНОПКИ ★ -->
+                            <ColumnDefinition Width="Auto" /> 
                         </Grid.ColumnDefinitions>
                         
                         <!-- Период выгрузки (в 2 строки) -->
@@ -477,6 +479,19 @@
                                  IsReadOnly="True"
                                  Margin="10,0,10,0"
                                  FontFamily="Segoe UI" />
+                        
+                        <!-- ★ НОВАЯ КНОПКА ГЕНЕРАЦИИ QR-КОДА ★ -->
+                        <Button Grid.Column="4"
+                                x:Name="btn_generate_qr"
+                                Content="Сгенерировать QR"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Left"
+                                Margin="10,0,0,0"
+                                Height="35"
+                                Padding="15,0"
+                                FontFamily="Segoe UI"
+                                Click="GenerateQrButton_Click"
+                                ToolTip.Tip="Сгенерировать зашифрованный QR-код для настройки планшета" />
                     </Grid>
                     
                     <!-- ===== НАСТРОЙКИ ПИОТ (новая строка) ===== -->

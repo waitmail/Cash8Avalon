@@ -1316,166 +1316,196 @@ namespace Cash8Avalon
         }
 
         protected override async void OnLoaded(RoutedEventArgs e)
+{
+    base.OnLoaded(e);
+    // Теперь ищем конкретно num_cash
+    var _num_cash = this.FindControl<TextBox>("num_cash");
+    //_num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
+    _num_cash.Text = "№ " + MainStaticClass.CashDeskNumber.ToString();
+    _num_cash.Tag = MainStaticClass.CashDeskNumber;
+
+    //Создание таблицы для перераспределения акций
+    DataColumn dc = new DataColumn("Code", System.Type.GetType("System.Int32"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Tovar", System.Type.GetType("System.String"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Quantity", System.Type.GetType("System.Int32"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Price", System.Type.GetType("System.Decimal"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("PriceAtDiscount", System.Type.GetType("System.Decimal"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Sum", System.Type.GetType("System.Decimal"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("SumAtDiscount", System.Type.GetType("System.Decimal"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Action", System.Type.GetType("System.Int32"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Gift", System.Type.GetType("System.Int32"));
+    table.Columns.Add(dc);
+    dc = new DataColumn("Action2", System.Type.GetType("System.Int32"));
+    table.Columns.Add(dc);
+
+    this.txtB_search_product.Focus();
+
+    if (MainStaticClass.GetVersionFn == 1)
+    {
+        checkBox_print_check.IsVisible = false;
+    }
+    checkBox_print_check.IsChecked = true;
+
+    if (IsNewCheck)
+    {
+        guid = Guid.NewGuid().ToString();
+
+        checkBox_to_print_repeatedly.IsVisible = false;
+        txtB_non_cash_money.IsVisible = false;
+        txtB_sertificate_money.IsVisible = false;
+        txtB_cash_money.IsVisible = false;
+        txtB_bonus_money.IsVisible = false;
+
+        this.txtB_search_product.Focus();
+
+        //this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
+        this.date_time_start.Text = DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
+        this.Discount = 0;
+        this.user.Text = MainStaticClass.Cash_Operator;
+        this.user.Tag = MainStaticClass.Cash_Operator_Client_Code;//gaa поменять на инн
+        numdoc = await get_new_number_document();
+        if (numdoc == 0)
         {
-            base.OnLoaded(e);
-            // Теперь ищем конкретно num_cash
-            var _num_cash = this.FindControl<TextBox>("num_cash");
-            //_num_cash.Text = "КАССА № " + MainStaticClass.CashDeskNumber.ToString();
-            _num_cash.Text = "№ " + MainStaticClass.CashDeskNumber.ToString();
-            _num_cash.Tag = MainStaticClass.CashDeskNumber;
-
-            //Создание таблицы для перераспределения акций
-            DataColumn dc = new DataColumn("Code", System.Type.GetType("System.Int32"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Tovar", System.Type.GetType("System.String"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Quantity", System.Type.GetType("System.Int32"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Price", System.Type.GetType("System.Decimal"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("PriceAtDiscount", System.Type.GetType("System.Decimal"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Sum", System.Type.GetType("System.Decimal"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("SumAtDiscount", System.Type.GetType("System.Decimal"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Action", System.Type.GetType("System.Int32"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Gift", System.Type.GetType("System.Int32"));
-            table.Columns.Add(dc);
-            dc = new DataColumn("Action2", System.Type.GetType("System.Int32"));
-            table.Columns.Add(dc);
-
-            this.txtB_search_product.Focus();
-
-            if (MainStaticClass.GetVersionFn == 1)
-            {
-                checkBox_print_check.IsVisible = false;
-            }
-            checkBox_print_check.IsChecked = true;
-
-            if (IsNewCheck)
-            {
-                guid = Guid.NewGuid().ToString();
-
-                checkBox_to_print_repeatedly.IsVisible = false;
-                txtB_non_cash_money.IsVisible = false;
-                txtB_sertificate_money.IsVisible = false;
-                txtB_cash_money.IsVisible = false;
-                txtB_bonus_money.IsVisible = false;
-
-                this.txtB_search_product.Focus();
-
-                //this.date_time_start.Text = "Чек   " + DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
-                this.date_time_start.Text = DateTime.Now.ToString("yyy-MM-dd HH:mm:ss");
-                this.Discount = 0;
-                this.user.Text = MainStaticClass.Cash_Operator;
-                this.user.Tag = MainStaticClass.Cash_Operator_Client_Code;//gaa поменять на инн
-                numdoc = await get_new_number_document();
-                if (numdoc == 0)
-                {
-                    await MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа", this);
-                    MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
-                    this.Close();
-                }
-                this.txtB_num_doc.Text = this.numdoc.ToString();
-                MainStaticClass.write_event_in_log(" Ввод нового документа ", "Документ чек", numdoc.ToString());
-                this.check_type.SelectedIndex = 0;
-                this.check_type.IsEnabled = true;
-                set_sale_disburse_button();
-            }
-            else
-            {
-                reopened = true;
-                SetFormReadOnly(true);
-
-                int status = await get_its_deleted_document();
-                if ((status == 0) || (status == 1))
-                {
-                    this.check_type.IsEnabled = false;
-                    this.txtB_search_product.IsEnabled = false;
-                    this.comment.IsEnabled = false;
-                    ToOpenTheWrittenDownDocument();
-                    enable_print();
-                    if (MainStaticClass.Code_right_of_user != 1)
-                    {
-                        this.pay.IsEnabled = false;
-                    }
-                }
-            }
-
-
-            if (IsNewCheck)
-            {
-                selection_goods = true;
-                this.txtB_search_product.Focus();
-                //список допустимых длин qr кодов                
-                qr_code_lenght.Add(29);
-                qr_code_lenght.Add(30);
-                qr_code_lenght.Add(31);
-                qr_code_lenght.Add(32);
-                qr_code_lenght.Add(37);
-                qr_code_lenght.Add(40);
-                qr_code_lenght.Add(41);
-                qr_code_lenght.Add(76);
-                qr_code_lenght.Add(83);
-                qr_code_lenght.Add(115);
-                qr_code_lenght.Add(127);
-
-                if (await MainStaticClass.PrintingUsingLibraries() == 1)
-                {
-                    IFptr fptr = MainStaticClass.FPTR;
-
-                    if (!fptr.isOpened())
-                    {
-                        fptr.open();
-                    }
-
-                    fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
-                    fptr.queryData();
-                    if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
-                    {
-                        await MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены", this);
-                    }
-                }
-            }
-            else
-            {
-                if (MainStaticClass.Use_Fiscall_Print)
-                {
-                    if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
-                    {
-                        if (await ItcPrinted())
-                        {
-                            this.pay.IsEnabled = false;
-                            this.checkBox_to_print_repeatedly.IsEnabled = false;
-                        }
-                        else
-                        {
-                            this.pay.IsEnabled = true;
-                            this.checkBox_to_print_repeatedly.IsEnabled = true;
-                        }
-                    }
-                    else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
-                    {
-                        if (await ItcPrinted())
-                        {
-                            this.checkBox_to_print_repeatedly.IsEnabled = false;
-                        }
-                        if (await ItcPrintedP())
-                        {
-                            this.checkBox_to_print_repeatedly_p.IsEnabled = false;
-                        }
-                        if (await ItcPrinted() && await this.ItcPrintedP())
-                        {
-                            this.pay.IsEnabled = false;
-                        }
-                    }
-                }
-            }
-            UpdateWindowTitle();
-            UpdatePaymentInfoRowVisibility();
+            await MessageBoxHelper.Show("Ошибка при получении номера документа.", "Проверка при получении номер документа", this);
+            MainStaticClass.WriteRecordErrorLog("Ошибка при получении номера документа", "Cash_check_Load", 0, MainStaticClass.CashDeskNumber, "При вводе нового документа получен нулевой номер");
+            this.Close();
         }
+        this.txtB_num_doc.Text = this.numdoc.ToString();
+        MainStaticClass.write_event_in_log(" Ввод нового документа ", "Документ чек", numdoc.ToString());
+        this.check_type.SelectedIndex = 0;
+        this.check_type.IsEnabled = true;
+        set_sale_disburse_button();
+    }
+    else
+    {
+        reopened = true;
+        SetFormReadOnly(true);
+
+        int status = await get_its_deleted_document();
+        if ((status == 0) || (status == 1))
+        {
+            this.check_type.IsEnabled = false;
+            this.txtB_search_product.IsEnabled = false;
+            this.comment.IsEnabled = false;
+            ToOpenTheWrittenDownDocument();
+            enable_print();
+            if (MainStaticClass.Code_right_of_user != 1)
+            {
+                this.pay.IsEnabled = false;
+            }
+        }
+    }
+
+
+    if (IsNewCheck)
+    {
+        selection_goods = true;
+        this.txtB_search_product.Focus();
+        //список допустимых длин qr кодов                
+        qr_code_lenght.Add(29);
+        qr_code_lenght.Add(30);
+        qr_code_lenght.Add(31);
+        qr_code_lenght.Add(32);
+        qr_code_lenght.Add(37);
+        qr_code_lenght.Add(40);
+        qr_code_lenght.Add(41);
+        qr_code_lenght.Add(76);
+        qr_code_lenght.Add(83);
+        qr_code_lenght.Add(115);
+        qr_code_lenght.Add(127);
+
+        if (await MainStaticClass.PrintingUsingLibraries() == 1)
+        {
+            IFptr fptr = MainStaticClass.FPTR;
+
+            if (!fptr.isOpened())
+            {
+                fptr.open();
+            }
+
+            fptr.setParam(AtolConstants.LIBFPTR_PARAM_DATA_TYPE, AtolConstants.LIBFPTR_DT_SHIFT_STATE);
+            fptr.queryData();
+            if (AtolConstants.LIBFPTR_SS_CLOSED == fptr.getParamInt(AtolConstants.LIBFPTR_PARAM_SHIFT_STATE))
+            {
+                await MessageBox.Show("У вас закрыта смена вы не сможете продавать маркированный товар, будете получать ошибку 422.Необходимо сделать внесение наличных в кассу. ", "Проверка состояния смены", this);
+            }
+        }
+    }
+    else
+    {
+        // ═══════════════════════════════════════════════════
+        // НАЧАЛО БЛОКА БЛОКИРОВКИ ПРОСРОЧЕННЫХ EXTRA ЧЕКОВ
+        // ═══════════════════════════════════════════════════
+        bool isExtraCheckOutOfDate = false;
+        if (this.Extra && !string.IsNullOrEmpty(date_time_write))
+        {
+            string[] expectedFormats = { "yyyy-MM-dd HH:mm:ss", "dd-MM-yyyy HH:mm:ss", "dd.MM.yyyy HH:mm:ss", "yyyy.MM.dd HH:mm:ss" };
+            if (DateTime.TryParseExact(date_time_write.Trim(), expectedFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dtWrite))
+            {
+                if (dtWrite.Date != DateTime.Now.Date)
+                {
+                    isExtraCheckOutOfDate = true;
+                }
+            }
+        }
+
+        // if (isExtraCheckOutOfDate)
+        // {
+        //     await MessageBoxHelper.Show(
+        //         "Печать чеков с признаком 'Extra' доступна только день в день (сегодня на сегодня).", 
+        //         "Ограничение печати", 
+        //         MessageBoxButton.OK, MessageBoxType.Warning, this);
+        //         
+        //     this.pay.IsEnabled = false;
+        //     this.checkBox_to_print_repeatedly.IsEnabled = false;
+        //     this.checkBox_to_print_repeatedly_p.IsEnabled = false;
+        // }
+        // ═══════════════════════════════════════════════════
+        // КОНЕЦ БЛОКА БЛОКИРОВКИ
+        // ═══════════════════════════════════════════════════
+        else if (MainStaticClass.Use_Fiscall_Print)
+        {
+            if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
+            {
+                if (await ItcPrinted())
+                {
+                    this.pay.IsEnabled = false;
+                    this.checkBox_to_print_repeatedly.IsEnabled = false;
+                }
+                else
+                {
+                    this.pay.IsEnabled = true;
+                    this.checkBox_to_print_repeatedly.IsEnabled = true;
+                }
+            }
+            else if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+            {
+                if (await ItcPrinted())
+                {
+                    this.checkBox_to_print_repeatedly.IsEnabled = false;
+                }
+                if (await ItcPrintedP())
+                {
+                    this.checkBox_to_print_repeatedly_p.IsEnabled = false;
+                }
+                if (await ItcPrinted() && await this.ItcPrintedP())
+                {
+                    this.pay.IsEnabled = false;
+                }
+            }
+        }
+    }
+    UpdateWindowTitle();
+    UpdatePaymentInfoRowVisibility();
+}
 
         private void UpdatePaymentInfoRowVisibility()
         {
@@ -3005,6 +3035,24 @@ namespace Cash8Avalon
 
         private async void Pay_Click(object? sender, RoutedEventArgs e)
         {
+
+            // Защита от печати просроченных Extra-чеков (даже через горячие клавиши)
+            // if (!IsNewCheck && this.Extra && !string.IsNullOrEmpty(date_time_write))
+            // {
+            //     string[] expectedFormats = { "yyyy-MM-dd HH:mm:ss", "dd-MM-yyyy HH:mm:ss", "dd.MM.yyyy HH:mm:ss", "yyyy.MM.dd HH:mm:ss" };
+            //     if (DateTime.TryParseExact(date_time_write.Trim(), expectedFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dtWrite))
+            //     {
+            //         if (dtWrite.Date != DateTime.Now.Date)
+            //         {
+            //             await MessageBoxHelper.Show(
+            //                 "Печать чеков с признаком 'Extra' доступна только день в день!", 
+            //                 "Ограничение печати", 
+            //                 MessageBoxButton.OK, MessageBoxType.Warning, this);
+            //             return;
+            //         }
+            //     }
+            // }
+
             Console.WriteLine($"Перед проверкой возможности печати");
             if (await MainStaticClass.PrintingUsingLibraries() == 1)
             {
@@ -3807,6 +3855,26 @@ namespace Cash8Avalon
             }
             return true;
         }
+        
+        private async void openDrawer()
+        {
+            if (await MainStaticClass.PrintingUsingLibraries() == 1)
+            {
+                try
+                {
+                    IFptr fptr = MainStaticClass.FPTR;
+                    if (!fptr.isOpened())
+                    {
+                        fptr.open();
+                    }
+                    fptr.openDrawer();
+                }
+                catch (Exception ex)
+                {
+                    await MessageBox.Show("Ошибки при попытке открыть денежный ящик: " + ex.Message);
+                }
+            }
+        }
 
 
         private async void show_pay_form()
@@ -3904,6 +3972,7 @@ namespace Cash8Avalon
 
                     // Передаём зафиксированную сумму в форму оплаты
                     pay_form.PaySum = sumForPayAndDb;
+                    pay_form.Extra = true;
 
                     // Передаём зафиксированную сумму в БД (с await!)
                     await write_new_document("0", verifiedSum.ToString(), "0", "0", false, "0", "0", "0", "0", false);
@@ -4165,29 +4234,7 @@ namespace Cash8Avalon
                 return false;
             }
         }
-        //public async void sale_cancellation_Click(string cash_money, string non_cash_money)
-        //{
-        //    try
-        //    {
-        //        if (_productsData.Count == 0)
-        //        {
-        //            await MessageBoxHelper.Show(" Нет строк ", " Проверки перед записью документа ", this);
-        //            return;
-        //        }
-
-        //        if (MainStaticClass.Use_Fiscall_Print)
-        //        {
-        //            fiscall_print_disburse(cash_money, non_cash_money);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка в sale_cancellation_Click: {ex.Message}");
-        //        // Если произошла ошибка до вызова печати, нужно разблокировать интерфейс
-        //        try { this.Close(); } catch { }
-        //    }
-        //}
-
+        
 
         //private async void fiscall_print_disburse(string cash_money, string non_cash_money)
         //{
@@ -4325,6 +4372,10 @@ namespace Cash8Avalon
                         result = await fiscall_print_pay(pay);
                     }
                 }
+            }
+            else
+            {
+                openDrawer();
             }
 
             return result;
@@ -5869,6 +5920,42 @@ namespace Cash8Avalon
                     return;
                 }
 
+                //// ✅ Создание нового товара
+                //var productItem = new ProductItem
+                //{
+                //    Code = (int)productData.Code,
+                //    Tovar = productData.GetName(),
+                //    Quantity = 1,
+                //    Price = productData.Price,
+                //    PriceAtDiscount = productData.Price,
+                //    Sum = 0,
+                //    SumAtDiscount = 0,
+                //    Action = 0,
+                //    Gift = 0,
+                //    Action2 = 0,
+
+                //    // ИСПРАВЛЕНИЕ: Приоритет для сертификатов, иначе маркировка, иначе "0"
+                //    //Mark = productData.isCertificate()
+                //    //    ? barcode
+                //    //    : (!string.IsNullOrEmpty(marking_code) ? marking_code : "0"),
+
+                //    //Если сертификат тогда присваиваем штрихкод, если маркировка то присваиваем код маркировки иначе 0 даже когда товар не маркированный то все равно может быть код маркировки 
+                //    //Mark = productData.isCertificate()
+                //    //    ? barcode
+                //    //    : (productData.IsMarked()
+                //    //    ? (!string.IsNullOrEmpty(marking_code) ? marking_code : "0")
+                //    //    : "0"),
+
+                //    Mark = await MainStaticClass.GetOfflineAsync() ? "0" :
+                //    productData.isCertificate() ? barcode :
+                //    productData.IsMarked() && !string.IsNullOrEmpty(marking_code) ? marking_code :
+                //    "0",
+
+                //    IsSertificate = productData.isCertificate(),
+                //    IsFractional = productData.IsFractional(),
+                //    IsMarked = productData.IsMarked()
+                //};
+
                 // ✅ Создание нового товара
                 var productItem = new ProductItem
                 {
@@ -5883,21 +5970,22 @@ namespace Cash8Avalon
                     Gift = 0,
                     Action2 = 0,
 
-                    // ИСПРАВЛЕНИЕ: Приоритет для сертификатов, иначе маркировка, иначе "0"
-                    //Mark = productData.isCertificate()
-                    //    ? barcode
-                    //    : (!string.IsNullOrEmpty(marking_code) ? marking_code : "0"),
-
-                    //Если сертификат тогда присваиваем штрихкод, если маркировка то присваиваем код маркировки иначе 0 даже когда товар не маркированный то все равно может быть код маркировки 
-                    Mark = productData.isCertificate()
-                        ? barcode
-                        : (productData.IsMarked()
-                        ? (!string.IsNullOrEmpty(marking_code) ? marking_code : "0")
-                        : "0"),
+                    // Приоритет: Офлайн (0) -> Сертификат (штрихкод) -> Маркировка (код) -> 0
+                    Mark = await MainStaticClass.GetOfflineAsync() ? "0" :
+                           productData.isCertificate() ? barcode :
+                           productData.IsMarked() && !string.IsNullOrEmpty(marking_code) ? marking_code :
+                           "0",
 
                     IsSertificate = productData.isCertificate(),
                     IsFractional = productData.IsFractional(),
-                    IsMarked = productData.IsMarked()
+                       //Если GetOfflineAsync() вернет true,
+                       //то!true станет false.При false && ... результат всего выражения сразу будет false(остальное даже не вычисляется).
+                       //Если вернет false(онлайн),
+                       //то!false станет true,
+                       //и результатом станет именно productData.IsMarked().
+
+                    // В офлайне всегда false, иначе берем из productData
+                    IsMarked = !await MainStaticClass.GetOfflineAsync() && productData.IsMarked()
                 };
 
 
@@ -9188,352 +9276,6 @@ namespace Cash8Avalon
             }
         }
 
-        // Метод для пересчета сумм товара с учетом скидки
-        //private void RecalculateProductSums(ProductItem product)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine($"=== Пересчет товара {product.Code}: {product.Tovar} ===");
-        //        Console.WriteLine($"Исходная цена: {product.Price}");
-        //        Console.WriteLine($"Текущая цена со скидкой: {product.PriceAtDiscount}");
-        //        Console.WriteLine($"Скидка клиента: {Discount * 100}%");
-        //        Console.WriteLine($"Акция: {product.Action}, Подарок: {product.Gift}, Акция2: {product.Action2}");
-
-        //        // 1. Проверяем, является ли товар сертификатом
-        //        //if (IsCertificate(product.Code.ToString()))
-        //        if (product.IsSertificate)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - сертификат");
-        //            // Для сертификата цена со скидкой равна номиналу
-        //            product.PriceAtDiscount = Math.Round(product.Price, 2, MidpointRounding.AwayFromZero);
-        //        }
-        //        // 2. Проверяем, участвует ли товар в акции или является подарком
-        //        else if (product.Action != 0 || product.Gift != 0 || product.Action2 != 0)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} участвует в акции/подарок");
-
-        //            // Для подарков с ценой 0.01 оставляем специальную цену
-        //            if (product.Gift != 0 && Math.Abs((double)product.Price - 0.01) < 0.001)
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //                Console.WriteLine($"Подарок по цене 0.01: цена = {product.PriceAtDiscount}");
-        //            }
-        //            else if (product.PriceAtDiscount == 0 || product.PriceAtDiscount == product.Price)
-        //            {
-        //                // Если цена со скидкой не установлена или равна базовой
-        //                // Сохраняем базовую цену (акционная скидка уже должна быть учтена)
-        //                product.PriceAtDiscount = product.Price;
-        //                Console.WriteLine($"Акционный товар: цена = {product.PriceAtDiscount}");
-        //            }
-        //            // Иначе оставляем существующую цену со скидкой
-        //        }
-        //        // 3. Обычный товар без акций - применяем скидку клиента
-        //        else
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - обычный товар без акций");
-
-        //            // Проверяем условия для применения скидки клиента:
-        //            // - Есть скидка клиента
-        //            // - Чек продажи (не возврат)
-        //            // - Не сертификат и не участвует в акциях (уже проверили)
-        //            bool canApplyCustomerDiscount =
-        //                Discount > 0 &&
-        //                CheckType?.SelectedIndex == 0 &&
-        //                product.PriceAtDiscount >= product.Price; // Только если нет другой скидки
-
-        //            if (canApplyCustomerDiscount)
-        //            {
-        //                decimal discountedPrice = product.Price - product.Price * (decimal)Discount;
-        //                decimal roundedPrice = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
-
-        //                // Проверяем, что новая цена действительно меньше
-        //                if (roundedPrice < product.PriceAtDiscount)
-        //                {
-        //                    product.PriceAtDiscount = roundedPrice;
-        //                    Console.WriteLine($"Применена скидка клиента: новая цена = {product.PriceAtDiscount}");
-        //                }
-        //                else
-        //                {
-        //                    Console.WriteLine($"Скидка клиента не уменьшила цену, оставляем {product.PriceAtDiscount}");
-        //                }
-        //            }
-        //            else
-        //            {
-        //                if (product.PriceAtDiscount == 0 || product.PriceAtDiscount > product.Price)
-        //                {
-        //                    product.PriceAtDiscount = product.Price;
-        //                }
-        //                Console.WriteLine($"Скидка клиента не применяется. Цена = {product.PriceAtDiscount}");
-        //            }
-        //        }
-
-        //        // Расчет сумм
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-
-        //        Console.WriteLine($"Итог: Базовая цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.Sum}, Сумма со скидкой={product.SumAtDiscount}");
-        //        Console.WriteLine($"=== Конец пересчета товара {product.Code} ===\n");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
-        //        Dispatcher.UIThread.InvokeAsync(async () =>
-        //        {
-        //            await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
-        //                MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        });
-        //        // В случае ошибки устанавливаем безопасные значения
-        //        product.PriceAtDiscount = product.Price;
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //    }
-        //}
-
-        //private void RecalculateProductSums(ProductItem product)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine($"=== Пересчет товара {product.Code}: {product.Tovar} ===");
-        //        Console.WriteLine($"Исходная цена: {product.Price}");
-        //        Console.WriteLine($"Текущая цена со скидкой: {product.PriceAtDiscount}");
-        //        Console.WriteLine($"Скидка клиента: {Discount * 100}%");
-        //        Console.WriteLine($"Акция: {product.Action}, Подарок: {product.Gift}, Акция2: {product.Action2}");
-
-        //        // 1. Проверяем, является ли товар сертификатом
-        //        if (product.IsSertificate)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - сертификат");
-        //            product.PriceAtDiscount = Math.Round(product.Price, 2, MidpointRounding.AwayFromZero);
-        //        }
-        //        // 2. Проверяем, участвует ли товар в акции или является подарком
-        //        //else if (product.Action != 0 || product.Gift != 0 || product.Action2 != 0)
-        //          else if (product.Action != 0 || product.Gift != 0)
-        //           {
-        //            Console.WriteLine($"Товар {product.Code} участвует в акции/подарок");
-        //            // Для подарков с ценой 0.01 оставляем специальную цену
-        //            if (product.Gift != 0 && Math.Abs((double)product.Price - 0.01) < 0.001)
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //                Console.WriteLine($"Подарок по цене 0.01: цена = {product.PriceAtDiscount}");
-        //            }
-        //            // ✅ ИСПРАВЛЕНИЕ: Не блокируем применение скидки клиента если акция уже уменьшила цену
-        //            // Оставляем цену из обработки акций, но позволяем применить скидку клиента поверх
-        //            else
-        //            {
-        //                // Сохраняем акционную цену как базовую для расчета
-        //                decimal actionPrice = product.PriceAtDiscount;
-
-        //                // ✅ Применяем скидку клиента ПОВЕРХ акционной цены (как в WinForms)
-        //                if (Discount > 0 && CheckType?.SelectedIndex == 0)
-        //                {
-        //                    decimal discountedPrice = actionPrice - actionPrice * (decimal)Discount;
-        //                    decimal roundedPrice = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
-        //                    product.PriceAtDiscount = roundedPrice;
-        //                    Console.WriteLine($"Применена скидка клиента поверх акции: новая цена = {product.PriceAtDiscount}");
-        //                }
-        //                else
-        //                {
-        //                    product.PriceAtDiscount = actionPrice;
-        //                }
-        //            }
-        //        }
-        //        // 3. Обычный товар без акций - применяем скидку клиента
-        //        else
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - обычный товар без акций");
-        //            if (Discount > 0 && CheckType?.SelectedIndex == 0)
-        //            {
-        //                decimal discountedPrice = product.Price - product.Price * (decimal)Discount;
-        //                decimal roundedPrice = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
-        //                product.PriceAtDiscount = roundedPrice;
-        //                Console.WriteLine($"Применена скидка клиента: новая цена = {product.PriceAtDiscount}");
-        //            }
-        //            else
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //            }
-        //        }
-
-        //        // Расчет сумм
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //        Console.WriteLine($"Итог: Базовая цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.Sum}, Сумма со скидкой={product.SumAtDiscount}");
-        //        Console.WriteLine($"=== Конец пересчета товара {product.Code} ===\n");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
-        //        Dispatcher.UIThread.InvokeAsync(async () =>
-        //        {
-        //            await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
-        //                MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        });
-        //        product.PriceAtDiscount = product.Price;
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //    }
-        //}
-
-        //private void RecalculateProductSums(ProductItem product)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine($"=== Пересчет товара {product.Code}: {product.Tovar} ===");
-        //        Console.WriteLine($"Исходная цена: {product.Price}");
-        //        Console.WriteLine($"Текущая цена со скидкой: {product.PriceAtDiscount}");
-        //        Console.WriteLine($"Скидка клиента: {Discount * 100}%");
-        //        Console.WriteLine($"Акция: {product.Action}, Подарок: {product.Gift}, Акция2: {product.Action2}");
-
-        //        // 1. Проверяем, является ли товар сертификатом
-        //        if (product.IsSertificate)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - сертификат");
-        //            product.PriceAtDiscount = Math.Round(product.Price, 2, MidpointRounding.AwayFromZero);
-        //        }
-        //        // 2. Проверяем, участвует ли товар в акции или является подарком
-        //        else if (product.Action != 0 || product.Gift != 0 || product.Action2 != 0)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} участвует в акции/подарок");
-
-        //            // Для подарков с ценой 0.01 оставляем специальную цену
-        //            if (product.Gift != 0 && Math.Abs((double)product.Price - 0.01) < 0.001)
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //                Console.WriteLine($"Подарок по цене 0.01: цена = {product.PriceAtDiscount}");
-        //            }
-        //            else
-        //            {
-        //                // ✅ ИСПРАВЛЕНИЕ: Применяем скидку клиента ПОВЕРХ акционной цены
-        //                decimal actionPrice = product.PriceAtDiscount;
-
-        //                if (Discount > 0 && CheckType?.SelectedIndex == 0 && product.Gift == 0 && product.Action == 0)
-        //                {
-        //                    decimal discountedPrice = actionPrice - actionPrice * (decimal)Discount;
-        //                    decimal roundedPrice = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
-        //                    product.PriceAtDiscount = roundedPrice;
-        //                    Console.WriteLine($"✅ Применена скидка клиента поверх акции: {actionPrice} -> {product.PriceAtDiscount}");
-        //                }
-        //                else
-        //                {
-        //                    product.PriceAtDiscount = actionPrice;
-        //                }
-        //            }
-        //        }
-        //        // 3. Обычный товар без акций - применяем скидку клиента
-        //        else
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - обычный товар без акций");
-        //            if (Discount > 0 && CheckType?.SelectedIndex == 0)
-        //            {
-        //                decimal discountedPrice = product.Price - product.Price * (decimal)Discount;
-        //                decimal roundedPrice = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
-        //                product.PriceAtDiscount = roundedPrice;
-        //                Console.WriteLine($"Применена скидка клиента: новая цена = {product.PriceAtDiscount}");
-        //            }
-        //            else
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //            }
-        //        }
-
-        //        // Расчет сумм
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //        Console.WriteLine($"Итог: Базовая цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.Sum}, Сумма со скидкой={product.SumAtDiscount}");
-        //        Console.WriteLine($"=== Конец пересчета товара {product.Code} ===\n");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
-        //        Dispatcher.UIThread.InvokeAsync(async () =>
-        //        {
-        //            await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
-        //                MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        });
-        //        product.PriceAtDiscount = product.Price;
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //    }
-        //}        
-
-        //private void RecalculateProductSums(ProductItem product)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine($"=== Пересчет товара {product.Code}: {product.Tovar} ===");
-        //        Console.WriteLine($"Исходная цена: {product.Price}");
-        //        Console.WriteLine($"Текущая цена со скидкой: {product.PriceAtDiscount}");
-        //        Console.WriteLine($"Скидка клиента: {Discount * 100}%");
-        //        Console.WriteLine($"Акция: {product.Action}, Подарок: {product.Gift}, Акция2: {product.Action2}");
-
-        //        // 1. Сертификаты — скидки не применяются, цена фиксируется
-        //        if (product.IsSertificate)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - сертификат. Скидки нет.");
-        //            product.PriceAtDiscount = Math.Round(product.Price, 2, MidpointRounding.AwayFromZero);
-        //        }
-        //        // 2. Акции (Action) и Подарки (Gift)
-        //        // Action2 ИСКЛЮЧЕН из этого условия, чтобы скидка клиента на него накладывалась.
-        //        // Здесь мы НЕ ПЕРЕЗАПИСЫВАЕМ PriceAtDiscount, чтобы сохранить цену, рассчитанную акцией.
-        //        else if (product.Action != 0 || product.Gift != 0)
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} участвует в акции/подарок. Скидка клиента НЕ применяется.");
-
-        //            // Особый случай для подарков с ценой 0.01
-        //            if (product.Gift != 0 && Math.Abs((double)product.Price - 0.01) < 0.001)
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //                Console.WriteLine($"Подарок по цене 0.01: цена = {product.PriceAtDiscount}");
-        //            }
-        //            else
-        //            {
-        //                // ВАЖНО: Мы ничего не делаем с product.PriceAtDiscount здесь.
-        //                // Акционная цена уже должна быть установлена в PriceAtDiscount предыдущими расчетами.
-        //                // Старый код делал: actionPrice = product.PriceAtDiscount; product.PriceAtDiscount = actionPrice;
-        //                // Что сохраняло значение. Мы просто оставляем его как есть.
-        //                Console.WriteLine($"Сохраняем акционную цену: {product.PriceAtDiscount}");
-        //            }
-        //        }
-        //        // 3. Обычные товары (Action == 0, Gift == 0), включая Action2
-        //        // Применяем скидку клиента
-        //        else
-        //        {
-        //            Console.WriteLine($"Товар {product.Code} - обычный (или Action2). Пробуем применить скидку клиента.");
-
-        //            if (Discount > 0 && CheckType?.SelectedIndex == 0)
-        //            {
-        //                decimal discountedPrice = Math.Round(product.Price - product.Price * (decimal)Discount,2,MidpointRounding.AwayFromZero);
-        //                product.PriceAtDiscount = Math.Round(discountedPrice, 2, MidpointRounding.AwayFromZero);
-        //                Console.WriteLine($"Применена скидка клиента: {product.Price} -> {product.PriceAtDiscount}");
-        //            }
-        //            else
-        //            {
-        //                product.PriceAtDiscount = product.Price;
-        //                Console.WriteLine($"Скидка клиента отсутствует. Цена: {product.PriceAtDiscount}");
-        //            }
-        //        }
-
-        //        // Расчет итоговых сумм
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //        Console.WriteLine($"Итог: Цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.SumAtDiscount}");
-        //        Console.WriteLine($"=== Конец пересчета товара {product.Code} ===\n");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
-        //        Dispatcher.UIThread.InvokeAsync(async () =>
-        //        {
-        //            await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
-        //                MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        });
-
-        //        product.PriceAtDiscount = product.Price;
-        //        product.Sum = product.Quantity * product.Price;
-        //        product.SumAtDiscount = product.Quantity * product.PriceAtDiscount;
-        //    }
-        //}
-
         private void RecalculateProductSums(ProductItem product)
         {
             try
@@ -9544,6 +9286,35 @@ namespace Cash8Avalon
                 Console.WriteLine($"Скидка клиента: {Discount * 100}%");
                 Console.WriteLine($"Акция: {product.Action}, Подарок: {product.Gift}, Акция2: {product.Action2}");
 
+                // ═══════════════════════════════════════════════════
+                // ✅ ИСПРАВЛЕНИЕ: Если это чек возврата, цены не пересчитываем!
+                // Берем цены из исходного чека продажи и только умножаем на количество.
+                // ═══════════════════════════════════════════════════
+                if (CheckType?.SelectedIndex == 1) // 1 — это Возврат
+                {
+                    Console.WriteLine($"Товар {product.Code} в чеке ВОЗВРАТА. Цены берутся из исходного чека.");
+
+                    // Подстраховка на случай, если цена со скидкой не загрузилась из БД
+                    if (product.PriceAtDiscount == 0)
+                    {
+                        product.PriceAtDiscount = product.Price;
+                    }
+
+                    // Считаем суммы на основе текущих цен и нового количества
+                    product.Sum = Math.Round(product.Quantity * product.Price, 2, MidpointRounding.AwayFromZero);
+                    product.SumAtDiscount = Math.Round(product.Quantity * product.PriceAtDiscount, 2,
+                        MidpointRounding.AwayFromZero);
+
+                    Console.WriteLine(
+                        $"Итог (Возврат): Цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.Sum}, Сумма со скидкой={product.SumAtDiscount}");
+                    Console.WriteLine($"=== Конец пересчета товара {product.Code} ===\n");
+                    return; // Завершаем метод, не трогая логику скидок для продаж
+                }
+
+                // ═══════════════════════════════════════════════════
+                // ДАЛЕЕ ИДЕТ СТАНДАРТНАЯ ЛОГИКА ТОЛЬКО ДЛЯ ПРОДАЖИ
+                // ═══════════════════════════════════════════════════
+
                 // 1. Сертификаты — скидки не применяются, цена фиксируется
                 if (product.IsSertificate)
                 {
@@ -9553,7 +9324,8 @@ namespace Cash8Avalon
                 // 2. Акции (Action) и Подарки (Gift)
                 else if (product.Action != 0 || product.Gift != 0)
                 {
-                    Console.WriteLine($"Товар {product.Code} участвует в акции/подарок. Скидка клиента НЕ применяется.");
+                    Console.WriteLine(
+                        $"Товар {product.Code} участвует в акции/подарок. Скидка клиента НЕ применяется.");
 
                     if (product.Gift != 0 && Math.Abs((double)product.Price - 0.01) < 0.001)
                     {
@@ -9570,7 +9342,8 @@ namespace Cash8Avalon
                 // 3. Обычные товары (Action == 0, Gift == 0), включая Action2
                 else
                 {
-                    Console.WriteLine($"Товар {product.Code} - обычный (или Action2). Пробуем применить скидку клиента.");
+                    Console.WriteLine(
+                        $"Товар {product.Code} - обычный (или Action2). Пробуем применить скидку клиента.");
 
                     if (Discount > 0 && CheckType?.SelectedIndex == 0)
                     {
@@ -9585,12 +9358,13 @@ namespace Cash8Avalon
                     }
                 }
 
-                // ✅ ИСПРАВЛЕНИЕ: Расчет итоговых сумм С ОБЯЗАТЕЛЬНЫМ ОКРУГЛЕНИЕМ В СТРОКЕ
-                // Это критически важно для весовых товаров, чтобы не было сумм вида 154.356 рублей
+                // Расчет итоговых сумм С ОБЯЗАТЕЛЬНЫМ ОКРУГЛЕНИЕМ В СТРОКЕ
                 product.Sum = Math.Round(product.Quantity * product.Price, 2, MidpointRounding.AwayFromZero);
-                product.SumAtDiscount = Math.Round(product.Quantity * product.PriceAtDiscount, 2, MidpointRounding.AwayFromZero);
+                product.SumAtDiscount = Math.Round(product.Quantity * product.PriceAtDiscount, 2,
+                    MidpointRounding.AwayFromZero);
 
-                Console.WriteLine($"Итог: Цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.SumAtDiscount}");
+                Console.WriteLine(
+                    $"Итог: Цена={product.Price}, Цена со скидкой={product.PriceAtDiscount}, Сумма={product.SumAtDiscount}");
                 Console.WriteLine($"=== Конец пересчета товара {product.Code} ===\n");
             }
             catch (Exception ex)
@@ -9598,51 +9372,19 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}");
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}", "Пересчет товара",
+                    await MessageBoxHelper.Show($"✗ Ошибка при пересчете товара {product.Code}: {ex.Message}",
+                        "Пересчет товара",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
 
                 product.PriceAtDiscount = product.Price;
 
-                // ✅ ИСПРАВЛЕНИЕ: Не забываем округлить суммы и в блоке catch (при ошибке)
+                // Округляем суммы и в блоке catch
                 product.Sum = Math.Round(product.Quantity * product.Price, 2, MidpointRounding.AwayFromZero);
-                product.SumAtDiscount = Math.Round(product.Quantity * product.PriceAtDiscount, 2, MidpointRounding.AwayFromZero);
+                product.SumAtDiscount = Math.Round(product.Quantity * product.PriceAtDiscount, 2,
+                    MidpointRounding.AwayFromZero);
             }
         }
-
-
-        ///// <summary>
-        ///// Проверка является ли товар сертификатом
-        ///// </summary>
-        //private bool IsCertificate(string productCode)
-        //{
-        //    try
-        //    {
-        //        using (var conn = MainStaticClass.NpgsqlConn())
-        //        {
-        //            conn.Open();
-        //            string query = "SELECT COUNT(*) FROM tovar WHERE code = @code AND its_certificate = '1'";
-        //            using (var cmd = new NpgsqlCommand(query, conn))
-        //            {
-        //                cmd.Parameters.AddWithValue("@code", Convert.ToInt64(productCode));
-        //                var result = cmd.ExecuteScalar();
-        //                return Convert.ToInt32(result) > 0;
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Ошибка при проверке сертификата: {ex.Message}");
-        //        Dispatcher.UIThread.InvokeAsync(async () =>
-        //        {
-        //            await MessageBoxHelper.Show($"Ошибка при проверке сертификата: {ex.Message}", "Проверка сертификата",
-        //                MessageBoxButton.OK, MessageBoxType.Error, this);
-        //        });
-        //        return false;
-        //    }
-        //}
-
-
 
         // Метод для обновления всей строки товара в Grid (обновление текста без пересоздания)
         private void UpdateProductRowInGrid(int dataIndex)
@@ -11505,8 +11247,8 @@ namespace Cash8Avalon
                                " checks_header.sertificate_money,checks_header.non_cash_money,checks_header.cash_money,checks_header.bonuses_it_is_counted, " +
                                " checks_header.bonuses_it_is_written_off, " +
                                " checks_table.bonus_standard,checks_table.bonus_promotion,checks_table.promotion_b_mover,checks_table.item_marker,checks_header.requisite," +
-                               "checks_header.its_deleted,checks_header.system_taxation,checks_header.guid AS checks_header_guid,checks_header.guid1 AS checks_header_guid,payment_by_sbp,checks_header.action_num_doc " +
-                               " FROM checks_header left join checks_table ON checks_header.document_number=checks_table.document_number " +
+                               " checks_header.its_deleted,checks_header.system_taxation,checks_header.guid AS checks_header_guid,checks_header.guid1 AS checks_header_guid,payment_by_sbp,checks_header.action_num_doc " +
+                               " ,checks_header.extra FROM checks_header left join checks_table ON checks_header.document_number=checks_table.document_number " +
                                " left join clients ON checks_header.client  = clients.code " +
                                " left join tovar ON checks_table.tovar_code = tovar.code " +
                                " left join users ON  checks_header.autor = users.code " +
@@ -11541,6 +11283,7 @@ namespace Cash8Avalon
                         this.numdoc = Convert.ToInt64(reader["document_number"]);
                         this.txtB_num_doc.Text = this.numdoc.ToString();
                         this.checkBox_payment_by_sbp.IsChecked = Convert.ToBoolean(reader["payment_by_sbp"]);
+                        this.Extra = Convert.ToBoolean(reader["extra"]);
 
                         if (CheckType != null)
                         {

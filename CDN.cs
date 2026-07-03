@@ -681,12 +681,12 @@ namespace Cash8Avalon
                         {
                             if (answer_check_mark.codes[0].groupIds != null)
                             {
-                                if ((answer_check_mark.codes[0].groupIds[0] != 23) && (answer_check_mark.codes[0].groupIds[0] != 8) && (answer_check_mark.codes[0].groupIds[0] != 15))
-                                //if ((answer_check_mark.codes[0].groupIds[0] != 23) && (answer_check_mark.codes[0].groupIds[0] != 8))
-                                {
+                                // if ((answer_check_mark.codes[0].groupIds[0] != 23) && (answer_check_mark.codes[0].groupIds[0] != 8) && (answer_check_mark.codes[0].groupIds[0] != 15))
+                                // //if ((answer_check_mark.codes[0].groupIds[0] != 23) && (answer_check_mark.codes[0].groupIds[0] != 8))
+                                // {
                                     if (!productData.RrNotControlOwner())
                                     {
-                                        await MessageBox.Show(" Исключения групп маркировки  23|8|15 \r\n Текущая группа маркировки  " + answer_check_mark.codes[0].groupIds[0].ToString());
+                                        //await MessageBox.Show(" Исключения групп маркировки  23|8|15 \r\n Текущая группа маркировки  " + answer_check_mark.codes[0].groupIds[0].ToString());
                                         //if (cash_Check.check_type.SelectedIndex == 0)
                                         //{
                                         //    //MessageBox.Show("Код маркировки " + answer_check_mark.codes[0].gtin + " Вы не являетесь владельцем " + s, "CDN проверка");
@@ -695,7 +695,7 @@ namespace Cash8Avalon
                                         //    MainStaticClass.write_cdn_log("CDN Код маркировки " + mark_str_cdn + " Вы не являетесь владельцем ", numdoc.ToString(), codes[0].ToString(), "1");
                                         //}
                                     }
-                                }
+                                // }
                             }
                             else
                             {

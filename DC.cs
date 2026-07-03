@@ -738,7 +738,24 @@ namespace Cash8Avalon
             return ParseSoapResponse<bool>(response, "UploadDataOnSalesPortionJson");
         }
 
-        public bool UploadDataOnSalesPortionJasonAvalon(string nick_shop, string data, string scheme)
+        //public bool UploadDataOnSalesPortionJasonAvalon(string nick_shop, string data, string scheme)
+        //{
+        //    string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+        //        <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+        //            <soap:Body>
+        //                <UploadDataOnSalesPortionJasonAvalon xmlns=""http://tempuri.org/"">
+        //                    <nick_shop>{SecurityHelper.EscapeXml(nick_shop)}</nick_shop>
+        //                    <data>{SecurityHelper.EscapeXml(data)}</data>
+        //                    <scheme>{SecurityHelper.EscapeXml(scheme)}</scheme>
+        //                </UploadDataOnSalesPortionJasonAvalon>
+        //            </soap:Body>
+        //        </soap:Envelope>";
+
+        //    string response = ExecuteSoapRequest(soapEnvelope, "UploadDataOnSalesPortionJasonAvalon");
+        //    return ParseSoapResponse<bool>(response, "UploadDataOnSalesPortionJasonAvalon");
+        //}
+
+        public bool UploadDataOnSalesPortionJsonAvalon(string nick_shop, string data, string scheme)
         {
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
                 <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">

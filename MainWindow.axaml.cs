@@ -859,19 +859,13 @@ namespace Cash8Avalon
 //        }
 
 
-        /// <summary>
-        /// Проверяет, что колонка "comment" в таблице "checks_header" имеет тип varchar(255).
-        /// Возвращает true, если тип корректен; false, если тип не соответствует или колонка отсутствует.
+               /// <summary>
+        /// Проверяет, что колонка "comment" в таблице "checks_header" имеет тип varchar(50).
+        /// Возвращает true, если тип некорректен/отсутствует (и окно было закрыто). Возвращает false, если всё нормально.
         /// </summary>
         private async Task<bool> check_correct_type_column()
         {
-//#if DEBUG
-//            if (System.Diagnostics.Debugger.IsAttached)
-//            {
-//                System.Diagnostics.Debugger.Break();
-//            }
-//#endif
-            const string targetSchema = "public";          // укажите актуальную схему
+            const string targetSchema = "public";          
             const string targetTable = "checks_header";
             const string targetColumn = "comment";
             const string expectedType = "character varying";
@@ -879,7 +873,7 @@ namespace Cash8Avalon
 
             using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
             {
-                await conn.OpenAsync();   // исключение здесь – повод уронить метод, не подавляйте
+                await conn.OpenAsync();   
 
                 string query = @"
             SELECT data_type, character_maximum_length
@@ -898,24 +892,29 @@ namespace Cash8Avalon
                     {
                         if (!reader.HasRows)
                         {
-                            // Колонка не найдена – точно не корректный тип
+                            // Колонка не найдена
                             Console.WriteLine($"Колонка {targetSchema}.{targetTable}.{targetColumn} не существует.");
-                            return false;
+                            SettingConnect sc = new SettingConnect();
+                            await sc.AddField_Click(this);
+                            this.Close();
+                            return true; // ✅ Была ошибка, вызвали Close, возвращаем true
                         }
 
                         await reader.ReadAsync();
                         string currentType = reader.GetString(0);
-                        // character_maximum_length может быть NULL для text и некоторых типов
                         int? currentLength = reader.IsDBNull(1) ? null : reader.GetInt32(1);
 
                         bool isCorrect = (currentType == expectedType && currentLength == expectedMaxLength);
+                        
                         if (!isCorrect)
                         {
                             SettingConnect sc = new SettingConnect();
                             await sc.AddField_Click(this);
                             this.Close();
+                            return true; // ✅ Была ошибка, вызвали Close, возвращаем true
                         }
-                        return isCorrect;
+                        
+                        return false; // ✅ Все нормально, возвращаем false
                     }
                 }
             }
@@ -929,7 +928,7 @@ namespace Cash8Avalon
                 try
                 {
                     await conn.OpenAsync();
-                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'checks_header' AND column_name = 'offline');";
+                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'checks_header' AND column_name = 'extra');";
 
                     using (var command = new NpgsqlCommand(query, conn))
                     {
@@ -984,15 +983,15 @@ namespace Cash8Avalon
         }
         
         ///// <summary>
-        ///// Исправление старого типа автор
-        ///// в колонке
+        ///// Исправление старого типа автор в колонке и проверка наличия таблиц/колонок
         ///// </summary>
         private async Task check_add_field()
         {
-            // Если метод вернул true (нужно обновление/закрытие), прерываем выполнение
+            // Если метод вернул true (была проблема, окно закрывается), 
+            // прерываем выполнение остальных проверок!
             if (await check_correct_type_column()) return;
             if (await check_exists_table()) return;
-            await check_exists_column();
+            if (await check_exists_column()) return;
         }
 
         private async Task InitializeTimeSyncAsync(CancellationToken token, int maxAttempts = 100, int timeoutSeconds = 15, int maxDelaySeconds = 600)
@@ -1500,8 +1499,8 @@ namespace Cash8Avalon
 //                         }
 // #endif
                         progress?.Report("Этап 3 из 5: Отправка марок (CDN)...");
-                        try { ct.ThrowIfCancellationRequested(); await send_cdn_logs(); Console.WriteLine("✓ CDN логи отправлены"); }
-                        catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки CDN логов"); Console.WriteLine($"✗ CDN: {ex.Message}"); progress?.Report("Этап 3 из 5: Ошибка CDN"); }
+                        //try { ct.ThrowIfCancellationRequested(); await send_cdn_logs(); Console.WriteLine("✓ CDN логи отправлены"); }
+                        //catch (Exception ex) { MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Ошибка отправки CDN логов"); Console.WriteLine($"✗ CDN: {ex.Message}"); progress?.Report("Этап 3 из 5: Ошибка CDN"); }
 // #if DEBUG
 //                         if (System.Diagnostics.Debugger.IsAttached)
 //                         {

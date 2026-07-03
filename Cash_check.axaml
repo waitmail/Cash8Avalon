@@ -301,11 +301,11 @@
                                 </Grid.RowDefinitions>
                                 
                                 <CheckBox Grid.Row="0" Name="checkBox_to_print_repeatedly" 
-                                         Content="Напечатать повторно" IsEnabled="False" 
+                                         Content="Печатать повторно" IsEnabled="False" 
                                          IsVisible="True" Margin="0,0,0,3" FontSize="11"/>
                                 
                                 <CheckBox Grid.Row="1" Name="checkBox_to_print_repeatedly_p" 
-                                         Content="Напечатать маркировку" IsEnabled="False" 
+                                         Content="Печатать маркировку" IsEnabled="False" 
                                          IsVisible="True" Margin="0,0,0,3" FontSize="11"/>
                                 
                                 <CheckBox Grid.Row="2" Name="checkBox_print_check" 

@@ -136,7 +136,8 @@ namespace Cash8Avalon
                     " sertificate_money1," +
                     " guid," +
                     " payment_by_sbp, " +
-                    " clients.phone " +
+                    " clients.phone, " +
+                    " extra "+
                     " FROM checks_header LEFT JOIN clients ON checks_header.client=clients.code WHERE guid in  (" + document_guid_list.ToString() + ")  ";
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 NpgsqlDataReader reader = command.ExecuteReader();
@@ -193,17 +194,10 @@ namespace Cash8Avalon
                     salesPortionsHeader.Guid = reader["guid"].ToString();
                     salesPortionsHeader.SBP = (Convert.ToBoolean(reader["payment_by_sbp"]) == true ? 1 : 0).ToString();
                     salesPortionsHeader.ClientPhone = (reader["phone"].ToString() == "" ? reader["client"].ToString() : reader["phone"].ToString()).Replace("+7", "");
+                    salesPortionsHeader.Extra = (Convert.ToBoolean(reader["extra"]) == true ? 1 : 0).ToString();
                     salesPortions.ListSalesPortionsHeader.Add(salesPortionsHeader);
+                    
                     //Конец Новое заполнение 
-                    ////////////////////////////////////////////////////////////////////////
-                    //DataRow row = dt.NewRow();
-                    //row["guid"] = reader["guid"].ToString();
-                    //row["sum_header"] = Convert.ToDouble(salesPortionsHeader.Sum_cash.Replace(".",",")) +
-                    //    Convert.ToDouble(salesPortionsHeader.Sum_terminal.Replace(".", ",")) + 
-                    //    Convert.ToDouble(salesPortionsHeader.Sum_certificate.Replace(".", ","));
-                    //row["sum_table"] = 0;
-                    //dt.Rows.Add(row);
-                    ////////////////////////////////////////////////////////////////////////
                 }
                 conn.Close();
                 reader.Close();
@@ -695,6 +689,8 @@ namespace Cash8Avalon
             public string Guid { get; set; }
             public string SBP { get; set; }
             public string ClientPhone { get; set; }
+            public string Extra { get; set; }
+
         }
 
         public class SalesPortionsTable
@@ -798,7 +794,7 @@ namespace Cash8Avalon
 
             get_data_on_sales();
 
-            if (were_mistakes)//Произошли какие то ошибки при выгрузке
+            if (were_mistakes)//Произошли какие-то ошибки при выгрузке
             {
                 return;
             }
@@ -827,7 +823,7 @@ namespace Cash8Avalon
             try
             {
 
-                result_web_quey = ds.UploadDataOnSalesPortionJasonAvalon(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString());
+                result_web_quey = ds.UploadDataOnSalesPortionJsonAvalon(nick_shop, data_crypt, MainStaticClass.GetWorkSchema.ToString());
             }
             catch (System.Net.WebException ex)
             {

@@ -74,7 +74,7 @@
                     
                     <!-- Кнопка отмены -->
                     <Button x:Name="CancelButton"
-                           IsVisible="True"
+                           IsVisible="False"
                            Content="Отменить"
                            Width="150"
                            Height="45"

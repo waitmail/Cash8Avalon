@@ -2557,35 +2557,6 @@ namespace Cash8Avalon
             }
         }
 
-
-        //public static string GetAuthStringProcessing
-        //{
-        //    get
-        //    {
-        //        string result = "";
-        //        if (MainStaticClass.GetWorkSchema == 1)
-        //        {
-        //            string shop_request = "";
-        //            if (MainStaticClass.Nick_Shop.Substring(0, 1).ToUpper() == "A")
-        //            {
-        //                shop_request = MainStaticClass.Nick_Shop + MainStaticClass.CashDeskNumber;
-        //            }
-        //            else
-        //            {
-        //                shop_request = "1" + Convert.ToInt16(MainStaticClass.Nick_Shop.Substring(1, 2)).ToString() + MainStaticClass.CashDeskNumber;
-        //            }
-
-        //            result = Convert.ToBase64String(Encoding.Default.GetBytes(shop_request + ":" + MainStaticClass.PassPromo));
-        //        }
-        //        else if (MainStaticClass.GetWorkSchema == 2)
-        //        {
-        //            result = Convert.ToBase64String(Encoding.Default.GetBytes(MainStaticClass.LoginPromo + ":" + MainStaticClass.PassPromo));
-        //        }
-        //        return result;
-        //    }
-        //}
-
-
         /// <summary>
         /// Возвращает начальный адрес 
         /// процессингового центра

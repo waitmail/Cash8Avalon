@@ -2,100 +2,108 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="300"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="350"
         x:Class="Cash8Avalon.LoadDataWebService"
         Title="Загрузка данных"
         MinWidth="500"
-        MinHeight="300"
+        MinHeight="350"
         Width="500"
-        Height="300"
+        Height="350"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
 
-        <Grid Margin="10">
-            <StackPanel Spacing="12" VerticalAlignment="Center">
-                <!-- Заголовок -->
-                <TextBlock Text="Загрузка данных из системы"
-                           FontSize="18"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"/>
+    <Grid Margin="10">
+        <!-- Уменьшил Spacing с 12 до 8 для более компактной верстки -->
+        <StackPanel Spacing="8" VerticalAlignment="Center">
+            <!-- Заголовок -->
+            <TextBlock Text="Загрузка данных из системы"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
 
-                <!-- Кнопка загрузки -->
-                <Button x:Name="btn_new_load"
-                        Content="Начать загрузку данных"
-                        Height="50"
-                        FontSize="18"
-                        FontWeight="Bold"
-                        Foreground="White"
-                        HorizontalAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Width="280"
-                        CornerRadius="25"
-                        BorderThickness="0"
-                        Padding="0"
-                        Background="#2196F3"/>
+            <!-- Кнопка загрузки -->
+            <Button x:Name="btn_new_load"
+                    Content="Начать загрузку данных"
+                    Height="45"
+                    FontSize="16"
+                    FontWeight="Bold"
+                    Foreground="White"
+                    HorizontalAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Width="280"
+                    CornerRadius="25"
+                    BorderThickness="0"
+                    Padding="0"
+                    Background="#2196F3"/>
 
-                <!-- ⬇⬇⬇ НОВОЕ: Подсказка о работе в фоне ⬇⬇⬇ -->
-                <TextBlock x:Name="workHintText"
-                        Text="Во время загрузки вы можете продолжать работу и пробивать чеки"
-                        FontSize="13"
-                        FontStyle="Italic"
-                        Foreground="#4CAF50"
-                        FontWeight="SemiBold"
-                        HorizontalAlignment="Center"
-                        IsVisible="False"
-                        Margin="0,-6,0,0"/>
+            <!-- Подсказка о работе в фоне -->
+            <TextBlock x:Name="workHintText"
+                    Text="Во время загрузки вы можете продолжать работу и пробивать чеки"
+                    FontSize="12"
+                    FontStyle="Italic"
+                    Foreground="#4CAF50"
+                    FontWeight="SemiBold"
+                    HorizontalAlignment="Center"
+                    IsVisible="False"/>
 
-                <!-- Информация о времени текущей загрузки -->
-                <TextBlock x:Name="timeInfoText"
-                           Text="Время загрузки: 00:00"
-                           FontSize="18"
-                           Foreground="#666666"
-                           HorizontalAlignment="Center"
-                           IsVisible="False"
-                           Margin="0,-8,0,0"/>
+            <!-- Чекбокс для выбора схемы загрузки -->
+            <CheckBox x:Name="useOptimizedSyncCheckBox"
+                      Content="Использовать оптимизированную схему загрузки"
+                      IsChecked="True"
+                      FontSize="13"
+                      FontWeight="SemiBold"
+                      Foreground="#2196F3"
+                      HorizontalAlignment="Center"/>
 
-                <!-- ⬇⬇⬇ Дата последней загрузки ПЕРЕМЕЩЕНА СЮДА (под время) ⬇⬇⬇ -->
-                <TextBlock x:Name="lastUpdateText"
-                           Text="Последняя загрузка: загрузка еще не выполнялась"
-                           FontSize="13"
-                           Foreground="#888888"
-                           HorizontalAlignment="Center"
-                           Margin="0,-6,0,0"/>
+            <!-- Информация о времени текущей загрузки -->
+            <TextBlock x:Name="timeInfoText"
+                       Text="Время загрузки: 00:00"
+                       FontSize="16"
+                       Foreground="#666666"
+                       HorizontalAlignment="Center"
+                       IsVisible="False"/>
 
-                <!-- Панель прогресса -->
-                <Border BorderBrush="#CCCCCC"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="15"
-                        Background="#F8F8F8"
-                        Margin="0,5,0,0">
-                    <StackPanel x:Name="progressPanel"
-                                Orientation="Vertical"
-                                Spacing="10"
-                                IsVisible="False">
-                        <TextBlock x:Name="statusText"
-                                   FontSize="15"
-                                   FontWeight="SemiBold"
-                                   Text="Подготовка..."
-                                   HorizontalAlignment="Center"/>
+            <!-- Дата последней загрузки -->
+            <TextBlock x:Name="lastUpdateText"
+                       Text="Последняя загрузка: загрузка еще не выполнялась"
+                       FontSize="12"
+                       Foreground="#888888"
+                       HorizontalAlignment="Center"/>
 
-                        <ProgressBar x:Name="progressBar1"
-                                     Height="25"
-                                     Minimum="0"
-                                     Maximum="100"
-                                     Value="0"
-                                     IsIndeterminate="False"/>
+            <!-- Панель прогресса -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="10"
+                    Background="#F8F8F8"
+                    Margin="0,5,0,0">
+                <!-- Уменьшил Spacing с 10 до 6 внутри панели прогресса -->
+                <StackPanel x:Name="progressPanel"
+                            Orientation="Vertical"
+                            Spacing="6"
+                            IsVisible="False">
+                    <TextBlock x:Name="statusText"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Text="Подготовка..."
+                               HorizontalAlignment="Center"/>
 
-                        <TextBlock x:Name="progressPercent"
-                                   FontSize="14"
-                                   FontWeight="Bold"
-                                   Foreground="#2196F3"
-                                   Text="0%"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </Grid>
+                    <ProgressBar x:Name="progressBar1"
+                                 Height="20"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="0"
+                                 IsIndeterminate="False"/>
+
+                    <TextBlock x:Name="progressPercent"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Foreground="#2196F3"
+                               Text="0%"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </Window>
