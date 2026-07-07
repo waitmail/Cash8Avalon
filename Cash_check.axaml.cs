@@ -1975,7 +1975,7 @@ namespace Cash8Avalon
                 // 2. Обертка опасной операции (работа с БД)
                 try
                 {
-                    await write_new_document("0", sumToDelete.ToString().Replace(",", "."), "0", "0", false, "0", "0", "0", "1");
+                    await write_new_document(0, sumToDelete, "0", "0", false, "0", "0", "0", "1");
 
                     closing = false;
                     this.Close(); // Закрываем окно только если запись в БД прошла успешно
@@ -2919,7 +2919,7 @@ namespace Cash8Avalon
 
                     MainStaticClass.write_event_in_log($"Загружено товаров: {_productsData.Count}, сертификатов: {_certificatesData.Count}",
                         "Документ чек", numdoc.ToString());
-                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                    await write_new_document(0, calculation_of_the_sum_of_the_document(), "0", "0", false, "0", "0", "0", "0");
                 }
             }
             catch (Exception ex)
@@ -3143,7 +3143,7 @@ namespace Cash8Avalon
                         {
                             if (this.check_type.SelectedIndex == 0)
                             {
-                                await fiscall_print_pay(this.p_sum_doc);
+                                await fiscall_print_pay();
                             }
                             else
                             {
@@ -3157,7 +3157,7 @@ namespace Cash8Avalon
                         {
                             if (this.check_type.SelectedIndex == 0)
                             {
-                                await fiscall_print_pay(this.p_sum_doc);
+                                await fiscall_print_pay();
                             }
                             else
                             {
@@ -3177,9 +3177,9 @@ namespace Cash8Avalon
 
         private async void FiscallPrintDisburse(string cash_money, string non_cash_money)
         {
+            decimal sum_pay = this.calculation_of_the_sum_of_the_document();
             if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
-            {
-                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+            {                
                 if (IsNewCheck)
                 {
                     await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
@@ -3191,7 +3191,7 @@ namespace Cash8Avalon
             }
             else
             {
-                string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                //string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
                 if (IsNewCheck)
                 {
                     await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
@@ -3975,7 +3975,7 @@ namespace Cash8Avalon
                     pay_form.Extra = true;
 
                     // Передаём зафиксированную сумму в БД (с await!)
-                    await write_new_document("0", verifiedSum.ToString(), "0", "0", false, "0", "0", "0", "0", false);
+                    await write_new_document(0, verifiedSum, "0", "0", false, "0", "0", "0", "0", false);
                 }
                 else
                 {
@@ -4294,7 +4294,7 @@ namespace Cash8Avalon
             {
                 if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
                 {
-                    string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                    decimal sum_pay = this.calculation_of_the_sum_of_the_document();
                     if (IsNewCheck)
                     {
                         if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
@@ -4313,7 +4313,7 @@ namespace Cash8Avalon
                 }
                 else
                 {
-                    string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
+                    decimal sum_pay = this.calculation_of_the_sum_of_the_document();
                     if (IsNewCheck)
                     {
                         if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
@@ -4348,7 +4348,7 @@ namespace Cash8Avalon
             }
         }
 
-        public async Task<bool> it_is_paid(string pay, string sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
+        public async Task<bool> it_is_paid(decimal pay, decimal sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
         {
             bool result = true;
 
@@ -4369,7 +4369,7 @@ namespace Cash8Avalon
                     if (MainStaticClass.Use_Fiscall_Print)
                     {
                         MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
-                        result = await fiscall_print_pay(pay);
+                        result = await fiscall_print_pay();
                     }
                 }
             }
@@ -4575,7 +4575,7 @@ namespace Cash8Avalon
         /// <summary>
         /// процедура для записи обычного документа
         /// </summary>
-        public async Task<bool> write_new_document(string pay, string sum_doc, string remainder, string pay_bonus_many,
+        public async Task<bool> write_new_document(decimal pay, decimal sum_doc, string remainder, string pay_bonus_many,
                                                   bool last_rewrite, string cash_money, string non_cash_money,
                                                   string sertificate_money, string its_deleted, bool sendToScreen = true)
         {
@@ -4583,9 +4583,9 @@ namespace Cash8Avalon
             //ValidateAndFixSumConsistency("write_new_document (перед записью в БД)");            
             //sum_doc = calculation_of_the_sum_of_the_document().ToString();
             
-            if ((sum_doc == "") || (sum_doc == "0"))
+            if (sum_doc == 0)
             {
-                sum_doc = calculation_of_the_sum_of_the_document().ToString();
+                sum_doc = calculation_of_the_sum_of_the_document();
             }
             bonuses_it_is_written_off = Convert.ToDecimal(pay_bonus_many);
             bool result = false;
@@ -4623,6 +4623,13 @@ namespace Cash8Avalon
 
             try
             {
+
+                decimal nonCash = Convert.ToDecimal(non_cash_money.Replace(".", ","));
+                if (nonCash > 0)
+                {
+                    this.Extra = false;
+                }
+
                 conn = MainStaticClass.NpgsqlConn();
                 conn.Open();
                 tran = conn.BeginTransaction();
@@ -4737,7 +4744,7 @@ namespace Cash8Avalon
                 }
                 command.Parameters.AddWithValue("comment", commentValue);
                 //command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc.Replace(",", ".")));
-                command.Parameters.AddWithValue("cash", Convert.ToDecimal(sum_doc.Replace(".", ",")));
+                command.Parameters.AddWithValue("cash", sum_doc);
                 command.Parameters.AddWithValue("remainder", Convert.ToDecimal(remainder.Replace(".", ",")));
                 command.Parameters.AddWithValue("date_time_write", Convert.ToDateTime(date_time_write));
                 command.Parameters.AddWithValue("discount", calculation_of_the_discount_of_the_document());
@@ -6133,7 +6140,7 @@ namespace Cash8Avalon
                 UpdateTotalSum();
                 // ЛОГ 3: Состояние при добавлении нового товара
                 LogProductsState($"3. При добавлении товара {barcode}");
-                await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                await write_new_document(0, calculation_of_the_sum_of_the_document(), "0", "0", false, "0", "0", "0", "0");
                 SelectProductRow(_productsData.Count - 1);
                 //await RestoreFocusLinux_productsScrollViewerAsync();
                 await RestoreFocusToSearchBoxAsync();
@@ -8226,8 +8233,8 @@ namespace Cash8Avalon
 
                                             try
                                             {
-                                                await write_new_document("0",
-                                                    calculation_of_the_sum_of_the_document().ToString(),
+                                                await write_new_document(0,
+                                                    calculation_of_the_sum_of_the_document(),
                                                     "0", "0", false, "0", "0", "0", "0");
                                             }
                                             catch (Exception ex)
@@ -8244,7 +8251,7 @@ namespace Cash8Avalon
                             {
                                 try
                                 {
-                                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
+                                    await write_new_document(0, calculation_of_the_sum_of_the_document(), "0", "0", false, "0", "0", "0", "0");
                                 }
                                 catch (Exception ex)
                                 {
@@ -8425,7 +8432,7 @@ namespace Cash8Avalon
                     UpdateTotalSum();
 
                     ShowQuantityEffect(dataIndex, true);
-                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                    await write_new_document(0, calculation_of_the_sum_of_the_document(),
                                    "0", "0", false, "0", "0", "0", "0");
 
                     SelectProductRow(dataIndex);
@@ -9045,7 +9052,7 @@ namespace Cash8Avalon
                 // Безопасная запись в БД
                 try
                 {
-                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                    await write_new_document(0, calculation_of_the_sum_of_the_document(),
                                   "0", "0", false, "0", "0", "0", "0");
                     Console.WriteLine($"✓ Уменьшено количество товара '{product.Tovar}' до {product.Quantity}");
                 }
@@ -9149,7 +9156,7 @@ namespace Cash8Avalon
                     UpdateTotalSum();
 
                     // Записываем изменения в БД
-                    await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                    await write_new_document(0, calculation_of_the_sum_of_the_document(),
                                            "0", "0", false, "0", "0", "0", "0");
 
                     Console.WriteLine($"✓ Товар '{product.Tovar}' удален из чека возврата");
@@ -9232,7 +9239,7 @@ namespace Cash8Avalon
                         UpdateTotalSum();
 
                         // 9. Записываем изменения в БД
-                        await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(),
+                        await write_new_document(0, calculation_of_the_sum_of_the_document(),
                                                "0", "0", false, "0", "0", "0", "0");
 
                         // 10. Устанавливаем флаг reopened (как в WinForms)
@@ -10875,14 +10882,14 @@ namespace Cash8Avalon
         /// регистрация продажного чека
         /// </summary>
         /// <param name="pay"></param>
-        private async Task<bool> fiscall_print_pay(string pay)
+        private async Task<bool> fiscall_print_pay()
         {
 
             bool result = true;
 
             if (MainStaticClass.SystemTaxation == 0)
             {
-                await MessageBoxHelper.Show("В константах не определена система налогообложения, печать чеков невозможна");
+                await MessageBoxHelper.Show("В константах не определена система налогообложения, печать чеков невозможна","Проверки настроек",this);
                 return false;
             }
 

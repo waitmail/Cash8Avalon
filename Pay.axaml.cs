@@ -1880,8 +1880,8 @@ namespace Cash8Avalon
             if (this.cc.IsNewCheck)//Здесь все таки убрал перезапись потому как если чек финально записан уже был и не является новым то теперь вопрос только в печати остался.
             {
                 preWriteOk = await cc.write_new_document(
-                    this.PaySum, // pay (не используется в методе, но требует сигнатура)
-                    this.PaySum, // sum_doc
+                    Convert.ToDecimal(this.PaySum), // pay (не используется в методе, но требует сигнатура)
+                    Convert.ToDecimal(this.PaySum), // sum_doc
                     this.Remainder, // remainder
                     "0", // pay_bonus_many
                     false, // last_rewrite = false (черновик)
@@ -2064,7 +2064,7 @@ namespace Cash8Avalon
                 string bonus_money_str = this.BonusMany?.Trim() ?? "0";
 
                 currentTrap = "4";
-                string sum_doc_str = cashCheck.calculation_of_the_sum_of_the_document().ToString().Replace(",", ".");
+                decimal sum_doc_str = cashCheck.calculation_of_the_sum_of_the_document();
                 string remainder_str = this.Remainder?.Replace(",", ".") ?? "0.00";
 
                 currentTrap = "5";
@@ -2189,7 +2189,7 @@ namespace Cash8Avalon
                 cashCheck.print_to_button = 0;
                 MainStaticClass.write_event_in_log($"[TRAP {currentTrap}] Вызов cc.it_is_paid...", logCtx, cashCheck.numdoc.ToString());
 
-                if (await cashCheck.it_is_paid(this.CashSum, sum_doc_str, remainder_str, bonus_money_str, true, sum_cash_pay, non_sum_cash_pay, sertSum.ToString().Replace(",", ".")))
+                if (await cashCheck.it_is_paid(Convert.ToDecimal(this.CashSum), sum_doc_str, remainder_str, bonus_money_str, true, sum_cash_pay, non_sum_cash_pay, sertSum.ToString().Replace(",", ".")))
                 {
                     MainStaticClass.write_event_in_log($"[TRAP {currentTrap}.1] Успех, закрываем окно.", logCtx, cashCheck.numdoc.ToString());
                     cashCheck.closing = false; this.Tag = true; this.Close();

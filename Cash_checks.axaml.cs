@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.OpenGL;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Npgsql;
@@ -82,6 +83,19 @@ namespace Cash8Avalon
         private const double BaseDesignWidth = 1920.0; // Эталонная ширина окна
         private const double MaxFontSize = 50.0;       // Максимальный размер (было 24, увеличил)
         private const double MinFontSize = 14.0;       // Минимальный размер
+
+        // ✅ Ссылка на таймер фокуса, чтобы его можно было остановить
+        //private DispatcherTimer _focusTimer;
+
+        // ✅ ДОБАВЛЕНО: Таймер для отложенного фонового обновления
+        //private DispatcherTimer _autoUpdateTimer;
+        //private bool _isUpdateScheduled = false; // Флаг, чтобы запустить таймер только 1 раз
+
+        private DateTime _updateAvailableSince = DateTime.MinValue; // Когда обнаружили обновление
+        private DateTime _lastUpdateAttempt = DateTime.MinValue;    // Когда была последняя попытка скачать
+        private bool _isDownloadingUpdate = false;                  // Защита от параллельных скачиваний
+        private readonly object _updateLock = new object();
+
 
         public Cash_checks()
         {
@@ -165,7 +179,7 @@ namespace Cash8Avalon
 
                 // Обнуляем ссылки на делегаты
                 _scrollSizeChangedHandler = null;
-                _scrollChangedHandler = null;
+                _scrollChangedHandler = null;                
 
                 Console.WriteLine("✓ Ресурсы успешно очищены");
             }
@@ -858,9 +872,13 @@ namespace Cash8Avalon
                 AddStyledCell(4, gridRowIndex, item.Remainder.ToString("N2"),
                     HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // 5: Комментарий (С ПЕРЕНОСОМ true - будет по центру по вертикали)
+                // // 5: Комментарий (С ПЕРЕНОСОМ true - будет по центру по вертикали)
+                // AddStyledCell(5, gridRowIndex, item.Comment,
+                //     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
+                
+                // 5: Комментарий (Без переноса - текст обрежется троеточием)
                 AddStyledCell(5, gridRowIndex, item.Comment,
-                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
+                    HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, false);
 
                 // 6: Тип (Без переноса)
                 AddStyledCell(6, gridRowIndex, item.CheckType,
@@ -1484,7 +1502,7 @@ namespace Cash8Avalon
             {
                 // ✅ ПРОВЕРКА в самом начале
                 if (_isDisposed) return;
-
+                
                 // Тяжелые операции — в фоне
                 int documentsNotOut = await MainStaticClass.get_documents_not_out_async();
                 string documents_not_out = documentsNotOut.ToString();
@@ -1535,18 +1553,26 @@ namespace Cash8Avalon
                         }
                     }
                 });
-
+                                
                 // ✅ Проверка версии — тоже с защитой
                 bool hasNewVersion = await MainStaticClass.CheckNewVersionProgrammAsync();
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
                     {
-                        if (_isDisposed) return;
-                        var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
-                        if (pictureBox != null)
+                        if (_isDisposed) return;                      
+
+                        lock (_updateLock)
                         {
-                            pictureBox.IsVisible = hasNewVersion;
+                            if (hasNewVersion && _updateAvailableSince == DateTime.MinValue)
+                            {
+                                _updateAvailableSince = DateTime.Now;
+                                Console.WriteLine("✓ Обнаружено обновление. Отложенное скачивание начнется через 15 минут.");
+                            }
+                            else if (!hasNewVersion)
+                            {
+                                _updateAvailableSince = DateTime.MinValue;
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -1575,43 +1601,7 @@ namespace Cash8Avalon
                 }
             }
         }
-
-        ///// <summary>
-        ///// Проверка наличия новой версии программы
-        ///// </summary>
-        //private void CheckNewVersion()
-        //{
-        //    try
-        //    {
-        //        bool hasNewVersion = MainStaticClass.CheckNewVersionProgramm();
-
-        //        Dispatcher.UIThread.InvokeAsync(() =>
-        //        {
-        //            try
-        //            {
-        //                var pictureBox = this.FindControl<Image>("pictureBox_get_update_program");
-        //                if (pictureBox != null)
-        //                {
-        //                    pictureBox.IsVisible = hasNewVersion;
-
-        //                    if (hasNewVersion)
-        //                    {
-        //                        Console.WriteLine("✓ Обнаружена новая версия программы");
-        //                    }
-        //                }
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                Console.WriteLine($"✗ Ошибка при обновлении UI: {ex.Message}");
-        //            }
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при проверке версии: {ex.Message}");
-        //    }
-        //}
-
+        
         /// <summary>
         /// Инициализация таймера для обновления статуса
         /// </summary>
@@ -1633,24 +1623,24 @@ namespace Cash8Avalon
 
                     Console.WriteLine($"✓ Таймер статуса инициализирован с интервалом {unloadInterval} мин.");
 
-                    //// ✅ Запуск с обработкой ошибок
-                    //_ = Task.Run(async () =>
-                    //{
-                    //    try
-                    //    {
-                    //        if (!_isDisposed)
-                    //        {
-                    //            GetStatusSendDocument();
-                    //        }
-                    //    }
-                    //    catch (Exception ex)
-                    //    {
-                    //        if (!_isDisposed)
-                    //        {
-                    //            Console.WriteLine($"✗ Ошибка в начальном обновлении статуса: {ex.Message}");
-                    //        }
-                    //    }
-                    //});
+                    // ✅ Запуск с обработкой ошибок
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (!_isDisposed)
+                            {
+                                GetStatusSendDocument();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!_isDisposed)
+                            {
+                                Console.WriteLine($"✗ Ошибка в начальном обновлении статуса: {ex.Message}");
+                            }
+                        }
+                    });
                 }
                 else
                 {
@@ -1663,19 +1653,111 @@ namespace Cash8Avalon
             }
         }
 
+        ///// <summary>
+        ///// Обработчик события таймера
+        ///// </summary>
+        //private async void StatusTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        //{
+        //    try
+        //    {
+        //        if (_isDisposed) return;
+
+        //        if (DateTime.Now > _timerExecute.AddSeconds(59))
+        //        {
+        //            if (_isDisposed) return;
+
+        //            GetStatusSendDocument();
+
+        //            if (!_isDisposed)
+        //            {
+        //                _timerExecute = DateTime.Now;
+        //                Console.WriteLine($"✓ Статус отправки обновлен в {DateTime.Now:HH:mm:ss}");
+        //            }
+        //        }
+
+        //        // ═══════════════════════════════════════════════════════════════
+        //        // ✅ НОВОЕ: Блок отложенного обновления (вместо отдельного таймера)
+        //        // ═══════════════════════════════════════════════════════════════
+        //        bool shouldDownload = false;
+        //        // ✅ ВАЖНО: Блокируем потоки, чтобы избежать параллельного скачивания
+        //        lock (_updateLock)
+        //        {
+        //            if (_updateAvailableSince != DateTime.MinValue && !_isDownloadingUpdate)
+        //            {
+        //                // Проверяем, прошло ли 30 минут с момента обнаружения
+        //                bool isTimeToUpdate = DateTime.Now >= _updateAvailableSince.AddMinutes(30);
+
+        //                // Проверяем, прошло ли 5 минут с последней неудачной попытки (чтобы не спамить сервер)
+        //                bool isRetryTime = DateTime.Now >= _lastUpdateAttempt.AddMinutes(5);
+
+        //                if (isTimeToUpdate && isRetryTime)
+        //                {
+        //                    _isDownloadingUpdate = true; // Блокируем повторный вход
+        //                    _lastUpdateAttempt = DateTime.Now; // Записываем время попытки
+        //                    shouldDownload = true;
+        //                }
+        //            }
+        //        } // Закрываем lock (_updateLock)
+
+        //        // ✅ Скачивание происходит вне блокировки, чтобы не freezes таймер
+        //        if (shouldDownload)
+        //        {
+        //            Console.WriteLine("⏳ Время обновления пришло. Пробуем скачать...");
+
+        //            bool success = await UpdateManager.DownloadAndSaveUpdateAsync();
+
+        //            lock (_updateLock)
+        //            {
+        //                if (success)
+        //                {
+        //                    Console.WriteLine("✓ Обновление успешно скачано в папку Update. Ожидает применения при перезапуске.");
+        //                    _updateAvailableSince = DateTime.MinValue; // Сбрасываем флажок, попытки прекращаются
+        //                }
+        //                else
+        //                {
+        //                    Console.WriteLine("⚠️ Скачивание не удалось. Повторная попытка будет при следующем тике таймера (не ранее чем через 5 мин).");
+        //                }
+
+        //                _isDownloadingUpdate = false; // Снимаем блокировку
+        //            } // Закрываем второй lock (_updateLock)
+        //        } // Закрываем if (shouldDownload)
+        //    }            
+        //    catch (Exception ex)
+        //    {
+        //        if (!_isDisposed)
+        //        {
+        //            Console.WriteLine($"✗ Ошибка в обработчике таймера: {ex.Message}");
+        //        }
+        //    }
+        //}
+
+
+//Как это работает теперь:
+//Скачивание глючной версии: Программа скачивает глючное обновление V1.1. UpdateManager сохраняет Cash8Avalon.dll и создает текстовый файл version.txt(записывая туда "1.1"). Метод возвращает true.
+//Цикл таймера: Таймер продолжает тикать.При следующем тике вызывается проверка статуса(GetStatusSendDocument). Сервер видит, что запущена старая версия программы(1.0), и снова отвечает "есть обновление". Таймер начинает отсчет 30 минут.
+//Повторная попытка скачивания: Через 30 минут таймер вызывает DownloadAndSaveUpdateAsync().
+//Проверка кэша: UpdateManager читает version.txt, видит там "1.1" и отправляет на сервер версию 1.1 вместо текущей 1.0.
+//Ответ сервера: Сервер видит, что у клиента уже есть последняя версия(1.1), и либо не присылает файл, либо присылает ответ без Base64-строки.
+//Защита от перезакачки: UpdateManager сравнивает версию сервера и версию из version.txt.Понимает, что качать не нужно (сервер <= кэша), возвращает true и отчитывается: "Эта версия уже скачана и ожидает перезапуска."
+//Реакция таймера: Таймер видит true. Он считает, что процесс успешно завершен(обновление у нас есть), сбрасывает флаги и снова засыпает на 30 минут.Таким образом, глючный файл не качается с сервера по кругу, но программа продолжает мониторинг!
+//Выпуск патча: Вы обнаруживаете баг, выпускаете патч V1.2 и выкладываете его на сервер.
+//Поиск патча: При следующем цикле UpdateManager снова отправляет серверу версию из кэша(1.1). Сервер видит, что 1.2 больше чем 1.1, и присылает новый файл.
+//Применение патча в кэше: UpdateManager скачивает V1.2, перезаписывает старый Cash8Avalon.dll и обновляет version.txt на "1.2". Возвращает true.
+//Ожидание перезапуска: Таймер снова засыпает на 30 минут.
+//Запуск: При следующем перезапуске программы кассир применит уже исправленную версию V1.2.
+
+
         /// <summary>
         /// Обработчик события таймера
         /// </summary>
-        private void StatusTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {            
+        private async void StatusTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
             try
             {
-                // ✅ ПРОВЕРКА: если контрол уже выгружен — выходим
                 if (_isDisposed) return;
 
                 if (DateTime.Now > _timerExecute.AddSeconds(59))
                 {
-                    // ✅ ЕЩЁ РАЗ ПРОВЕРЯЕМ перед вызовом
                     if (_isDisposed) return;
 
                     GetStatusSendDocument();
@@ -1686,10 +1768,57 @@ namespace Cash8Avalon
                         Console.WriteLine($"✓ Статус отправки обновлен в {DateTime.Now:HH:mm:ss}");
                     }
                 }
+
+                // ═══════════════════════════════════════════════════════════════
+                // ✅ НОВОЕ: Блок отложенного обновления (вместо отдельного таймера)
+                // ═══════════════════════════════════════════════════════════════
+                bool shouldDownload = false;
+                // ✅ ВАЖНО: Блокируем потоки, чтобы избежать параллельного скачивания
+                lock (_updateLock)
+                {
+                    if (_updateAvailableSince != DateTime.MinValue && !_isDownloadingUpdate)
+                    {
+                        // Проверяем, прошло ли 15 минут(раньш было 30) с момента обнаружения
+                        bool isTimeToUpdate = DateTime.Now >= _updateAvailableSince.AddMinutes(15);
+
+                        // Проверяем, прошло ли 5 минут с последней неудачной попытки (чтобы не спамить сервер)
+                        bool isRetryTime = DateTime.Now >= _lastUpdateAttempt.AddMinutes(5);
+
+                        if (isTimeToUpdate && isRetryTime)
+                        {
+                            _isDownloadingUpdate = true; // Блокируем повторный вход
+                            _lastUpdateAttempt = DateTime.Now; // Записываем время попытки
+                            shouldDownload = true;
+                        }
+                    }
+                } // Закрываем lock (_updateLock)
+
+                // ✅ Скачивание происходит вне блокировки, чтобы не freezes таймер
+                if (shouldDownload)
+                {
+                    Console.WriteLine("⏳ Время обновления пришло. Пробуем скачать...");
+
+                    // ✅ ВОЗВРАЩАЕМСЯ К BOOL
+                    bool downloadResult = await UpdateManager.DownloadAndSaveUpdateAsync();
+
+                    lock (_updateLock)
+                    {
+                        if (downloadResult) // Успешно скачали новую версию ИЛИ уже скачана актуальная
+                        {
+                            Console.WriteLine("✓ Обновление проверено/скачано. Ожидает применения при перезапуске.");
+                            _updateAvailableSince = DateTime.MinValue; // Сбрасываем флажок на 30 минут
+                        }
+                        else // false - ошибка или нет обновления
+                        {
+                            Console.WriteLine("⚠️ Скачивание не удалось или нет нового обновления. Повторная попытка будет при следующем тике таймера (не ранее чем через 5 мин).");
+                        }
+
+                        _isDownloadingUpdate = false; // Снимаем блокировку
+                    } // Закрываем второй lock (_updateLock)
+                } // Закрываем if (shouldDownload)
             }
             catch (Exception ex)
             {
-                // ✅ Игнорируем ошибки при закрытии
                 if (!_isDisposed)
                 {
                     Console.WriteLine($"✗ Ошибка в обработчике таймера: {ex.Message}");
@@ -1807,193 +1936,7 @@ namespace Cash8Avalon
             }
         }
 
-        //private async void ProcessInsertKey()
-        //{
-        //    Console.WriteLine("Insert нажат - создание нового чека");
-
-        //    try
-        //    {               
-        //        // Проверка даты на компьютере
-        //        if (DateTime.Now <= MainStaticClass.GetMinDateWork)
-        //        {
-        //            await MessageBox.Show(
-        //                " У ВАС УСТАНОВЛЕНА НЕПРАВИЛЬНАЯ ДАТА НА КОМПЬЮТЕРЕ !!! ДАЛЬНЕЙШАЯ РАБОТА С ЧЕКАМИ НЕВОЗМОЖНА !!!",
-        //                "Проверка даты на компьютере",
-        //                MessageBoxButton.OK,
-        //                MessageBoxType.Error
-        //            );
-        //            return;
-        //        }
-
-        //        // Проверка версии ФН
-        //        if (MainStaticClass.CashDeskNumber != 9)
-        //        {
-        //            bool restart = false;
-        //            bool errors = false;
-        //            MainStaticClass.check_version_fn(ref restart, ref errors);
-
-        //            if (errors)
-        //            {
-        //                return;
-        //            }
-
-        //            if (restart)
-        //            {
-        //                await MessageBox.Show(
-        //                    "У вас неверно была установлена версия ФН, НЕОБХОДИМ ПЕРЕЗАПУСК КАССОВОЙ ПРОГРАММЫ !!!",
-        //                    "Проверка настройки ФН",
-        //                    MessageBoxButton.OK,
-        //                    MessageBoxType.Error
-        //                );
-        //                return;
-        //            }
-        //        }
-
-        //        // Проверка системы налогообложения
-        //        if (MainStaticClass.SystemTaxation == 0)
-        //        {
-        //            await MessageBox.Show(
-        //                "У вас не заполнена система налогообложения!\r\nСоздание и печать чеков невозможна!\r\nОБРАЩАЙТЕСЬ В БУХГАЛТЕРИЮ!"
-        //            );
-        //            return;
-        //        }
-
-        //        // Проверка на заполненность обязательных реквизитов
-        //        if (!await AllIsFilled())
-        //        {
-        //            return;
-        //        }
-
-        //        // Проверка кассира
-        //        var txtCashier = this.FindControl<TextBox>("txtB_cashier");
-        //        if (txtCashier == null || string.IsNullOrWhiteSpace(txtCashier.Text))
-        //        {
-        //            await MessageBox.Show("Не заполнен кассир");
-        //            return;
-        //        }
-
-        //        // Проверка времени с ФН
-        //        MainStaticClass.validate_date_time_with_fn(15,MainStaticClass.MainWindow);
-
-        //        // Создаем окно для нового чека
-        //        var checkWindow = new Cash_check();
-
-        //        // Настраиваем для нового чека
-        //        checkWindow.IsNewCheck = true;
-        //        checkWindow.cashier = txtCashier.Text;
-
-        //        // Дополнительная инициализация для нового чека
-        //        checkWindow.OnFormLoaded();
-
-        //        // Находим активное окно
-        //        Window parentWindow = null;
-
-        //        // Вариант 1: Через TopLevel
-        //        var topLevel = TopLevel.GetTopLevel(this);
-        //        if (topLevel is Window currentWindow)
-        //        {
-        //            parentWindow = currentWindow;
-        //        }
-
-        //        // Вариант 2: Через Application
-        //        if (parentWindow == null && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        //        {
-        //            parentWindow = desktop.MainWindow ?? desktop.Windows.FirstOrDefault();
-        //        }
-
-        //        // Настройка размеров окна чека
-        //        if (parentWindow != null)
-        //        {
-        //            // Получаем размеры главного окна
-        //            double mainWidth = parentWindow.Bounds.Width;
-        //            double mainHeight = parentWindow.Bounds.Height;
-
-        //            // Проверяем, есть ли у родительского окна системные декорации
-        //            bool parentHasDecorations = parentWindow.SystemDecorations != SystemDecorations.None;
-        //            bool checkHasDecorations = checkWindow.SystemDecorations != SystemDecorations.None;
-
-        //            // Примерная высота заголовка Windows
-        //            const double titleBarHeight = 35;
-
-        //            if (parentHasDecorations && !checkHasDecorations)
-        //            {
-        //                // Компенсируем разницу в высоте
-        //                checkWindow.Width = mainWidth;
-        //                checkWindow.Height = mainHeight + titleBarHeight;
-
-        //                Console.WriteLine($"Компенсируем разницу в высоте: +{titleBarHeight}px");
-        //            }
-        //            else
-        //            {
-        //                // Окна имеют одинаковый тип декораций
-        //                checkWindow.Width = mainWidth;
-        //                checkWindow.Height = mainHeight;
-        //            }
-
-        //            // Позиционируем по центру главного окна
-        //            checkWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        //        }
-        //        else
-        //        {
-        //            // Стандартные размеры если нет родительского окна
-        //            checkWindow.Width = 1200;
-        //            checkWindow.Height = 800;
-        //            checkWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        //        }
-
-        //        // Настройка свойств окна
-        //        checkWindow.Title = "Новый чек";
-        //        checkWindow.CanResize = false;
-        //        checkWindow.CanMaximize = false;
-        //        checkWindow.CanMinimize = false;
-
-        //        // Подписываемся на событие закрытия окна
-        //        checkWindow.Closed += (s, e) =>
-        //        {
-        //            // Проверяем результат через Tag
-        //            bool? dialogResult = checkWindow.Tag as bool?;
-        //            if (dialogResult == true) // Чек успешно создан
-        //            {
-        //                LoadDocuments(); // Обновляем список после создания чека
-        //            }
-        //        };
-
-        //        // ВАЖНО: Добавляем обработчик события загрузки окна
-        //        checkWindow.Loaded += (s, e) =>
-        //        {
-        //            Console.WriteLine("Окно чека загружено и отображается");
-        //        };
-
-        //        // Показываем окно
-        //        if (parentWindow != null)
-        //        {
-        //            // Показываем как диалог (модальное окно)
-        //            //await checkWindow.ShowDialog(parentWindow);
-        //            await ModalWindowHelper.ShowModalWindow(parentWindow, checkWindow, _scrollViewer);
-        //        }
-        //        else
-        //        {
-        //            // Показываем как немодальное окно
-        //            checkWindow.Show();
-
-        //            // Если нужно ждать закрытия, можно использовать TaskCompletionSource
-        //            var tcs = new TaskCompletionSource<bool>();
-        //            checkWindow.Closed += (s, e) => tcs.TrySetResult(true);
-        //            await tcs.Task;
-        //        }
-        //        checkWindow = null;
-        //        // Обновляем список документов
-        //        LoadDocuments();
-
-        //        Console.WriteLine("Окно чека закрыто, обновляем список документов");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при создании нового чека: {ex.Message}");
-        //        Console.WriteLine(ex.StackTrace);
-        //        await MessageBox.Show($"Ошибка при создании нового чека: {ex.Message}");
-        //    }
-        //}
+        
 
         private async void ProcessInsertKey()
         {
@@ -2366,32 +2309,7 @@ namespace Cash8Avalon
                         {
                             conn.Open();
                             Console.WriteLine("✓ Соединение с БД установлено");
-
-
-                            //string myQuery = @"
-                            //    SELECT checks_header.its_deleted,
-                            //           checks_header.date_time_write,
-                            //           CASE 
-                            //               WHEN checks_header.client IS NULL 
-                            //                    OR TRIM(checks_header.client) = '' 
-                            //               THEN NULL 
-                            //               ELSE clients.name 
-                            //           END as client_name,
-                            //           checks_header.cash,
-                            //           checks_header.remainder,
-                            //           checks_header.comment,
-                            //           checks_header.its_print,
-                            //           checks_header.check_type,
-                            //           checks_header.document_number,
-                            //           checks_header.its_print_p  
-                            //    FROM checks_header 
-                            //    LEFT JOIN clients ON checks_header.client = clients.code 
-                            //                     AND clients.code IS NOT NULL 
-                            //                     AND TRIM(clients.code) <> ''
-                            //    WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
-                            //      AND its_deleted < 2 
-                            //    ORDER BY checks_header.date_time_write";
-
+                            
                             string myQuery = @"
                                 SELECT checks_header.its_deleted,
                                        checks_header.date_time_write,
@@ -2606,36 +2524,7 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка загрузки: {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Получает текущий элемент с фокусом в Avalonia
-        /// </summary>
-        private IInputElement GetFocusedElement()
-        {
-            try
-            {
-                // В Avalonia можно получить TopLevel и через него фокус
-                var topLevel = TopLevel.GetTopLevel(this);
-                if (topLevel != null)
-                {
-                    return topLevel.FocusManager?.GetFocusedElement();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при получении элемента с фокусом: {ex.Message}");
-            }
-
-            return null;
-        }
-
-        ///// <summary>
-        ///// Получает текущий элемент с фокусом как Control
-        ///// </summary>
-        //private Control GetFocusedControl()
-        //{
-        //    return GetFocusedElement() as Control;
-        //}
+               
 
         /// <summary>
         /// Восстановление фокуса после загрузки данных
@@ -2652,7 +2541,7 @@ namespace Cash8Avalon
                     _focusTimer.Stop();
                 }
 
-                _focusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                _focusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
 
                 _focusTimer.Tick += (s, e) =>
                 {
@@ -2834,6 +2723,10 @@ namespace Cash8Avalon
             try
             {
                 MainStaticClass.Last_Write_Check = DateTime.Now;
+
+                var sdsp = new SendDataOnSalesPortions();
+                await sdsp.send_sales_data_Click(null, null);
+                Console.WriteLine("✓ Данные о продажах отправлены");
 
                 // ✅ await вместо fire-and-forget
                 await Task.Run(() => GetStatusSendDocument());

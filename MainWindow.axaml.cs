@@ -344,6 +344,51 @@ namespace Cash8Avalon
             typeof(WindowBase).GetProperty(nameof(WindowBase.Owner))?.SetValue(target, owner);
         }
 
+        public async Task UpdateChecksIfDateValidAsync()
+        {
+            // 1. Проверяем условие: если СЕГОДНЯ меньше 01.07.2026
+            DateTime limitDate = new DateTime(2026, 7, 7);
+
+            if (DateTime.Today >= limitDate)
+            {
+                Console.WriteLine("Текущая дата больше или равна 07.07.2026. Запрос не выполняется.");
+                return;
+            }
+
+            // 2. Выполняем запрос, если условие выполнено
+            string sqlQuery = @"
+            UPDATE public.checks_header 
+            SET extra = false, is_sent = 0 
+            WHERE its_deleted = 0 
+              AND non_cash_money <> 0 
+              AND date_time_write < @targetDate
+              AND extra = true";
+
+            try
+            {
+                using (var connection = MainStaticClass.NpgsqlConn())
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = new NpgsqlCommand(sqlQuery, connection))
+                    {
+                        // Передаем дату как параметр (формат YYYY-MM-DD безопасно передается в Npgsql)
+                        // Если вам нужно строго '04.07.2026', передаем именно эту дату
+                        command.Parameters.AddWithValue("@targetDate", limitDate);
+
+                        int rowsAffected = await command.ExecuteNonQueryAsync();
+                        Console.WriteLine($"Запрос успешно выполнен. Обновлено строк: {rowsAffected}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при выполнении запроса: {ex.Message}");
+                // Здесь можно добавить логирование ошибки
+            }
+        }
+
+
         protected override async void OnOpened(EventArgs e)
         {
             MainStaticClass.MainWindow = this;
@@ -612,6 +657,7 @@ namespace Cash8Avalon
                         // ❌ Ошибка: красим шрифт в красный!
                         usersMessageText.Foreground = new SolidColorBrush(Color.Parse("#D32F2F")); // Красный цвет
                     }
+                    await UpdateChecksIfDateValidAsync();
                 }
                 catch (Exception ex)
                 {

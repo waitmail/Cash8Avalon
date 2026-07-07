@@ -83,14 +83,7 @@
                             <Setter Property="BorderBrush" Value="#1565C0"/>
                         </Style>
                     </Button.Styles>
-                </Button>                   
-                
-                <Image Name="pictureBox_get_update_program"
-                      Width="65"
-                      Height="50"
-                      HorizontalAlignment="Right"
-                      VerticalAlignment="Center"
-                      IsVisible="False"/>
+                </Button>                
             </DockPanel>
             
             <!-- Строка 2: Фильтры -->
