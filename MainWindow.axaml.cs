@@ -974,7 +974,7 @@ namespace Cash8Avalon
                 try
                 {
                     await conn.OpenAsync();
-                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'checks_header' AND column_name = 'extra');";
+                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'constants' AND column_name = 'offline2');";
 
                     using (var command = new NpgsqlCommand(query, conn))
                     {

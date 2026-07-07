@@ -78,7 +78,7 @@
                           VerticalScrollBarVisibility="Auto">
                 <Grid Margin="10"
                       ColumnDefinitions="Auto,*,Auto,Auto"
-                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     
                     <!-- ===== НАЗВАНИЕ МАГАЗИНА, НОМЕР КАССЫ, ВЕРСИЯ ФН И ОФЛАЙН НА ОДНОЙ СТРОКЕ ===== -->
                     <Grid Grid.Row="0"
@@ -93,6 +93,7 @@
                             <ColumnDefinition Width="Auto" />  <!-- Версия ФН текст -->
                             <ColumnDefinition Width="70" />    <!-- Поле версии -->
                             <ColumnDefinition Width="Auto" />  <!-- ★ НОВОЕ: Чекбокс Офлайн ★ -->
+                            <ColumnDefinition Width="Auto" />  <!-- ★ НОВОЕ: Чекбокс Офлайн2 ★ -->
                         </Grid.ColumnDefinitions>
                         
                         <!-- Название магазина -->
@@ -142,6 +143,14 @@
                         <CheckBox Grid.Column="7"
                                   x:Name="checkBox_offline"
                                   Content="офлайн"
+                                  VerticalAlignment="Center"
+                                  Margin="20,5,5,5"
+                                  FontFamily="Segoe UI" />
+
+                        <!-- ★ НОВЫЙ ЧЕКБОКС ОФЛАЙН2 ★ -->
+                        <CheckBox Grid.Column="8"
+                                  x:Name="checkBox_offline2"
+                                  Content="офлайн2"
                                   VerticalAlignment="Center"
                                   Margin="20,5,5,5"
                                   FontFamily="Segoe UI" />

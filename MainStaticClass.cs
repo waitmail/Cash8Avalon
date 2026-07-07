@@ -312,6 +312,7 @@ namespace Cash8Avalon
         private static bool fiscals_forbidden = true;
         // Поле для кэширования результата
         private static bool? _offline = null;
+        private static bool? _offline2 = null;
 
         private static string ip_addr_lm_ch_z = "0";
         private static string kitchen_print = "0";
@@ -495,6 +496,52 @@ namespace Cash8Avalon
             }
 
             return _offline.Value;
+        }
+        
+        /// <summary>
+        /// Асинхронный метод для получения статуса Offline из БД.
+        /// При первом вызове обращается к БД и кэширует результат. 
+        /// При последующих вызовах возвращает кэшированное значение без обращения к БД.
+        /// </summary>
+        public static async Task<bool> GetOffline2Async()
+        {
+            // Если значение уже загружено ранее, сразу возвращаем его
+            if (_offline2.HasValue)
+            {
+                return _offline2.Value;
+            }
+
+            NpgsqlConnection conn = null;
+            NpgsqlCommand command = null;
+
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                await conn.OpenAsync(); // Используем асинхронное открытие соединения
+
+                string query = "SELECT offline2 FROM constants";
+                command = new NpgsqlCommand(query, conn);
+
+                object result = await command.ExecuteScalarAsync();
+
+                // Защита от DBNull, если в базе поле пустое
+                _offline2 = result != null && result != DBNull.Value && Convert.ToBoolean(result);
+            }
+            catch (Exception ex)
+            {
+                // Теперь await здесь абсолютно легален и работает
+                await MessageBox.Show("Ошибка при чтении offline2: " + ex.Message, "Чтение свойства", MainStaticClass.MainWindow);
+                _offline2 = false; // В случае ошибки устанавливаем безопасное значение по умолчанию
+            }
+            finally
+            {
+                if (conn != null && conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+
+            return _offline2.Value;
         }
 
         /// <summary>

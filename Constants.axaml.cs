@@ -250,7 +250,28 @@ namespace Cash8Avalon
             }
         }
 
-        private void SubscribeToEvents()
+        // private void SubscribeToEvents()
+        // {
+        //     var writeButton = this.FindControl<Button>("write");
+        //     var closeButton = this.FindControl<Button>("btnCloseBottom");
+        //     var btnGetWeight = this.FindControl<Button>("btn_get_weight");
+        //     var btnTestConnection = this.FindControl<Button>("btn_test_connection");
+        //     var btnStatus = this.FindControl<Button>("btn_status");
+        //     var comboBoxVariantConnectFn = this.FindControl<ComboBox>("comboBox_variant_connect_fn");
+        //
+        //     if (writeButton != null) writeButton.Click += Write_Click;
+        //     if (closeButton != null) closeButton.Click += Close_Click;
+        //     if (btnGetWeight != null) btnGetWeight.Click += Btn_get_weight_Click;
+        //     if (btnTestConnection != null) btnTestConnection.Click += Btn_test_connection_Click;
+        //     if (btnStatus != null) btnStatus.Click += Btn_status_Click;
+        //
+        //     if (comboBoxVariantConnectFn != null)
+        //     {
+        //         comboBoxVariantConnectFn.SelectionChanged += ComboBox_variant_connect_fn_SelectionChanged;
+        //     }
+        // }
+        
+                private void SubscribeToEvents()
         {
             var writeButton = this.FindControl<Button>("write");
             var closeButton = this.FindControl<Button>("btnCloseBottom");
@@ -268,6 +289,35 @@ namespace Cash8Avalon
             if (comboBoxVariantConnectFn != null)
             {
                 comboBoxVariantConnectFn.SelectionChanged += ComboBox_variant_connect_fn_SelectionChanged;
+            }
+
+            // ✅ НОВОЕ: Связывание чекбоксов Офлайн и Офлайн2
+            var checkBoxOffline = this.FindControl<CheckBox>("checkBox_offline");
+            var checkBoxOffline2 = this.FindControl<CheckBox>("checkBox_offline2");
+
+            if (checkBoxOffline2 != null)
+            {
+                // Если пользователь ставит галочку на Офлайн2, автоматически ставим Офлайн
+                checkBoxOffline2.Checked += (s, e) =>
+                {
+                    if (checkBoxOffline != null && checkBoxOffline.IsChecked != true)
+                    {
+                        checkBoxOffline.IsChecked = true;
+                    }
+                };
+            }
+
+            if (checkBoxOffline != null)
+            {
+                // Если пользователь снимает галочку с Офлайн, автоматически снимаем с Офлайн2
+                // (потому что Офлайн2 не может быть включен, если обычный Офлайн выключен)
+                checkBoxOffline.Unchecked += (s, e) =>
+                {
+                    if (checkBoxOffline2 != null && checkBoxOffline2.IsChecked == true)
+                    {
+                        checkBoxOffline2.IsChecked = false;
+                    }
+                };
             }
         }
 
@@ -364,7 +414,7 @@ namespace Cash8Avalon
                         get_weight_automatically, scale_serial_port,
                         variant_connect_fn, fn_ipaddr, acquiring_bank, 
                         constant_conversion_to_kilograms, nds_ip, ip_adress_local_ch_z,
-                        include_piot,piot_url,offline FROM constants LIMIT 1";
+                        include_piot,piot_url,offline,offline2 FROM constants LIMIT 1";
 
                 using (var command = new NpgsqlCommand(query, conn))
                 using (var reader = command.ExecuteReader())
@@ -392,8 +442,9 @@ namespace Cash8Avalon
                                                 
                         var txtPiotUrl = this.FindControl<TextBox>("txtB_piot_url");
 
-                        var comboBoxNdsIp = this.FindControl<ComboBox>("comboBox_nds_ip");
-                        var checkBoxOffline = this.FindControl<CheckBox>("checkBox_offline");
+                        var comboBoxNdsIp    = this.FindControl<ComboBox>("comboBox_nds_ip");
+                        var checkBoxOffline  = this.FindControl<CheckBox>("checkBox_offline");
+                        var checkBoxOffline2 = this.FindControl<CheckBox>("checkBox_offline2");
 
 
                         if (nickShop != null) nickShop.Text = reader["nick_shop"].ToString();
@@ -489,6 +540,7 @@ namespace Cash8Avalon
 
 
                         checkBoxOffline.IsChecked = Convert.ToBoolean(reader["offline"]);
+                        checkBoxOffline2.IsChecked = Convert.ToBoolean(reader["offline2"]);
 
                         txtPiotUrl.Text = reader["piot_url"].ToString();
                     }
@@ -670,7 +722,8 @@ namespace Cash8Avalon
             var txtConstantConversion = this.FindControl<TextBox>("txtB_constant_conversion_to_kilograms");
 
             var txtPiotUrl = this.FindControl<TextBox>("txtB_piot_url");
-            var checkBoxOffline = this.FindControl<CheckBox>("checkBox_offline"); 
+            var checkBoxOffline  = this.FindControl<CheckBox>("checkBox_offline");
+            var checkBoxOffline2 = this.FindControl<CheckBox>("checkBox_offline2");
 
 
 
@@ -758,6 +811,7 @@ namespace Cash8Avalon
             string acquiringBank = comboBoxAcquiringBank?.SelectedIndex.ToString() ?? "0";
             string lastDateDownload = txtB_last_date_download_bonus_clients?.Text ?? "";
             string offline = (checkBoxOffline.IsChecked == true) ? "true" : "false";
+            string offline2 = (checkBoxOffline2.IsChecked == true) ? "true" : "false";
 
             try
             {
@@ -786,7 +840,8 @@ namespace Cash8Avalon
                     "ip_adress_local_ch_z='" + ipAddrLmChZ + "'," +
                     "include_piot=" + include_piot + "," +
                     "piot_url='" + txtPiotUrl.Text.Trim() + "',"+
-                    "offline='"+ offline+"'";
+                    "offline='"+ offline+"',"+
+                    "offline2='" +  offline2+"'";
 
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 int resul_update = command.ExecuteNonQuery();
@@ -813,7 +868,8 @@ namespace Cash8Avalon
                         "ip_adress_local_ch_z," +
                         "include_piot," +
                         "piot_url,"+
-                        "offline) VALUES(" +
+                        "offline,"+
+                        "offline2) VALUES(" +
                         cashDeskNumber.Text + ",'" +
                         nickShop.Text + "'," +
                         periodText + ",'" +
@@ -834,7 +890,8 @@ namespace Cash8Avalon
                         ipAddrLmChZ + "'," +
                         include_piot + ",'"+
                         piot_url+"','"+
-                        "offline')";
+                        offline+"','"+
+                        offline2+"')";
 
                     command = new NpgsqlCommand(query, conn);
                     command.ExecuteNonQuery();

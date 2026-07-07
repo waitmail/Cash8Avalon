@@ -511,8 +511,10 @@ namespace Cash8Avalon
                 queries.Add("CREATE TABLE date_sync(tovar date,client date)WITH(OIDS = FALSE); ALTER TABLE date_sync OWNER TO postgres");
                 queries.Add("CREATE TABLE deleted_items(num_doc bigint NOT NULL,num_cash smallint NOT NULL,date_time_start timestamp without time zone NOT NULL,date_time_action timestamp without time zone NOT NULL,tovar integer NOT NULL,quantity integer NOT NULL,type_of_operation smallint NOT NULL)WITH(    OIDS = FALSE)TABLESPACE pg_default;        ALTER TABLE public.deleted_items            OWNER to postgres");
                 queries.Add("CREATE TABLE public.client_with_changed_status_to_send(client character varying(10) COLLATE pg_catalog.default NOT NULL,date_change timestamp without time zone NOT NULL,new_phone_number character varying(10) COLLATE pg_catalog.default,   CONSTRAINT client_with_changed_status_to_send_pkey PRIMARY KEY (client) )WITH(    OIDS = FALSE)TABLESPACE pg_default;        ALTER TABLE public.client_with_changed_status_to_send OWNER to postgres");
+                
 
                 conn.Open();
+
                 trans = conn.BeginTransaction();
 
                 foreach (string str in queries)
@@ -682,6 +684,8 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE public.constants ADD COLUMN last_date_reset_bonus_clients TIMESTAMP;");
             queries.Add("ALTER TABLE public.clients ADD COLUMN last_server_sync TIMESTAMP;");
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN offline boolean NOT NULL DEFAULT true;");
+            queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN offline2 boolean NOT NULL DEFAULT true;");
+
             queries.Add("ALTER TABLE IF EXISTS public.checks_header ADD COLUMN extra boolean NOT NULL DEFAULT false;");
         //queries.Add("CREATE INDEX IF NOT EXISTS idx_barcode_lookup ON barcode(barcode, tovar_code);");
         queries.Add("CREATE INDEX IF NOT EXISTS idx_sertificates_lookup ON sertificates(code, code_tovar);");

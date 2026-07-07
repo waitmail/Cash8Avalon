@@ -3972,7 +3972,10 @@ namespace Cash8Avalon
 
                     // Передаём зафиксированную сумму в форму оплаты
                     pay_form.PaySum = sumForPayAndDb;
-                    pay_form.Extra = true;
+                    if (await MainStaticClass.GetOffline2Async())
+                    {
+                        pay_form.Extra = true;
+                    }
 
                     // Передаём зафиксированную сумму в БД (с await!)
                     await write_new_document(0, verifiedSum, "0", "0", false, "0", "0", "0", "0", false);
