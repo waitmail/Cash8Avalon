@@ -82,8 +82,8 @@ namespace Cash8Avalon
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public void  LoadControls()
-        {            
+        public void LoadControls()
+        {
             _paySumTextBox = this.FindControl<TextBox>("pay_sum");
             _cashSumTextBox = this.FindControl<TextBox>("txtB_cash_sum");
             _nonCashSumTextBox = this.FindControl<TextBox>("non_cash_sum");
@@ -96,7 +96,32 @@ namespace Cash8Avalon
             _checkBoxDoNotSendPaymentToTheTerminal = this.FindControl<CheckBox>("checkBox_do_not_send_payment_to_the_terminal");
             _buttonPay = this.FindControl<Button>("button_pay");
             _button1 = this.FindControl<Button>("button1");
-            _extra   = this.FindControl<CheckBox>("checkBox_extra");
+            _extra = this.FindControl<CheckBox>("checkBox_extra");
+
+            // ✅ Запускаем асинхронную проверку в фоне, не блокируя отрисовку формы
+            _ = UpdateExtraVisibilityAsync();
+        }
+
+        /// <summary>
+        /// Асинхронно проверяет статус Офлайн2 и скрывает/показывает чекбокс Extra
+        /// </summary>
+        private async Task UpdateExtraVisibilityAsync()
+        {
+            try
+            {
+                // Ждем результат проверки от базы/сервера
+                bool isOffline2Enabled = await MainStaticClass.GetOffline2Async();
+
+                // Если форма закрылась, пока мы ждали ответа - выходим
+                if (_extra == null) return;
+
+                // Если Офлайн2 включен (true) — чекбокс виден. Если выключен (false) — скрыт.
+                _extra.IsVisible = isOffline2Enabled;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при проверке видимости чекбокса Extra: {ex.Message}");
+            }
         }
 
         private void Pay_Loaded(object? sender, RoutedEventArgs e)
@@ -2521,7 +2546,7 @@ namespace Cash8Avalon
                 if (attempts % 5 == 0 || attempts == 1)
                     MainStaticClass.write_event_in_log($"{contextLog}: попытка опроса {attempts}/{MaxAttempts}", "Terminal", cc?.numdoc.ToString() ?? "0");
 
-                var result = await WaitNonCashPay.SendRequestAsync(url, xmlData, 20);
+                var result = await WaitNonCashPay.SendRequestAsync(url, xmlData, 80);
 
                 if (result.IsSuccess)
                 {
@@ -2718,12 +2743,12 @@ namespace Cash8Avalon
                     decimal certificatesSum = _sertificatesSumTextBox != null ? ParseDecimal(_sertificatesSumTextBox.Text) : 0;
                     decimal bonusSum = _bonusManyTextBox != null ? ParseDecimal(_bonusManyTextBox.Text) : 0;
 
-                    // ★★★ НОВОЕ УСЛОВИЕ: Если введена сумма по карте, снимаем галочку ЧС ★★★
-                    if (nonCashSum > 0 && _extra != null && _extra.IsChecked == true) 
-                    //if ( nonCashSum > 0 )
-                    {
-                        _extra.IsChecked = false;
-                    }
+                    //// ★★★ НОВОЕ УСЛОВИЕ: Если введена сумма по карте, снимаем галочку ЧС ★★★
+                    //if (nonCashSum > 0 && _extra != null && _extra.IsChecked == true) 
+                    ////if ( nonCashSum > 0 )
+                    //{
+                    //    _extra.IsChecked = false;
+                    //}
 
                     decimal totalPaid = cashSum + nonCashSum + certificatesSum + bonusSum;
                     decimal remainder = totalPaid - paySum;
@@ -2797,7 +2822,16 @@ namespace Cash8Avalon
         public string BonusMany { get => _bonusManyTextBox?.Text ?? string.Empty; set { if (_bonusManyTextBox != null) _bonusManyTextBox.Text = value; } }
         public string Remainder { get => _remainderTextBox?.Text ?? string.Empty; set { if (_remainderTextBox != null) _remainderTextBox.Text = value; } }
         public bool IsSbpPayment { get => _checkBoxPaymentBySbp?.IsChecked ?? false; set { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsChecked = value; } }
-        public bool Extra { get => _extra?.IsChecked ?? false; set { if (_extra != null) _extra.IsChecked = value; } }
+        public bool Extra 
+        { 
+            get => _extra?.IsChecked ?? false; set 
+            {
+                if (_extra != null)
+                {
+                    _extra.IsChecked = value;
+                }
+            }
+        }
         public void ShowSbpControls(bool show) { if (_checkBoxPaymentBySbp != null) _checkBoxPaymentBySbp.IsVisible = false; if (_checkBoxDoNotSendPaymentToTheTerminal != null) _checkBoxDoNotSendPaymentToTheTerminal.IsVisible = show; }
 
         #endregion

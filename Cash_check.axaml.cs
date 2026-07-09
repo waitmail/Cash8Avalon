@@ -2358,297 +2358,7 @@ namespace Cash8Avalon
                     this);
             }
         }
-
-        ///// <summary>
-        ///// Загрузка товаров из чека продажи с учетом возвратов
-        ///// </summary>
-        //private async Task LoadSalesItemsAsync(string documentNumber)
-        //{
-        //    MainStaticClass.write_event_in_log($"Загрузка товаров по чеку продажи №{documentNumber}",
-        //        "Документ чек",
-        //        numdoc.ToString());
-
-        //    NpgsqlConnection? conn = null;
-        //    try
-        //    {
-        //        conn = MainStaticClass.NpgsqlConn();
-        //        await conn.OpenAsync();
-
-        //        // 1. Получаем информацию о чеке продажи
-        //        string query = @"
-        //    SELECT id_transaction_terminal, code_authorization_terminal, date_time_write, 
-        //           non_cash_money, guid 
-        //    FROM checks_header 
-        //    WHERE document_number = @docNumber";
-
-        //        using (var cmd = new NpgsqlCommand(query, conn))
-        //        {
-        //            cmd.Parameters.AddWithValue("@docNumber", Convert.ToInt64(documentNumber));
-        //            using (var reader = await cmd.ExecuteReaderAsync())
-        //            {
-        //                if (await reader.ReadAsync())
-        //                {
-        //                    sale_id_transaction_terminal = reader["id_transaction_terminal"]?.ToString() ?? "";
-        //                    sale_code_authorization_terminal = reader["code_authorization_terminal"]?.ToString() ?? "";
-        //                    sale_date = Convert.ToDateTime(reader["date_time_write"]);
-        //                    sale_non_cash_money = Convert.ToDouble(reader["non_cash_money"]);
-        //                    id_sale = reader["guid"]?.ToString() ?? "";
-        //                }
-        //                else
-        //                {
-        //                    await MessageBoxHelper.Show($"Чек продажи №{documentNumber} не найден за последние 14 дней",
-        //                        "Информация",
-        //                        MessageBoxButton.OK,
-        //                        MessageBoxType.Warning,
-        //                        this);
-        //                    return;
-        //                }
-        //            }
-        //        }
-
-        //        // 2. Получаем товары из чека продажи и вычитаем возвращенные
-        //        query = @"
-        //    SELECT 
-        //        dt.tovar_code, 
-        //        dt.name,
-        //        SUM(dt.quantity) AS quantity,
-        //        dt.price, 
-        //        dt.price_at_a_discount, 
-        //        SUM(dt.sum) AS sum,
-        //        SUM(dt.sum_at_a_discount) AS sum_at_a_discount, 
-        //        dt.id_transaction,
-        //        dt.client,
-        //        dt.item_marker,
-        //        dt.fractional,
-        //        dt.its_marked,
-        //        dt.its_certificate
-        //    FROM (
-        //        -- Товары из чека продажи
-        //        SELECT 
-        //            ct.tovar_code, 
-        //            t.name,
-        //            ct.quantity AS quantity, 
-        //            ct.price, 
-        //            ct.price_at_a_discount, 
-        //            ct.sum, 
-        //            ct.sum_at_a_discount,
-        //            ch.id_transaction, 
-        //            ch.client, 
-        //            ct.item_marker,
-        //            t.fractional,
-        //            t.its_marked,
-        //            t.its_certificate
-        //        FROM checks_table ct
-        //        LEFT JOIN tovar t ON ct.tovar_code = t.code
-        //        LEFT JOIN checks_header ch ON ct.document_number = ch.document_number
-        //        WHERE ct.guid = @id_sale 
-        //          AND ch.check_type = 0 
-        //          AND ch.its_deleted = 0
-        //          AND ch.date_time_write BETWEEN @date_start AND @date_end
-
-        //        UNION ALL
-
-        //        -- Возвращенные товары (с минусом)
-        //        SELECT 
-        //            ct.tovar_code, 
-        //            t.name,
-        //            -ct.quantity, 
-        //            ct.price, 
-        //            ct.price_at_a_discount, 
-        //            -ct.sum, 
-        //            -ct.sum_at_a_discount, 
-        //            ch.id_transaction,
-        //            ch.client, 
-        //            ct.item_marker,
-        //            t.fractional,
-        //            t.its_marked,
-        //            t.its_certificate
-        //        FROM checks_table ct
-        //        LEFT JOIN tovar t ON ct.tovar_code = t.code
-        //        LEFT JOIN checks_header ch ON ct.document_number = ch.document_number
-        //        WHERE ch.id_sale = @id_sale 
-        //          AND ch.check_type = 1 
-        //          AND ch.its_deleted = 0
-        //          AND ch.date_time_write BETWEEN @date_start AND @date_end
-        //    ) AS dt
-        //    GROUP BY 
-        //        dt.tovar_code, 
-        //        dt.name, 
-        //        dt.price, 
-        //        dt.price_at_a_discount, 
-        //        dt.id_transaction,
-        //        dt.client,
-        //        dt.item_marker,
-        //        dt.fractional,
-        //        dt.its_marked,
-        //        dt.its_certificate
-        //    HAVING SUM(dt.quantity) > 0";
-
-        //        using (var cmd = new NpgsqlCommand(query, conn))
-        //        {
-        //            cmd.Parameters.AddWithValue("@id_sale", id_sale);
-        //            cmd.Parameters.AddWithValue("@date_start", DateTime.Now.AddDays(-14).Date);
-        //            cmd.Parameters.AddWithValue("@date_end", DateTime.Now.AddDays(1).Date);
-
-        //            using (var reader = await cmd.ExecuteReaderAsync())
-        //            {
-        //                bool hasItems = false;
-
-        //                while (await reader.ReadAsync())
-        //                {
-        //                    hasItems = true;
-
-        //                    // Получаем общее количество из чека продажи
-        //                    int saleQuantity = Convert.ToInt32(reader["quantity"]);
-
-        //                    // Проверяем, является ли товар сертификатом
-        //                    bool isCertificate = Convert.ToBoolean(reader["its_certificate"]);
-
-        //                    if (isCertificate)
-        //                    {
-        //                        // Добавляем сертификат (без ограничений)
-        //                        var certItem = new CertificateItem
-        //                        {
-        //                            Code = reader["tovar_code"].ToString(),
-        //                            Certificate = reader["name"].ToString().Trim(),
-        //                            Nominal = Math.Abs(Convert.ToDecimal(reader["sum_at_a_discount"])),
-        //                            Barcode = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim()
-        //                        };
-        //                        _certificatesData.Add(certItem);
-        //                    }
-        //                    else
-        //                    {
-        //                        // Получаем флаги товара
-        //                        ProductFlags flags = ProductFlags.None;
-        //                        if (Convert.ToBoolean(reader["its_certificate"])) flags |= ProductFlags.Certificate;
-        //                        if (Convert.ToBoolean(reader["its_marked"])) flags |= ProductFlags.Marked;
-        //                        if (Convert.ToBoolean(reader["fractional"])) flags |= ProductFlags.Fractional;
-
-        //                        // Создаем объект ProductData для получения имени
-        //                        var productData = new ProductData(
-        //                            Convert.ToInt64(reader["tovar_code"]),
-        //                            reader["name"].ToString().Trim(),
-        //                            Convert.ToDecimal(reader["price"]),
-        //                            flags
-        //                        );
-
-        //                        // Сохраняем id_transaction для связи
-        //                        if (string.IsNullOrEmpty(id_transaction_sale))
-        //                        {
-        //                            id_transaction_sale = reader["id_transaction"]?.ToString() ?? "";
-        //                        }
-
-        //                        // Если есть клиент в чеке продажи
-        //                        if (!string.IsNullOrEmpty(reader["client"]?.ToString()))
-        //                        {
-        //                            string clientCode = reader["client"].ToString().Trim();
-        //                            if (!string.IsNullOrEmpty(clientCode) && Client != null)
-        //                            {
-        //                                Client.Tag = clientCode;
-        //                                Client.Text = clientCode;
-        //                                if (ClientBarcodeOrPhone != null)
-        //                                    ClientBarcodeOrPhone.IsEnabled = false;
-        //                            }
-        //                        }
-
-        //                        // Добавляем товар в коллекцию с сохранением максимального количества
-        //                        var productItem = new ProductItem
-        //                        {
-        //                            Code = Convert.ToInt32(reader["tovar_code"]),
-        //                            Tovar = reader["name"].ToString().Trim(),
-        //                            Quantity = saleQuantity, // Текущее количество для возврата
-        //                            MaxQuantity = saleQuantity, // Максимально допустимое количество
-        //                            Price = Convert.ToDecimal(reader["price"]),
-        //                            PriceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]),
-        //                            Sum = Convert.ToDecimal(reader["sum"]),
-        //                            SumAtDiscount = Convert.ToDecimal(reader["sum_at_a_discount"]),
-        //                            Action = 0,
-        //                            Gift = 0,
-        //                            Action2 = 0,
-        //                            Mark = reader["item_marker"]?.ToString().Replace("vasya2021", "'").Trim() ?? "0",
-        //                            IsSertificate = false,
-        //                            IsFractional = Convert.ToBoolean(reader["fractional"]),
-        //                            IsMarked = Convert.ToBoolean(reader["its_marked"])
-        //                        };
-
-        //                        _productsData.Add(productItem);
-        //                        Console.WriteLine($"✓ Добавлен товар: {productItem.Tovar}, кол-во: {productItem.Quantity}, макс: {productItem.MaxQuantity}");
-        //                    }
-        //                }
-
-        //                if (!hasItems)
-        //                {
-        //                    await MessageBoxHelper.Show($"В чеке продажи №{documentNumber} нет доступных для возврата товаров",
-        //                        "Информация",
-        //                        MessageBoxButton.OK,
-        //                        MessageBoxType.Info,
-        //                        this);
-        //                }
-        //            }
-        //        }
-
-        //        // 3. Обновляем Grid товаров
-        //        if (_productsData.Count > 0 || _certificatesData.Count > 0)
-        //        {
-        //            RefreshProductsGrid();
-
-        //            // Обновляем Grid сертификатов
-        //            if (_certificatesData.Count > 0 && _certificatesTableGrid != null)
-        //            {
-        //                while (_certificatesTableGrid.RowDefinitions.Count > 1)
-        //                    _certificatesTableGrid.RowDefinitions.RemoveAt(_certificatesTableGrid.RowDefinitions.Count - 1);
-
-        //                var elementsToRemove = _certificatesTableGrid.Children
-        //                    .Where(c => Grid.GetRow(c) > 0)
-        //                    .ToList();
-
-        //                foreach (var element in elementsToRemove)
-        //                    _certificatesTableGrid.Children.Remove(element);
-
-        //                _certificatesCurrentRow = 1;
-        //                AddCertificatesGridRows(_certificatesTableGrid, ref _certificatesCurrentRow, _certificatesData);
-        //            }
-
-        //            //// Блокируем ввод новых товаров - ЭТО ВАЖНО!
-        //            //if (txtB_search_product != null)
-        //            //{
-        //            //    txtB_search_product.IsEnabled = false;
-        //            //    txtB_search_product.Text = string.Empty;
-        //            //}                   
-
-        //            if (InputSearchProduct != null)
-        //            {
-        //                InputSearchProduct.IsEnabled = false;
-        //                InputSearchProduct.Text = string.Empty;
-        //            }
-
-        //            // Блокируем кнопку повторного заполнения
-        //            if (btn_fill_on_sales != null)
-        //            {
-        //                btn_fill_on_sales.IsEnabled = false;
-        //            }
-
-        //            MainStaticClass.write_event_in_log($"Загружено товаров: {_productsData.Count}, сертификатов: {_certificatesData.Count}",
-        //                "Документ чек", numdoc.ToString());
-        //            await write_new_document("0", calculation_of_the_sum_of_the_document().ToString(), "0", "0", false, "0", "0", "0", "0");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка БД: {ex.Message}");
-        //        await MessageBoxHelper.Show($"Ошибка базы данных: {ex.Message}",
-        //            "Ошибка",
-        //            MessageBoxButton.OK,
-        //            MessageBoxType.Error,
-        //            this);
-        //        throw;
-        //    }
-        //    finally
-        //    {
-        //        if (conn?.State == ConnectionState.Open)
-        //            await conn.CloseAsync();
-        //    }
-        //}
+                
 
         /// <summary>
         /// Загрузка товаров из чека продажи с учетом возвратов
@@ -3492,7 +3202,7 @@ namespace Cash8Avalon
 
                 using (StreamWriter sw = new StreamWriter(fileName, false, Encoding.UTF8))
                 {
-                    sw.WriteLine($"Бэкап чека № {docNum} | Касса: {cashDesk} | Время: {DateTime.Now:dd.MM.yyyy HH:mm:ss}");
+                    sw.WriteLine($"Бэкап чека № {docNum} | К: {cashDesk} | Время: {DateTime.Now:dd.MM.yyyy HH:mm:ss}");
                     sw.WriteLine(new string('-', 120));
                     sw.WriteLine($"{"Код",-10} | {"Кол-во",-7} | {"Цена",-10} | {"Маркировка",-35} | {"Товар"}");
                     sw.WriteLine(new string('-', 120));
@@ -3975,6 +3685,10 @@ namespace Cash8Avalon
                     if (await MainStaticClass.GetOffline2Async())
                     {
                         pay_form.Extra = true;
+                    }
+                    else
+                    {
+                        pay_form.Extra = false;
                     }
 
                     // Передаём зафиксированную сумму в БД (с await!)
@@ -10801,7 +10515,7 @@ namespace Cash8Avalon
 
                 if (NumCash != null)
                 {
-                    NumCash.Text = $"КАССА № {MainStaticClass.CashDeskNumber}";
+                    NumCash.Text = $"К № {MainStaticClass.CashDeskNumber}";
                     NumCash.Tag = MainStaticClass.CashDeskNumber;
                     Console.WriteLine("✓ NumCash установлен");
                 }

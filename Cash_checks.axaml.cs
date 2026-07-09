@@ -376,41 +376,7 @@ namespace Cash8Avalon
         {
             AvaloniaXamlLoader.Load(this);
         }
-
-        ///// <summary>
-        ///// Инициализация кнопки закрытия
-        ///// </summary>
-        //private void InitializeCloseButton()
-        //{
-        //    try
-        //    {
-        //        // Находим кнопку закрытия
-        //        //var closeButton = this.FindControl<Button>("btnClose");
-        //        //if (closeButton != null)
-        //        //{
-        //        //    Console.WriteLine("✓ Кнопка закрытия найдена и инициализирована");
-
-        //        //    // Добавляем эффект при наведении
-        //        //    closeButton.PointerEntered += (s, e) =>
-        //        //    {
-        //        //        closeButton.Foreground = Brushes.Red;
-        //        //    };
-
-        //        //    closeButton.PointerExited += (s, e) =>
-        //        //    {
-        //        //        closeButton.Foreground = Brushes.Gray;
-        //        //    };
-        //        //}
-        //        //else
-        //        //{
-        //        //    Console.WriteLine("⚠ Кнопка закрытия не найдена");
-        //        //}
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"✗ Ошибка при инициализации кнопки закрытия: {ex.Message}");
-        //    }
-        //}
+                
 
         /// <summary>
         /// Инициализация значений контролов
@@ -715,19 +681,7 @@ namespace Cash8Avalon
                 Console.WriteLine($"✗ Ошибка при добавлении строки загрузки: {ex.Message}");
             }
         }
-
-        // Создание анимированного спиннера
-        private Avalonia.Media.Imaging.Bitmap CreateLoadingSpinner()
-        {
-            // Простая реализация - можно заменить на настоящую картинку
-            var renderTarget = new RenderTargetBitmap(new PixelSize(100, 100));
-            using (var ctx = renderTarget.CreateDrawingContext())
-            {
-                var pen = new Pen(new SolidColorBrush(Color.Parse("#2196F3")), 4);
-                ctx.DrawEllipse(null, pen, new Point(50, 50), 40, 40);
-            }
-            return renderTarget;
-        }
+                
 
         /// <summary>
         /// Создание строки заголовков (теперь в отдельном Grid)
@@ -1042,24 +996,7 @@ namespace Cash8Avalon
             Grid.SetRow(textBlock, row);
             _tableGrid.Children.Add(textBlock);
         }
-
-        /// <summary>
-        /// Добавление ячейки с CheckBox
-        /// </summary>
-        private void AddCheckBoxCell(int column, int row, bool isChecked)
-        {
-            var checkBox = new CheckBox
-            {
-                IsEnabled = false,
-                IsChecked = isChecked,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            Grid.SetColumn(checkBox, column);
-            Grid.SetRow(checkBox, row);
-            _tableGrid.Children.Add(checkBox);
-        }
+        
 
         /// <summary>
         /// Очистка таблицы данных
@@ -1204,6 +1141,79 @@ namespace Cash8Avalon
             }
         }
 
+        ///// <summary>
+        ///// Прокрутка к указанной строке с проверкой видимости
+        ///// </summary>
+        //private void ScrollToRow(int gridRowIndex)
+        //{
+        //    try
+        //    {
+        //        if (_scrollViewer == null || _tableGrid == null) return;
+
+        //        // ПРОВЕРЯЕМ, ВИДИМА ЛИ УЖЕ СТРОКА В ОКНЕ ПРОСМОТРА
+        //        // Вычисляем позицию строки
+        //        double rowPosition = 0;
+        //        for (int i = 0; i < gridRowIndex; i++)
+        //        {
+        //            if (i < _tableGrid.RowDefinitions.Count)
+        //            {
+        //                rowPosition += _tableGrid.RowDefinitions[i].Height.Value;
+        //            }
+        //        }
+
+        //        double rowBottom = rowPosition + _tableGrid.RowDefinitions[gridRowIndex].Height.Value;
+
+        //        // Проверяем, полностью ли видна строка в текущей области просмотра
+        //        bool isFullyVisible = rowPosition >= _scrollViewer.Offset.Y &&
+        //                               rowBottom <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
+
+        //        // Проверяем, частично видна ли строка сверху или снизу
+        //        bool isPartiallyVisibleTop = rowPosition >= _scrollViewer.Offset.Y &&
+        //                                     rowPosition <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
+
+        //        bool isPartiallyVisibleBottom = rowBottom >= _scrollViewer.Offset.Y &&
+        //                                        rowBottom <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
+
+        //        // Если строка уже полностью видна, НЕ прокручиваем
+        //        if (isFullyVisible)
+        //        {
+        //            Console.WriteLine($"✓ Строка {gridRowIndex} уже видна, прокрутка не требуется");
+        //            return;
+        //        }
+
+        //        // Если строка частично видна, можно немного подкорректировать позицию
+        //        // но не прыгать резко. Давайте сделаем так:
+
+        //        if (isPartiallyVisibleTop)
+        //        {
+        //            // Строка видна сверху, но не полностью
+        //            // Прокручиваем так, чтобы она была сверху видимой области
+        //            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, rowPosition - 20); // Небольшой отступ сверху
+        //            Console.WriteLine($"✓ Строка {gridRowIndex} частично видна сверху, корректируем позицию");
+        //        }
+        //        else if (isPartiallyVisibleBottom)
+        //        {
+        //            // Строка видна снизу, но не полностью
+        //            // Прокручиваем так, чтобы она была снизу видимой области
+        //            double targetPosition = rowBottom - _scrollViewer.Viewport.Height + 20;
+        //            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetPosition);
+        //            Console.WriteLine($"✓ Строка {gridRowIndex} частично видна снизу, корректируем позицию");
+        //        }
+        //        else
+        //        {
+        //            // Строка не видна совсем - центрируем ее
+        //            double centerPosition = rowPosition - (_scrollViewer.Viewport.Height / 2) +
+        //                                   (_tableGrid.RowDefinitions[gridRowIndex].Height.Value / 2);
+        //            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, centerPosition);
+        //            Console.WriteLine($"✓ Строка {gridRowIndex} не видна, центрируем");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"✗ Ошибка при прокрутке: {ex.Message}");
+        //    }
+        //}
+
         /// <summary>
         /// Прокрутка к указанной строке с проверкой видимости
         /// </summary>
@@ -1211,65 +1221,14 @@ namespace Cash8Avalon
         {
             try
             {
-                if (_scrollViewer == null || _tableGrid == null) return;
+                if (_scrollViewer == null || _selectedRowBorder == null) return;
 
-                // ПРОВЕРЯЕМ, ВИДИМА ЛИ УЖЕ СТРОКА В ОКНЕ ПРОСМОТРА
-                // Вычисляем позицию строки
-                double rowPosition = 0;
-                for (int i = 0; i < gridRowIndex; i++)
-                {
-                    if (i < _tableGrid.RowDefinitions.Count)
-                    {
-                        rowPosition += _tableGrid.RowDefinitions[i].Height.Value;
-                    }
-                }
+                // ✅ ИСПОЛЬЗУЕМ ВСТРОЕННЫЙ МЕТОД AVALONIA
+                // Он автоматически вычисляет реальную позицию элемента (даже если высота Auto)
+                // и прокручивает ScrollViewer ровно настолько, чтобы элемент стал виден.
+                _selectedRowBorder.BringIntoView();
 
-                double rowBottom = rowPosition + _tableGrid.RowDefinitions[gridRowIndex].Height.Value;
-
-                // Проверяем, полностью ли видна строка в текущей области просмотра
-                bool isFullyVisible = rowPosition >= _scrollViewer.Offset.Y &&
-                                       rowBottom <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
-
-                // Проверяем, частично видна ли строка сверху или снизу
-                bool isPartiallyVisibleTop = rowPosition >= _scrollViewer.Offset.Y &&
-                                             rowPosition <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
-
-                bool isPartiallyVisibleBottom = rowBottom >= _scrollViewer.Offset.Y &&
-                                                rowBottom <= _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height;
-
-                // Если строка уже полностью видна, НЕ прокручиваем
-                if (isFullyVisible)
-                {
-                    Console.WriteLine($"✓ Строка {gridRowIndex} уже видна, прокрутка не требуется");
-                    return;
-                }
-
-                // Если строка частично видна, можно немного подкорректировать позицию
-                // но не прыгать резко. Давайте сделаем так:
-
-                if (isPartiallyVisibleTop)
-                {
-                    // Строка видна сверху, но не полностью
-                    // Прокручиваем так, чтобы она была сверху видимой области
-                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, rowPosition - 20); // Небольшой отступ сверху
-                    Console.WriteLine($"✓ Строка {gridRowIndex} частично видна сверху, корректируем позицию");
-                }
-                else if (isPartiallyVisibleBottom)
-                {
-                    // Строка видна снизу, но не полностью
-                    // Прокручиваем так, чтобы она была снизу видимой области
-                    double targetPosition = rowBottom - _scrollViewer.Viewport.Height + 20;
-                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetPosition);
-                    Console.WriteLine($"✓ Строка {gridRowIndex} частично видна снизу, корректируем позицию");
-                }
-                else
-                {
-                    // Строка не видна совсем - центрируем ее
-                    double centerPosition = rowPosition - (_scrollViewer.Viewport.Height / 2) +
-                                           (_tableGrid.RowDefinitions[gridRowIndex].Height.Value / 2);
-                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, centerPosition);
-                    Console.WriteLine($"✓ Строка {gridRowIndex} не видна, центрируем");
-                }
+                Console.WriteLine($"✓ Прокрутка к строке {gridRowIndex} выполнена через BringIntoView");
             }
             catch (Exception ex)
             {
@@ -2541,7 +2500,7 @@ namespace Cash8Avalon
                     _focusTimer.Stop();
                 }
 
-                _focusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
+                _focusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
 
                 _focusTimer.Tick += (s, e) =>
                 {
