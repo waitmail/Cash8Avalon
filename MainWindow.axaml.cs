@@ -344,25 +344,73 @@ namespace Cash8Avalon
             typeof(WindowBase).GetProperty(nameof(WindowBase.Owner))?.SetValue(target, owner);
         }
 
+        //public async Task UpdateChecksIfDateValidAsync()
+        //{
+        //    // 1. Проверяем условие: если СЕГОДНЯ меньше 01.07.2026
+        //    DateTime limitDate = new DateTime(2026, 7, 7);
+
+        //    if (DateTime.Today >= limitDate)
+        //    {
+        //        Console.WriteLine("Текущая дата больше или равна 07.07.2026. Запрос не выполняется.");
+        //        return;
+        //    }
+
+        //    // 2. Выполняем запрос, если условие выполнено
+        //    string sqlQuery = @"
+        //    UPDATE public.checks_header 
+        //    SET extra = false, is_sent = 0 
+        //    WHERE its_deleted = 0 
+        //      AND non_cash_money <> 0 
+        //      AND date_time_write < @targetDate
+        //      AND extra = true";
+
+        //    try
+        //    {
+        //        using (var connection = MainStaticClass.NpgsqlConn())
+        //        {
+        //            await connection.OpenAsync();
+
+        //            using (var command = new NpgsqlCommand(sqlQuery, connection))
+        //            {
+        //                // Передаем дату как параметр (формат YYYY-MM-DD безопасно передается в Npgsql)
+        //                // Если вам нужно строго '04.07.2026', передаем именно эту дату
+        //                command.Parameters.AddWithValue("@targetDate", limitDate);
+
+        //                int rowsAffected = await command.ExecuteNonQueryAsync();
+        //                Console.WriteLine($"Запрос успешно выполнен. Обновлено строк: {rowsAffected}");
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Ошибка при выполнении запроса: {ex.Message}");
+        //        // Здесь можно добавить логирование ошибки
+        //    }
+        //}
+
         public async Task UpdateChecksIfDateValidAsync()
         {
+
             // 1. Проверяем условие: если СЕГОДНЯ меньше 01.07.2026
-            DateTime limitDate = new DateTime(2026, 7, 7);
+            DateTime limitDate = new DateTime(2026, 7, 17);
 
             if (DateTime.Today >= limitDate)
             {
-                Console.WriteLine("Текущая дата больше или равна 07.07.2026. Запрос не выполняется.");
+                Console.WriteLine("Текущая дата больше или равна 17.07.2026. Запрос не выполняется.");
                 return;
             }
 
-            // 2. Выполняем запрос, если условие выполнено
+            // Дата в формате ISO (YYYY-MM-DD) — самый безопасный способ передачи даты в PostgreSQL
+            DateTime targetDate = new DateTime(2026, 6, 25);
+
             string sqlQuery = @"
             UPDATE public.checks_header 
-            SET extra = false, is_sent = 0 
-            WHERE its_deleted = 0 
-              AND non_cash_money <> 0 
-              AND date_time_write < @targetDate
-              AND extra = true";
+                SET is_sent = 0, 
+                its_print_p = true 
+            WHERE date_time_write >= @targetDate
+                AND extra = true 
+                AND its_print = true 
+                AND its_print_p IS NULL";
 
             try
             {
@@ -372,9 +420,7 @@ namespace Cash8Avalon
 
                     using (var command = new NpgsqlCommand(sqlQuery, connection))
                     {
-                        // Передаем дату как параметр (формат YYYY-MM-DD безопасно передается в Npgsql)
-                        // Если вам нужно строго '04.07.2026', передаем именно эту дату
-                        command.Parameters.AddWithValue("@targetDate", limitDate);
+                        command.Parameters.AddWithValue("@targetDate", targetDate);
 
                         int rowsAffected = await command.ExecuteNonQueryAsync();
                         Console.WriteLine($"Запрос успешно выполнен. Обновлено строк: {rowsAffected}");

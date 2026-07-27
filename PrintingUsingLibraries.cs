@@ -2209,7 +2209,15 @@ namespace Cash8Avalon
 
                 if (!error)
                 {
-                    check.its_print_p(variant);
+                    if (check.Extra)
+                    {
+                        MainStaticClass.its_print(check.numdoc.ToString());
+                    }
+                    else
+                    {                        
+                        check.its_print_p(variant);
+                    }
+
                     if (variant == 0)
                     {
                         check.closing = false;

@@ -2378,7 +2378,7 @@ namespace Cash8Avalon
                 // 1. Получаем информацию о чеке продажи
                 string query = @"
             SELECT id_transaction_terminal, code_authorization_terminal, date_time_write, 
-                   non_cash_money, guid 
+                   non_cash_money, guid, extra 
             FROM checks_header 
             WHERE document_number = @docNumber";
 
@@ -2394,6 +2394,7 @@ namespace Cash8Avalon
                             sale_date = Convert.ToDateTime(reader["date_time_write"]);
                             sale_non_cash_money = Convert.ToDouble(reader["non_cash_money"]);
                             id_sale = reader["guid"]?.ToString() ?? "";
+                            Extra = Convert.ToBoolean(reader["extra"]);
                         }
                         else
                         {
@@ -4341,8 +4342,17 @@ namespace Cash8Avalon
             try
             {
 
+                //decimal nonCash = Convert.ToDecimal(non_cash_money.Replace(".", ","));
+                //if (nonCash > 0)
+                //{
+                //    this.Extra = false;
+                //}
+
                 decimal nonCash = Convert.ToDecimal(non_cash_money.Replace(".", ","));
-                if (nonCash > 0)
+                // Точечная корректировка: сбрасываем Extra только для продажи. 
+                // Для возврата Extra не должен меняться никак!
+                // Ибо он разово заполняется из продажи.
+                if (nonCash > 0 && this.CheckType.SelectedIndex == 0)
                 {
                     this.Extra = false;
                 }

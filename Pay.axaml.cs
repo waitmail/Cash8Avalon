@@ -165,6 +165,15 @@ namespace Cash8Avalon
             };
             ToolTip.SetTip(_checkBoxDoNotSendPaymentToTheTerminal, toolTipContent);
             CalculateChange();
+            // Точечная корректировка: блокируем изменение флага Extra при возврате
+            if (cc?.CheckType?.SelectedIndex == 1)
+            {
+                if (_extra != null)
+                {
+                    _extra.IsEnabled = false; // Запрещаем ручное изменение
+                    _extra.IsChecked = cc.Extra; // Ставим то, что пришло из продажи
+                }
+            }
         }
 
         private async void Pay_Opened(object? sender, EventArgs e)
@@ -1993,13 +2002,26 @@ namespace Cash8Avalon
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 }
 
-                if ( nonCashSum > 0 )
+                //if ( nonCashSum > 0 )
+                //{
+                //    _extra.IsChecked = false;
+                //}
+
+                //cashCheck.Extra = this._extra.IsChecked ?? false;
+                if (nonCashSum > 0 && cashCheck.CheckType?.SelectedIndex == 0)
                 {
+                    // Сбрасываем Extra только при ПРОДАЖЕ по карте
                     _extra.IsChecked = false;
                 }
-                
+                else if (cashCheck.CheckType?.SelectedIndex == 1)
+                {
+                    // При ВОЗВРАТЕ жестко возвращаем чекбокс в то значение, 
+                    // которое было загружено из продажи, игнорируя способ возврата денег
+                    _extra.IsChecked = cashCheck.Extra;
+                }
+
                 cashCheck.Extra = this._extra.IsChecked ?? false;
-                
+
                 currentTrap = "0.1";
                 MainStaticClass.write_event_in_log(
                     $"[TRAP {currentTrap}] Controls init: " +
