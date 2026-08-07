@@ -450,7 +450,96 @@ namespace Cash8Avalon
             }
         }
 
-        
+        /// <summary>
+        /// Проверка статуса сертификата через веб-сервис
+        /// </summary>
+        /// <param name="isPayment">true - если это оплата, false - если продажа</param>
+        /// <returns>true - активен, false - не активен, null - ошибка</returns>
+        public static async Task<bool?> CheckCertificateStatusAsync(string certificateCode, bool isPayment, Window ownerWindow, long docNum = 0)
+        {
+            try
+            {
+                string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(nickShop))
+                {
+                    await MessageBoxHelper.Show("Не удалось получить название магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    return null;
+                }
+
+                string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(codeShop))
+                {
+                    await MessageBoxHelper.Show("Не удалось получить код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    return null;
+                }
+
+                string countDay = CryptorEngine.get_count_day();
+                string key = nickShop + countDay + codeShop;
+
+                string payload = isPayment ? certificateCode + "|1" : certificateCode;
+                string encryptData = CryptorEngine.Encrypt(payload, true, key);
+
+                string status;
+                try
+                {
+                    status = await Task.Run(() =>
+                    {
+                        DS ds = MainStaticClass.get_ds();
+                        ds.Timeout = 10000;
+                        return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString());
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await MessageBoxHelper.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    MainStaticClass.WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+                    return null;
+                }
+
+                if (status == "-1")
+                {
+                    await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами", "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+                    return null;
+                }
+
+                if (status == "-2")
+                {
+                    await MessageBoxHelper.Show($"Сертификат {certificateCode} не принадлежит вашей сети", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не принадлежит сети", "Документ чек", docNum.ToString());
+                    return null;
+                }
+
+                string decryptData = CryptorEngine.Decrypt(status, true, key);
+
+                switch (decryptData)
+                {
+                    case "1":
+                        MainStaticClass.write_event_in_log($"Сертификат {certificateCode} активен.", "Документ чек", docNum.ToString());
+                        return true; // Активен
+
+                    case "0":
+                        // Если это оплата, ругаемся, что он не активен. Если продажа - молча возвращаем false.
+                        if (isPayment)
+                        {
+                            await MessageBoxHelper.Show($"Сертификат {certificateCode} не активирован", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                            MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не активен", "Документ чек", docNum.ToString());
+                        }
+                        return false; // Не активен
+
+                    default:
+                        await MessageBoxHelper.Show($"Неизвестный статус сертификата: {decryptData}", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                        return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата (критическая ошибка)");
+                await MessageBoxHelper.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                return null;
+            }
+        }
+
 
         /// <summary>
         /// Асинхронный метод для получения статуса Offline из БД.

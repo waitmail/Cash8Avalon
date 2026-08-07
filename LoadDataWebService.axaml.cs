@@ -1061,13 +1061,23 @@ namespace Cash8Avalon
             }
 
             queries.Add("DELETE FROM action_clients");
+            // if (loadPacketData.ListActionClients?.Count > 0)
+            // {
+            //     foreach (var actionClients in loadPacketData.ListActionClients)
+            //     {
+            //         queries.Add($@"
+            //             INSERT INTO action_clients(num_doc, code_client)
+            //             VALUES({actionClients.NumDoc},{actionClients.CodeClient})");
+            //     }
+            // }
             if (loadPacketData.ListActionClients?.Count > 0)
             {
                 foreach (var actionClients in loadPacketData.ListActionClients)
                 {
+                    // ✅ ИСПРАВЛЕНИЕ: Добавлены одинарные кавычки вокруг кода клиента и экранирование
                     queries.Add($@"
                         INSERT INTO action_clients(num_doc, code_client)
-                        VALUES({actionClients.NumDoc},{actionClients.CodeClient})");
+                        VALUES({actionClients.NumDoc},'{EscapeSql(actionClients.CodeClient)}')");
                 }
             }
         }

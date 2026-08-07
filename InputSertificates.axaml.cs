@@ -19,8 +19,7 @@ namespace Cash8Avalon
 {
     public partial class InputSertificates : Window
     {
-
-       
+        public long DocumentNumber { get; set; } = 0;
 
         // Элементы управления
         private TextBox _inputSertificate;
@@ -685,21 +684,54 @@ namespace Cash8Avalon
             await CommitSertificates();
         }
 
-        /// <summary>
-        /// Проверить все сертификаты на то, что они активированы
-        /// Аналог button_commit_Click из WinForms
-        /// </summary>
+        ///// <summary>
+        ///// Проверить все сертификаты на то, что они активированы
+        ///// Аналог button_commit_Click из WinForms
+        ///// </summary>
+        //private async Task CommitSertificates()
+        //{
+        //    if (_certificates.Count > 0)
+        //    {
+        //        bool allActive = true;
+        //        // Проверяем все сертификаты
+        //        foreach (var certificate in _certificates)
+        //        {
+        //            //if (!await CheckSertificateActive(certificate.Barcode))
+        //            //{                        
+        //            //    allActive = false;//Проверяем все чтобы понять 
+        //            //}
+        //            if (!await MainStaticClass.CheckCertificateStatusAsync(certificate.Barcode,true,this,))
+        //            {
+        //                allActive = false;//Проверяем все чтобы понять 
+        //            }
+        //        }
+        //        if (!allActive)
+        //        {
+        //            this.Activate();
+        //            return;
+        //        }
+        //    }
+
+
+        //    _closedNormally = true;
+
+        //    // Возвращаем ТОЛЬКО список сертификатов
+        //    this.Tag = _certificates.Select(c => c.Clone()).ToList();
+        //    this.Close();
+        //}
+
         private async Task CommitSertificates()
         {
             if (_certificates.Count > 0)
             {
                 bool allActive = true;
-                // Проверяем все сертификаты
                 foreach (var certificate in _certificates)
                 {
-                    if (!await CheckSertificateActive(certificate.Barcode))
-                    {                        
-                        allActive = false;//Проверяем все чтобы понять 
+                    bool? isCertActive = await MainStaticClass.CheckCertificateStatusAsync(certificate.Barcode, true, this, this.DocumentNumber);
+
+                    if (isCertActive != true) // Если не активен или произошла ошибка (null)
+                    {
+                        allActive = false;
                     }
                 }
                 if (!allActive)
@@ -708,113 +740,115 @@ namespace Cash8Avalon
                     return;
                 }
             }
-            
 
             _closedNormally = true;
-
-            // Возвращаем ТОЛЬКО список сертификатов
             this.Tag = _certificates.Select(c => c.Clone()).ToList();
             this.Close();
         }
 
-        /// <summary>
-        /// Проверка активности сертификата
-        /// </summary>
-        private async Task<bool> CheckSertificateActive(string sertificateCode)
-        {
-            try
-            {
-                // 1. Подготовка данных (это быстро, можно в UI потоке)
-                string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
-                if (string.IsNullOrEmpty(nickShop))
-                {
-                    await MessageBox.Show("Не удалось получить название магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
-                    return false;
-                }
 
-                string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
-                if (string.IsNullOrEmpty(codeShop))
-                {
-                    await MessageBox.Show("Не удалось получить код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error);
-                    return false;
-                }
 
-                string countDay = CryptorEngine.get_count_day();
-                string key = nickShop.Trim() + countDay.Trim() + codeShop.Trim();
-                string encryptData = CryptorEngine.Encrypt(sertificateCode, true, key);
 
-                // 2. Получение DS и вызов сервиса (это долго, выносим в Task.Run)
-                string status;
-                try
-                {
-                    // ВАЖНО: Весь код получения DS и вызова сервиса выполняем в фоновом потоке
-                    status = await Task.Run(() =>
-                    {
-                        // get_ds() сам проверит адреса и найдет рабочий, это может занять время
-                        DS ds = MainStaticClass.get_ds();
-                        ds.Timeout = 10000; // Таймаут 10 секунд
-                        return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString());
-                    });
-                }
-                catch (Exception ex)
-                {
-                    await MessageBox.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
-                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error);
+        ///// <summary>
+        ///// Проверка активности сертификата
+        ///// </summary>
+        //private async Task<bool> CheckSertificateActive(string sertificateCode)
+        //{
+        //    try
+        //    {
+        //        // 1. Подготовка данных (это быстро, можно в UI потоке)
+        //        string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
+        //        if (string.IsNullOrEmpty(nickShop))
+        //        {
+        //            await MessageBox.Show("Не удалось получить название магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
+        //            return false;
+        //        }
 
-                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
-                    return false;
-                }
+        //        string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
+        //        if (string.IsNullOrEmpty(codeShop))
+        //        {
+        //            await MessageBox.Show("Не удалось получить код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error,this);
+        //            return false;
+        //        }
 
-                // 3. Обработка результата (возвращаемся в UI поток автоматически через await)
-                if (status == "-1")
-                {
-                    await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
-                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error,this);
+        //        string countDay = CryptorEngine.get_count_day();
+        //        string key = nickShop.Trim() + countDay.Trim() + codeShop.Trim();
+        //        string payload = sertificateCode + "|1";//1 здесь это флаг того что это оплата сертификатом
+        //        //string encryptData = CryptorEngine.Encrypt(sertificateCode, true, key);
+        //        string encryptData = CryptorEngine.Encrypt(payload, true, key);
 
-                    MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами",
-                        "CheckSertificateActive", 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
-                    return false;
-                }
+        //        // 2. Получение DS и вызов сервиса (это долго, выносим в Task.Run)
+        //        string status;
+        //        try
+        //        {
+        //            // ВАЖНО: Весь код получения DS и вызова сервиса выполняем в фоновом потоке
+        //            status = await Task.Run(() =>
+        //            {
+        //                // get_ds() сам проверит адреса и найдет рабочий, это может занять время
+        //                DS ds = MainStaticClass.get_ds();
+        //                ds.Timeout = 10000; // Таймаут 10 секунд
+        //                return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString());
+        //            });
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            await MessageBox.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
+        //                "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error,this);
 
-                if (status == "-2")
-                {
-                    await MessageBox.Show($"Сертификат {sertificateCode} не принадлежит вашей сети",
-                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+        //            return false;
+        //        }
 
-                    MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
-                    return false;
-                }
+        //        // 3. Обработка результата (возвращаемся в UI поток автоматически через await)
+        //        if (status == "-1")
+        //        {
+        //            await MessageBox.Show("Произошли ошибки на сервере при работе с сертификатами",
+        //                "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error,this);
 
-                
-                string decryptData = CryptorEngine.Decrypt(status, true, key);
+        //            MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами",
+        //                "CheckSertificateActive", 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+        //            return false;
+        //        }
 
-                switch (decryptData)
-                {
-                    case "1":
-                        MainStaticClass.write_event_in_log($"Успешная проверка сертификата {sertificateCode}", "Документ чек", "0");
-                        return true;
+        //        if (status == "-2")
+        //        {
+        //            await MessageBox.Show($"Сертификат {sertificateCode} не принадлежит вашей сети",
+        //                "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
 
-                    case "0":
-                        await MessageBox.Show($"Сертификат {sertificateCode} не активирован",
-                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //            MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
+        //            return false;
+        //        }
 
-                        MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
-                        return false;
-                   
 
-                    default:
-                        await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
-                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
-                        return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
-                await MessageBox.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
-                return false;
-            }
-        }
+        //        string decryptData = CryptorEngine.Decrypt(status, true, key);
+
+        //        switch (decryptData)
+        //        {
+        //            case "1":
+        //                MainStaticClass.write_event_in_log($"Успешная проверка сертификата {sertificateCode}", "Документ чек", "0");
+        //                return true;
+
+        //            case "0":
+        //                await MessageBox.Show($"Сертификат {sertificateCode} не активирован",
+        //                    "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+
+        //                MainStaticClass.write_event_in_log($"Сертификат {sertificateCode} не активен", "Документ чек", "0");
+        //                return false;
+
+
+        //            default:
+        //                await MessageBox.Show($"Неизвестный статус сертификата: {decryptData}",
+        //                    "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //                return false;
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+        //        await MessageBox.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        return false;
+        //    }
+        //}
 
         ///// <summary>
         ///// Асинхронная проверка активности сертификата

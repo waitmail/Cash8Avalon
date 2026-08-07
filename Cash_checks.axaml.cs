@@ -47,6 +47,7 @@ namespace Cash8Avalon
         private int _currentRow = 0;
         private int _selectedRowIndex = -1;
         private Border _selectedRowBorder;
+        private TextBox _txtBSelectedComment;
 
         // ДЛЯ ТАЙМЕРА И СТАТУСА
         private System.Timers.Timer _statusTimer;
@@ -176,6 +177,7 @@ namespace Cash8Avalon
                 _txtStatusBox = null;
                 _headerGrid = null;
                 _headerScrollTransform = null;
+                _txtBSelectedComment = null;
 
                 // Обнуляем ссылки на делегаты
                 _scrollSizeChangedHandler = null;
@@ -417,6 +419,8 @@ namespace Cash8Avalon
                 {
                     Console.WriteLine("⚠ TextBox 'txtB_not_unloaded_docs' не найден!");
                 }
+
+                _txtBSelectedComment = this.FindControl<TextBox>("txtB_selected_comment");
             }
             catch (Exception ex)
             {
@@ -1048,6 +1052,11 @@ namespace Cash8Avalon
                 // ✅ ИСПРАВЛЕНО: Теперь индексы совпадают (rowIndex = gridRowIndex)
                 int gridRowIndex = rowIndex;
 
+                if (_txtBSelectedComment != null)
+                {
+                    _txtBSelectedComment.Text = _checkItems[rowIndex].Comment;
+                }
+
                 foreach (Control child in _tableGrid.Children)
                 {
                     if (child is Border border && Grid.GetRow(border) == gridRowIndex)
@@ -1134,6 +1143,10 @@ namespace Cash8Avalon
                 }
 
                 _selectedRowIndex = -1;
+                if (_txtBSelectedComment != null)
+                {
+                    _txtBSelectedComment.Text = string.Empty;
+                }
             }
             catch (Exception ex)
             {

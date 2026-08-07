@@ -195,29 +195,44 @@
             <!-- DataGrid будет добавлен в коде -->
         </Border>
         
-        <!-- Нижняя панель с подсказками и кнопкой -->
+        <!-- Нижняя панель с подсказками, комментарием и кнопкой -->
         <Grid Grid.Row="2" Margin="0,10,0,0" Name="BottomPanel">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/> <!-- Левая часть: занимает всё свободное место -->
-                <ColumnDefinition Width="Auto"/> <!-- Правая часть: подстраивается под кнопку -->
+                <ColumnDefinition Width="Auto"/> <!-- Левая часть: горячие клавиши -->
+                <ColumnDefinition Width="*"/>    <!-- Средняя часть: TextBox (занимает всё свободное место) -->
+                <ColumnDefinition Width="Auto"/> <!-- Правая часть: кнопка Закрыть -->
             </Grid.ColumnDefinitions>
-            
+    
             <!-- Левая часть: Текст с горячими клавишами -->
             <TextBlock Grid.Column="0" 
                        VerticalAlignment="Center"
                        Foreground="#555555"
                        FontSize="12"
                        TextWrapping="Wrap"
-                       LineHeight="18">
+                       LineHeight="18"
+                       Margin="0,0,20,0">
                 <Run FontWeight="SemiBold" Text="Insert"/>
                 <Run Text=" — создание нового чека"/>
                 <LineBreak/>
                 <Run FontWeight="SemiBold" Text="Enter"/>
                 <Run Text=" — открытие старого чека (просмотр)"/>
             </TextBlock>
-            
+    
+            <!-- Средняя часть: TextBox для комментария -->
+            <TextBox Grid.Column="1"
+                     Name="txtB_selected_comment"
+                     IsReadOnly="True"
+                     MinHeight="30"
+                     VerticalAlignment="Center"
+                     Margin="0,0,20,0"
+                     Background="White"
+                     Foreground="Black"
+                     FontSize="14"
+                     Watermark="Комментарий выделенного чека..."
+                     TextWrapping="Wrap" />
+    
             <!-- Правая часть: Кнопка закрытия -->
-            <Button Grid.Column="1" 
+            <Button Grid.Column="2" 
                     Name="button1" 
                     Content="Закрыть" 
                     Width="120"

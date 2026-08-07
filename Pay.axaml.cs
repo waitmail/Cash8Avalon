@@ -408,6 +408,7 @@ namespace Cash8Avalon
             try
             {
                 var inputSertificates = new InputSertificates();
+                inputSertificates.DocumentNumber = cc?.numdoc ?? 0;
                 if (_certificatesList.Count > 0) inputSertificates.LoadExistingCertificates(_certificatesList);
                 inputSertificates.Topmost = true;
 
