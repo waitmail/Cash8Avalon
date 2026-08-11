@@ -132,7 +132,9 @@ namespace Cash8Avalon
         public string guid_sales = "";
         public string tax_order = "";
         public bool external_fix = false;
-        public double sale_non_cash_money = 0;
+        public decimal sale_non_cash_money = 0m;
+        public decimal sale_cash_money = 0m; 
+        public decimal sale_sertificate_money = 0m;
         public bool payment_by_sbp = false;
         public bool payment_by_sbp_sales = false;
 
@@ -2375,12 +2377,17 @@ namespace Cash8Avalon
                 conn = MainStaticClass.NpgsqlConn();
                 await conn.OpenAsync();
 
+                //    // 1. Получаем информацию о чеке продажи
+                //    string query = @"
+                //SELECT id_transaction_terminal, code_authorization_terminal, date_time_write, 
+                //       non_cash_money, guid, extra 
+                //FROM checks_header 
+                //WHERE document_number = @docNumber";
                 // 1. Получаем информацию о чеке продажи
                 string query = @"
-            SELECT id_transaction_terminal, code_authorization_terminal, date_time_write, 
-                   non_cash_money, guid, extra 
-            FROM checks_header 
-            WHERE document_number = @docNumber";
+                SELECT id_transaction_terminal, code_authorization_terminal, date_time_write,
+                non_cash_money, cash_money,sertificate_money, guid, extra FROM checks_header
+                WHERE document_number = @docNumber";
 
                 using (var cmd = new NpgsqlCommand(query, conn))
                 {
@@ -2392,7 +2399,9 @@ namespace Cash8Avalon
                             sale_id_transaction_terminal = reader["id_transaction_terminal"]?.ToString() ?? "";
                             sale_code_authorization_terminal = reader["code_authorization_terminal"]?.ToString() ?? "";
                             sale_date = Convert.ToDateTime(reader["date_time_write"]);
-                            sale_non_cash_money = Convert.ToDouble(reader["non_cash_money"]);
+                            sale_non_cash_money = Convert.ToDecimal(reader["non_cash_money"]);
+                            sale_cash_money = reader.GetDecimal(reader.GetOrdinal("cash_money"));
+                            sale_sertificate_money = reader.GetDecimal(reader.GetOrdinal("sertificate_money")); 
                             id_sale = reader["guid"]?.ToString() ?? "";
                             Extra = Convert.ToBoolean(reader["extra"]);
                         }

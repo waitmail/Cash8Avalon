@@ -387,10 +387,175 @@ namespace Cash8Avalon
                     if (_isPaymentInProgress) return; 
                     button2_Click(null, null);
                     break;
-                case Key.Y: e.Handled = true; this.CashSum = this.PaySum; ClearNonCash(); _cashSumTextBox?.Focus(); break;
-                //case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); this.FindControl<TextBox>("non_cash_sum")?.Focus(); break;
-                case Key.R: e.Handled = true; FillNonCashFromPaySum(); ClearCash(); _nonCashSumTextBox?.Focus(); break;
-                case Key.F8: e.Handled = true; await ShowCertificatesDialog(); break;
+                //case Key.Y: 
+                //    e.Handled = true; 
+                //    this.CashSum = this.PaySum; 
+                //    ClearNonCash(); 
+                //    _cashSumTextBox?.Focus();
+                //    break;
+                case Key.Y:
+                    e.Handled = true;
+                    if (cc?.CheckType?.SelectedIndex == 1) // ★ Возврат
+                    {
+                        FillCashForReturn();      // Считаем максимум налички
+                        _cashSumTextBox?.Focus();
+                    }
+                    else // Продажа — старая логика
+                    {
+                        this.CashSum = this.PaySum;
+                        ClearNonCash();
+                        _cashSumTextBox?.Focus();
+                    }
+                    break;
+
+                //case Key.R:
+                //    e.Handled = true; 
+                //    FillNonCashFromPaySum();
+                //    ClearCash();
+                //    _nonCashSumTextBox?.Focus();
+                //    break;
+                case Key.R:
+                    e.Handled = true;
+                    if (cc?.CheckType?.SelectedIndex == 1) // ★ Возврат
+                    {
+                        FillNonCashForReturn();      // Считаем карту = возврат − нал − сертификаты
+                        _nonCashSumTextBox?.Focus(); // Наличные НЕ очищаем!
+                    }
+                    else // Продажа — старая логика
+                    {
+                        FillNonCashFromPaySum();
+                        ClearCash();
+                        _nonCashSumTextBox?.Focus();
+                    }
+                    break;
+
+                // case Key.F8:
+                //     e.Handled = true;
+                //     
+                //     await ShowCertificatesDialog(); 
+                //     break;
+                case Key.F8: 
+                    e.Handled = true; 
+                    if (cc?.CheckType?.SelectedIndex == 1) // ★ Возврат
+                    {
+                        // Блокируем ввод сертификатов при возврате
+                        await MessageBoxHelper.Show("При возврате продажа сертификатов недоступна. Сумма сертификата возвращается наличными.", "Возврат", MessageBoxButton.OK, MessageBoxType.Info, this);
+                    }
+                    else // Продажа
+                    {
+                        await ShowCertificatesDialog(); 
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Рассчитывает сумму возврата на карту при нажатии R в режиме ВОЗВРАТА.
+        /// Сертификаты клиенту НЕ выдаём → их сумма идёт в наличные (кассир вводит руками).
+        /// Карта = (Сумма возврата) − (Наличные) − (Сертификаты), но не больше, чем было оплачено картой при продаже.
+        /// </summary>
+        private void FillNonCashForReturn()
+        {
+            try
+            {
+                // 1. Сумма возврата (сколько всего нужно вернуть клиенту)
+                if (!decimal.TryParse(this.PaySum.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal returnSum))
+                    return;
+                returnSum = Math.Round(returnSum, 2, MidpointRounding.AwayFromZero);
+
+                // 2. Внесённая наличная сумма (уже может включать "сертификатную" часть, т.к. возврат сертификата делаем деньгами)
+                decimal cashSum = 0;
+                if (decimal.TryParse(this.CashSum.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal cs))
+                    cashSum = Math.Round(cs, 2, MidpointRounding.AwayFromZero);
+
+                // 3. Сертификаты в текущем окне (при возврате обычно 0)
+                decimal certSum = 0;
+                if (decimal.TryParse(this.CertificatesSum.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal c))
+                    certSum = Math.Round(c, 2, MidpointRounding.AwayFromZero);
+
+                // 4. Сколько клиент оплатил картой при исходной продаже
+                decimal saleNonCash = 0;
+                if (cc != null)
+                {
+                    try { saleNonCash = Convert.ToDecimal(cc.sale_non_cash_money); }
+                    catch { saleNonCash = 0; }
+                }
+                saleNonCash = Math.Round(saleNonCash, 2, MidpointRounding.AwayFromZero);
+
+                // 5. Сколько нужно вернуть картой
+                decimal neededCardReturn = returnSum - cashSum - certSum;
+                if (neededCardReturn < 0) neededCardReturn = 0;
+
+                // 6. Не превышаем сумму, оплаченную картой при продаже
+                decimal cardReturn = Math.Min(neededCardReturn, saleNonCash);
+                cardReturn = Math.Round(cardReturn, 2, MidpointRounding.AwayFromZero);
+
+                // 7. Разбиваем на рубли и копейки
+                int rubles = (int)Math.Floor(cardReturn);
+                int kopecks = (int)Math.Round((cardReturn - rubles) * 100, MidpointRounding.AwayFromZero);
+                if (kopecks >= 100) { rubles += 1; kopecks -= 100; }
+
+                // 8. Заполняем поля (копейки остаются IsEnabled=False, но программно текст меняется)
+                this.NonCashSum = rubles.ToString();
+                this.NonCashSumKop = kopecks.ToString("00");
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, cc?.numdoc ?? 0, MainStaticClass.CashDeskNumber, "FillNonCashForReturn FAILED");
+            }
+            finally
+            {
+                CalculateChange();
+            }
+        }
+
+        /// <summary>
+        /// Рассчитывает максимальную возможную сумму наличных для возврата при нажатии Y.
+        /// Сертификаты из продажи тоже добавляются к доступным наличным, т.к. мы возвращаем их деньгами.
+        /// </summary>
+        private void FillCashForReturn()
+        {
+            try
+            {
+                // 1. Сумма текущего возврата
+                if (!decimal.TryParse(this.PaySum.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal returnSum))
+                    return;
+                returnSum = Math.Round(returnSum, 2, MidpointRounding.AwayFromZero);
+
+                // 2. Сколько наличными клиент оплатил при исходной продаже + сертификаты (т.к. возвращаем деньгами)
+                decimal saleCash = 0m;
+                decimal saleSert = 0m;
+                if (cc != null)
+                {
+                    saleCash = cc.sale_cash_money;
+                    saleSert = cc.sale_sertificate_money; // ★ Добавили сертификаты
+                }
+        
+                // Итого доступно к возврату наличными
+                decimal availableCashReturn = Math.Round(saleCash + saleSert, 2, MidpointRounding.AwayFromZero);
+
+                // 3. Уже возвращено наличными (заглушка, если нет метода)
+                decimal alreadyReturnedCash = 0m;
+                // try { alreadyReturnedCash = MainStaticClass.GetAlreadyReturnedCashSum(cc.id_sale); } catch { }
+                availableCashReturn = Math.Max(0m, availableCashReturn - alreadyReturnedCash);
+
+                // 4. Итоговая сумма наличными = Минимум(Сумма возврата, Доступный остаток)
+                decimal cashReturn = Math.Min(returnSum, availableCashReturn);
+                cashReturn = Math.Round(cashReturn, 2, MidpointRounding.AwayFromZero);
+
+                // 5. Заполняем поле
+                this.CashSum = cashReturn.ToString("F2");
+
+                // 6. Очищаем карту
+                ClearNonCash();
+            }
+            catch (Exception ex)
+            {
+                MainStaticClass.WriteRecordErrorLog(ex, cc?.numdoc ?? 0, MainStaticClass.CashDeskNumber, "FillCashForReturn FAILED");
+            }
+            finally
+            {
+                CalculateChange();
             }
         }
 
@@ -2127,8 +2292,7 @@ namespace Cash8Avalon
                 };
                 MainStaticClass.write_event_in_log($"[TRAP {currentTrap}.1] Snapshot: {cashCheck.LastPaymentSnapshot}", logCtx, cashCheck.numdoc.ToString());
 
-                currentTrap = "6";
-                double notCashSum = get_non_cash_sum();
+                currentTrap = "6";                
 
                 currentTrap = "6.1";
                 MainStaticClass.write_event_in_log(
@@ -2140,9 +2304,9 @@ namespace Cash8Avalon
                 string ipTerm = MainStaticClass.IpAddressAcquiringTerminal?.Trim() ?? "";
                 string idTerm = MainStaticClass.IdAcquirerTerminal?.Trim() ?? "";
 
-                MainStaticClass.write_event_in_log($"[TRAP {currentTrap}.2] Терминал: IP='{ipTerm}', ID='{idTerm}', Sum={notCashSum}", logCtx, cashCheck.numdoc.ToString());
+                MainStaticClass.write_event_in_log($"[TRAP {currentTrap}.2] Терминал: IP='{ipTerm}', ID='{idTerm}', Sum={nonCashSum}", logCtx, cashCheck.numdoc.ToString());
 
-                if (ipTerm != "" && idTerm != "" && notCashSum > 0)
+                if (ipTerm != "" && idTerm != "" && nonCashSum > 0)
                 {
                     currentTrap = "7";
                     bool skipTerminal = _checkBoxDoNotSendPaymentToTheTerminal?.IsChecked == true;
@@ -2303,7 +2467,7 @@ namespace Cash8Avalon
                 currentTrap = "12";
                 string ipTerm = MainStaticClass.IpAddressAcquiringTerminal?.Trim() ?? "";
                 string idTerm = MainStaticClass.IdAcquirerTerminal?.Trim() ?? "";
-                double notCashSum = get_non_cash_sum();
+                decimal notCashSum = get_non_cash_sum();
 
                 if (ipTerm != "" && idTerm != "" && notCashSum > 0)
                 {
@@ -2658,9 +2822,9 @@ namespace Cash8Avalon
         //}
 
         // ИСПРАВЛЕННЫЙ метод get_non_cash_sum с защитой от null
-        private double get_non_cash_sum()
+        private decimal get_non_cash_sum()
         {
-            double result = 0;
+            decimal result = 0;
             // Используем свойства NonCashSum и NonCashSumKop вместо полей
             string rub = this.NonCashSum;
             string kop = this.NonCashSumKop;
@@ -2677,8 +2841,8 @@ namespace Cash8Avalon
                 kop = "0"; // Дополнительная защита
             }
 
-            if (double.TryParse(rub, out double rubVal)) result += rubVal;
-            if (double.TryParse(kop, out double kopVal)) result += kopVal / 100;
+            if (decimal.TryParse(rub, out decimal rubVal)) result += rubVal;
+            if (decimal.TryParse(kop, out decimal kopVal)) result += kopVal / 100;
 
             return result;
         }

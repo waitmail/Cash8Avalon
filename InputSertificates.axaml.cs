@@ -20,6 +20,8 @@ namespace Cash8Avalon
     public partial class InputSertificates : Window
     {
         public long DocumentNumber { get; set; } = 0;
+        //public bool IsReturnMode { get; set; } = false; //при возвратном чеке когда мы отдаем сертификат обратно которым был ранее оплачен чек, как бы снова продаем
+        //public string OriginalSaleGuid { get; set; } = ""; 
 
         // Элементы управления
         private TextBox _inputSertificate;
