@@ -1235,6 +1235,8 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;
+
                     string query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"].ToString() + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query, conn);
                     Int16 result = Convert.ToInt16(command.ExecuteScalar());
@@ -1283,6 +1285,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;                    
                     string query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"].ToString() + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query, conn);
                     Int16 result = Convert.ToInt16(command.ExecuteScalar());
@@ -1315,63 +1318,63 @@ namespace Cash8Avalon
         }
 
 
-        /// <summary>
-        /// Пометка товарных позиций, которые участвовали в акции,
-        /// чтобы они не участвовали в следующих акциях.
-        /// </summary>
-        /// <param name="num_doc">Номер документа акции.</param>
-        /// <param name="comment">Комментарий к акции.</param>
-        /// <param name="actionPricesByDoc">Словарь с данными о товарах и их ценах по документам.</param>
-        private void marked_action_tovar_dt(int num_doc, string comment, Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)
-        {
-            try
-            {
-                // Проверяем, есть ли данные для текущего документа в словаре
-                if (actionPricesByDoc.ContainsKey(num_doc))
-                {
-                    // Получаем словарь с товарами для текущего документа
-                    var tovarPrices = actionPricesByDoc[num_doc];
+        ///// <summary>
+        ///// Пометка товарных позиций, которые участвовали в акции,
+        ///// чтобы они не участвовали в следующих акциях.
+        ///// </summary>
+        ///// <param name="num_doc">Номер документа акции.</param>
+        ///// <param name="comment">Комментарий к акции.</param>
+        ///// <param name="actionPricesByDoc">Словарь с данными о товарах и их ценах по документам.</param>
+        //private void marked_action_tovar_dt(int num_doc, string comment, Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)
+        //{
+        //    try
+        //    {
+        //        // Проверяем, есть ли данные для текущего документа в словаре
+        //        if (actionPricesByDoc.ContainsKey(num_doc))
+        //        {
+        //            // Получаем словарь с товарами для текущего документа
+        //            var tovarPrices = actionPricesByDoc[num_doc];
 
-                    // Проходим по всем строкам в DataTable (предполагается, что dt — это DataTable)
-                    foreach (DataRow row in dt.Rows)
-                    {
-                        // Пропускаем товары, которые уже участвовали в акции
-                        if (Convert.ToInt32(row["action2"]) > 0)
-                        {
-                            continue;
-                        }
+        //            // Проходим по всем строкам в DataTable (предполагается, что dt — это DataTable)
+        //            foreach (DataRow row in dt.Rows)
+        //            {
+        //                // Пропускаем товары, которые уже участвовали в акции
+        //                if (Convert.ToInt32(row["action2"]) > 0)
+        //                {
+        //                    continue;
+        //                }
 
-                        // Получаем код товара из строки
-                        long tovarCode = Convert.ToInt64(row["tovar_code"]);
+        //                // Получаем код товара из строки
+        //                long tovarCode = Convert.ToInt64(row["tovar_code"]);
 
-                        // Проверяем, есть ли товар в словаре для текущего документа
-                        if (tovarPrices.ContainsKey(tovarCode))
-                        {
-                            // Если товар участвовал в акции, помечаем его
-                            row["action2"] = num_doc.ToString();
+        //                // Проверяем, есть ли товар в словаре для текущего документа
+        //                if (tovarPrices.ContainsKey(tovarCode))
+        //                {
+        //                    // Если товар участвовал в акции, помечаем его
+        //                    row["action2"] = num_doc.ToString();
 
-                            // Добавляем комментарий, если есть соответствующая колонка
-                            if (dt.Columns.Contains("promo_description"))
-                            {
-                                row["promo_description"] = comment;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // Если данных для текущего документа нет, можно вывести предупреждение
-                    MessageBoxHelper.Show($"Данные для документа {num_doc} отсутствуют в словаре.");
-                    MainStaticClass.WriteRecordErrorLog("Данные для документа {num_doc} отсутствуют в словаре.", "marked_action_tovar_dt(int num_doc, string comment, Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)", num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Обработка ошибок
-                MessageBoxHelper.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
-                MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
-            }
-        }
+        //                    // Добавляем комментарий, если есть соответствующая колонка
+        //                    if (dt.Columns.Contains("promo_description"))
+        //                    {
+        //                        row["promo_description"] = comment;
+        //                    }
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // Если данных для текущего документа нет, можно вывести предупреждение
+        //            MessageBoxHelper.Show($"Данные для документа {num_doc} отсутствуют в словаре.");
+        //            MainStaticClass.WriteRecordErrorLog("Данные для документа {num_doc} отсутствуют в словаре.", "marked_action_tovar_dt(int num_doc, string comment, Dictionary<int, Dictionary<long, decimal>> actionPricesByDoc)", num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Обработка ошибок
+        //        MessageBoxHelper.Show(ex.Message, "Ошибка при обработке акций", MessageBoxButton.OK, MessageBoxType.Error, cc);
+        //        MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Отметка позиций уже участовавших в акции");
+        //    }
+        //}
 
         /// <summary>
         /// Пометка товарных позиций, которые участвовали в акции,
@@ -1398,6 +1401,7 @@ namespace Cash8Avalon
                         {
                             continue;
                         }
+                        if (!IsPriceValidForAction(row)) continue;
 
                         // Получаем код товара из строки
                         long tovarCode = Convert.ToInt64(row["tovar_code"]);
@@ -1653,6 +1657,7 @@ namespace Cash8Avalon
                         foreach (DataRow row in dt.Rows)
                         {
                             if (Convert.ToInt32(row["action2"]) > 0) continue; // Пропускаем уже учтенные
+                            if (!IsPriceValidForAction(row)) continue;
 
                             double currentCode = Convert.ToDouble(row["tovar_code"]);
                             if (actionPrices.ContainsKey(currentCode))
@@ -2020,10 +2025,11 @@ namespace Cash8Avalon
                     continue;
                 }
 
-                //if (Convert.ToInt32(row["sum_at_discount"]) < 1)
-                //{
-                //    continue;
-                //}
+                if (!IsPriceValidForAction(row))
+                {
+                    continue;
+                }
+
 
                 long tovarCode = Convert.ToInt64(row["tovar_code"]);
                 if (actionPrices.TryGetValue(tovarCode, out var price))
@@ -2111,6 +2117,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;
 
                     //if (Convert.ToInt32(row["sum_at_discount"]) < 1)
                     //{
@@ -2298,7 +2305,7 @@ namespace Cash8Avalon
                     continue; // Пропускаем товары, уже участвовавшие в акциях
                 }
 
-                if (Convert.ToInt32(row["sum_at_discount"]) < 1)
+                if (!IsPriceValidForAction(row))
                 {
                     continue;
                 }
@@ -2471,6 +2478,11 @@ namespace Cash8Avalon
             foreach (DataRow row in dtCopy.Rows)
             {
                 if (Convert.ToInt32(row["action2"]) > 0) continue; // уже обработано
+                if (!IsPriceValidForAction(row))
+                {
+                    continue;
+                }
+
 
                 long code = Convert.ToInt64(row["tovar_code"]);
                 int qty = Convert.ToInt32(row["quantity"]);
@@ -2496,7 +2508,7 @@ namespace Cash8Avalon
             foreach (DataRow row in dtCopy.Rows)
             {
                 if (Convert.ToInt32(row["action2"]) > 0) continue;
-                if (Convert.ToDouble(row["sum_at_discount"]) < 1) continue;
+                if (!IsPriceValidForAction(row)) continue;
 
                 long code = Convert.ToInt64(row["tovar_code"]);
                 int qty = Convert.ToInt32(row["quantity"]);
@@ -2538,56 +2550,56 @@ namespace Cash8Avalon
             }
         }
 
-        private void ApplyDiscountsToEligibleItems(DataTable dtCopy, int num_doc, decimal percent, int min_quantity, Dictionary<long, int> firstListItems)
-        {
-            DataRow newRow = null;
+        //private void ApplyDiscountsToEligibleItems(DataTable dtCopy, int num_doc, decimal percent, int min_quantity, Dictionary<long, int> firstListItems)
+        //{
+        //    DataRow newRow = null;
 
-            foreach (DataRow row in dtCopy.Rows)
-            {
-                if (Convert.ToInt32(row["action2"]) > 0)
-                {
-                    continue;
-                }
-                if (Convert.ToInt32(row["sum_at_discount"]) < 1)
-                {
-                    continue;
-                }
+        //    foreach (DataRow row in dtCopy.Rows)
+        //    {
+        //        if (Convert.ToInt32(row["action2"]) > 0)
+        //        {
+        //            continue;
+        //        }
+        //        if (Convert.ToInt32(row["sum_at_discount"]) < 1)
+        //        {
+        //            continue;
+        //        }
 
-                long tovar_code = Convert.ToInt64(row["tovar_code"]);
-                int quantity_of_pieces = Convert.ToInt32(row["quantity"]);
+        //        long tovar_code = Convert.ToInt64(row["tovar_code"]);
+        //        int quantity_of_pieces = Convert.ToInt32(row["quantity"]);
 
-                if (firstListItems.ContainsKey(tovar_code) && firstListItems[tovar_code] >= min_quantity)
-                {
-                    int discountedQuantity = Math.Min(quantity_of_pieces, min_quantity);
+        //        if (firstListItems.ContainsKey(tovar_code) && firstListItems[tovar_code] >= min_quantity)
+        //        {
+        //            int discountedQuantity = Math.Min(quantity_of_pieces, min_quantity);
 
-                    if (discountedQuantity > 0)
-                    {
-                        if (quantity_of_pieces <= discountedQuantity)
-                        {
-                            ApplyDiscountToRow(row, percent, num_doc);
-                        }
-                        else
-                        {
-                            newRow = CreateNewRow(dtCopy, row, discountedQuantity, percent, num_doc);
-                            row["quantity"] = Convert.ToInt32(row["quantity"]) - discountedQuantity;
-                            row["sum_at_discount"] = Math.Round(Convert.ToDouble(row["quantity"]) * Convert.ToDouble(row["price_at_discount"]), 2, MidpointRounding.AwayFromZero);
-                        }
+        //            if (discountedQuantity > 0)
+        //            {
+        //                if (quantity_of_pieces <= discountedQuantity)
+        //                {
+        //                    ApplyDiscountToRow(row, percent, num_doc);
+        //                }
+        //                else
+        //                {
+        //                    newRow = CreateNewRow(dtCopy, row, discountedQuantity, percent, num_doc);
+        //                    row["quantity"] = Convert.ToInt32(row["quantity"]) - discountedQuantity;
+        //                    row["sum_at_discount"] = Math.Round(Convert.ToDouble(row["quantity"]) * Convert.ToDouble(row["price_at_discount"]), 2, MidpointRounding.AwayFromZero);
+        //                }
 
-                        firstListItems[tovar_code] -= discountedQuantity;
+        //                firstListItems[tovar_code] -= discountedQuantity;
 
-                        if (firstListItems[tovar_code] <= 0)
-                        {
-                            firstListItems.Remove(tovar_code);
-                        }
-                    }
-                }
-            }
+        //                if (firstListItems[tovar_code] <= 0)
+        //                {
+        //                    firstListItems.Remove(tovar_code);
+        //                }
+        //            }
+        //        }
+        //    }
 
-            if (newRow != null)
-            {
-                dtCopy.Rows.Add(newRow);
-            }
-        }
+        //    if (newRow != null)
+        //    {
+        //        dtCopy.Rows.Add(newRow);
+        //    }
+        //}
 
         private void ApplyDiscountToRow(DataRow row, decimal percent, int num_doc)
         {
@@ -2613,57 +2625,57 @@ namespace Cash8Avalon
         #endregion
 
 
-        /// <summary>
-        /// Пометка товарных позиций, которые участвовали в акции,
-        /// чтобы они не участвовали в следующих акциях.
-        /// </summary>
-        /// <param name="dtCopy">DataTable с товарами.</param>
-        /// <param name="num_doc">Номер документа акции.</param>
-        /// <param name="comment">Комментарий к акции.</param>
-        /// <param name="listQuantities">Словарь с данными о товарах и их количестве по документам.</param>
-        /// <param name="show_messages">Флаг, указывающий, нужно ли показывать сообщения об ошибках.</param>
-        private void marked_action_tovar_dt(DataTable dtCopy, int num_doc, string comment, Dictionary<int, int> listQuantities, bool show_messages)
-        {
-            try
-            {
-                // Проходим по всем строкам в DataTable
-                foreach (DataRow row in dtCopy.Rows)
-                {
-                    // Пропускаем товары, которые уже участвовали в акции
-                    if (Convert.ToInt32(row["action2"]) > 0)
-                    {
-                        continue;
-                    }
+        ///// <summary>
+        ///// Пометка товарных позиций, которые участвовали в акции,
+        ///// чтобы они не участвовали в следующих акциях.
+        ///// </summary>
+        ///// <param name="dtCopy">DataTable с товарами.</param>
+        ///// <param name="num_doc">Номер документа акции.</param>
+        ///// <param name="comment">Комментарий к акции.</param>
+        ///// <param name="listQuantities">Словарь с данными о товарах и их количестве по документам.</param>
+        ///// <param name="show_messages">Флаг, указывающий, нужно ли показывать сообщения об ошибках.</param>
+        //private void marked_action_tovar_dt(DataTable dtCopy, int num_doc, string comment, Dictionary<int, int> listQuantities, bool show_messages)
+        //{
+        //    try
+        //    {
+        //        // Проходим по всем строкам в DataTable
+        //        foreach (DataRow row in dtCopy.Rows)
+        //        {
+        //            // Пропускаем товары, которые уже участвовали в акции
+        //            if (Convert.ToInt32(row["action2"]) > 0)
+        //            {
+        //                continue;
+        //            }
 
-                    // Получаем код товара из строки
-                    int tovarCode = Convert.ToInt32(row["tovar_code"]);
+        //            // Получаем код товара из строки
+        //            int tovarCode = Convert.ToInt32(row["tovar_code"]);
 
-                    // Проверяем, есть ли товар в словаре для текущего документа
-                    if (listQuantities.ContainsKey(tovarCode))
-                    {
-                        // Если товар участвовал в акции, помечаем его
-                        row["action2"] = num_doc.ToString();
+        //            // Проверяем, есть ли товар в словаре для текущего документа
+        //            if (listQuantities.ContainsKey(tovarCode))
+        //            {
+        //                // Если товар участвовал в акции, помечаем его
+        //                row["action2"] = num_doc.ToString();
 
-                        // Добавляем комментарий, если есть соответствующая колонка
-                        if (dtCopy.Columns.Contains("promo_description"))
-                        {
-                            row["promo_description"] = comment;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Обработка ошибок
-                if (show_messages)
-                {
-                    MessageBoxHelper.Show(ex.Message, "Пометка товарных позиций участвующих в акции", MessageBoxButton.OK, MessageBoxType.Error, cc);
-                }
+        //                // Добавляем комментарий, если есть соответствующая колонка
+        //                if (dtCopy.Columns.Contains("promo_description"))
+        //                {
+        //                    row["promo_description"] = comment;
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Обработка ошибок
+        //        if (show_messages)
+        //        {
+        //            MessageBoxHelper.Show(ex.Message, "Пометка товарных позиций участвующих в акции", MessageBoxButton.OK, MessageBoxType.Error, cc);
+        //        }
 
-                // Логирование ошибки
-                MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Пометка товарных позиций участвующих в акции");
-            }
-        }
+        //        // Логирование ошибки
+        //        MainStaticClass.WriteRecordErrorLog(ex, num_doc, MainStaticClass.CashDeskNumber, "Пометка товарных позиций участвующих в акции");
+        //    }
+        //}
 
         /*
   * Обработать акцию по 2 типу
@@ -2799,7 +2811,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
-                    if (Convert.ToInt32(row["sum_at_discount"]) < 1)
+                    if (!IsPriceValidForAction(row))
                     {
                         continue;
                     }
@@ -3056,6 +3068,8 @@ namespace Cash8Avalon
                     continue;
                 }
 
+                if (!IsPriceValidForAction(row)) continue;
+
                 if (tovarCodesInAction.Contains(Convert.ToInt64(row["tovar_code"]))) // Используем Convert.ToInt64 для long
                 {
                     sumOnDoc += Convert.ToDecimal(row["sum_at_discount"]);
@@ -3078,10 +3092,11 @@ namespace Cash8Avalon
                 {
                     continue;
                 }
-                if (Convert.ToInt32(row["sum_at_discount"]) < 1)
+                if (!IsPriceValidForAction(row))
                 {
                     continue;
                 }
+
 
                 if (tovarCodesInAction.Contains(Convert.ToInt64(row["tovar_code"]))) // Используем Convert.ToInt64 для long
                 {
@@ -3181,6 +3196,11 @@ namespace Cash8Avalon
                 {
                     continue;
                 }
+                if (!IsPriceValidForAction(row))
+                {
+                    continue;
+                }
+
 
                 if (tovarCodesInAction.Contains(Convert.ToInt32(row["tovar_code"])))
                 {
@@ -3300,6 +3320,14 @@ namespace Cash8Avalon
                         dt2.Rows.Add(row2);
                         continue;
                     }
+                    if (!IsPriceValidForAction(row))
+                    {
+                        DataRow row2 = dt2.NewRow();
+                        row2.ItemArray = row.ItemArray;
+                        dt2.Rows.Add(row2);                        
+                        continue;
+                    }
+
 
                     query_string = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query_string, conn);
@@ -3517,7 +3545,8 @@ namespace Cash8Avalon
                 foreach (DataRow row in originalDt.Rows)
                 {
                     if (Convert.ToInt32(row["action2"]) > 0 ||
-                        !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
+                                !IsPriceValidForAction(row) ||
+                                !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
                     {
                         tempDt.ImportRow(row);
                     }
@@ -3527,15 +3556,8 @@ namespace Cash8Avalon
                 var items = new List<ItemData>();
                 foreach (DataRow row in originalDt.Rows)
                 {
-                    if (Convert.ToInt32(row["action2"]) > 0)
-                    {
-                        continue;
-                    }
-
-                    if (Convert.ToInt32(row["sum_at_discount"]) < 1)
-                    {
-                        continue;
-                    }
+                    if (Convert.ToInt32(row["action2"]) > 0) continue;
+                    if (!IsPriceValidForAction(row)) continue;
 
                     long tovarCode = (long)Convert.ToDouble(row["tovar_code"]);
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
@@ -3934,6 +3956,13 @@ namespace Cash8Avalon
                         dt2.Rows.Add(row2);
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) //Этот товар уже участвовал в акции значит его пропускаем                  
+                    {
+                        DataRow row2 = dt2.NewRow();
+                        row2.ItemArray = row.ItemArray;
+                        dt2.Rows.Add(row2);
+                        continue;
+                    }
                     query_string = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query_string, conn);
                     if (Convert.ToInt16(command.ExecuteScalar()) != 0)
@@ -4103,7 +4132,8 @@ namespace Cash8Avalon
                 foreach (DataRow row in originalDt.Rows)
                 {
                     if (Convert.ToInt32(row["action2"]) > 0 ||
-                        !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
+                                !IsPriceValidForAction(row) ||
+                                !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
                     {
                         tempDt.ImportRow(row);
                     }
@@ -4114,6 +4144,7 @@ namespace Cash8Avalon
                 foreach (DataRow row in originalDt.Rows)
                 {
                     if (Convert.ToInt32(row["action2"]) > 0) continue;
+                    if (!IsPriceValidForAction(row)) continue;
 
                     long tovarCode = (long)Convert.ToDouble(row["tovar_code"]);
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
@@ -4354,6 +4385,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;
                     query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query, conn);
                     result = Convert.ToInt16(command.ExecuteScalar());
@@ -4435,6 +4467,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;
                     query = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query, conn);
                     result = Convert.ToInt16(command.ExecuteScalar());
@@ -4593,6 +4626,13 @@ namespace Cash8Avalon
                         dt2.Rows.Add(row2);
                         continue;
                     }
+                    if (!IsPriceValidForAction(row))//Этот товар уже участвовал в акции значит его пропускаем                  
+                    {
+                        DataRow row2 = dt2.NewRow();
+                        row2.ItemArray = row.ItemArray;
+                        dt2.Rows.Add(row2);
+                        continue;
+                    }                   
 
                     query_string = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query_string, conn);
@@ -4782,6 +4822,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;
 
                     query_string = "SELECT COUNT(*) FROM action_table WHERE code_tovar=" + row["tovar_code"] + " AND num_doc=" + num_doc.ToString();
                     command = new NpgsqlCommand(query_string, conn);
@@ -4877,6 +4918,7 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
+                    if (!IsPriceValidForAction(row)) continue;
                     query += "INSERT INTO table12(tovar_code,sum_at_a_discount)VALUES(" + row["tovar_code"].ToString() + "," + row["sum_at_discount"].ToString().Replace(",", ".") + ");";
                 }
 
@@ -5171,6 +5213,23 @@ namespace Cash8Avalon
                 {
                     conn.Close();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Проверяет, может ли товар участвовать в акции.
+        /// Товары с ценой со скидкой меньше 1 рубля не участвуют.
+        /// </summary>
+        private bool IsPriceValidForAction(DataRow row)
+        {
+            try
+            {
+                // Проверяем цену со скидкой (price_at_discount). Если она меньше 1 рубля, товар пропускается.
+                return Convert.ToDecimal(row["price_at_discount"]) >= 1m;
+            }
+            catch
+            {
+                return false;
             }
         }
     }

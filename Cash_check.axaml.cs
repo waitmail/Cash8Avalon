@@ -209,6 +209,8 @@ namespace Cash8Avalon
         private const int FOCUS_RESTORE_COOLDOWN_MS = 300; // Минимальная пауза между восстановлениями
 
         public bool IsShowingModal { get; set; } = false;
+        
+        private bool _isPaidFinalized = false;
 
         // Добавить в секцию полей класса Cash_check (где-то после public bool reopened = false;)
 
@@ -4205,57 +4207,65 @@ namespace Cash8Avalon
         }
         
 
-        //private async void fiscall_print_disburse(string cash_money, string non_cash_money)
-        //{
-        //    try
-        //    {
-        //        if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
-        //        {
-        //            string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
-        //            if (IsNewCheck)
-        //            {
-        //                await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
-        //            }
-        //            PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();                    
-        //            await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
-        //            await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
-
-        //            // Безопасное закрытие окна
-        //            this.Close();
-        //        }
-        //        else
-        //        {
-        //            string sum_pay = this.calculation_of_the_sum_of_the_document().ToString();
-        //            if (IsNewCheck)
-        //            {
-        //                await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0");
-        //            }
-        //            PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
-        //            await printingUsingLibraries.print_sell_2_or_return_sell(this);
-
-        //            // Безопасное закрытие окна
-        //            this.Close();
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Ловим ошибку, чтобы не уронить программу
-        //        Console.WriteLine($"✗ КРИТИЧЕСКАЯ ОШИБКА в fiscall_print_disburse: {ex.Message}");
-
-        //        // Пытаемся показать сообщение, если окно еще живо
-        //        if (!_isDisposed && this.IsVisible)
-        //        {
-        //            await Dispatcher.UIThread.InvokeAsync(async () =>
-        //            {
-        //                await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}",
-        //                    "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
-        //            });
-        //        }
-
-        //        // Все равно пытаемся закрыть окно чека, чтобы разблокировать интерфейс
-        //        try { this.Close(); } catch { }
-        //    }
-        //}
+        // private async Task<bool> fiscall_print_disburse(string cash_money, string non_cash_money)
+        // {
+        //     try
+        //     {
+        //         if ((MainStaticClass.SystemTaxation == 3) || (MainStaticClass.SystemTaxation == 5))
+        //         {
+        //             decimal sum_pay = this.calculation_of_the_sum_of_the_document();
+        //             if (IsNewCheck)
+        //             {
+        //                 if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
+        //                     return false; // Ошибка записи в БД
+        //             }
+        //
+        //             PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+        //             bool result1 = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 1);
+        //             if (!result1) return false; // Если первый чек не напечатался, второй не пытаемся
+        //
+        //             bool result2 = await printingUsingLibraries.print_sell_2_3_or_return_sell(this, 0);
+        //             if (!result2) return false;
+        //
+        //             this.Close(); // Закрываем ТОЛЬКО если всё прошло успешно
+        //             return true;
+        //         }
+        //         else
+        //         {
+        //             decimal sum_pay = this.calculation_of_the_sum_of_the_document();
+        //             if (IsNewCheck)
+        //             {
+        //                 if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
+        //                     return false;
+        //             }
+        //
+        //             PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
+        //             bool printResult = await printingUsingLibraries.print_sell_2_or_return_sell(this);
+        //
+        //             if (printResult)
+        //             {
+        //                 this.Close(); // Закрываем ТОЛЬКО если всё прошло успешно
+        //             }
+        //             return printResult;
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"✗ КРИТИЧЕСКАЯ ОШИБКА в fiscall_print_disburse: {ex.Message}");
+        //
+        //         if (!_isDisposed && this.IsVisible)
+        //         {
+        //             await Dispatcher.UIThread.InvokeAsync(async () =>
+        //             {
+        //                 await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}", "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
+        //             });
+        //         }
+        //
+        //         // ВАЖНО: Мы НЕ вызываем this.Close() здесь! 
+        //         // Если упала исключительная ошибка, окно чека должно остаться открытым.
+        //         return false;
+        //     }
+        // }
 
         private async Task<bool> fiscall_print_disburse(string cash_money, string non_cash_money)
         {
@@ -4266,8 +4276,17 @@ namespace Cash8Avalon
                     decimal sum_pay = this.calculation_of_the_sum_of_the_document();
                     if (IsNewCheck)
                     {
-                        if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
+                        if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0",
+                                "0"))
                             return false; // Ошибка записи в БД
+                    }
+
+                    // ✅ ИСПРАВЛЕНИЕ: Если признак Extra включен — отменяем печать, открываем ящик и закрываем чек
+                    if (this.Extra)
+                    {
+                        openDrawer();
+                        this.Close();
+                        return true;
                     }
 
                     PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
@@ -4285,8 +4304,17 @@ namespace Cash8Avalon
                     decimal sum_pay = this.calculation_of_the_sum_of_the_document();
                     if (IsNewCheck)
                     {
-                        if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0", "0"))
+                        if (!await write_new_document(sum_pay, sum_pay, "0", "0", true, cash_money, non_cash_money, "0",
+                                "0"))
                             return false;
+                    }
+
+                    // ✅ ИСПРАВЛЕНИЕ: Если признак Extra включен — отменяем печать, открываем ящик и закрываем чек
+                    if (this.Extra)
+                    {
+                        openDrawer();
+                        this.Close();
+                        return true;
                     }
 
                     PrintingUsingLibraries printingUsingLibraries = new PrintingUsingLibraries();
@@ -4296,6 +4324,7 @@ namespace Cash8Avalon
                     {
                         this.Close(); // Закрываем ТОЛЬКО если всё прошло успешно
                     }
+
                     return printResult;
                 }
             }
@@ -4307,30 +4336,88 @@ namespace Cash8Avalon
                 {
                     await Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}", "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
+                        await MessageBoxHelper.Show($"Ошибка при фискальной печати возврата:\n{ex.Message}",
+                            "Ошибка печати", MessageBoxButton.OK, MessageBoxType.Error, this);
                     });
                 }
 
-                // ВАЖНО: Мы НЕ вызываем this.Close() здесь! 
-                // Если упала исключительная ошибка, окно чека должно остаться открытым.
                 return false;
             }
         }
 
+        // public async Task<bool> it_is_paid(decimal pay, decimal sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
+        // {
+        //     bool result = true;
+        //
+        //     // ИЗМЕНЕНИЕ ЗДЕСЬ: добавляем || last_rewrite
+        //     //Это необходимо если при печати закончилась бумага и затем из окна оплаты происходит повторные попытки печати
+        //     //и получалось что когда чек уже не новый из окна оплаты предварительная запись шла ,
+        //     //а здесь уже нет и чек оставался во втором статусе, а это не правильно  
+        //     if (IsNewCheck || last_rewrite)//По идее это будет актуально для сбера, но потом уберу.            
+        //     {
+        //         MainStaticClass.write_event_in_log(" Финальная запись документа ", "Документ чек", numdoc.ToString());
+        //         result = await write_new_document(pay, sum_doc, remainder, pay_bonus_many, last_rewrite, cash_money, non_cash_money, sertificate_money, "0");
+        //     }
+        //
+        //     if (!this.Extra)
+        //     {
+        //         if (result)
+        //         {
+        //             if (MainStaticClass.Use_Fiscall_Print)
+        //             {
+        //                 MainStaticClass.write_event_in_log("Попытка распечатать чек ", "Документ чек", numdoc.ToString());
+        //                 result = await fiscall_print_pay();
+        //             }
+        //         }
+        //     }
+        //     else
+        //     {
+        //         openDrawer();
+        //     }
+        //
+        //     return result;
+        // }
+        
         public async Task<bool> it_is_paid(decimal pay, decimal sum_doc, string remainder, string pay_bonus_many, bool last_rewrite, string cash_money, string non_cash_money, string sertificate_money)
         {
-            bool result = true;
+            // 🛡️ УРОВЕНЬ 2: Блокировка на уровне бизнес-логики (Защита от Зомби-задач)
+            if (_isPaidFinalized)
+            {
+                MainStaticClass.write_event_in_log(
+                    "⛔ КРИТИЧЕСКАЯ БЛОКИРОВКА: Повторный вызов it_is_paid (Зомби-задача)! Печать и запись прерваны.", 
+                    "PaymentGuard", numdoc.ToString());
+        
+                // ★ БЕЗОПАСНЫЙ ВЫЗОВ ДЛЯ КАССИРА/ИТ ★
+                await Dispatcher.UIThread.InvokeAsync(async () => 
+                {
+                    // 🔥 ЗАЩИТА: Если окно чека уже закрыто первым потоком, не пытаемся показать MessageBox
+                    if (_isDisposed || !this.IsVisible) 
+                    {
+                        MainStaticClass.write_event_in_log("Окно чека уже закрыто, MessageBox пропущен.", "PaymentGuard", numdoc.ToString());
+                        return; 
+                    }
 
-            // ИЗМЕНЕНИЕ ЗДЕСЬ: добавляем || last_rewrite
-            //Это необходимо если при печати закончилась бумага и затем из окна оплаты происходит повторные попытки печати
-            //и получалось что когда чек уже не новый из окна оплаты предварительная запись шла ,
-            //а здесь уже нет и чек оставался во втором статусе, а это не правильно  
-            if (IsNewCheck || last_rewrite)//По идее это будет актуально для сбера, но потом уберу.            
+                    // Используем MessageBox.Show напрямую (так как MessageBoxHelper устарел)
+                    await MessageBox.Show(
+                        "⚠ ВНИМАНИЕ!\n\nСистема заблокировала попытку ПОВТОРНОЙ печати чека.\nОплата уже была успешно проведена и фискализирована ранее.\n\nЕсли первый чек не вышел (зажевало бумагу и т.д.), нажмите кнопку «Печать» или перепроведите чек.\n\nОбязательно сообщите в ИТ-отдел номер чека: " + numdoc,
+                        "Защита от дубликата",
+                        MessageBoxButton.OK,
+                        MessageBoxType.Warning,
+                        this
+                    );
+                });
+
+                return true; 
+            }
+
+            bool result = true;
+    
+            if (IsNewCheck || last_rewrite)
             {
                 MainStaticClass.write_event_in_log(" Финальная запись документа ", "Документ чек", numdoc.ToString());
                 result = await write_new_document(pay, sum_doc, remainder, pay_bonus_many, last_rewrite, cash_money, non_cash_money, sertificate_money, "0");
             }
-
+    
             if (!this.Extra)
             {
                 if (result)
@@ -4347,6 +4434,12 @@ namespace Cash8Avalon
                 openDrawer();
             }
 
+            // 🔒 Устанавливаем флаг только если финализация прошла успешно
+            if (result) 
+            {
+                _isPaidFinalized = true; 
+            }
+    
             return result;
         }
 

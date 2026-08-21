@@ -4392,26 +4392,81 @@ namespace Cash8Avalon
         //    return result;
         //}
 
+        // public static async Task<int> get_documents_out_of_the_range_of_dates_async()
+        // {
+        //     int result = 0;
+        //
+        //     // 1. Получаем время.
+        //     // Если TimeSync.GetServerTime() делает HTTP/DB запрос, он тоже должен быть async.
+        //     // Если он синхронный, запускаем в фоне.
+        //     //DateTime serverTime = await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
+        //     // Было (блокирующее):
+        //     // DateTime serverTime = await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
+        //
+        //     // Стало (чисто асинхронное):
+        //     DateTime serverTime = await TimeSync.GetServerTimeAsync().ConfigureAwait(false);
+        //     //DateTime serverTime = DateTime.Now;// await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
+        //
+        //     if (serverTime == DateTime.MinValue)
+        //     {
+        //         return -1;
+        //     }
+        //
+        //     // 2. Используем using и await
+        //     using (var conn = MainStaticClass.NpgsqlConn())
+        //     {
+        //         try
+        //         {
+        //             // Асинхронное открытие
+        //             await conn.OpenAsync().ConfigureAwait(false);
+        //
+        //             string query = "SELECT COUNT(*) FROM checks_header WHERE (date_time_write < @start_data OR date_time_write > @current_data) AND is_sent = 0";
+        //
+        //             using (var command = new NpgsqlCommand(query, conn))
+        //             {
+        //                 command.Parameters.AddWithValue("@start_data", serverTime.AddDays(-31));
+        //                 command.Parameters.AddWithValue("@current_data", serverTime.AddHours(2));
+        //
+        //                 // Асинхронное выполнение
+        //                 var scalarResult = await command.ExecuteScalarAsync().ConfigureAwait(false);
+        //                 result = Convert.ToInt32(scalarResult);
+        //             }
+        //
+        //             return result;
+        //         }
+        //         catch (NpgsqlException)
+        //         {
+        //             return -2;
+        //         }
+        //         catch (Exception)
+        //         {
+        //             return -2;
+        //         }
+        //         // conn.Close() не нужен, using делает Dispose, который закрывает соединение
+        //     }
+        // }
+        
         public static async Task<int> get_documents_out_of_the_range_of_dates_async()
         {
             int result = 0;
-
+        
             // 1. Получаем время.
-            // Если TimeSync.GetServerTime() делает HTTP/DB запрос, он тоже должен быть async.
-            // Если он синхронный, запускаем в фоне.
-            //DateTime serverTime = await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
-            // Было (блокирующее):
-            // DateTime serverTime = await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
-
-            // Стало (чисто асинхронное):
             DateTime serverTime = await TimeSync.GetServerTimeAsync().ConfigureAwait(false);
-            //DateTime serverTime = DateTime.Now;// await Task.Run(() => TimeSync.GetServerTime()).ConfigureAwait(false);
-
+        
             if (serverTime == DateTime.MinValue)
             {
+                MainStaticClass.write_event_in_log("Ошибка получения серверного времени (DateTime.MinValue)", "get_documents_out_of_the_range_of_dates_async", "-1");
                 return -1;
             }
-
+        
+            // Вычисляем границы диапазона заранее, чтобы вывести их в лог
+            DateTime startData = serverTime.AddDays(-31);
+            DateTime currentData = serverTime.AddHours(2);
+        
+            // Пишем в лог серверное время и рассчитанные границы
+            string logMessage = $"Серверное время: {serverTime:yyyy-MM-dd HH:mm:ss}. Диапазон поиска: с {startData:yyyy-MM-dd HH:mm:ss} по {currentData:yyyy-MM-dd HH:mm:ss}";
+            MainStaticClass.write_event_in_log(logMessage, "get_documents_out_of_the_range_of_dates_async", "0");
+        
             // 2. Используем using и await
             using (var conn = MainStaticClass.NpgsqlConn())
             {
@@ -4419,30 +4474,34 @@ namespace Cash8Avalon
                 {
                     // Асинхронное открытие
                     await conn.OpenAsync().ConfigureAwait(false);
-
+        
                     string query = "SELECT COUNT(*) FROM checks_header WHERE (date_time_write < @start_data OR date_time_write > @current_data) AND is_sent = 0";
-
+        
                     using (var command = new NpgsqlCommand(query, conn))
                     {
-                        command.Parameters.AddWithValue("@start_data", serverTime.AddDays(-31));
-                        command.Parameters.AddWithValue("@current_data", serverTime.AddHours(2));
-
+                        // Передаем заранее вычисленные переменные
+                        command.Parameters.AddWithValue("@start_data", startData);
+                        command.Parameters.AddWithValue("@current_data", currentData);
+        
                         // Асинхронное выполнение
                         var scalarResult = await command.ExecuteScalarAsync().ConfigureAwait(false);
                         result = Convert.ToInt32(scalarResult);
                     }
-
+        
                     return result;
                 }
-                catch (NpgsqlException)
+                catch (NpgsqlException ex)
                 {
+                    // Запись ошибки БД в лог ошибок
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "get_documents_out_of_the_range_of_dates_async (NpgsqlException)");
                     return -2;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    // Запись общей ошибки в лог ошибок
+                    MainStaticClass.WriteRecordErrorLog(ex, 0, MainStaticClass.CashDeskNumber, "get_documents_out_of_the_range_of_dates_async (Exception)");
                     return -2;
                 }
-                // conn.Close() не нужен, using делает Dispose, который закрывает соединение
             }
         }
 
@@ -4562,9 +4621,48 @@ namespace Cash8Avalon
             }
         }
 
-        /// <summary>
-        /// Читает массив адресов из PostgreSQL (тип text[])
-        /// </summary>
+        // /// <summary>
+        // /// Читает массив адресов из PostgreSQL (тип text[])
+        // /// </summary>
+        // private static string[] get_path_for_web_service()
+        // {
+        //     // Дефолтное значение, если в базе пусто
+        //     string[] defaultUrls = new string[] { "http://8.8.8.8/DiscountSystem/Ds.asmx" };
+        //
+        //     using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
+        //     {
+        //         try
+        //         {
+        //             conn.Open();
+        //             string query = "SELECT path_for_web_service FROM constants LIMIT 1";
+        //
+        //             using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+        //             using (NpgsqlDataReader reader = command.ExecuteReader())
+        //             {
+        //                 if (reader.Read())
+        //                 {
+        //                     MessageBox.Show(reader[0].ToString());
+        //                     if (reader[0] != DBNull.Value)
+        //                     {
+        //                         // Npgsql автоматически мапит Postgres text[] в C# string[]
+        //                         var result = (string[])reader[0];
+        //
+        //                         // Если массив не пустой, возвращаем его
+        //                         if (result != null && result.Length > 0)
+        //                             return result;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             Console.WriteLine($"Ошибка чтения path_for_web_service: {ex.Message}");
+        //         }
+        //     }
+        //
+        //     return defaultUrls;
+        // }
+
         private static string[] get_path_for_web_service()
         {
             // Дефолтное значение, если в базе пусто
@@ -4580,16 +4678,36 @@ namespace Cash8Avalon
                     using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
                     using (NpgsqlDataReader reader = command.ExecuteReader())
                     {
-                        if (reader.Read())
+                        if (reader.Read() && reader[0] != DBNull.Value)
                         {
-                            if (reader[0] != DBNull.Value)
-                            {
-                                // Npgsql автоматически мапит Postgres text[] в C# string[]
-                                var result = (string[])reader[0];
+                            object value = reader[0];
 
-                                // Если массив не пустой, возвращаем его
-                                if (result != null && result.Length > 0)
-                                    return result;
+                            // Вариант 1: База реально вернула массив строк (PostgreSQL text[])
+                            if (value is string[] strArray)
+                            {
+                                if (strArray.Length > 0)
+                                    return strArray;
+                            }
+                            // Вариант 2: База вернула обычную строку (text / varchar)
+                            else if (value is string str)
+                            {
+                                // На случай, если строка выглядит как Postgres массив: "{url1, url2}"
+                                string cleanStr = str.Trim().TrimStart('{').TrimEnd('}');
+
+                                // Разбиваем строку по запятой или точке с запятой
+                                string[] urls = cleanStr.Split(new[] { ',', ';' },
+                                    StringSplitOptions.RemoveEmptyEntries);
+
+                                if (urls.Length > 0)
+                                {
+                                    // Очищаем от возможных пробелов и кавычек
+                                    for (int i = 0; i < urls.Length; i++)
+                                    {
+                                        urls[i] = urls[i].Trim().Trim('"');
+                                    }
+
+                                    return urls;
+                                }
                             }
                         }
                     }

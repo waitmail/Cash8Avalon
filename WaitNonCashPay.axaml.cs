@@ -86,6 +86,29 @@ namespace Cash8Avalon
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             this.ShowInTaskbar = false;
             this.Opened += OnOpened;
+            
+             this.Closing += OnClosing;
+        }
+        
+        /// <summary>
+        /// Обработчик закрытия окна (вызывается при закрытии крестиком, Alt+F4 
+        /// или когда родительское окно Pay закрывается и "утягивает" за собой это окно).
+        /// </summary>
+        private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _isClosed = true;
+            _cts?.Cancel(); // Пытаемся отменить токен (для таймера и HTTP-запросов)
+    
+            // ★ ГЛАВНАЯ ЗАЩИТА ОТ ЗОМБИ ★
+            // Если задача всё ещё висит в ожидании, принудительно завершаем её с ошибкой.
+            // Это снимет зависание await в методе Pay.ProcessPayment 
+            // и заставит зомби-задачу уйти в блок if (!result.IsSuccess) return;
+            if (!_tcs.Task.IsCompleted)
+            {
+                _tcs.TrySetResult(TerminalResult.CreateError("Окно ожидания терминала было закрыто"));
+            }
+    
+            _windowClosedTcs.TrySetResult(true);
         }
 
         #region Инициализация окна
@@ -679,20 +702,27 @@ namespace Cash8Avalon
                     code == "58" || // Терминал не поддерживает операцию
                     code == "96" || // Системная ошибка банка
                     // На будущее, если добавите конвертацию кодов Сбера:
-                    code == "4451" || code == "4452" || code == "2000" || code == "7400")
+                    code == "4451" || //Недостаточно средств
+                    code == "4454" || //Срок действия карты истек
+                    code == "2000" || //Операция отменена клиентом или кассиром
+                    code == "7400" || //Операция заблокирована для пользователя
+                    code == "4455" || //ПИН неверен
+                    code == "4457" || //Транзакция не разрешена клиенту
+                    code == "521"  || //На карте недостаточно средств
+                    code == "4461")//Исчерпан лимит
                 {
                     isRefused = true;
                 }
                 // 2. Фоллбэк по тексту (Это спасет Сбера прямо сейчас!)
-                else if (string.IsNullOrEmpty(code) &&
+                else if //(string.IsNullOrEmpty(code) &&
                          (errorText.Contains("отклонено") ||
                           errorText.Contains("недостаточно средств") ||
                           errorText.Contains("операция не прошла") ||
-                          errorText.Contains("неверный ПИН-код") ||
+                          errorText.Contains("неверный пин-код") ||
                           errorText.Contains("заблокирована") ||
                           errorText.Contains("пинпад не подключен") ||
-                          errorText.Contains("Операция прервана клиентом") ||                          
-                          errorText.Contains("отказано")))
+                          errorText.Contains("операция прервана клиентом") ||                          
+                          errorText.Contains("отказано"))//)
                 {
                     isRefused = true;
                 }
