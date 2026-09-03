@@ -4179,30 +4179,149 @@ namespace Cash8Avalon
         /// <summary>
         /// Создает объект DS, выбирая лучший доступный адрес из списка.
         /// </summary>
+        //public static DS get_ds()
+        //{
+        //    DS ds = new DS();
+
+        //    // 1. Проверяем кэш (Слепое доверие)
+        //    lock (_urlLock)
+        //    {
+        //        // Если адрес есть и он не протух (5 минут) - берем его сразу, НЕ проверяя пинг.
+        //        // Это убирает задержку в 1.5 сек на каждый вызов.
+        //        if (!string.IsNullOrWhiteSpace(_lastWorkingServiceUrl) &&
+        //            DateTime.Now - _lastWorkingUrlTimestamp < URL_CACHE_DURATION)
+        //        {
+        //            ds.Url = _lastWorkingServiceUrl;
+        //            return ds;
+        //        }
+        //    }
+
+        //    // Если мы здесь - кэша нет или он протух. Ищем адрес.
+
+        //    // 2. Получаем список адресов
+        //    List<string> urlsToTry = new List<string>(PathForWebService);
+        //    if (urlsToTry.Count == 0)
+        //    {
+        //        urlsToTry.Add("http://8.8.8.8/DiscountSystem/Ds.asmx");
+        //    }
+
+        //    // 3. Рандомизация (Load Balancing)
+        //    var shuffled = urlsToTry.OrderBy(x => Guid.NewGuid()).ToList();
+
+        //    // 4. Перебор
+        //    foreach (var url in shuffled)
+        //    {
+        //        try
+        //        {
+        //            // Синхронная проверка доступности (Надежно для Linux)
+        //            // Таймаут 1500 мс
+        //            if (IsUrlAccessible(url, 1500))
+        //            {
+        //                lock (_urlLock)
+        //                {
+        //                    _lastWorkingServiceUrl = url;
+        //                    _lastWorkingUrlTimestamp = DateTime.Now;
+        //                }
+
+        //                ds.Url = url;
+        //                Console.WriteLine($"[WebService] ✓ Подключено к: {url}");
+        //                return ds;
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine($"[WebService] ✗ Ошибка проверки {url}: {ex.Message}");
+        //        }
+        //    }
+
+        //    // 5. Фолбэк
+        //    ds.Url = urlsToTry.FirstOrDefault();
+        //    Console.WriteLine($"[WebService] ⚠ Все адреса недоступны. Фолбэк: {ds.Url}");
+        //    return ds;
+        //}
+
+        ///// <summary>
+        ///// СИНХРОННАЯ проверка доступности URL для Linux и .NET 4.0+
+        ///// Использует HttpWebRequest, который надежно обрабатывает таймауты.
+        ///// </summary>
+        //private static bool IsUrlAccessible(string url, int timeoutMs)
+        //{
+        //    HttpWebRequest request = null;
+        //    HttpWebResponse response = null;
+
+        //    try
+        //    {
+        //        request = (HttpWebRequest)WebRequest.Create(url);
+        //        request.Timeout = timeoutMs; // Строгий таймаут
+        //        request.Method = "HEAD"; // Самый легкий метод
+        //        request.AllowAutoRedirect = true;
+        //        request.ReadWriteTimeout = timeoutMs;
+
+        //        // Игнорируем ошибки SSL сертификатов (если нужно)
+        //        // В .NET 4.0/Standard это делается через делегат
+        //        request.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
+
+        //        // Выполняем запрос (блокирующий вызов, но с таймаутом)
+        //        response = (HttpWebResponse)request.GetResponse();
+
+        //        // Если дошли сюда - сервер ответил
+        //        return true;
+        //    }
+        //    catch (WebException ex)
+        //    {
+        //        // WebExceptionStatus.ProtocolError означает, что сервер ответил (например 404, 500).
+        //        // Это значит сервер ЖИВ, просто вернул ошибку. Для наших целей это успех.
+        //        if (ex.Status == WebExceptionStatus.ProtocolError)
+        //        {
+        //            return true;
+        //        }
+
+        //        // Остальные ошибки (Timeout, ConnectFailure, NameResolutionFailure) - сервер недоступен
+        //        return false;
+        //    }
+        //    catch (Exception)
+        //    {
+        //        return false;
+        //    }
+        //    finally
+        //    {
+        //        if (response != null)
+        //            response.Close();
+        //    }
+        //}
+
+        /// <summary>
+        /// Создает объект DS, выбирая лучший доступный адрес из списка.
+        /// </summary>
         public static DS get_ds()
         {
             DS ds = new DS();
+            string logPrefix = "[WebService]";
 
             // 1. Проверяем кэш (Слепое доверие)
             lock (_urlLock)
             {
-                // Если адрес есть и он не протух (5 минут) - берем его сразу, НЕ проверяя пинг.
-                // Это убирает задержку в 1.5 сек на каждый вызов.
                 if (!string.IsNullOrWhiteSpace(_lastWorkingServiceUrl) &&
                     DateTime.Now - _lastWorkingUrlTimestamp < URL_CACHE_DURATION)
                 {
                     ds.Url = _lastWorkingServiceUrl;
+                    MainStaticClass.write_event_in_log($"{logPrefix} Использован кэшированный рабочий адрес: {ds.Url}", "get_ds", "0");
                     return ds;
                 }
             }
 
-            // Если мы здесь - кэша нет или он протух. Ищем адрес.
+            MainStaticClass.write_event_in_log($"{logPrefix} Кэш пуст или устарел. Начинаем поиск доступного адреса...", "get_ds", "0");
 
             // 2. Получаем список адресов
             List<string> urlsToTry = new List<string>(PathForWebService);
             if (urlsToTry.Count == 0)
             {
                 urlsToTry.Add("http://8.8.8.8/DiscountSystem/Ds.asmx");
+                MainStaticClass.write_event_in_log($"{logPrefix} Список адресов из БД пуст! Использован адрес по умолчанию.", "get_ds", "0");
+            }
+            else
+            {
+                MainStaticClass.write_event_in_log($"{logPrefix} Из БД загружено адресов: {urlsToTry.Count}", "get_ds", "0");
             }
 
             // 3. Рандомизация (Load Balancing)
@@ -4213,36 +4332,48 @@ namespace Cash8Avalon
             {
                 try
                 {
-                    // Синхронная проверка доступности (Надежно для Linux)
-                    // Таймаут 1500 мс
-                    if (IsUrlAccessible(url, 1500))
+                    MainStaticClass.write_event_in_log($"{logPrefix} Проверка доступности: {url} ...", "get_ds", "0");
+
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    bool isAccessible = IsUrlAccessible(url, 1500);
+                    sw.Stop();
+
+                    if (isAccessible)
                     {
                         lock (_urlLock)
                         {
                             _lastWorkingServiceUrl = url;
                             _lastWorkingUrlTimestamp = DateTime.Now;
                         }
-
                         ds.Url = url;
-                        Console.WriteLine($"[WebService] ✓ Подключено к: {url}");
+                        MainStaticClass.write_event_in_log($"{logPrefix} ✓ УСПЕХ! Выбран адрес: {url} (Время отклика: {sw.ElapsedMilliseconds} мс)", "get_ds", "0");
                         return ds;
+                    }
+                    else
+                    {
+                        MainStaticClass.write_event_in_log($"{logPrefix} ✗ НЕДОСТУПЕН: {url} (Потрачено времени: {sw.ElapsedMilliseconds} мс)", "get_ds", "0");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[WebService] ✗ Ошибка проверки {url}: {ex.Message}");
+                    MainStaticClass.write_event_in_log($"{logPrefix} ✗ Ошибка при проверке {url}: {ex.Message}", "get_ds", "0");
                 }
             }
 
             // 5. Фолбэк
             ds.Url = urlsToTry.FirstOrDefault();
-            Console.WriteLine($"[WebService] ⚠ Все адреса недоступны. Фолбэк: {ds.Url}");
+            MainStaticClass.WriteRecordErrorLog(
+                new Exception("Все адреса веб-сервиса недоступны"),
+                0,
+                MainStaticClass.CashDeskNumber,
+                $"{logPrefix} ⚠ ВСЕ АДРЕСА НЕДОСТУПНЫ! Проверено: {shuffled.Count} шт. Использован фолбэк: {ds.Url}"
+            );
+
             return ds;
         }
 
         /// <summary>
         /// СИНХРОННАЯ проверка доступности URL для Linux и .NET 4.0+
-        /// Использует HttpWebRequest, который надежно обрабатывает таймауты.
         /// </summary>
         private static bool IsUrlAccessible(string url, int timeoutMs)
         {
@@ -4252,35 +4383,30 @@ namespace Cash8Avalon
             try
             {
                 request = (HttpWebRequest)WebRequest.Create(url);
-                request.Timeout = timeoutMs; // Строгий таймаут
-                request.Method = "HEAD"; // Самый легкий метод
+                request.Timeout = timeoutMs;
+                request.Method = "HEAD";
                 request.AllowAutoRedirect = true;
                 request.ReadWriteTimeout = timeoutMs;
-
-                // Игнорируем ошибки SSL сертификатов (если нужно)
-                // В .NET 4.0/Standard это делается через делегат
                 request.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
 
-                // Выполняем запрос (блокирующий вызов, но с таймаутом)
                 response = (HttpWebResponse)request.GetResponse();
-
-                // Если дошли сюда - сервер ответил
                 return true;
             }
             catch (WebException ex)
             {
-                // WebExceptionStatus.ProtocolError означает, что сервер ответил (например 404, 500).
-                // Это значит сервер ЖИВ, просто вернул ошибку. Для наших целей это успех.
                 if (ex.Status == WebExceptionStatus.ProtocolError)
                 {
+                    // Сервер ответил ошибкой (404, 405 и т.д.), но он жив
+                    MainStaticClass.write_event_in_log($"[WebService] Сервер {url} ответил ошибкой {ex.Message}, но считается доступным (ProtocolError).", "IsUrlAccessible", "0");
                     return true;
                 }
 
-                // Остальные ошибки (Timeout, ConnectFailure, NameResolutionFailure) - сервер недоступен
+                MainStaticClass.write_event_in_log($"[WebService] Сервер {url} недоступен. Причина: {ex.Status} - {ex.Message}", "IsUrlAccessible", "0");
                 return false;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                MainStaticClass.write_event_in_log($"[WebService] Общая ошибка при проверке {url}: {ex.Message}", "IsUrlAccessible", "0");
                 return false;
             }
             finally
@@ -4290,32 +4416,38 @@ namespace Cash8Avalon
             }
         }
 
+        public static bool service_is_worker()
+        {
+            bool result = true;
+            DS ds = MainStaticClass.get_ds();
 
+            // ✅ УВЕЛИЧИЛИ ТАЙМАУТ ДО 15 СЕКУНД
+            ds.Timeout = 15000;
 
-        //private static DateTime get_datetime_on_server()
-        //{
-        //    DateTime result = new DateTime(1, 1, 1);
+            MainStaticClass.write_event_in_log($"[WebService] Вызов ServiceIsWorker() по адресу: {ds.Url} (Таймаут: {ds.Timeout} мс)", "service_is_worker", "0");
 
-        //    //if (!MainStaticClass.service_is_worker())
-        //    //{
-        //    //    return result;
-        //    //}
+            try
+            {
+                result = ds.ServiceIsWorker();
+                MainStaticClass.write_event_in_log($"[WebService] ServiceIsWorker() вернул: {result}", "service_is_worker", "0");
+            }
+            catch (Exception ex)
+            {
+                result = false;
+                MainStaticClass.WriteRecordErrorLog(
+                    ex,
+                    0,
+                    MainStaticClass.CashDeskNumber,
+                    $"service_is_worker FAILED на адресе {ds.Url} (Таймаут: {ds.Timeout} мс)"
+                );
+                MainStaticClass.write_event_in_log($"[WebService] Ошибка при вызове ServiceIsWorker(): {ex.Message}", "service_is_worker", "0");
 
-        //    try
-        //    {
-        //        DS ds = MainStaticClass.get_ds();
-        //        ds.Timeout = 15000;
-        //        result = ds.GetDateTimeServer();
-        //    }
-        //    catch (Exception)
-        //    {
+                ResetDsCache();
+            }
 
-        //    }
-
-        //    return result;
-
-        //}
-
+            return result;
+        
+        }
 
         public static async Task<int> get_documents_not_out_async()
         {
@@ -4580,24 +4712,24 @@ namespace Cash8Avalon
             });
         }
 
-        public static bool service_is_worker()
-        {
-            bool result = true;
+        //public static bool service_is_worker()
+        //{
+        //    bool result = true;
 
-            DS ds = MainStaticClass.get_ds();
-            ds.Timeout = 5000;
-            try
-            {
-                result = ds.ServiceIsWorker();
-            }
-            catch
-            {
-                result = false;
-            }
+        //    DS ds = MainStaticClass.get_ds();
+        //    ds.Timeout = 5000;
+        //    try
+        //    {
+        //        result = ds.ServiceIsWorker();
+        //    }
+        //    catch
+        //    {
+        //        result = false;
+        //    }
 
 
-            return result;
-        }
+        //    return result;
+        //}
 
 
 

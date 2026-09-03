@@ -767,6 +767,7 @@ namespace Cash8Avalon
                     if (await MainStaticClass.exist_table_name("constants"))
                     {
                         await check_add_field();
+                        await OrdersManager.UpdateWaitingOrdersDateAsync();
                         _ = InventoryManager.FillDictionaryProductDataAsync(this);
                         _ = Task.Run(() => InventoryManager.DictionaryPriceGiftAction);
                         await UpdateUnloadingPeriod();
@@ -889,69 +890,71 @@ namespace Cash8Avalon
                 });
             }
         }
+
         
 
-//        /// <summary>
-//        /// Исправление старого типа колонки 'action_num_doc'
-//        /// </summary>
-//        private async Task<bool> check_correct_type_column()
-//        {
-//            bool update = false;
-//#if DEBUG
-//            if (System.Diagnostics.Debugger.IsAttached)
-//            {
-//                System.Diagnostics.Debugger.Break();
-//            }
-//#endif
 
-//            // 1. Используем using для гарантированного закрытия соединения
-//            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
-//            {
-//                try
-//                {
-//                    await conn.OpenAsync();
-//                }
-//                catch (InvalidOperationException) { /* Игнорируем, если уже открыто */ }
+        //        /// <summary>
+        //        /// Исправление старого типа колонки 'action_num_doc'
+        //        /// </summary>
+        //        private async Task<bool> check_correct_type_column()
+        //        {
+        //            bool update = false;
+        //#if DEBUG
+        //            if (System.Diagnostics.Debugger.IsAttached)
+        //            {
+        //                System.Diagnostics.Debugger.Break();
+        //            }
+        //#endif
 
-//                try
-//                {
-//                    // 2. Транзакция убрана, так как это только чтение (SELECT)
-//                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'checks_header' AND column_name = 'comment'";
+        //            // 1. Используем using для гарантированного закрытия соединения
+        //            using (NpgsqlConnection conn = MainStaticClass.NpgsqlConn())
+        //            {
+        //                try
+        //                {
+        //                    await conn.OpenAsync();
+        //                }
+        //                catch (InvalidOperationException) { /* Игнорируем, если уже открыто */ }
 
-//                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
-//                    {
-//                        // 3. ExecuteScalar быстрее и проще, если нужно получить одно значение (тип данных)
-//                        // Если вернется null, значит колонки нет (но по логике проверяем тип)
-//                        var result = await command.ExecuteScalarAsync();
+        //                try
+        //                {
+        //                    // 2. Транзакция убрана, так как это только чтение (SELECT)
+        //                    string query = "SELECT data_type FROM information_schema.columns WHERE table_name = 'checks_header' AND column_name = 'comment'";
 
-//                        if (result != null && result.ToString() != "varchar(100)")
-//                        {
-//                            update = true;
-//                        }
-//                    }
-//                }
-//                catch (Exception ex)
-//                {
-//                    Console.WriteLine($"Ошибка при чтении типа колонки: {ex.Message}");
-//                    return false;
-//                }
-//            }
-//            // Соединение закрыто здесь
+        //                    using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+        //                    {
+        //                        // 3. ExecuteScalar быстрее и проще, если нужно получить одно значение (тип данных)
+        //                        // Если вернется null, значит колонки нет (но по логике проверяем тип)
+        //                        var result = await command.ExecuteScalarAsync();
 
-//            // 4. Обновление запускаем ТОЛЬКО если чтение завершено и соединение освобождено
-//            if (update)
-//            {
-//                SettingConnect sc = new SettingConnect();
-//                await sc.AddField_Click(this);
-//                this.Close();
-//                return true;
-//            }
+        //                        if (result != null && result.ToString() != "varchar(100)")
+        //                        {
+        //                            update = true;
+        //                        }
+        //                    }
+        //                }
+        //                catch (Exception ex)
+        //                {
+        //                    Console.WriteLine($"Ошибка при чтении типа колонки: {ex.Message}");
+        //                    return false;
+        //                }
+        //            }
+        //            // Соединение закрыто здесь
 
-//            return false;
-//        }
+        //            // 4. Обновление запускаем ТОЛЬКО если чтение завершено и соединение освобождено
+        //            if (update)
+        //            {
+        //                SettingConnect sc = new SettingConnect();
+        //                await sc.AddField_Click(this);
+        //                this.Close();
+        //                return true;
+        //            }
+
+        //            return false;
+        //        }
 
 
-               /// <summary>
+        /// <summary>
         /// Проверяет, что колонка "comment" в таблице "checks_header" имеет тип varchar(50).
         /// Возвращает true, если тип некорректен/отсутствует (и окно было закрыто). Возвращает false, если всё нормально.
         /// </summary>
@@ -1020,7 +1023,7 @@ namespace Cash8Avalon
                 try
                 {
                     await conn.OpenAsync();
-                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'constants' AND column_name = 'offline2');";
+                    string query = "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'checks_table' AND column_name = 'is_added_to_order_on_cash');";
 
                     using (var command = new NpgsqlCommand(query, conn))
                     {

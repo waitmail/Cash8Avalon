@@ -33,6 +33,10 @@ namespace Cash8Avalon
         public bool ItsPrint { get; set; }
         public bool ItsPrintP { get; set; }
         public bool Extra { get; set; }
+
+        // ==== Интернет-заказ ====
+        public OrderState OrderState { get; set; } = OrderState.NotOrder;
+        public long OrderId { get; set; } = 0;
     }
 
     public partial class Cash_checks : UserControl
@@ -224,7 +228,10 @@ namespace Cash8Avalon
 
                 var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
                 if (checkBox != null) checkBox.Click -= CheckBox_show_3_last_checks_Click;
-
+                
+                var ordersCheckBox = this.FindControl<CheckBox>("checkBox_show_orders");
+                if (ordersCheckBox != null) ordersCheckBox.Click -= CheckBox_show_orders_Click;
+                
                 var updateButton = this.FindControl<Button>("btn_update_status_send");
                 if (updateButton != null) updateButton.Click -= Btn_update_status_send_Click;
 
@@ -735,6 +742,131 @@ namespace Cash8Avalon
             }
         }
 
+        // /// <summary>
+        // /// Добавление строки данных в таблицу (с учетом спец-стилей и масштабирования)
+        // /// </summary>
+        // private void AddRowToTable(CheckItem item, int dataRowIndex)
+        // {
+        //     try
+        //     {
+        //         int gridRowIndex = _currentRow;
+        //
+        //         // === МАСШТАБИРОВАНИЕ ===
+        //         // Используем поля класса (см. ниже после метода), чтобы менять в одном месте
+        //         double currentWidth = this.Bounds.Width;
+        //         if (currentWidth <= 0) currentWidth = BaseDesignWidth;
+        //
+        //         double scale = currentWidth / BaseDesignWidth;
+        //
+        //         // Рассчитываем размер шрифта
+        //         double baseScaledFontSize = BaseFontSize * scale;
+        //
+        //         // Ограничиваем размер (Min 10, Max 50 - можно менять MaxFontSize)
+        //         baseScaledFontSize = Math.Max(MinFontSize, Math.Min(baseScaledFontSize, MaxFontSize));
+        //
+        //         // Рассчитываем высоту строки
+        //         double rowHeight = 30 * scale;
+        //         rowHeight = Math.Max(25, Math.Min(rowHeight, 45));
+        //
+        //         // Автовысота с минимальной высотой
+        //         _tableGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto, MinHeight = rowHeight });
+        //
+        //         // Базовые стили
+        //         IBrush rowBackground = (dataRowIndex % 2 == 0) ? EVEN_ROW_BACKGROUND : ODD_ROW_BACKGROUND;
+        //         FontWeight fontWeight = FontWeight.Normal;
+        //         FontStyle fontStyle = FontStyle.Normal;
+        //         double fontSize = baseScaledFontSize;
+        //         IBrush foreground = Brushes.Black;
+        //         TextDecorationCollection textDecorations = null;
+        //
+        //         // === СПЕЦИАЛЬНЫЕ СЛУЧАИ (Удален / Не напечатан) ===
+        //         if (item.ItsDeleted == 1)
+        //         {
+        //             rowBackground = Brushes.Transparent;
+        //             fontSize = baseScaledFontSize * 0.9;
+        //             fontStyle = FontStyle.Italic;
+        //             foreground = Brushes.Gray;
+        //             textDecorations = TextDecorations.Strikethrough;
+        //         }
+        //         else if (item.ItsDeleted == 0 && MainStaticClass.Use_Fiscall_Print)
+        //         {
+        //             bool needHighlight = !(item.ItsPrint && item.ItsPrintP);
+        //
+        //             if (needHighlight && !item.Extra)
+        //             {
+        //                 rowBackground = new SolidColorBrush(Color.Parse("#FFFFC0CB")); // Розовый
+        //                 fontSize = baseScaledFontSize * 1.1;
+        //                 fontWeight = FontWeight.Bold;
+        //                 textDecorations = TextDecorations.Underline;
+        //             }
+        //         }
+        //
+        //         // Border для строки
+        //         var rowBorder = new Border
+        //         {
+        //             BorderBrush = Brushes.LightGray,
+        //             BorderThickness = new Thickness(0, 0, 0, 1),
+        //             Background = rowBackground,
+        //             Tag = dataRowIndex
+        //         };
+        //         rowBorder.PointerPressed += OnRowPointerPressed;
+        //
+        //         Grid.SetColumnSpan(rowBorder, 11);
+        //         Grid.SetRow(rowBorder, gridRowIndex);
+        //         _tableGrid.Children.Add(rowBorder);
+        //
+        //         // === ЯЧЕЙКИ ===
+        //
+        //         // 0: Статус (Без переноса)
+        //         AddStyledCell(0, gridRowIndex, item.ItsDeleted == 1 ? "Удален" : "Активен",
+        //             HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+        //
+        //         // 1: Дата (Без переноса)
+        //         AddStyledCell(1, gridRowIndex, item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"),
+        //             HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+        //
+        //         // 2: Клиент (С ПЕРЕНОСОМ true - будет по центру по вертикали)
+        //         AddStyledCell(2, gridRowIndex, item.ClientName,
+        //             HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
+        //
+        //         // 3: Сумма (Без переноса)
+        //         AddStyledCell(3, gridRowIndex, item.Cash.ToString("N2"),
+        //             HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+        //
+        //         // 4: Сдача (Без переноса)
+        //         AddStyledCell(4, gridRowIndex, item.Remainder.ToString("N2"),
+        //             HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+        //
+        //         // // 5: Комментарий (С ПЕРЕНОСОМ true - будет по центру по вертикали)
+        //         // AddStyledCell(5, gridRowIndex, item.Comment,
+        //         //     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
+        //         
+        //         // 5: Комментарий (Без переноса - текст обрежется троеточием)
+        //         AddStyledCell(5, gridRowIndex, item.Comment,
+        //             HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, false);
+        //
+        //         // 6: Тип (Без переноса)
+        //         AddStyledCell(6, gridRowIndex, item.CheckType,
+        //             HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+        //
+        //         // 7: Номер (Без переноса)
+        //         AddStyledCell(7, gridRowIndex, item.DocumentNumber,
+        //             HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
+        //
+        //         // CheckBox с масштабированием
+        //         AddCheckBoxCell(8, gridRowIndex, item.ItsPrint, fontSize);
+        //         AddCheckBoxCell(9, gridRowIndex, item.ItsPrintP, fontSize);
+        //         AddCheckBoxCell(10, gridRowIndex, item.Extra, fontSize);
+        //
+        //         _currentRow++;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"✗ Ошибка при добавлении строки: {ex.Message}");
+        //     }
+        // }
+
+
         /// <summary>
         /// Добавление строки данных в таблицу (с учетом спец-стилей и масштабирования)
         /// </summary>
@@ -745,23 +877,17 @@ namespace Cash8Avalon
                 int gridRowIndex = _currentRow;
 
                 // === МАСШТАБИРОВАНИЕ ===
-                // Используем поля класса (см. ниже после метода), чтобы менять в одном месте
                 double currentWidth = this.Bounds.Width;
                 if (currentWidth <= 0) currentWidth = BaseDesignWidth;
 
                 double scale = currentWidth / BaseDesignWidth;
 
-                // Рассчитываем размер шрифта
                 double baseScaledFontSize = BaseFontSize * scale;
-
-                // Ограничиваем размер (Min 10, Max 50 - можно менять MaxFontSize)
                 baseScaledFontSize = Math.Max(MinFontSize, Math.Min(baseScaledFontSize, MaxFontSize));
 
-                // Рассчитываем высоту строки
                 double rowHeight = 30 * scale;
                 rowHeight = Math.Max(25, Math.Min(rowHeight, 45));
 
-                // Автовысота с минимальной высотой
                 _tableGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto, MinHeight = rowHeight });
 
                 // Базовые стили
@@ -808,6 +934,11 @@ namespace Cash8Avalon
                 Grid.SetRow(rowBorder, gridRowIndex);
                 _tableGrid.Children.Add(rowBorder);
 
+                // ==== Интернет-заказ: текст колонки "Тип" ====
+                string typeText = item.CheckType;
+                if (item.OrderState == OrderState.Waiting) typeText = "ЗАКАЗ";
+                else if (item.OrderState == OrderState.Done) typeText += " (заказ)";
+
                 // === ЯЧЕЙКИ ===
 
                 // 0: Статус (Без переноса)
@@ -818,7 +949,7 @@ namespace Cash8Avalon
                 AddStyledCell(1, gridRowIndex, item.DateTimeWrite.ToString("dd.MM.yyyy HH:mm:ss"),
                     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // 2: Клиент (С ПЕРЕНОСОМ true - будет по центру по вертикали)
+                // 2: Клиент (С переносом)
                 AddStyledCell(2, gridRowIndex, item.ClientName,
                     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
 
@@ -830,16 +961,12 @@ namespace Cash8Avalon
                 AddStyledCell(4, gridRowIndex, item.Remainder.ToString("N2"),
                     HorizontalAlignment.Right, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
-                // // 5: Комментарий (С ПЕРЕНОСОМ true - будет по центру по вертикали)
-                // AddStyledCell(5, gridRowIndex, item.Comment,
-                //     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, true);
-                
-                // 5: Комментарий (Без переноса - текст обрежется троеточием)
+                // 5: Комментарий (Без переноса)
                 AddStyledCell(5, gridRowIndex, item.Comment,
                     HorizontalAlignment.Left, fontSize, fontWeight, fontStyle, foreground, textDecorations, false);
 
-                // 6: Тип (Без переноса)
-                AddStyledCell(6, gridRowIndex, item.CheckType,
+                // 6: Тип — с пометкой заказа ★★★ изменено
+                AddStyledCell(6, gridRowIndex, typeText,
                     HorizontalAlignment.Center, fontSize, fontWeight, fontStyle, foreground, textDecorations);
 
                 // 7: Номер (Без переноса)
@@ -1371,6 +1498,7 @@ namespace Cash8Avalon
                 // Передаем параметры
                 checkWindow.date_time_write = dateTimeWrite;
                 checkWindow.IsNewCheck = false;
+                checkWindow.numdoc = Convert.ToInt64(_checkItems[_selectedRowIndex].DocumentNumber);
 
                 checkWindow.OnFormLoaded();
 
@@ -2024,7 +2152,7 @@ namespace Cash8Avalon
                 // ❌ Убран обработчик Closed, так как он срабатывает раньше времени и мешает фокусу.
                 // Обновление списка перенесено ниже после await.
 
-                checkWindow.Loaded += (s, e) => Console.WriteLine("Окно чека загружено и отображается");
+                //checkWindow.Loaded += (s, e) => Console.WriteLine("Окно чека загружено и отображается");
 
                 //// Показываем окно
                 //if (parentWindow != null)
@@ -2244,6 +2372,265 @@ namespace Cash8Avalon
 
         #endregion
 
+        // /// <summary>
+        // /// ✅ Асинхронная загрузка документов
+        // /// </summary>
+        // private async Task LoadDocumentsAsync()
+        // {
+        //     try
+        //     {
+        //         if (_isDisposed) return;
+        //         Console.WriteLine("=== Асинхронная загрузка документов ===");
+        //
+        //         var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
+        //         //var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
+        //
+        //         if (checkBox == null)// || datePicker == null)
+        //         {
+        //             Console.WriteLine("✗ Контрол не найдены!");
+        //             return;
+        //         }
+        //
+        //         // Получаем параметры
+        //         bool showLast3 = checkBox.IsChecked ?? false;
+        //         DateTime selectedDate = _currentDate;//datePicker.SelectedDate?.DateTime ?? DateTime.Today;
+        //
+        //         Console.WriteLine($"Параметры: showLast3={showLast3}, date={selectedDate:yyyy-MM-dd}");
+        //         
+        //         var ordersCheckBox = this.FindControl<CheckBox>("checkBox_show_orders");
+        //         bool showOrders = ordersCheckBox?.IsChecked ?? false;
+        //         Console.WriteLine($"Параметры: showLast3={showLast3}, showOrders={showOrders}, date={selectedDate:yyyy-MM-dd}");
+        //
+        //         // ✅ ЗАГРУЖАЕМ ДАННЫЕ В ФОНОВОМ ПОТОКЕ
+        //         var checkItems = await Task.Run(() =>
+        //         {
+        //             var items = new List<CheckItem>();
+        //
+        //             try
+        //             {
+        //                 Console.WriteLine("Загрузка данных из БД...");
+        //                 using (var conn = MainStaticClass.NpgsqlConn())
+        //                 {
+        //                     conn.Open();
+        //                     Console.WriteLine("✓ Соединение с БД установлено");
+        //                     
+        //                     string myQuery = @"
+        //                         SELECT checks_header.its_deleted,
+        //                                checks_header.date_time_write,
+        //                                CASE 
+        //                                    WHEN checks_header.client IS NULL 
+        //                                         OR TRIM(checks_header.client) = '' 
+        //                                    THEN NULL 
+        //                                    ELSE clients.name 
+        //                                END as client_name,
+        //                                checks_header.cash,
+        //                                checks_header.remainder,
+        //                                checks_header.comment,
+        //                                checks_header.its_print,
+        //                                checks_header.check_type,
+        //                                checks_header.document_number,
+        //                                checks_header.its_print_p,
+        //                                checks_header.extra,  -- ★★★ ДОБАВЛЕНО (было)
+        //                                checks_header.order_state,   -- ★★★ ДОБАВЛЕНО
+        //                                checks_header.order_id       -- ★★★ ДОБАВЛЕНО
+        //                         FROM checks_header 
+        //                         LEFT JOIN clients ON checks_header.client = clients.code 
+        //                                          AND clients.code IS NOT NULL 
+        //                                          AND TRIM(clients.code) <> ''
+        //                         WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
+        //                           AND its_deleted < 2 
+        //                         ORDER BY checks_header.date_time_write";
+        //
+        //                     if (showLast3)
+        //                     {
+        //                         myQuery += " DESC LIMIT 3";
+        //                     }
+        //
+        //                     Console.WriteLine($"SQL запрос: {myQuery}");
+        //
+        //                     using (var command = new NpgsqlCommand(myQuery, conn))
+        //                     {
+        //                         command.Parameters.AddWithValue("@startDate", selectedDate);
+        //                         command.Parameters.AddWithValue("@endDate", selectedDate.AddDays(1));
+        //
+        //                         using (var reader = command.ExecuteReader())
+        //                         {
+        //                             // 📋 Получаем ординалы один раз перед циклом - это эффективнее
+        //                             var ordinals = new
+        //                             {
+        //                                 ItsDeleted = reader.GetOrdinal("its_deleted"),
+        //                                 DateTimeWrite = reader.GetOrdinal("date_time_write"),
+        //                                 ClientName = reader.GetOrdinal("client_name"), // ваш новый алиас
+        //                                 Cash = reader.GetOrdinal("cash"),
+        //                                 Remainder = reader.GetOrdinal("remainder"),
+        //                                 Comment = reader.GetOrdinal("comment"),
+        //                                 ItsPrint = reader.GetOrdinal("its_print"),
+        //                                 CheckType = reader.GetOrdinal("check_type"),
+        //                                 DocumentNumber = reader.GetOrdinal("document_number"),
+        //                                 ItsPrintP = reader.GetOrdinal("its_print_p"),
+        //                                 Extra = reader.GetOrdinal("extra")
+        //                             };
+        //
+        //                             int count = 0;
+        //                             while (reader.Read())
+        //                             {
+        //                                 count++;
+        //                                 Console.WriteLine($"Чтение строки {count}...");
+        //
+        //                                 var checkItem = new CheckItem();
+        //
+        //                                 // 0. its_deleted - numeric/decimal
+        //                                 checkItem.ItsDeleted = reader.IsDBNull(ordinals.ItsDeleted)
+        //                                     ? 0
+        //                                     : Convert.ToDecimal(reader.GetValue(ordinals.ItsDeleted));
+        //
+        //                                 // 1. date_time_write - timestamp
+        //                                 checkItem.DateTimeWrite = reader.IsDBNull(ordinals.DateTimeWrite)
+        //                                     ? DateTime.MinValue
+        //                                     : reader.GetDateTime(ordinals.DateTimeWrite);
+        //
+        //                                 // 2. client_name - text/varchar (может быть NULL)
+        //                                 checkItem.ClientName = reader.IsDBNull(ordinals.ClientName)
+        //                                     ? ""
+        //                                     : reader.GetString(ordinals.ClientName).Trim();
+        //
+        //                                 // 3. cash - numeric/decimal
+        //                                 checkItem.Cash = reader.IsDBNull(ordinals.Cash)
+        //                                     ? 0
+        //                                     : Convert.ToDecimal(reader.GetValue(ordinals.Cash));
+        //
+        //                                 // 4. remainder - numeric/decimal
+        //                                 checkItem.Remainder = reader.IsDBNull(ordinals.Remainder)
+        //                                     ? 0
+        //                                     : Convert.ToDecimal(reader.GetValue(ordinals.Remainder));
+        //
+        //                                 // 5. comment - text/varchar
+        //                                 checkItem.Comment = reader.IsDBNull(ordinals.Comment)
+        //                                     ? ""
+        //                                     : reader.GetString(ordinals.Comment).Trim();
+        //
+        //                                 // 6. its_print - boolean
+        //                                 checkItem.ItsPrint = reader.IsDBNull(ordinals.ItsPrint)
+        //                                     ? false
+        //                                     : Convert.ToBoolean(reader.GetValue(ordinals.ItsPrint));
+        //
+        //                                 // 7. check_type - smallint (0,1,2)
+        //                                 if (!reader.IsDBNull(ordinals.CheckType))
+        //                                 {
+        //                                     object checkTypeObj = reader.GetValue(ordinals.CheckType);
+        //                                     checkItem.CheckType = checkTypeObj switch
+        //                                     {
+        //                                         short s => s switch { 0 => "Продажа", 1 => "Возврат", 2 => "Коррекция", _ => $"Неизвестно ({s})" },
+        //                                         int i => i switch { 0 => "Продажа", 1 => "Возврат", 2 => "Коррекция", _ => $"Неизвестно ({i})" },
+        //                                         _ => "Неизвестно"
+        //                                     };
+        //                                 }
+        //                                 else
+        //                                 {
+        //                                     checkItem.CheckType = "Неизвестно";
+        //                                 }
+        //
+        //                                 // 8. document_number - bigint/numeric/varchar
+        //                                 if (!reader.IsDBNull(ordinals.DocumentNumber))
+        //                                 {
+        //                                     checkItem.DocumentNumber = reader.GetValue(ordinals.DocumentNumber) switch
+        //                                     {
+        //                                         long l => l.ToString(),
+        //                                         int i => i.ToString(),
+        //                                         decimal d => d.ToString("F0"),
+        //                                         object o => o.ToString(),
+        //                                         _ => ""
+        //                                     };
+        //                                 }
+        //                                 else
+        //                                 {
+        //                                     checkItem.DocumentNumber = "";
+        //                                 }
+        //
+        //                                 // 9. its_print_p - boolean
+        //                                 checkItem.ItsPrintP = reader.IsDBNull(ordinals.ItsPrintP)
+        //                                     ? false
+        //                                     : Convert.ToBoolean(reader.GetValue(ordinals.ItsPrintP));
+        //
+        //                                 checkItem.Extra = reader.IsDBNull(ordinals.Extra)
+        //                                     ? false
+        //                                     : Convert.ToBoolean(reader.GetValue(ordinals.Extra));
+        //
+        //                                 items.Add(checkItem);
+        //                                 Console.WriteLine($"  - Чек #{checkItem.DocumentNumber}: {checkItem.ClientName}, сумма: {checkItem.Cash}");
+        //                             }
+        //                             Console.WriteLine($"✓ Прочитано {count} строк из БД");
+        //                         }
+        //                     }
+        //                 }
+        //                 Console.WriteLine($"✓ Загружено {items.Count} записей из БД");
+        //             }
+        //             catch (Exception ex)
+        //             {
+        //                 Console.WriteLine($"✗ Ошибка при загрузке из БД: {ex.Message}");
+        //                 Console.WriteLine(ex.StackTrace);
+        //             }
+        //
+        //             return items;
+        //         });
+        //
+        //         // ✅ ОБНОВЛЯЕМ UI В UI ПОТОКЕ
+        //         await Dispatcher.UIThread.InvokeAsync(() =>
+        //         {
+        //             try
+        //             {
+        //                 Console.WriteLine($"Обновление таблицы с {checkItems.Count} записями");
+        //
+        //                 if (checkItems.Count == 0)
+        //                 {
+        //                     Console.WriteLine("⚠ Нет данных для отображения");
+        //                     ClearTable();
+        //                     AddMessageRow("Нет данных за выбранную дату");
+        //                     return;
+        //                 }
+        //
+        //                 ClearTable();
+        //
+        //                 for (int i = 0; i < checkItems.Count; i++)
+        //                 {
+        //                     _checkItems.Add(checkItems[i]);
+        //                     AddRowToTable(checkItems[i], i);
+        //                 }
+        //
+        //                 Console.WriteLine($"✓ Таблица обновлена: {_checkItems.Count} записей");
+        //
+        //                 // Автоматически выделяем первую строку
+        //                 if (_checkItems.Count > 0)
+        //                 {
+        //                     SelectRow(0);
+        //                 }
+        //
+        //                 // Прокручиваем к началу
+        //                 if (_scrollViewer != null)
+        //                 {
+        //                     Dispatcher.UIThread.InvokeAsync(() =>
+        //                     {
+        //                         _scrollViewer.ScrollToHome();
+        //                     }, DispatcherPriority.Background);
+        //                 }
+        //             }
+        //             catch (Exception ex)
+        //             {
+        //                 Console.WriteLine($"✗ Ошибка при обновлении таблицы: {ex.Message}");
+        //                 Console.WriteLine(ex.StackTrace);
+        //             }
+        //         }, DispatcherPriority.Background);
+        //
+        //         Console.WriteLine($"✓ Асинхронная загрузка завершена: {checkItems.Count} записей");
+        //         RestoreFocusAfterLoad();
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"✗ Ошибка в LoadDocumentsAsync: {ex.Message}");
+        //         await MessageBox.Show($"Ошибка загрузки: {ex.Message}");
+        //     }
+        // }
+
         /// <summary>
         /// ✅ Асинхронная загрузка документов
         /// </summary>
@@ -2257,7 +2644,7 @@ namespace Cash8Avalon
                 var checkBox = this.FindControl<CheckBox>("checkBox_show_3_last_checks");
                 //var datePicker = this.FindControl<DatePicker>("dateTimePicker1");
 
-                if (checkBox == null)// || datePicker == null)
+                if (checkBox == null) // || datePicker == null)
                 {
                     Console.WriteLine("✗ Контрол не найдены!");
                     return;
@@ -2265,9 +2652,59 @@ namespace Cash8Avalon
 
                 // Получаем параметры
                 bool showLast3 = checkBox.IsChecked ?? false;
-                DateTime selectedDate = _currentDate;//datePicker.SelectedDate?.DateTime ?? DateTime.Today;
+                DateTime selectedDate = _currentDate; //datePicker.SelectedDate?.DateTime ?? DateTime.Today;
 
-                Console.WriteLine($"Параметры: showLast3={showLast3}, date={selectedDate:yyyy-MM-dd}");
+                // ==== Интернет-заказ: галочка заказов ====
+                // Читаем ДО Task.Run — контролы доступны только в UI-потоке
+                var ordersCheckBox = this.FindControl<CheckBox>("checkBox_show_orders");
+                bool showOrders = ordersCheckBox?.IsChecked ?? false;
+
+                Console.WriteLine(
+                    $"Параметры: showLast3={showLast3}, showOrders={showOrders}, date={selectedDate:yyyy-MM-dd}");
+
+                // ==== Интернет-заказ: WHERE ветвится по галочке ====
+                string whereClause = showOrders
+                    ? // ВКЛ: ТОЛЬКО заказы — все ожидающие (любая дата) + выполненные сегодня.
+                      // Обычные чеки в этом режиме не отображаются (ТЗ).
+                      @"WHERE ((order_state = 1 AND its_deleted = 2)
+                             OR (order_state = 2 AND its_deleted = 0 AND date_time_write >= CURRENT_DATE))"
+                    : // ВЫКЛ: все чеки за дату; выполненные заказы (its_deleted=0) проходят как обычные.
+                      @"WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate
+                             AND its_deleted < 2";
+
+                // ==== Сортировка: по ТЗ «сначала дата-время, потом номер документа» ====
+                string orderByClause = (showLast3 && !showOrders)
+                    ? // режим «3 последних» — как было; с заказами лимит несовместим
+                    // (DESC взял бы сначала заказы с 23:59:59 и вытеснил обычные чеки)
+                    @" ORDER BY checks_header.date_time_write DESC LIMIT 3"
+                    : @" ORDER BY checks_header.date_time_write, checks_header.document_number";
+
+                string myQuery = @"
+                SELECT checks_header.its_deleted,
+                       checks_header.date_time_write,
+                       CASE 
+                           WHEN checks_header.client IS NULL 
+                                OR TRIM(checks_header.client) = '' 
+                           THEN NULL 
+                           ELSE clients.name 
+                       END as client_name,
+                       checks_header.cash,
+                       checks_header.remainder,
+                       checks_header.comment,
+                       checks_header.its_print,
+                       checks_header.check_type,
+                       checks_header.document_number,
+                       checks_header.its_print_p,
+                       checks_header.extra,
+                       checks_header.order_state,
+                       checks_header.order_id
+                FROM checks_header 
+                LEFT JOIN clients ON checks_header.client = clients.code 
+                                 AND clients.code IS NOT NULL 
+                                 AND TRIM(clients.code) <> ''
+                " + whereClause + orderByClause;
+
+                Console.WriteLine($"SQL запрос: {myQuery}");
 
                 // ✅ ЗАГРУЖАЕМ ДАННЫЕ В ФОНОВОМ ПОТОКЕ
                 var checkItems = await Task.Run(() =>
@@ -2281,38 +2718,6 @@ namespace Cash8Avalon
                         {
                             conn.Open();
                             Console.WriteLine("✓ Соединение с БД установлено");
-                            
-                            string myQuery = @"
-                                SELECT checks_header.its_deleted,
-                                       checks_header.date_time_write,
-                                       CASE 
-                                           WHEN checks_header.client IS NULL 
-                                                OR TRIM(checks_header.client) = '' 
-                                           THEN NULL 
-                                           ELSE clients.name 
-                                       END as client_name,
-                                       checks_header.cash,
-                                       checks_header.remainder,
-                                       checks_header.comment,
-                                       checks_header.its_print,
-                                       checks_header.check_type,
-                                       checks_header.document_number,
-                                       checks_header.its_print_p,
-                                       checks_header.extra  -- ★★★ ДОБАВЛЕНО
-                                FROM checks_header 
-                                LEFT JOIN clients ON checks_header.client = clients.code 
-                                                 AND clients.code IS NOT NULL 
-                                                 AND TRIM(clients.code) <> ''
-                                WHERE checks_header.date_time_write BETWEEN @startDate AND @endDate 
-                                  AND its_deleted < 2 
-                                ORDER BY checks_header.date_time_write";
-
-                            if (showLast3)
-                            {
-                                myQuery += " DESC LIMIT 3";
-                            }
-
-                            Console.WriteLine($"SQL запрос: {myQuery}");
 
                             using (var command = new NpgsqlCommand(myQuery, conn))
                             {
@@ -2326,7 +2731,7 @@ namespace Cash8Avalon
                                     {
                                         ItsDeleted = reader.GetOrdinal("its_deleted"),
                                         DateTimeWrite = reader.GetOrdinal("date_time_write"),
-                                        ClientName = reader.GetOrdinal("client_name"), // ваш новый алиас
+                                        ClientName = reader.GetOrdinal("client_name"),
                                         Cash = reader.GetOrdinal("cash"),
                                         Remainder = reader.GetOrdinal("remainder"),
                                         Comment = reader.GetOrdinal("comment"),
@@ -2334,14 +2739,15 @@ namespace Cash8Avalon
                                         CheckType = reader.GetOrdinal("check_type"),
                                         DocumentNumber = reader.GetOrdinal("document_number"),
                                         ItsPrintP = reader.GetOrdinal("its_print_p"),
-                                        Extra = reader.GetOrdinal("extra")
+                                        Extra = reader.GetOrdinal("extra"),
+                                        OrderState = reader.GetOrdinal("order_state"),
+                                        OrderId = reader.GetOrdinal("order_id")
                                     };
 
                                     int count = 0;
                                     while (reader.Read())
                                     {
                                         count++;
-                                        Console.WriteLine($"Чтение строки {count}...");
 
                                         var checkItem = new CheckItem();
 
@@ -2386,8 +2792,16 @@ namespace Cash8Avalon
                                             object checkTypeObj = reader.GetValue(ordinals.CheckType);
                                             checkItem.CheckType = checkTypeObj switch
                                             {
-                                                short s => s switch { 0 => "Продажа", 1 => "Возврат", 2 => "Коррекция", _ => $"Неизвестно ({s})" },
-                                                int i => i switch { 0 => "Продажа", 1 => "Возврат", 2 => "Коррекция", _ => $"Неизвестно ({i})" },
+                                                short s => s switch
+                                                {
+                                                    0 => "Продажа", 1 => "Возврат", 2 => "Коррекция",
+                                                    _ => $"Неизвестно ({s})"
+                                                },
+                                                int i => i switch
+                                                {
+                                                    0 => "Продажа", 1 => "Возврат", 2 => "Коррекция",
+                                                    _ => $"Неизвестно ({i})"
+                                                },
                                                 _ => "Неизвестно"
                                             };
                                         }
@@ -2396,7 +2810,7 @@ namespace Cash8Avalon
                                             checkItem.CheckType = "Неизвестно";
                                         }
 
-                                        // 8. document_number - bigint/numeric/varchar
+                                        // 8. document_number
                                         if (!reader.IsDBNull(ordinals.DocumentNumber))
                                         {
                                             checkItem.DocumentNumber = reader.GetValue(ordinals.DocumentNumber) switch
@@ -2422,13 +2836,23 @@ namespace Cash8Avalon
                                             ? false
                                             : Convert.ToBoolean(reader.GetValue(ordinals.Extra));
 
+                                        // ==== Интернет-заказ ====
+                                        checkItem.OrderState = reader.IsDBNull(ordinals.OrderState)
+                                            ? OrderState.NotOrder
+                                            : (OrderState)Convert.ToInt16(reader.GetValue(ordinals.OrderState));
+
+                                        checkItem.OrderId = reader.IsDBNull(ordinals.OrderId)
+                                            ? 0
+                                            : Convert.ToInt64(reader.GetValue(ordinals.OrderId));
+
                                         items.Add(checkItem);
-                                        Console.WriteLine($"  - Чек #{checkItem.DocumentNumber}: {checkItem.ClientName}, сумма: {checkItem.Cash}");
                                     }
+
                                     Console.WriteLine($"✓ Прочитано {count} строк из БД");
                                 }
                             }
                         }
+
                         Console.WriteLine($"✓ Загружено {items.Count} записей из БД");
                     }
                     catch (Exception ex)
@@ -2451,7 +2875,7 @@ namespace Cash8Avalon
                         {
                             Console.WriteLine("⚠ Нет данных для отображения");
                             ClearTable();
-                            AddMessageRow("Нет данных за выбранную дату");
+                            AddMessageRow(showOrders ? "Нет заказов" : "Нет данных за выбранную дату");
                             return;
                         }
 
@@ -2474,10 +2898,8 @@ namespace Cash8Avalon
                         // Прокручиваем к началу
                         if (_scrollViewer != null)
                         {
-                            Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                _scrollViewer.ScrollToHome();
-                            }, DispatcherPriority.Background);
+                            Dispatcher.UIThread.InvokeAsync(() => { _scrollViewer.ScrollToHome(); },
+                                DispatcherPriority.Background);
                         }
                     }
                     catch (Exception ex)
@@ -2496,7 +2918,7 @@ namespace Cash8Avalon
                 await MessageBox.Show($"Ошибка загрузки: {ex.Message}");
             }
         }
-               
+
 
         /// <summary>
         /// Восстановление фокуса после загрузки данных
@@ -2634,6 +3056,12 @@ namespace Cash8Avalon
                 {
                     checkBox.Click += CheckBox_show_3_last_checks_Click;
                 }
+                
+                var ordersCheckBox = this.FindControl<CheckBox>("checkBox_show_orders");
+                if (ordersCheckBox != null)
+                {
+                    ordersCheckBox.Click += CheckBox_show_orders_Click;
+                }
 
                 var updateButton = this.FindControl<Button>("btn_update_status_send");
                 if (updateButton != null)
@@ -2683,6 +3111,14 @@ namespace Cash8Avalon
         {
             Console.WriteLine("Чекбокс '3' нажат");
             LoadDocuments();
+        }
+        
+        /// <summary>
+        /// Интернет-заказ: переключение режима отображения (чеки / чеки+заказы)
+        /// </summary>
+        private async void CheckBox_show_orders_Click(object? sender, RoutedEventArgs e)
+        {
+            await LoadDocumentsAsync();
         }
 
         private async void Btn_update_status_send_Click(object sender, RoutedEventArgs e)

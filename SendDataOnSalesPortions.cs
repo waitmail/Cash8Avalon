@@ -137,7 +137,9 @@ namespace Cash8Avalon
                     " guid," +
                     " payment_by_sbp, " +
                     " clients.phone, " +
-                    " extra "+
+                    " extra, " +                         
+                    " order_id, " +
+                    " order_state " +
                     " FROM checks_header LEFT JOIN clients ON checks_header.client=clients.code WHERE guid in  (" + document_guid_list.ToString() + ")  ";
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 NpgsqlDataReader reader = command.ExecuteReader();
@@ -195,6 +197,8 @@ namespace Cash8Avalon
                     salesPortionsHeader.SBP = (Convert.ToBoolean(reader["payment_by_sbp"]) == true ? 1 : 0).ToString();
                     salesPortionsHeader.ClientPhone = (reader["phone"].ToString() == "" ? reader["client"].ToString() : reader["phone"].ToString()).Replace("+7", "");
                     salesPortionsHeader.Extra = (Convert.ToBoolean(reader["extra"]) == true ? 1 : 0).ToString();
+                    salesPortionsHeader.Order_id = reader["order_id"] == DBNull.Value ? null : reader["order_id"].ToString();
+                    salesPortionsHeader.Order_state = reader["order_state"].ToString(); // у обычных чеков = "0"
                     salesPortions.ListSalesPortionsHeader.Add(salesPortionsHeader);
                     
                     //Конец Новое заполнение 
@@ -334,7 +338,9 @@ namespace Cash8Avalon
             {
                 string its_deleted = "";
                 conn.Open();
-                string query = "SELECT guid,its_deleted FROM checks_header WHERE is_sent=0 order by document_number ";
+                string query = " SELECT guid,its_deleted FROM checks_header " +
+                               " WHERE is_sent=0 AND order_state <> 1 " +   // ← GUARD: ожидающие заказы никогда
+                               " order by document_number ";
                 //" WHERE date_time_write > ";
                 NpgsqlCommand command = new NpgsqlCommand(query, conn);
                 NpgsqlDataReader reader = command.ExecuteReader();
@@ -690,6 +696,8 @@ namespace Cash8Avalon
             public string SBP { get; set; }
             public string ClientPhone { get; set; }
             public string Extra { get; set; }
+            public string Order_id { get; set; }
+            public string Order_state { get; set; }
 
         }
 

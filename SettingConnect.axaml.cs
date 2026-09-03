@@ -686,13 +686,21 @@ namespace Cash8Avalon
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN offline boolean NOT NULL DEFAULT true;");
             queries.Add("ALTER TABLE IF EXISTS public.constants ADD COLUMN offline2 boolean NOT NULL DEFAULT true;");
 
-            queries.Add("ALTER TABLE IF EXISTS public.checks_header ADD COLUMN extra boolean NOT NULL DEFAULT false;");
-        //queries.Add("CREATE INDEX IF NOT EXISTS idx_barcode_lookup ON barcode(barcode, tovar_code);");
-        queries.Add("CREATE INDEX IF NOT EXISTS idx_sertificates_lookup ON sertificates(code, code_tovar);");
-            //queries.Add("CREATE INDEX IF NOT EXISTS idx_action_table_lookup ON action_table(num_doc, code_tovar);");
+            // ==== Интернет-заказа: миграция структуры БД ====
+
+            // ШАПКА ЧЕКА
+            queries.Add("ALTER TABLE public.checks_header ADD COLUMN IF NOT EXISTS order_state smallint NOT NULL DEFAULT 0; COMMENT ON COLUMN public.checks_header.order_state IS '0 - обычный чек 1 - ожидающий интернет-заказ 2 - выполненный интернет-заказ';");
+            queries.Add("ALTER TABLE public.checks_header ADD COLUMN IF NOT EXISTS order_id bigint; COMMENT ON COLUMN public.checks_header.order_id IS 'Номер интернет-заказа на ЦС. NULL = не заказ';");
+            // защита от повторной загрузки одного заказа с ЦС
+            queries.Add("CREATE UNIQUE INDEX IF NOT EXISTS ux_checks_header_order_id ON checks_header(order_id) WHERE order_id IS NOT NULL;");
+            // отбор ожидающих заказов
+            queries.Add("CREATE INDEX IF NOT EXISTS ix_checks_header_waiting ON checks_header(order_state) WHERE order_state = 1;");
+            // СТРОКИ ЧЕКА
+            queries.Add("ALTER TABLE public.checks_table ADD COLUMN IF NOT EXISTS is_added_to_order_on_cash boolean NOT NULL DEFAULT false; COMMENT ON COLUMN public.checks_table.is_added_to_order_on_cash IS 'Строка добавлена к заказу на кассе, отсутствовала в исходном заказе с ЦС';");
+
+            queries.Add("ALTER TABLE IF EXISTS public.checks_header ADD COLUMN extra boolean NOT NULL DEFAULT false;");            
+            queries.Add("CREATE INDEX IF NOT EXISTS idx_sertificates_lookup ON sertificates(code, code_tovar);");            
             queries.Add("ALTER TABLE checks_header ALTER COLUMN comment TYPE character varying(50);");
-
-
             //            Блок по созданию индексов для проверки кодов маркировки при офлайн проверке корректности кодов маркировки
             //            --Индекс на коде маркировки
             queries.Add("CREATE INDEX idx_checks_table_marker ON checks_table(item_marker);");
