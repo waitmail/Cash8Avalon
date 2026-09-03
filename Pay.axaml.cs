@@ -2598,123 +2598,117 @@ namespace Cash8Avalon
 
         // ═══════════════════════════════════════════════════════════════
         // ВЫНЕСЕННАЯ ФУНКЦИЯ: Валидация и сохранение данных терминала
-        // ═══════════════════════════════════════════════════════════════
-        // private async Task ValidateAndSaveTerminalData(Cash_check chk, TerminalResult res, string bankName)
-        // {
-        //     // 1. ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РЕЗУЛЬТАТА
-        //     string responseLog = $"[{bankName} RESPONSE] Success={res.IsSuccess}, " +
-        //                          $"AuthCode='{res.AuthorizationCode}', " +
-        //                          $"RRN='{res.ReferenceNumber}', " +
-        //                          $"ErrorMessage='{res.ErrorMessage}', " +
-        //                          $"SlipLen={res.RechargeNote?.Length ?? 0}";
-        //
-        //     MainStaticClass.write_event_in_log(responseLog, "Terminal", chk.numdoc.ToString());
-        //
-        //     // 2. БЕЗОПАСНОЕ ПРИСВОЕНИЕ (Защита от null)
-        //     chk.code_authorization_terminal = res.AuthorizationCode ?? string.Empty;
-        //     chk.id_transaction_terminal = res.ReferenceNumber ?? string.Empty;
-        //     if (!string.IsNullOrEmpty(res.RechargeNote)) chk.recharge_note = res.RechargeNote;
-        //
-        //     // 3. ВАЛИДАЦИЯ И ПРЕДУПРЕЖДЕНИЕ
-        //     if (string.IsNullOrEmpty(chk.id_transaction_terminal) || string.IsNullOrEmpty(chk.code_authorization_terminal))
-        //     {
-        //         string errorContext = $"Bank={bankName}, " +
-        //                              $"CheckNum={chk.numdoc}, " +
-        //                              $"CashDesk={MainStaticClass.CashDeskNumber}, " +
-        //                              $"FullResponse: {responseLog}";
-        //
-        //         MainStaticClass.WriteRecordErrorLog(
-        //             $"{bankName} вернул успешный статус, но НЕТ RRN или Кода авторизации! Возврат будет невозможен.",
-        //             "Pay.MissingTransactionData",
-        //             chk.numdoc,
-        //             MainStaticClass.CashDeskNumber,
-        //             errorContext
-        //         );
-        //
-        //         await MessageBoxHelper.Show(
-        //             "⚠ ВНИМАНИЕ! Банковский терминал подтвердил оплату, но НЕ вернул номер транзакции (RRN).\n\n" +
-        //             "Возврат денежных средств по этому чеку может быть затруднён.\n\n" +
-        //             "Продолжайте работу, но ОБЯЗАТЕЛЬНО создайте заявку в ИТ-отдел!",
-        //             $"Внимание ({bankName})",
-        //             MessageBoxButton.OK,
-        //             MessageBoxType.Warning,
-        //             this
-        //         );
-        //     }
-        // }
-        
+        // ═══════════════════════════════════════════════════════════════        
+        //private async Task ValidateAndSaveTerminalData(Cash_check chk, TerminalResult res, string bankName)
+        //{
+        //    // 1. ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РЕЗУЛЬТАТА
+        //    string responseLog = $"[{bankName} RESPONSE] Success={res.IsSuccess}, " +
+        //                         $"AuthCode='{res.AuthorizationCode}', " +
+        //                         $"RRN='{res.ReferenceNumber}', " +
+        //                         $"ErrorMessage='{res.ErrorMessage}', " +
+        //                         $"SlipLen={res.RechargeNote?.Length ?? 0}";
+
+        //    MainStaticClass.write_event_in_log(responseLog, "Terminal", chk.numdoc.ToString());
+
+        //    // 2. БЕЗОПАСНОЕ ПРИСВОЕНИЕ (Защита от null)
+        //    chk.code_authorization_terminal = res.AuthorizationCode ?? string.Empty;
+        //    chk.id_transaction_terminal = res.ReferenceNumber ?? string.Empty;
+        //    if (!string.IsNullOrEmpty(res.RechargeNote)) chk.recharge_note = res.RechargeNote;
+
+        //    // 3. ВАЛИДАЦИЯ (РАЗДЕЛЕНА НА ДВА СЦЕНАРИЯ)
+
+        //    // СЦЕНАРИЙ А: НЕТ НОМЕРА ТРАНЗАКЦИИ (RRN) — ЭТО КРИТИЧЕСКАЯ ОШИБКА!
+        //    // Без RRN сделать возврат по этому чеку будет невозможно.
+        //    if (string.IsNullOrEmpty(chk.id_transaction_terminal))
+        //    {
+        //        string errorContext = $"Bank={bankName}, " +
+        //                             $"CheckNum={chk.numdoc}, " +
+        //                             $"CashDesk={MainStaticClass.CashDeskNumber}, " +
+        //                             $"FullResponse: {responseLog}";
+
+        //        MainStaticClass.WriteRecordErrorLog(
+        //            $"{bankName} вернул успешный статус, но НЕТ номера транзакции (RRN)! Возврат будет невозможен.",
+        //            "Pay.MissingRRN",
+        //            chk.numdoc,
+        //            MainStaticClass.CashDeskNumber,
+        //            errorContext
+        //        );
+
+        //        await MessageBoxHelper.Show(
+        //            "⚠ КРИТИЧЕСКАЯ ОШИБКА!\n\n" +
+        //            "Терминал подтвердил оплату, но НЕ вернул номер транзакции (RRN).\n" +
+        //            "Возврат денежных средств по этому чеку НЕВОЗМОЖЕН.\n\n" +
+        //            "ОБЯЗАТЕЛЬНО создайте заявку в ИТ-отдел с указанием номера чека!",
+        //            $"Критическая ошибка ({bankName})",
+        //            MessageBoxButton.OK,
+        //            MessageBoxType.Error, // Изменил Warning на Error, так как ситуация критичная
+        //            this
+        //        );
+        //    }
+        //    // СЦЕНАРИЙ Б: НЕТ КОДА АВТОРИЗАЦИИ, НО RRN ЕСТЬ — ЭТО НОРМАЛЬНО!
+        //    // Такое часто бывает при оплате через СБП или из-за особенностей банка-эмитента.
+        //    else if (string.IsNullOrEmpty(chk.code_authorization_terminal))
+        //    {
+        //        // Кассира НЕ тревожим окнами! Просто пишем в тихий лог.
+        //        MainStaticClass.write_event_in_log(
+        //            $"[{bankName}] Код авторизации пуст (возможно СБП), но RRN получен корректно: {chk.id_transaction_terminal}",
+        //            "Terminal", chk.numdoc.ToString());
+        //    }
+        //}
+
         private async Task ValidateAndSaveTerminalData(Cash_check chk, TerminalResult res, string bankName)
         {
-            // 1. ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РЕЗУЛЬТАТА
+            // 1. Логирование — как было
             string responseLog = $"[{bankName} RESPONSE] Success={res.IsSuccess}, " +
-                                 $"AuthCode='{res.AuthorizationCode}', " +
-                                 $"RRN='{res.ReferenceNumber}', " +
-                                 $"ErrorMessage='{res.ErrorMessage}', " +
-                                 $"SlipLen={res.RechargeNote?.Length ?? 0}";
-        
+                                 $"AuthCode='{res.AuthorizationCode}', RRN='{res.ReferenceNumber}', " +
+                                 $"ErrorMessage='{res.ErrorMessage}', SlipLen={res.RechargeNote?.Length ?? 0}";
             MainStaticClass.write_event_in_log(responseLog, "Terminal", chk.numdoc.ToString());
-        
-            // 2. БЕЗОПАСНОЕ ПРИСВОЕНИЕ (Защита от null)
+
+            // 2. Присвоение — как было
             chk.code_authorization_terminal = res.AuthorizationCode ?? string.Empty;
             chk.id_transaction_terminal = res.ReferenceNumber ?? string.Empty;
             if (!string.IsNullOrEmpty(res.RechargeNote)) chk.recharge_note = res.RechargeNote;
-        
-            // 3. ВАЛИДАЦИЯ (РАЗДЕЛЕНА НА ДВА СЦЕНАРИЯ)
-        
-            // СЦЕНАРИЙ А: НЕТ НОМЕРА ТРАНЗАКЦИИ (RRN) — ЭТО КРИТИЧЕСКАЯ ОШИБКА!
-            // Без RRN сделать возврат по этому чеку будет невозможно.
+
+            // 3. Валидация
             if (string.IsNullOrEmpty(chk.id_transaction_terminal))
             {
-                string errorContext = $"Bank={bankName}, " +
-                                     $"CheckNum={chk.numdoc}, " +
-                                     $"CashDesk={MainStaticClass.CashDeskNumber}, " +
-                                     $"FullResponse: {responseLog}";
-        
-                MainStaticClass.WriteRecordErrorLog(
-                    $"{bankName} вернул успешный статус, но НЕТ номера транзакции (RRN)! Возврат будет невозможен.",
-                    "Pay.MissingRRN",
-                    chk.numdoc,
-                    MainStaticClass.CashDeskNumber,
-                    errorContext
-                );
-        
-                await MessageBoxHelper.Show(
-                    "⚠ КРИТИЧЕСКАЯ ОШИБКА!\n\n" +
-                    "Терминал подтвердил оплату, но НЕ вернул номер транзакции (RRN).\n" +
-                    "Возврат денежных средств по этому чеку НЕВОЗМОЖЕН.\n\n" +
-                    "ОБЯЗАТЕЛЬНО создайте заявку в ИТ-отдел с указанием номера чека!",
-                    $"Критическая ошибка ({bankName})",
-                    MessageBoxButton.OK,
-                    MessageBoxType.Error, // Изменил Warning на Error, так как ситуация критичная
-                    this
-                );
+                bool isRefund = (chk.check_type.SelectedIndex == 1);
+
+                if (isRefund)
+                {
+                    // ВОЗВРАТ без RRN — норма (ВТБ): для возврата идентификатор этой операции
+                    // не нужен, RRN исходной оплаты хранится в её чеке. Кассира не тревожим,
+                    // в журнал ошибок НЕ пишем — иначе настоящий Pay.MissingRRN утонет в шуме.
+                    MainStaticClass.write_event_in_log(
+                        $"[{bankName}] Возврат (check_type=1) выполнен без RRN — норма. Чек: {chk.numdoc}",
+                        "Terminal", chk.numdoc.ToString());
+                }
+                else
+                {
+                    // ПРОДАЖА без RRN — критично: возврат по чеку будет невозможен
+                    string errorContext = $"Bank={bankName}, CheckNum={chk.numdoc}, " +
+                                          $"CashDesk={MainStaticClass.CashDeskNumber}, FullResponse: {responseLog}";
+                    MainStaticClass.WriteRecordErrorLog(
+                        $"{bankName} вернул успешный статус, но НЕТ номера транзакции (RRN)! Возврат будет невозможен.",
+                        "Pay.MissingRRN", chk.numdoc, MainStaticClass.CashDeskNumber, errorContext);
+
+                    await MessageBoxHelper.Show(
+                        "⚠ КРИТИЧЕСКАЯ ОШИБКА!\n\n" +
+                        "Терминал подтвердил оплату, но НЕ вернул номер транзакции (RRN).\n" +
+                        "Возврат денежных средств по этому чеку НЕВОЗМОЖЕН.\n\n" +
+                        "ОБЯЗАТЕЛЬНО создайте заявку в ИТ-отдел с указанием номера чека!",
+                        $"Критическая ошибка ({bankName})",
+                        MessageBoxButton.OK, MessageBoxType.Error, this);
+                }
             }
-            // СЦЕНАРИЙ Б: НЕТ КОДА АВТОРИЗАЦИИ, НО RRN ЕСТЬ — ЭТО НОРМАЛЬНО!
-            // Такое часто бывает при оплате через СБП или из-за особенностей банка-эмитента.
             else if (string.IsNullOrEmpty(chk.code_authorization_terminal))
             {
-                // Кассира НЕ тревожим окнами! Просто пишем в тихий лог.
+                // как было — тихий лог (СБП, особенности эмитента)
                 MainStaticClass.write_event_in_log(
-                    $"[{bankName}] Код авторизации пуст (возможно СБП), но RRN получен корректно: {chk.id_transaction_terminal}",
+                    $"[{bankName}] Код авторизации пуст (возможно СБП), но RRN получен: {chk.id_transaction_terminal}",
                     "Terminal", chk.numdoc.ToString());
             }
-        }
-
-        //private double get_non_cash_sum()
-        //{
-        //    double result = 0;
-        //    string rub = this.NonCashSum;
-        //    string kop = this.NonCashSumKop;
-
-        //    // Логируем, если свойства вернули null (хотя свойства этого не должны делать, но на всякий случай)
-        //    if (rub == null) MainStaticClass.write_event_in_log($"[Pay.get_non_cash_sum] NonCashSum is null", "PayWindow", cc?.numdoc.ToString() ?? "0");
-        //    if (kop == null) MainStaticClass.write_event_in_log($"[Pay.get_non_cash_sum] NonCashSumKop is null", "PayWindow", cc?.numdoc.ToString() ?? "0");
-
-        //    if (double.TryParse(rub, out double rubVal)) result += rubVal;
-        //    if (double.TryParse(kop, out double kopVal)) result += kopVal / 100;
-
-        //    return result;
-        //}
+        }       
 
         /// <summary>
         /// Универсальный метод опроса статуса СБП (для оплаты и возврата)
