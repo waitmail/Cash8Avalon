@@ -722,30 +722,151 @@ namespace Cash8Avalon
         //    this.Close();
         //}
 
+        // private async Task CommitSertificates()
+        // {
+        //     if (_certificates.Count > 0)
+        //     {
+        //         bool allActive = true;
+        //         foreach (var certificate in _certificates)
+        //         {
+        //             bool? isCertActive = await MainStaticClass.CheckCertificateStatusAsync(certificate.Barcode, true, this, this.DocumentNumber);
+        //
+        //             if (isCertActive != true) // Если не активен или произошла ошибка (null)
+        //             {
+        //                 allActive = false;
+        //             }
+        //         }
+        //         if (!allActive)
+        //         {
+        //             this.Activate();
+        //             return;
+        //         }
+        //     }
+        //
+        //     _closedNormally = true;
+        //     this.Tag = _certificates.Select(c => c.Clone()).ToList();
+        //     this.Close();
+        // }
+
+        /// <summary>
+        /// Подтверждение сертификатов (F12): проверка активации с общим таймаутом.
+        /// 
+        /// Семантика исхода:
+        ///   true  — активен; false — бизнес-отказ (не активен / не принадлежит сети);
+        ///   null  — критическая ошибка (сеть/БД/сервер): метод УЖЕ показал своё окно,
+        ///           цикл прерывается БЕЗ повторного окна и без дублирующей строки в сводке.
+        ///           Проверять остальные сертификаты при упавшем соединении бессмысленно.
+        /// 
+        /// Ошибки сети (null) не каскадируются: одно окно от метода — и всё.
+        /// Неактивные сертификаты (false) собираются в problems и показываются ОДНИМ окном.
+        /// Общий бюджет 15 секунд, токен прерывает сам веб-запрос.
+        /// </summary>
         private async Task CommitSertificates()
         {
-            if (_certificates.Count > 0)
-            {
-                bool allActive = true;
-                foreach (var certificate in _certificates)
-                {
-                    bool? isCertActive = await MainStaticClass.CheckCertificateStatusAsync(certificate.Barcode, true, this, this.DocumentNumber);
+            // Защита от спама F12: блокируем кнопку на время проверки.
+            // Клавиша F12 защищена тем же флагом: InputSertificates_KeyDown
+            // проверяет _buttonCommit.IsEnabled перед вызовом.
+            if (_buttonCommit != null) _buttonCommit.IsEnabled = false;
 
-                    if (isCertActive != true) // Если не активен или произошла ошибка (null)
+            bool allActive = true;
+            var problems = new List<string>(); // сводка НЕАКТИВНЫХ сертификатов (false)
+
+            try
+            {
+                if (_certificates.Count > 0)
+                {
+                    // Общий бюджет: 60 секунд на все проверки.
+                    // Кассир ждёт максимум это время — не «висит наглухо».
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
                     {
-                        allActive = false;
+                        foreach (var certificate in _certificates)
+                        {
+                            if (cts.IsCancellationRequested)
+                            {
+                                problems.Add("Проверка прервана: сервер не отвечает (таймаут 60 сек).");
+                                allActive = false;
+
+                                // ↓ таймаут по общему бюджету — инфраструктурный сбой, в errors_log
+                                MainStaticClass.WriteRecordErrorLog(
+                                    "Проверка сертификатов прервана по таймауту 60 сек (сервер не отвечает)",
+                                    "CommitSertificates", this.DocumentNumber, MainStaticClass.CashDeskNumber,
+                                    "Проверка сертификатов: таймаут до начала вызова " + certificate.Barcode);
+                                break;
+                            }
+
+                            bool? isCertActive = null;
+                            try
+                            {
+                                isCertActive = await MainStaticClass.CheckCertificateStatusAsync(
+                                    certificate.Barcode, true, this, this.DocumentNumber,
+                                    cts.Token);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                problems.Add("Проверка прервана: сервер не отвечает (таймаут 60 сек).");
+                                allActive = false;
+
+                                // ↓ отмена пришла ИЗНУТРИ запроса — та же запись, контекст чуть другой
+                                MainStaticClass.WriteRecordErrorLog(
+                                    "Проверка сертификатов прервана по таймауту 60 сек (отмена внутри запроса)",
+                                    "CommitSertificates", this.DocumentNumber, MainStaticClass.CashDeskNumber,
+                                    "Проверка сертификата " + certificate.Barcode + ": сервер не отвечает");
+                                break;
+                            }
+
+                            if (isCertActive == true)
+                            {
+                                continue;
+                            }
+
+                            allActive = false;
+
+                            if (isCertActive == null)
+                            {
+                                // Критическая ошибка: метод уже показал окно И уже записал в errors_log
+                                // (внутри CheckCertificateStatusAsync) — здесь НЕ дублируем
+                                break;
+                            }
+
+                            problems.Add($"Сертификат {certificate.Barcode} не активен");
+                        }
+                    }
+
+                    if (!allActive)
+                    {
+                        // Одно окно со сводкой. При null-прерывании problems пуст —
+                        // и окно НЕ показываем (метод уже показал своё) — дублей нет.
+                        if (problems.Count > 0)
+                        {
+                            await MessageBox.Show(
+                                "Проверка не пройдена:\n" + string.Join("\n", problems),
+                                "Проверка сертификатов",
+                                MessageBoxButton.OK, MessageBoxType.Warning, this);
+                        }
+
+                        this.Activate();
+
+                        // Возврат фокуса в поле ввода — кассиру не искать поле мышью после окон
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            _inputSertificate?.Focus();
+                            _inputSertificate?.SelectAll();
+                        }, DispatcherPriority.Input);
+
+                        return; // finally разблокирует кнопку
                     }
                 }
-                if (!allActive)
-                {
-                    this.Activate();
-                    return;
-                }
-            }
 
-            _closedNormally = true;
-            this.Tag = _certificates.Select(c => c.Clone()).ToList();
-            this.Close();
+                // Успех: закрываем окно и возвращаем данные
+                _closedNormally = true;
+                this.Tag = _certificates.Select(c => c.Clone()).ToList(); // c.Clone() — метод экземпляра
+                this.Close();
+            }
+            finally
+            {
+                // Гарантированная разблокировка при любом исходе, включая исключения
+                if (_buttonCommit != null) _buttonCommit.IsEnabled = true;
+            }
         }
 
 

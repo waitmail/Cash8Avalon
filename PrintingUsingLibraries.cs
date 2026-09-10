@@ -770,8 +770,18 @@ namespace Cash8Avalon
                 IFptr fptr = MainStaticClass.FPTR;
                 if (!fptr.isOpened())
                 {
+                    // fptr.close();
+                    // fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_USE_COMMODITY_NAME_FOR_ADVANCE, "1");
+                    // fptr.applySingleSettings();
+                    // // в любом месте после FPTR инициализирован, перед печатью:
+                    // string flagState = MainStaticClass.FPTR.getSingleSetting("UseCommodityNameForAdvance");
+                    // Console.WriteLine("Флаг: " + flagState);
                     fptr.open();
+                    // в любом месте после FPTR инициализирован, перед печатью:
+                    // flagState = MainStaticClass.FPTR.getSingleSetting("UseCommodityNameForAdvance");
+                    // Console.WriteLine("Флаг: " + flagState);
                 }
+                
 
                 // Логика проверки маркировки для возвратов/коррекций
                 if (check.CheckType.SelectedIndex == 1 || check.CheckType.SelectedIndex == 2 || check.reopened)
@@ -1064,8 +1074,14 @@ namespace Cash8Avalon
 
                     if (check.CheckType.SelectedIndex == 0)
                     {
-                        if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim())) fptr.setParam(1214, 3);
-                        else fptr.setParam(1214, 4);
+                        if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))//(productItem.IsSertificate) не работает для красных чеков 
+                        {
+                            fptr.setParam(1214, 3);
+                        }
+                        else
+                        {
+                            fptr.setParam(1214, 4);
+                        }
                     }
 
                     fptr.registration();

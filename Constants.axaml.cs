@@ -125,6 +125,31 @@ namespace Cash8Avalon
                     this.Owner = desktop.MainWindow;
                 }
             }
+
+            this.Opened += Constants_Opened;
+        }
+        
+        /// <summary>
+        /// Открытие окна: асинхронная проверка чеков за сегодня.
+        /// Кнопки блокируются только если чеки записаны (или БД недоступна — fail-safe метода).
+        /// </summary>
+        private async void Constants_Opened(object sender, EventArgs e)
+        {
+            // отписка: обработчик одноразовый, при переоткрытии окна не дублируется
+            this.Opened -= Constants_Opened;
+
+            bool hasChecks = await HasChecksWrittenToday();
+
+            var comboBoxSystemTaxation = this.FindControl<ComboBox>("comboBox_system_taxation");
+            var comboBoxNdsIp = this.FindControl<ComboBox>("comboBox_nds_ip");
+
+            if (hasChecks)
+            {
+                // Чеки за сегодня есть (или ошибка БД — метод вернул true fail-safe):
+                // блокируем выбор системы налогообложения и НДС ИП — менять их уже нельзя
+                if (comboBoxSystemTaxation != null) comboBoxSystemTaxation.IsEnabled = false;
+                if (comboBoxNdsIp != null) comboBoxNdsIp.IsEnabled = false;
+            }
         }
 
         private async void BtnCheckPiot_Click(object? sender, RoutedEventArgs e)
@@ -395,6 +420,96 @@ namespace Cash8Avalon
             catch (Exception ex)
             {
                 Console.WriteLine("Ошибка генерации: " + ex.Message);
+            }
+        }
+        
+        
+
+        /// <summary>
+        /// Записаны ли уже чеки за сегодня.
+        /// Используется как блокиратор: true → «не начинать новое».
+        /// ВАЖНО: при ошибке БД возвращает true — fail-safe: сбой соединения
+        /// НЕ должен разблокировать действие. При этом кассиру показывается окно
+        /// об ошибке — он знает, что проверка не прошла, а не молча продолжается.
+        /// </summary>
+        /// <returns>true — за сегодня записан хотя бы один чек ИЛИ произошла ошибка БД;
+        ///          false — чеков за сегодня точно нет</returns>
+        private async Task<bool> HasChecksWrittenToday()
+        {
+            // границы «сегодня»: [полночь, полночь завтра) — полуинтервал,
+            // BETWEEN с 00:00:00–23:59:59 теряет доли секунды на границе
+            DateTime dayStart = DateTime.Today;
+            DateTime dayEnd = dayStart.AddDays(1);
+
+            NpgsqlConnection conn = null;
+            try
+            {
+                conn = MainStaticClass.NpgsqlConn();
+                await conn.OpenAsync();
+
+                string query = @"SELECT COUNT(1)
+                         FROM public.checks_header
+                         WHERE date_time_write >= @dayStart
+                           AND date_time_write <  @dayEnd";
+
+                using (NpgsqlCommand command = new NpgsqlCommand(query, conn))
+                {
+                    command.Parameters.AddWithValue("@dayStart", dayStart);
+                    command.Parameters.AddWithValue("@dayEnd", dayEnd);
+
+                    object result_query = await command.ExecuteScalarAsync();
+
+                    long count = (result_query == null || result_query == DBNull.Value)
+                        ? 0
+                        : Convert.ToInt64(result_query);
+
+                    return count > 0;
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                Console.WriteLine($"Ошибка БД: {ex.Message}");
+
+                // ↓ ИТ-журнал: причина сбоя сохраняется независимо от окна
+                MainStaticClass.WriteRecordErrorLog(
+                    "Не удалось получить количество чеков за сегодня — возвращено true (fail-safe)",
+                    "HasChecksWrittenToday", 0, MainStaticClass.CashDeskNumber,
+                    "Ошибка при подсчёте чеков за день: " + ex.Message);
+
+                // ↓ окно кассиру: говорит правду — проверка не прошла, действие осталось заблокированным
+                await MessageBox.Show(
+                    "Не удалось проверить наличие чеков за сегодня.\n" +
+                    "Действие оставлено в заблокированном состоянии (как будто чеки уже есть).\n" +
+                    "Создайте заявку в ИТ-отдел.",
+                    "Ошибка БД", MessageBoxButton.OK, MessageBoxType.Error, this);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка: {ex.Message}");
+
+                MainStaticClass.WriteRecordErrorLog(
+                    "Не удалось получить количество чеков за сегодня — возвращено true (fail-safe)",
+                    "HasChecksWrittenToday", 0, MainStaticClass.CashDeskNumber,
+                    "Критическая ошибка при подсчёте чеков за день: " + ex.Message);
+
+                await MessageBox.Show(
+                    "Не удалось проверить наличие чеков за сегодня.\n" +
+                    "Действие оставлено в заблокированном состоянии (как будто чеки уже есть).\n" +
+                    "Создайте заявку в ИТ-отдел.",
+                    "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, this);
+
+                return true;
+            }
+            finally
+            {
+                if (conn != null && conn.State == System.Data.ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+
+                conn?.Dispose();
             }
         }
 

@@ -450,26 +450,137 @@ namespace Cash8Avalon
             }
         }
 
+        // /// <summary>
+        // /// Проверка статуса сертификата через веб-сервис
+        // /// </summary>
+        // /// <param name="isPayment">true - если это оплата, false - если продажа</param>
+        // /// <returns>true - активен, false - не активен, null - ошибка</returns>
+        // public static async Task<bool?> CheckCertificateStatusAsync(string certificateCode, bool isPayment, Window ownerWindow, long docNum = 0)
+        // {
+        //     try
+        //     {
+        //         string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
+        //         if (string.IsNullOrEmpty(nickShop))
+        //         {
+        //             await MessageBoxHelper.Show("Не удалось получить название магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //             return null;
+        //         }
+        //
+        //         string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
+        //         if (string.IsNullOrEmpty(codeShop))
+        //         {
+        //             await MessageBoxHelper.Show("Не удалось получить код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //             return null;
+        //         }
+        //
+        //         string countDay = CryptorEngine.get_count_day();
+        //         string key = nickShop + countDay + codeShop;
+        //
+        //         string payload = isPayment ? certificateCode + "|1" : certificateCode;
+        //         string encryptData = CryptorEngine.Encrypt(payload, true, key);
+        //
+        //         string status;
+        //         try
+        //         {
+        //             status = await Task.Run(() =>
+        //             {
+        //                 DS ds = MainStaticClass.get_ds();
+        //                 ds.Timeout = 10000;
+        //                 return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString());
+        //             });
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             await MessageBoxHelper.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //             MainStaticClass.WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+        //             return null;
+        //         }
+        //
+        //         if (status == "-1")
+        //         {
+        //             await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //             MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами", "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+        //             return null;
+        //         }
+        //
+        //         if (status == "-2")
+        //         {
+        //             await MessageBoxHelper.Show($"Сертификат {certificateCode} не принадлежит вашей сети", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //             MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не принадлежит сети", "Документ чек", docNum.ToString());
+        //             return null;
+        //         }
+        //
+        //         string decryptData = CryptorEngine.Decrypt(status, true, key);
+        //
+        //         switch (decryptData)
+        //         {
+        //             case "1":
+        //                 MainStaticClass.write_event_in_log($"Сертификат {certificateCode} активен.", "Документ чек", docNum.ToString());
+        //                 return true; // Активен
+        //
+        //             case "0":
+        //                 // Если это оплата, ругаемся, что он не активен. Если продажа - молча возвращаем false.
+        //                 if (isPayment)
+        //                 {
+        //                     await MessageBoxHelper.Show($"Сертификат {certificateCode} не активирован", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //                     MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не активен", "Документ чек", docNum.ToString());
+        //                 }
+        //                 return false; // Не активен
+        //
+        //             default:
+        //                 await MessageBoxHelper.Show($"Неизвестный статус сертификата: {decryptData}", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //                 return null;
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         MainStaticClass.WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата (критическая ошибка)");
+        //         await MessageBoxHelper.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+        //         return null;
+        //     }
+        // }
+
         /// <summary>
-        /// Проверка статуса сертификата через веб-сервис
+        /// Проверка статуса сертификата через веб-сервис.
         /// </summary>
-        /// <param name="isPayment">true - если это оплата, false - если продажа</param>
-        /// <returns>true - активен, false - не активен, null - ошибка</returns>
-        public static async Task<bool?> CheckCertificateStatusAsync(string certificateCode, bool isPayment, Window ownerWindow, long docNum = 0)
+        /// <param name="certificateCode">Штрихкод сертификата</param>
+        /// <param name="isPayment">true — при оплате, false — при продаже</param>
+        /// <param name="ownerWindow">Окно-владелец для MessageBox</param>
+        /// <param name="docNum">Номер документа (для логов)</param>
+        /// <param name="cancellationToken">Токен отмены: прерывает сам веб-запрос (общий таймаут F12)</param>
+        /// <returns>true — активен; false — бизнес-отказ (не активен / не принадлежит сети);
+        ///          null — критическая ошибка (сеть/сервер), окно с причиной уже показано</returns>
+        public static async Task<bool?> CheckCertificateStatusAsync(
+            string certificateCode,
+            bool isPayment,
+            Window ownerWindow,
+            long docNum = 0,
+            System.Threading.CancellationToken cancellationToken = default)
         {
             try
             {
                 string nickShop = MainStaticClass.Nick_Shop?.Trim() ?? string.Empty;
                 if (string.IsNullOrEmpty(nickShop))
                 {
-                    await MessageBoxHelper.Show("Не удалось получить название магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    await MessageBoxHelper.Show("Не удалось получить название магазина", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+
+                    // ↓ запись в errors_log: это сбой данных кассы, а не бизнес-ситуация
+                    WriteRecordErrorLog("Не получено название магазина при проверке сертификата",
+                        "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber,
+                        "Проверка сертификата: нет Nick_Shop");
                     return null;
                 }
 
                 string codeShop = MainStaticClass.Code_Shop?.Trim() ?? string.Empty;
                 if (string.IsNullOrEmpty(codeShop))
                 {
-                    await MessageBoxHelper.Show("Не удалось получить код магазина", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    await MessageBoxHelper.Show("Не удалось получить код магазина", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+
+                    WriteRecordErrorLog("Не получен код магазина при проверке сертификата",
+                        "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber,
+                        "Проверка сертификата: нет Code_Shop");
                     return null;
                 }
 
@@ -482,60 +593,114 @@ namespace Cash8Avalon
                 string status;
                 try
                 {
+                    // Сетевой вызов — в фоне (UI жив), токен прерывает запрос по бюджету
                     status = await Task.Run(() =>
                     {
                         DS ds = MainStaticClass.get_ds();
-                        ds.Timeout = 10000;
-                        return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData, MainStaticClass.GetWorkSchema.ToString());
-                    });
+                        ds.Timeout = 15000;
+                        return ds.GetStatusSertificat(MainStaticClass.Nick_Shop, encryptData,
+                            MainStaticClass.GetWorkSchema.ToString());
+                    }, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Отмена по бюджету — пробрасываем вверх: владелец бюджета решает, что показать.
+                    // НЕ глотаем как «ошибку сети» и НЕ пишем в errors_log:
+                    // это управляемый таймаут, а не сбой (кто и что прервал — фиксирует вызывающий)
+                    throw;
                 }
                 catch (Exception ex)
                 {
-                    await MessageBoxHelper.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
-                    MainStaticClass.WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+                    await MessageBoxHelper.Show($"Отсутствует доступ в интернет или ошибка на сервере: {ex.Message}",
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+
+                    // ↓ основная сетевая ошибка — с исключением в контексте
+                    WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber,
+                        $"Проверка сертификата {certificateCode}: сетевой вызов GetStatusSertificat");
                     return null;
                 }
 
                 if (status == "-1")
                 {
-                    await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
-                    MainStaticClass.WriteRecordErrorLog("Ошибки на сервере при работе с сертификатами", "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата");
+                    await MessageBoxHelper.Show("Произошли ошибки на сервере при работе с сертификатами",
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+
+                    // ↓ ошибка на стороне сервера — без исключения, текстом
+                    WriteRecordErrorLog("Сервер вернул -1 при проверке сертификата " + certificateCode,
+                        "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber,
+                        "Проверка сертификата: ошибка на сервере");
                     return null;
                 }
 
                 if (status == "-2")
                 {
-                    await MessageBoxHelper.Show($"Сертификат {certificateCode} не принадлежит вашей сети", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
-                    MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не принадлежит сети", "Документ чек", docNum.ToString());
-                    return null;
+                    await MessageBoxHelper.Show($"Сертификат {certificateCode} не принадлежит вашей сети",
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                    // Бизнес-отказ: аудит в events, НЕ в errors_log
+                    MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не принадлежит сети",
+                        "Документ чек", docNum.ToString());
+                    return false;
                 }
 
-                string decryptData = CryptorEngine.Decrypt(status, true, key);
+                string decryptData;
+                try
+                {
+                    decryptData = CryptorEngine.Decrypt(status, true, key);
+                }
+                catch (Exception ex)
+                {
+                    await MessageBoxHelper.Show($"Ошибка расшифровки ответа сервера: {ex.Message}",
+                        "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+
+                    // ↓ расшифровка падала необработанно (ключ дня/битый пакет) — в errors_log
+                    WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber,
+                        $"Проверка сертификата {certificateCode}: ошибка расшифровки ответа");
+                    return null;
+                }
 
                 switch (decryptData)
                 {
                     case "1":
-                        MainStaticClass.write_event_in_log($"Сертификат {certificateCode} активен.", "Документ чек", docNum.ToString());
+                        MainStaticClass.write_event_in_log($"Сертификат {certificateCode} активен.",
+                            "Документ чек", docNum.ToString());
                         return true; // Активен
 
                     case "0":
-                        // Если это оплата, ругаемся, что он не активен. Если продажа - молча возвращаем false.
+                        // При оплате — предупреждаем; при продаже молча возвращаем false
                         if (isPayment)
                         {
-                            await MessageBoxHelper.Show($"Сертификат {certificateCode} не активирован", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
-                            MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не активен", "Документ чек", docNum.ToString());
+                            await MessageBoxHelper.Show($"Сертификат {certificateCode} не активирован",
+                                "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                            // Бизнес-отказ — аудит в events, НЕ в errors_log
+                            MainStaticClass.write_event_in_log($"Сертификат {certificateCode} не активен",
+                                "Документ чек", docNum.ToString());
                         }
+
                         return false; // Не активен
 
                     default:
-                        await MessageBoxHelper.Show($"Неизвестный статус сертификата: {decryptData}", "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                        await MessageBoxHelper.Show($"Неизвестный статус сертификата: {decryptData}",
+                            "Проверка сертификата", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+
+                        // ↓ неизвестный статус = неожидаемый ответ сервера — это сбой протокола
+                        WriteRecordErrorLog("Неизвестный статус сертификата: " + decryptData,
+                            "CheckCertificateStatusAsync", docNum, MainStaticClass.CashDeskNumber,
+                            "Проверка сертификата: неожидаемый ответ (не 0/1)");
                         return null;
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // Проброс отмены — к владельцу бюджета (CommitSertificates), без записи в errors_log
+                throw;
+            }
             catch (Exception ex)
             {
-                MainStaticClass.WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber, "Проверка активации сертификата (критическая ошибка)");
-                await MessageBoxHelper.Show($"Критическая ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
+                // ↓ внешние (неожидаемые) исключения — уже было, оставлено
+                WriteRecordErrorLog(ex, docNum, MainStaticClass.CashDeskNumber,
+                    "Проверка активации сертификата (критическая ошибка)");
+                await MessageBoxHelper.Show($"Критическая ошибка: {ex.Message}", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxType.Error, ownerWindow);
                 return null;
             }
         }
@@ -3791,7 +3956,7 @@ namespace Cash8Avalon
                 ////fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_IPADDRESS, "10.21.200.46");
                 ////fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_IPPORT, "5555");            
                 //fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_BAUDRATE, AtolConstants.LIBFPTR_PORT_BR_115200.ToString());
-                fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_PORT, (AtolConstants.LIBFPTR_PORT_USB).ToString());
+                fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_PORT, (AtolConstants.LIBFPTR_PORT_USB).ToString());                
             }
             else if (MainStaticClass.GetVariantConnectFN == 1)
             {
@@ -3802,8 +3967,10 @@ namespace Cash8Avalon
                 string[] ip_adress = GetFnIpaddr.Split(':');
                 fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_IPADDRESS, ip_adress[0]);
                 fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_IPPORT, ip_adress[1]);
-                //fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_BAUDRATE, AtolConstants.LIBFPTR_PORT_BR_115200.ToString());
+                //fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_BAUDRATE, AtolConstants.LIBFPTR_PORT_BR_115200.ToString());                
             }
+
+            fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_USE_COMMODITY_NAME_FOR_ADVANCE, "1");
             fptr.applySingleSettings();
         }
 

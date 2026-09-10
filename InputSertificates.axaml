@@ -7,11 +7,9 @@
         x:Class="Cash8Avalon.InputSertificates"
         Title="Ввод сертификатов"
         WindowStartupLocation="CenterScreen"
-        CanResize="False"
-        CanMinimize="False"
-        CanMaximize="False"
         SystemDecorations="None"
-        WindowState="Maximized">
+        WindowState="Maximized"
+        >
     
     <Grid x:Name="MainGrid" Background="White">
         <Grid.RowDefinitions>

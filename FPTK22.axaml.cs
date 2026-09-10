@@ -66,7 +66,11 @@ public partial class FPTK22 : Window
             _z_report.IsEnabled = false;
         }
         btn_ofd_exchange_status_Click(null, null);
-        btn_send_fiscal_Click(null, null);
+
+        if (OperatingSystem.IsWindows())
+        {
+            btn_send_fiscal_Click(null, null);
+        }
     }
 
     private void get_fiscall_info()

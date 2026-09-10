@@ -2656,6 +2656,9 @@ namespace Cash8Avalon
         //    }
         //}
 
+        // ═══════════════════════════════════════════════════════════════
+        // ВЫНЕСЕННАЯ ФУНКЦИЯ: Валидация и сохранение данных терминала
+        // ═══════════════════════════════════════════════════════════════       
         private async Task ValidateAndSaveTerminalData(Cash_check chk, TerminalResult res, string bankName)
         {
             // 1. Логирование — как было
@@ -2672,7 +2675,7 @@ namespace Cash8Avalon
             // 3. Валидация
             if (string.IsNullOrEmpty(chk.id_transaction_terminal))
             {
-                bool isRefund = (chk.check_type.SelectedIndex == 1);
+                bool isRefund = (chk.CheckType.SelectedIndex == 1);
 
                 if (isRefund)
                 {

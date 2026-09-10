@@ -1011,7 +1011,7 @@ namespace Cash8Avalon
                 conn.Open();
                 //string query = "SELECT tip,num_doc,persent,comment,code_tovar,sum,barcode,marker,action_by_discount FROM action_header WHERE '" + DateTime.Now.Date.ToString("yyy-MM-dd") + "' between date_started AND date_end AND barcode='" + barcode + "' AND kind = 1";
                 string query = "SELECT tip,num_doc,persent,comment,sum,barcode,marker,action_by_discount FROM action_header WHERE '" +
-                    DateTime.Now.Date.ToString("yyy-MM-dd") + "' between date_started AND date_end AND barcode='" + barcode + "' AND kind = 1";
+                    DateTime.Now.Date.ToString("yyy-MM-dd") + "' between date_started AND date_end AND TRIM(barcode)='" + barcode + "' AND kind = 1";
 
                 command = new NpgsqlCommand(query, conn);
                 NpgsqlDataReader reader = command.ExecuteReader();
@@ -1144,28 +1144,41 @@ namespace Cash8Avalon
                     else if (tip_action == 4)
                     {
                         //start_action = DateTime.Now;
-
-                        //if (persent != 0)
-                        //{
-                        //    await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
-                        //}
-                        //else
-                        //{
-                        //    //if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
-                        //    //{                            
-                        //    await action_4_dt(num_doc, comment, sum, show_messages);
-                        //    //}
-                        //}
-                        //write_time_execution(reader[1].ToString(), tip_action.ToString());
+                       
+                        // if (persent != 0)
+                        // {
+                        //     if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
+                        //     {
+                        //         await action_4_dt(num_doc, persent, sum, comment);
+                        //     }
+                        //     else
+                        //     {
+                        //         await action_4_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
+                        //     }
+                        // }
                         if (persent != 0)
                         {
                             if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
                             {
-                                await action_4_dt(num_doc, persent, sum, comment);
+                                await action_4_dt(num_doc, persent, sum, comment);//Дать скидку на все позиции из списка позицию                                                 
                             }
                             else
                             {
-                                await action_4_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);
+                                await action_4_dt(num_doc, persent, sum, comment, LoadActionDataInMemory.AllActionData1);//Дать скидку на все позиции из списка позицию                                                 
+                            }
+                        }
+                        else
+                        {
+                            if (show_messages)//В этой акции в любом случае всплывающие окна, в предварительном рассчете она не будет участвовать
+                            {
+                                if (LoadActionDataInMemory.AllActionData1 == null || LoadActionDataInMemory.AllActionData1.Count == 0)
+                                {
+                                    await action_4_dt(num_doc, comment, sum, show_messages);
+                                }
+                                else
+                                {
+                                    await action_4_dt(num_doc, comment, sum, show_messages, LoadActionDataInMemory.AllActionData1);
+                                }
                             }
                         }
                     }

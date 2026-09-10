@@ -186,7 +186,7 @@ namespace Cash8Avalon
         public TextBox NumCash { get; private set; }
         public TextBox User { get; private set; }
         public TextBox Client { get; private set; }
-        public TextBox ClientBarcodeOrPhone { get; private set; }
+        //public TextBox ClientBarcodeOrPhone { get; private set; }
         public TextBox NumSales { get; private set; }
         public TextBox InputSearchProduct { get; private set; }
         public Button Pay { get; private set; }
@@ -301,7 +301,7 @@ namespace Cash8Avalon
             // Блокируем ввод товаров и смену типа чека
             if (InputSearchProduct != null) InputSearchProduct.IsEnabled = false;
             if (CheckType != null) CheckType.IsEnabled = false;
-            if (ClientBarcodeOrPhone != null) ClientBarcodeOrPhone.IsEnabled = false;
+            //if (ClientBarcodeOrPhone != null) ClientBarcodeOrPhone.IsEnabled = false;
             if (txtB_inn != null) txtB_inn.IsEnabled = false;
             if (txtB_name != null) txtB_name.IsEnabled = false;
             if (btn_get_name != null) btn_get_name.IsEnabled = false;
@@ -356,7 +356,7 @@ namespace Cash8Avalon
         private bool IsFocusOnImportantControl()
         {
             return (Comment?.IsFocused == true) ||
-                   (ClientBarcodeOrPhone?.IsFocused == true) ||
+                   //(ClientBarcodeOrPhone?.IsFocused == true) ||
                    (txtB_inn?.IsFocused == true) ||
                    (txtB_name?.IsFocused == true) ||
                    //(Client?.IsFocused == true) ||
@@ -652,8 +652,8 @@ namespace Cash8Avalon
                 if (CheckType != null)
                     CheckType.SelectionChanged -= CheckType_SelectionChanged;
 
-                if (ClientBarcodeOrPhone != null)
-                    ClientBarcodeOrPhone.KeyDown -= ClientBarcodeOrPhone_KeyDown;
+                //if (ClientBarcodeOrPhone != null)
+                //    ClientBarcodeOrPhone.KeyDown -= ClientBarcodeOrPhone_KeyDown;
 
                 if (InputSearchProduct != null)
                     InputSearchProduct.KeyDown -= InputSearchProduct_KeyDown;
@@ -2206,12 +2206,12 @@ namespace Cash8Avalon
                 if (barcode.Trim().Length > 4)
                 {
                     query = "SELECT COUNT(*) FROM action_header WHERE '" + DateTime.Now.Date.ToString("yyy-MM-dd") +
-                            "' between date_started AND date_end AND barcode='" + barcode + "'";
+                            "' between date_started AND date_end AND TRIM(barcode)='" + barcode + "'";
                 }
                 else
                 {
                     query = "SELECT COUNT(*) FROM action_header WHERE '" + DateTime.Now.Date.ToString("yyy-MM-dd") +
-                            "' between date_started AND date_end AND promo_code='" + barcode + "'";
+                            "' between date_started AND date_end AND TRIM(promo_code)='" + barcode + "'";
                 }
 
                 command = new NpgsqlCommand(query, conn);
@@ -2300,60 +2300,207 @@ namespace Cash8Avalon
         }
 
 
+        //private async Task CheckControls()
+        //{
+        //    try
+        //    {
+
+
+        //        Console.WriteLine("=== Проверка и заполнение контролов ===");
+
+        //        BtnFillOnSales = this.FindControl<Button>("btn_fill_on_sales");
+        //        if (BtnFillOnSales != null)
+        //        {
+        //            BtnFillOnSales.Click += BtnFillOnSales_Click;
+        //        }
+
+        //        CheckType = this.FindControl<ComboBox>("check_type");
+
+        //        if (CheckType != null)
+        //        {
+        //            CheckType.SelectionChanged += CheckType_SelectionChanged;
+        //        }
+
+
+        //        Client = this.FindControl<TextBox>("client");
+        //        NumCash = this.FindControl<TextBox>("num_cash");
+        //        User = this.FindControl<TextBox>("user");
+        //        Comment = this.FindControl<TextBox>("comment");
+        //        LastTovar = this.FindControl<TextBox>("last_tovar"); // Если решили сделать публичным
+
+        //        ClientBarcodeOrPhone = this.FindControl<TextBox>("client_barcode");
+        //        if (ClientBarcodeOrPhone != null)
+        //        {
+        //            ClientBarcodeOrPhone.KeyDown += ClientBarcodeOrPhone_KeyDown;
+        //        }
+
+        //        //client_barcode
+        //        NumSales = this.FindControl<TextBox>("txtB_num_sales");
+        //        InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
+        //        InputSearchProduct.Focus();
+
+        //        // Подписка на события поиска товара
+        //        if (InputSearchProduct != null)
+        //        {
+        //            InputSearchProduct.KeyDown += InputSearchProduct_KeyDown;
+        //            // Или: InputSearchProduct.KeyDown += OnSearchProductKeyDown;
+        //        }
+
+        //        Pay = this.FindControl<Button>("pay");
+
+        //        Pay.Click += Pay_Click;
+
+        //        _tabProducts = this.FindControl<TabItem>("tabProducts");
+        //        _tabCertificates = this.FindControl<TabItem>("tabCertificates");
+
+        //        btn_get_name.Click += btn_get_name_Click;
+
+        //        Console.WriteLine("✓ Все основные контролы проверены");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Ошибка при проверке контролов: {ex.Message}");
+        //        await Dispatcher.UIThread.InvokeAsync(async () =>
+        //        {
+        //            await MessageBoxHelper.Show($"Ошибка при проверке контролов: {ex.Message}", "Проверка контролов",
+        //                MessageBoxButton.OK, MessageBoxType.Error, this);
+        //        });
+        //    }
+        //}
+
+
+
+        // ═══════════════════════════════════════════════════════════════
+        // ПОЛЯ КЛАССА: снимок типа операции (живёт вне UI)
+        // ═══════════════════════════════════════════════════════════════
+        // 0 = Продажа, 1 = Возврат, 2 = Коррекция.
+        // Фиксируется в UI-потоке при инициализации, при переключении комбобокса
+        // и при старте платежа. Бизнес-логика (валидация терминальных данных)
+        // читает ЭТО ПОЛЕ, а не контрол: чтение SelectedIndex по факту ответа
+        // терминала — гонка с SelectionChanged и риск прочитать уже
+        // переключённое или сброшенное значение.
+        private int _checkTypeValue = 0;
+
+        /// <summary> Текущий тип операции: 0 продажа, 1 возврат, 2 коррекция. </summary>
+        private int CheckTypeValue
+        {
+            get { return _checkTypeValue; }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // ПРОВЕРКА И ЗАПОЛНЕНИЕ КОНТРОЛОВ
+        // ═══════════════════════════════════════════════════════════════
         private async Task CheckControls()
         {
             try
             {
-
-
                 Console.WriteLine("=== Проверка и заполнение контролов ===");
 
+                // ---- Кнопки ----
                 BtnFillOnSales = this.FindControl<Button>("btn_fill_on_sales");
                 if (BtnFillOnSales != null)
                 {
                     BtnFillOnSales.Click += BtnFillOnSales_Click;
                 }
 
+                // ---- Тип чека (продажа/возврат/коррекция) ----
                 CheckType = this.FindControl<ComboBox>("check_type");
-
                 if (CheckType != null)
                 {
                     CheckType.SelectionChanged += CheckType_SelectionChanged;
+                    // Если при открытии формы комбобокс уже стоит не на продаже
+                    // (значение по умолчанию из разметки) — снимаем тип СЕЙЧАС,
+                    // чтобы поле не отставало от реального состояния:
+                    SyncCheckTypeValue();
                 }
 
-
+                // ---- Текстовые поля ----
                 Client = this.FindControl<TextBox>("client");
                 NumCash = this.FindControl<TextBox>("num_cash");
                 User = this.FindControl<TextBox>("user");
                 Comment = this.FindControl<TextBox>("comment");
-                LastTovar = this.FindControl<TextBox>("last_tovar"); // Если решили сделать публичным
+                LastTovar = this.FindControl<TextBox>("last_tovar");
 
-                ClientBarcodeOrPhone = this.FindControl<TextBox>("client_barcode");
-                if (ClientBarcodeOrPhone != null)
-                {
-                    ClientBarcodeOrPhone.KeyDown += ClientBarcodeOrPhone_KeyDown;
-                }
+                //ClientBarcodeOrPhone = this.FindControl<TextBox>("client_barcode");
+                //if (ClientBarcodeOrPhone != null)
+                //{
+                //    ClientBarcodeOrPhone.KeyDown += ClientBarcodeOrPhone_KeyDown;
+                //}
 
-                //client_barcode
                 NumSales = this.FindControl<TextBox>("txtB_num_sales");
-                InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
-                InputSearchProduct.Focus();
 
-                // Подписка на события поиска товара
+                // ---- Поиск товара ----
+                InputSearchProduct = this.FindControl<TextBox>("txtB_search_product");
                 if (InputSearchProduct != null)
                 {
                     InputSearchProduct.KeyDown += InputSearchProduct_KeyDown;
-                    // Или: InputSearchProduct.KeyDown += OnSearchProductKeyDown;
+
+                    // Откладываем фокус до полной сборки визуального дерева:
+                    // синхронный Focus() в инициализации часто уходит впустую.
+                    // Приоритет не указываем: DispatcherPriority.Loaded есть не во всех
+                    // версиях Avalonia, Post без приоритета работает везде.
+                    Dispatcher.UIThread.Post(new Action(() =>
+                    {
+                        if (InputSearchProduct != null)
+                        {
+                            InputSearchProduct.Focus();
+                        }
+                    }));
                 }
 
+                // ---- Оплата ----
                 Pay = this.FindControl<Button>("pay");
+                if (Pay != null)
+                {
+                    Pay.Click += Pay_Click;
+                }
 
-                Pay.Click += Pay_Click;
-
+                // ---- Вкладки ----
                 _tabProducts = this.FindControl<TabItem>("tabProducts");
                 _tabCertificates = this.FindControl<TabItem>("tabCertificates");
 
-                btn_get_name.Click += btn_get_name_Click;
+                // ---- Всплывающая кнопка ----
+                if (btn_get_name != null)
+                {
+                    btn_get_name.Click += btn_get_name_Click;
+                }
+
+                // ---- Контроль целостности: ненайденные контролы — единым списком в лог ----
+                // Ценность списка — в полноте: «кнопка не реагирует» при живом приложении
+                // почти всегда = контрол переименован в разметке; причина будет в логе,
+                // а не в NRE-стеке в случайном месте.
+                List<string> missing = new List<string>();
+                if (BtnFillOnSales == null) missing.Add("btn_fill_on_sales");
+                if (CheckType == null) missing.Add("check_type");
+                if (Client == null) missing.Add("client");
+                if (NumCash == null) missing.Add("num_cash");
+                if (User == null) missing.Add("user");
+                if (Comment == null) missing.Add("comment");
+                if (LastTovar == null) missing.Add("last_tovar");
+                //if (ClientBarcodeOrPhone == null) missing.Add("client_barcode");
+                if (NumSales == null) missing.Add("txtB_num_sales");
+                if (InputSearchProduct == null) missing.Add("txtB_search_product");
+                if (Pay == null) missing.Add("pay");
+                if (_tabProducts == null) missing.Add("tabProducts");
+                if (_tabCertificates == null) missing.Add("tabCertificates");
+                if (btn_get_name == null) missing.Add("btn_get_name");
+
+                if (missing.Count > 0)
+                {
+                    string names = string.Join(", ", missing);
+
+                    Console.WriteLine("⚠ Не найдены контролы: " + names);
+
+                    // Ошибка целостности UI — в errors_log: разметка и код разъехались.
+                    // Это инцидент для ИТ (кнопка/поле не работают), не аудит — потому
+                    // errors_log, а не logs.
+                    MainStaticClass.WriteRecordErrorLog(
+                        "Не найдены контролы: " + names,        // errorMessage
+                        "CheckControls",                        // methodName
+                        numdoc,                                 // numDoc
+                        MainStaticClass.CashDeskNumber,         // cashDeskNumber
+                        "UI integrity: контролы отсутствуют в разметке");   // description
+                }
 
                 Console.WriteLine("✓ Все основные контролы проверены");
             }
@@ -2365,6 +2512,30 @@ namespace Cash8Avalon
                     await MessageBoxHelper.Show($"Ошибка при проверке контролов: {ex.Message}", "Проверка контролов",
                         MessageBoxButton.OK, MessageBoxType.Error, this);
                 });
+            }
+        }
+
+        /// <summary>
+        /// Снимок текущего типа чека из комбобокса в ПОЛЕ ДАННЫХ.
+        /// Вызывается: при инициализации (CheckControls), при переключении
+        /// (CheckType_SelectionChanged) и при старте платежа (Pay_Click).
+        ///
+        /// ЗАЩИТА ОТ -1 (пустой/сброшенный комбобокс): НЕ подменяем нулём —
+        /// это тихо переквалифицировало бы возврат/коррекцию в продажу и вернуло
+        /// ложное критическое окно «возврат невозможен». Сохраняем последний
+        /// достоверный снимок. Отсечение сброшенной формы — в Pay_Click, там
+        /// -1 обрабатывается явно («не начинать операцию»).
+        /// </summary>
+        private void SyncCheckTypeValue()
+        {
+            if (CheckType != null)
+            {
+                int index = CheckType.SelectedIndex;
+
+                if (index >= 0)
+                {
+                    _checkTypeValue = index;      // 0 продажа, 1 возврат, 2 коррекция
+                }
             }
         }
 
@@ -2676,8 +2847,8 @@ namespace Cash8Avalon
                                     {
                                         Client.Tag = clientCode;
                                         Client.Text = clientCode;
-                                        if (ClientBarcodeOrPhone != null)
-                                            ClientBarcodeOrPhone.IsEnabled = false;
+                                        //if (ClientBarcodeOrPhone != null)
+                                        //    ClientBarcodeOrPhone.IsEnabled = false;
                                     }
                                 }
 
@@ -5505,23 +5676,23 @@ namespace Cash8Avalon
             }
         }
 
-        private async void ClientBarcodeOrPhone_KeyDown(object? sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                if (await IsPaymentLockedAsync()) return;
-                MainStaticClass.write_event_in_log(" Перед началом поиска клиента ", "Документ чек", numdoc.ToString());
-                ProcessClientDiscount(ClientBarcodeOrPhone.Text.Trim());
-            }
-            else
-            {
-                // Разрешаем только цифры и Backspace
-                if (!IsDigitKey(e.Key) && e.Key != Key.Back && e.Key != Key.Delete)
-                {
-                    e.Handled = true;
-                }
-            }
-        }
+        //private async void ClientBarcodeOrPhone_KeyDown(object? sender, KeyEventArgs e)
+        //{
+        //    if (e.Key == Key.Enter)
+        //    {
+        //        if (await IsPaymentLockedAsync()) return;
+        //        MainStaticClass.write_event_in_log(" Перед началом поиска клиента ", "Документ чек", numdoc.ToString());
+        //        ProcessClientDiscount(ClientBarcodeOrPhone.Text.Trim());
+        //    }
+        //    else
+        //    {
+        //        // Разрешаем только цифры и Backspace
+        //        if (!IsDigitKey(e.Key) && e.Key != Key.Back && e.Key != Key.Delete)
+        //        {
+        //            e.Handled = true;
+        //        }
+        //    }
+        //}
 
         // Метод для проверки, является ли клавиша цифрой
         private bool IsDigitKey(Key key)
@@ -6288,7 +6459,7 @@ namespace Cash8Avalon
                     {
                         // Сервер ответил, что сертификат УЖЕ АКТИВЕН. Продавать нельзя!
                         await MessageBoxHelper.Show(
-                            "Сертификат уже активирован",
+                            "Сертификат уже активирован "+barcode,
                             "Проверка сертификата",
                             MessageBoxButton.OK,
                             MessageBoxType.Error,
