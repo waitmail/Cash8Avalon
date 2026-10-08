@@ -1173,6 +1173,16 @@ namespace Cash8Avalon
                     string query = "SELECT nds_ip FROM constants";
                     command = new NpgsqlCommand(query, conn);
                     nds_ip = Convert.ToInt16(command.ExecuteScalar());
+                    // Нормализация легаси-кодировки: старый код настроек писал
+                    // SelectedIndex (1="5%", 2="7%"), новый пишет сами ставки (5, 7).
+                    if (nds_ip == 1)
+                    {
+                        nds_ip = 5;
+                    }
+                    else if (nds_ip == 2)
+                    {
+                        nds_ip = 7;
+                    }
                 }
                 catch (NpgsqlException ex)
                 {

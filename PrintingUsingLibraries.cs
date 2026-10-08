@@ -770,18 +770,8 @@ namespace Cash8Avalon
                 IFptr fptr = MainStaticClass.FPTR;
                 if (!fptr.isOpened())
                 {
-                    // fptr.close();
-                    // fptr.setSingleSetting(AtolConstants.LIBFPTR_SETTING_USE_COMMODITY_NAME_FOR_ADVANCE, "1");
-                    // fptr.applySingleSettings();
-                    // // в любом месте после FPTR инициализирован, перед печатью:
-                    // string flagState = MainStaticClass.FPTR.getSingleSetting("UseCommodityNameForAdvance");
-                    // Console.WriteLine("Флаг: " + flagState);
                     fptr.open();
-                    // в любом месте после FPTR инициализирован, перед печатью:
-                    // flagState = MainStaticClass.FPTR.getSingleSetting("UseCommodityNameForAdvance");
-                    // Console.WriteLine("Флаг: " + flagState);
                 }
-                
 
                 // Логика проверки маркировки для возвратов/коррекций
                 if (check.CheckType.SelectedIndex == 1 || check.CheckType.SelectedIndex == 2 || check.reopened)
@@ -872,36 +862,7 @@ namespace Cash8Avalon
                         fptr.setParam(1173, 1);
                     }
                 }
-
-                //// === ИСПРАВЛЕННАЯ ЛОГИКА ПРОВЕРКИ КОНТАКТОВ ===
-                //if (check.txtB_email_telephone != null)
-                //{
-                //    string contact = check.txtB_email_telephone.Text;
-                //    if (!string.IsNullOrWhiteSpace(contact) && contact.Trim().Length > 0)
-                //    {
-                //        fptr.setParam(1008, contact);
-                //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-                //    }
-                //}
-                //else
-                //{
-                //    MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_email_telephone is NULL. Client contact not printed.", "PrintCheck", check.numdoc.ToString());
-                //}
-
-                //bool hasInn = check.txtB_inn != null && !string.IsNullOrWhiteSpace(check.txtB_inn.Text);
-                //bool hasName = check.txtB_name != null && !string.IsNullOrWhiteSpace(check.txtB_name.Text);
-
-                //if (hasInn && hasName)
-                //{
-                //    fptr.setParam(1228, check.txtB_inn.Text);
-                //    fptr.setParam(1227, check.txtB_name.Text);
-                //}
-                //else
-                //{
-                //    //if (!hasInn) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_inn is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
-                //    //if (!hasName) MainStaticClass.write_event_in_log($"[print_sell_2_or_return_sell] check.txtB_name is NULL or Empty.", "PrintCheck", check.numdoc.ToString());
-                //}
-
+                
                 if (check.txtB_email_telephone != null && !string.IsNullOrWhiteSpace(check.txtB_email_telephone.Text))
                 {
                     fptr.setParam(1008, check.txtB_email_telephone.Text.Trim());
@@ -932,20 +893,7 @@ namespace Cash8Avalon
                     fptr.setParam(1055, AtolConstants.LIBFPTR_TT_USN_INCOME);
                     MainStaticClass.write_event_in_log("SNO SystemTaxation == 4 LIBFPTR_TT_USN_INCOME", "print_sell_2_or_return_sell", check.numdoc.ToString());
                 }
-
-                //if (fptr.openReceipt() != 0)
-                //{
-                //    await MessageBoxHelper.Show(string.Format("Ошибка при открытии чека.\nОшибка {0}: {1}", fptr.errorCode(), fptr.errorDescription()),
-                //            "Ошибка открытия чека", MessageBoxButton.OK, MessageBoxType.Error, check);
-                //    MainStaticClass.WriteRecordErrorLog($"Ошибка при открытии чека.\nОшибка {fptr.errorCode()}: {fptr.errorDescription()}", "print_sell_2_or_return_sell", check.numdoc, MainStaticClass.CashDeskNumber, "Ошибка при открытии чека");
-                //    if (fptr.errorCode() == 82)
-                //    {
-                //        fptr.cancelReceipt();
-                //        await MessageBoxHelper.Show("Попробуйте распечатать чек еще раз", "Ошибка при печати чека", MessageBoxButton.OK, MessageBoxType.Error, check);
-                //    }
-                //    return false;
-                //}
-
+                
                 if (fptr.openReceipt() != 0)
                 {
                     int errorCode = fptr.errorCode();
@@ -975,6 +923,8 @@ namespace Cash8Avalon
 
                     return false;
                 }
+                
+                int ndsIp = await MainStaticClass.GetNdsIp(check); 
 
                 foreach (ProductItem productItem in check._productsData)
                 {
@@ -1046,35 +996,76 @@ namespace Cash8Avalon
 
                     if (MainStaticClass.SystemTaxation == 1)
                     {
-                        if (stavka_nds == 0) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT0);
-                        else if (stavka_nds == 10) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT10);
-                        else if (stavka_nds == 18) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT20);
+                        if (stavka_nds == 0)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT0);
+                        }
+                        else if (stavka_nds == 10)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT10);
+                        }
+                        else if (stavka_nds == 18)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT20);
+                        }
                         else if (stavka_nds == 20)
                         {
                             fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, DateTime.Now.Year >= 2026 ? AtolConstants.LIBFPTR_TAX_VAT22 : AtolConstants.LIBFPTR_TAX_VAT20);
                         }
-                        else if (stavka_nds == 22) 
-                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
+                        else if (stavka_nds == 22)
+                        {
+                            if (productItem.IsSertificate)
+                            {
+                                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, DateTime.Now.Year >= 2026 ? AtolConstants.LIBFPTR_TAX_VAT122 : AtolConstants.LIBFPTR_TAX_VAT120);
+                            }
+                            else
+                            {
+                                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT22);
+                            }
+                        }
                         else
                         {
                             await MessageBoxHelper.Show("Неизвестная ставка ндс", "Проверка ставки ндс", MessageBoxButton.OK, MessageBoxType.Error, check);
                             error = true;
                         }
-                        if (productItem.IsSertificate)
-                        {
-                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, DateTime.Now.Year >= 2026 ? AtolConstants.LIBFPTR_TAX_VAT122 : AtolConstants.LIBFPTR_TAX_VAT120);
-                        }
+                        //if (productItem.IsSertificate)
+                        //{
+                        //    fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, DateTime.Now.Year >= 2026 ? AtolConstants.LIBFPTR_TAX_VAT122 : AtolConstants.LIBFPTR_TAX_VAT120);
+                        //}
                     }
                     else
                     {
-                        if (await MainStaticClass.GetNdsIp(check) == 0) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
-                        else if (await MainStaticClass.GetNdsIp(check) == 5) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
-                        else if (await MainStaticClass.GetNdsIp(check) == 7) fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
+                        if (ndsIp == 0)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
+                        }
+                        else if (ndsIp == 5)
+                        {
+                            if (productItem.IsSertificate)
+                            {
+                                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT105);
+                            }
+                            else
+                            {
+                                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
+                            }
+                        }
+                        else if (ndsIp == 7)
+                        {
+                            if (productItem.IsSertificate)
+                            {
+                                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT107);
+                            }
+                            else
+                            {
+                                fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);    
+                            }
+                        }
                     }
 
                     if (check.CheckType.SelectedIndex == 0)
                     {
-                        if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))//(productItem.IsSertificate) не работает для красных чеков 
+                        if (productItem.IsSertificate)//if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))//(productItem.IsSertificate) не работает для красных чеков 
                         {
                             fptr.setParam(1214, 3);
                         }
@@ -1887,21 +1878,6 @@ namespace Cash8Avalon
                     }
                 }
 
-                //if (check.txtB_email_telephone.Text != null)
-                //{
-                //    if (check.txtB_email_telephone.Text.Trim().Length > 0)
-                //    {
-                //        fptr.setParam(1008, check.txtB_email_telephone.Text);
-                //        fptr.setParam(AtolConstants.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, true);
-                //    }
-
-                //    if ((check.txtB_inn.Text.Trim().Length > 0) && (check.txtB_name.Text.Trim().Length > 0))
-                //    {
-                //        fptr.setParam(1228, check.txtB_inn.Text);
-                //        fptr.setParam(1227, check.txtB_name.Text);
-                //    }
-                //}
-
                 if (check.txtB_email_telephone != null && !string.IsNullOrWhiteSpace(check.txtB_email_telephone.Text))
                 {
                     fptr.setParam(1008, check.txtB_email_telephone.Text.Trim());
@@ -1954,6 +1930,8 @@ namespace Cash8Avalon
                     return false;
                 }
 
+                int ndsIp = await MainStaticClass.GetNdsIp(check);
+                
                 foreach (ProductItem productItem in check._productsData)
                 {
                     if (variant == 0)
@@ -2033,23 +2011,38 @@ namespace Cash8Avalon
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_MEASUREMENT_UNIT, AtolConstants.LIBFPTR_IU_KILOGRAM);
                     }
                     fptr.setParam(AtolConstants.LIBFPTR_PARAM_QUANTITY, productItem.Quantity.ToString().Replace(",", "."));
-
-                    if (await MainStaticClass.GetNdsIp(check) == 0)
+                  
+                    if (ndsIp == 0)
                     {
                         fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_NO);
                     }
-                    else if (await MainStaticClass.GetNdsIp(check) == 1)
+                    else if (ndsIp == 5)
                     {
-                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
+                        if (productItem.IsSertificate)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT105); // аванс: НДС из суммы 5/105
+                        }
+                        else
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT5);
+                        }
                     }
-                    else if (await MainStaticClass.GetNdsIp(check) == 2)
+                    else if (ndsIp == 7)
                     {
-                        fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
+                        if (productItem.IsSertificate)
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT107); // аванс: НДС из суммы 7/107
+                        }
+                        else
+                        {
+                            fptr.setParam(AtolConstants.LIBFPTR_PARAM_TAX_TYPE, AtolConstants.LIBFPTR_TAX_VAT7);
+                        }
                     }
 
                     if (check.CheckType.SelectedIndex == 0)
                     {
-                        if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
+                        //if (MainStaticClass.its_certificate(productItem.Code.ToString().Trim()))
+                        if (productItem.IsSertificate)
                         {
                             fptr.setParam(1214, 3);
                         }

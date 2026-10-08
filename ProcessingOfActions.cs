@@ -2038,7 +2038,11 @@ namespace Cash8Avalon
                     continue;
                 }
 
-                if (!IsPriceValidForAction(row))
+                // if (!IsPriceValidForAction(row))
+                // {
+                //     continue;
+                // }
+                if (!IsPriceValidForAction(row, percent))
                 {
                     continue;
                 }
@@ -2130,7 +2134,8 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
-                    if (!IsPriceValidForAction(row)) continue;
+                    //if (!IsPriceValidForAction(row)) continue;
+                    if (!IsPriceValidForAction(row, percent)) continue;
 
                     //if (Convert.ToInt32(row["sum_at_discount"]) < 1)
                     //{
@@ -2491,10 +2496,11 @@ namespace Cash8Avalon
             foreach (DataRow row in dtCopy.Rows)
             {
                 if (Convert.ToInt32(row["action2"]) > 0) continue; // уже обработано
-                if (!IsPriceValidForAction(row))
-                {
-                    continue;
-                }
+                // if (!IsPriceValidForAction(row))
+                // {
+                //     continue;
+                // }
+                if (!IsPriceValidForAction(row, percent)) continue;
 
 
                 long code = Convert.ToInt64(row["tovar_code"]);
@@ -2521,7 +2527,8 @@ namespace Cash8Avalon
             foreach (DataRow row in dtCopy.Rows)
             {
                 if (Convert.ToInt32(row["action2"]) > 0) continue;
-                if (!IsPriceValidForAction(row)) continue;
+                //if (!IsPriceValidForAction(row)) continue;
+                if (!IsPriceValidForAction(row, percent)) continue;
 
                 long code = Convert.ToInt64(row["tovar_code"]);
                 int qty = Convert.ToInt32(row["quantity"]);
@@ -2907,7 +2914,7 @@ namespace Cash8Avalon
                 var tovarCodesInAction = GetTovarCodesInActionFromDictionary(actionPricesByDoc, num_doc);
 
                 // Вычисляем общую сумму документа без скидок
-                decimal sumOnDoc = CalculateTotalSumWithoutDiscount(dtCopy, tovarCodesInAction);
+                decimal sumOnDoc = CalculateTotalSumWithoutDiscount(dtCopy, tovarCodesInAction,percent);
 
                 // Проверяем условия акции
                 if (CheckActionConditions(sumOnDoc, sum))
@@ -3022,7 +3029,7 @@ namespace Cash8Avalon
                     var tovarCodesInAction = GetTovarCodesInAction(conn, num_doc);
 
                     // Вычисляем общую сумму документа без скидок
-                    decimal sumOnDoc = CalculateTotalSumWithoutDiscount(dtCopy, tovarCodesInAction);
+                    decimal sumOnDoc = CalculateTotalSumWithoutDiscount(dtCopy, tovarCodesInAction,percent);
 
                     // Проверяем условия акции
                     if (CheckActionConditions(sumOnDoc, sum))
@@ -3070,7 +3077,7 @@ namespace Cash8Avalon
             return tovarCodesInAction;
         }
 
-        private decimal CalculateTotalSumWithoutDiscount(DataTable dtCopy, HashSet<long> tovarCodesInAction)
+        private decimal CalculateTotalSumWithoutDiscount(DataTable dtCopy, HashSet<long> tovarCodesInAction,decimal percent)
         {
             decimal sumOnDoc = 0;
 
@@ -3081,7 +3088,8 @@ namespace Cash8Avalon
                     continue;
                 }
 
-                if (!IsPriceValidForAction(row)) continue;
+                //if (!IsPriceValidForAction(row)) continue;
+                if (!IsPriceValidForAction(row,percent)) continue;
 
                 if (tovarCodesInAction.Contains(Convert.ToInt64(row["tovar_code"]))) // Используем Convert.ToInt64 для long
                 {
@@ -3105,10 +3113,11 @@ namespace Cash8Avalon
                 {
                     continue;
                 }
-                if (!IsPriceValidForAction(row))
-                {
-                    continue;
-                }
+                // if (!IsPriceValidForAction(row))
+                // {
+                //     continue;
+                // }
+                if (!IsPriceValidForAction(row, percent)) continue;
 
 
                 if (tovarCodesInAction.Contains(Convert.ToInt64(row["tovar_code"]))) // Используем Convert.ToInt64 для long
@@ -3333,7 +3342,8 @@ namespace Cash8Avalon
                         dt2.Rows.Add(row2);
                         continue;
                     }
-                    if (!IsPriceValidForAction(row))
+                    //if (!IsPriceValidForAction(row))
+                    if (!IsPriceValidForAction(row, persent))
                     {
                         DataRow row2 = dt2.NewRow();
                         row2.ItemArray = row.ItemArray;
@@ -3558,7 +3568,8 @@ namespace Cash8Avalon
                 foreach (DataRow row in originalDt.Rows)
                 {
                     if (Convert.ToInt32(row["action2"]) > 0 ||
-                                !IsPriceValidForAction(row) ||
+                                //!IsPriceValidForAction(row) ||
+                                !IsPriceValidForAction(row, percent) ||
                                 !IsTovarInAction(actionPricesByDoc, num_doc, (long)Convert.ToDouble(row["tovar_code"])))
                     {
                         tempDt.ImportRow(row);
@@ -3570,7 +3581,9 @@ namespace Cash8Avalon
                 foreach (DataRow row in originalDt.Rows)
                 {
                     if (Convert.ToInt32(row["action2"]) > 0) continue;
-                    if (!IsPriceValidForAction(row)) continue;
+                    //if (!IsPriceValidForAction(row)) continue;
+                    if (!IsPriceValidForAction(row, percent)) continue;
+                      
 
                     long tovarCode = (long)Convert.ToDouble(row["tovar_code"]);
                     if (!IsTovarInAction(actionPricesByDoc, num_doc, tovarCode)) continue;
@@ -4639,7 +4652,8 @@ namespace Cash8Avalon
                         dt2.Rows.Add(row2);
                         continue;
                     }
-                    if (!IsPriceValidForAction(row))//Этот товар уже участвовал в акции значит его пропускаем                  
+                    //if (!IsPriceValidForAction(row))//Этот товар уже участвовал в акции значит его пропускаем
+                    if (!IsPriceValidForAction(row, persent))
                     {
                         DataRow row2 = dt2.NewRow();
                         row2.ItemArray = row.ItemArray;
@@ -4931,38 +4945,65 @@ namespace Cash8Avalon
                     {
                         continue;
                     }
-                    if (!IsPriceValidForAction(row)) continue;
+                    //if (!IsPriceValidForAction(row)) continue;
+                    if (!IsPriceValidForAction(row, persent)) continue;
                     query += "INSERT INTO table12(tovar_code,sum_at_a_discount)VALUES(" + row["tovar_code"].ToString() + "," + row["sum_at_discount"].ToString().Replace(",", ".") + ");";
                 }
 
                 command = new NpgsqlCommand(query, conn);
                 command.ExecuteNonQuery();
 
+                // query = " SELECT MAX(num_list)AS count_list FROM action_table WHERE num_doc =" + num_doc + ";" +
+                //
+                //     " Select coalesce(num_list,2)AS num_list,coalesce(SUM(sum_at_a_discount),0) AS sum_at_discount" +
+                //     " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
+                //     " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
+                //     " FULL JOIN  table12 ON tovar_code = code_tovar" +
+                //     " GROUP BY coalesce(num_list, 2);" +
+                //
+                //     " Select coalesce(CASE WHEN Action12.num_list = 1 THEN" +
+                //     " tovar_code::varchar(255)" +
+                //     " WHEN Action12.num_list = 2 OR Action12.num_list = NULL THEN" +
+                //     " 'num_list2'" +
+                //     " END,'0') AS code_action, coalesce(num_list, 2)AS num_list, sum_at_a_discount" +
+                //     " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
+                //     " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
+                //     " FULL JOIN  table12 ON tovar_code = code_tovar;" +
+                //
+                //     " Select coalesce(CASE WHEN Action12.num_list = 1 THEN" +
+                //     " tovar_code::varchar(255)" +
+                //     " WHEN Action12.num_list = 2 OR Action12.num_list = NULL THEN" +
+                //     " 'num_list2'" +
+                //     " END,'0') AS code_action, coalesce(num_list, 2), sum_at_a_discount" +
+                //     " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
+                //     " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
+                //     " LEFT JOIN  table12 ON tovar_code = code_tovar; ";
+                
                 query = " SELECT MAX(num_list)AS count_list FROM action_table WHERE num_doc =" + num_doc + ";" +
 
-                    " Select coalesce(num_list,2)AS num_list,SUM(sum_at_a_discount) AS sum_at_a_discount" +
-                    " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
-                    " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
-                    " FULL JOIN  table12 ON tovar_code = code_tovar" +
-                    " GROUP BY coalesce(num_list, 2);" +
+                        " Select coalesce(num_list,2)AS num_list,coalesce(SUM(sum_at_a_discount),0) AS sum_at_discount" +   // ← coalesce вокруг SUM
+                        " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
+                        " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
+                        " FULL JOIN  table12 ON tovar_code = code_tovar" +
+                        " GROUP BY coalesce(num_list, 2);" +
 
-                    " Select coalesce(CASE WHEN Action12.num_list = 1 THEN" +
-                    " tovar_code::varchar(255)" +
-                    " WHEN Action12.num_list = 2 OR Action12.num_list = NULL THEN" +
-                    " 'num_list2'" +
-                    " END,'0') AS code_action, coalesce(num_list, 2)AS num_list, sum_at_a_discount" +
-                    " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
-                    " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
-                    " FULL JOIN  table12 ON tovar_code = code_tovar;" +
+                        " Select coalesce(CASE WHEN Action12.num_list = 1 THEN" +
+                        " tovar_code::varchar(255)" +
+                        " WHEN Action12.num_list = 2 OR Action12.num_list = NULL THEN" +
+                        " 'num_list2'" +
+                        " END,'0') AS code_action, coalesce(num_list, 2)AS num_list, coalesce(sum_at_a_discount,0) AS sum_at_discount" +   // ← coalesce вокруг суммы
+                        " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
+                        " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
+                        " FULL JOIN  table12 ON tovar_code = code_tovar;" +
 
-                    " Select coalesce(CASE WHEN Action12.num_list = 1 THEN" +
-                    " tovar_code::varchar(255)" +
-                    " WHEN Action12.num_list = 2 OR Action12.num_list = NULL THEN" +
-                    " 'num_list2'" +
-                    " END,'0') AS code_action, coalesce(num_list, 2), sum_at_a_discount" +
-                    " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
-                    " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
-                    " LEFT JOIN  table12 ON tovar_code = code_tovar; ";
+                        " Select coalesce(CASE WHEN Action12.num_list = 1 THEN" +
+                        " tovar_code::varchar(255)" +
+                        " WHEN Action12.num_list = 2 OR Action12.num_list = NULL THEN" +
+                        " 'num_list2'" +
+                        " END,'0') AS code_action, coalesce(num_list, 2) AS num_list, coalesce(sum_at_a_discount,0) AS sum_at_discount" +   // ← для единообразия (запрос кодом не читается)
+                        " FROM(SELECT code_tovar, coalesce(num_list, 2) AS num_list, num_doc" +
+                        " FROM action_table WHERE action_table.num_doc =" + num_doc + ") AS Action12" +
+                        " LEFT JOIN  table12 ON tovar_code = code_tovar; ";
 
                 command = new NpgsqlCommand(query, conn);
                 //command.Transaction = tran;
@@ -5020,11 +5061,16 @@ namespace Cash8Avalon
                         {
                             break;
                         }
+                       
                         foreach (DataRow row_dt in dt.Rows)
                         {
                             if (action_sum == 0)
                             {
                                 break;
+                            }
+                            if (!IsPriceValidForAction(row_dt, persent)) 
+                            {
+                                continue;
                             }
                             if (Convert.ToDouble(row_list1["tovar_code"]) == Convert.ToDouble(row_dt["tovar_code"]))//на эту строку необходимо дать скидку но проверить сумму 
                             {
@@ -5230,15 +5276,53 @@ namespace Cash8Avalon
         }
 
         /// <summary>
-        /// Проверяет, может ли товар участвовать в акции.
-        /// Товары с ценой со скидкой меньше 1 рубля не участвуют.
+        /// Минимальная цена после скидки (1 копейка),
+        /// чтобы цена не обнулилась при округлении.
+        /// </summary>
+        private const decimal MinPriceAfterDiscount = 0.01m;
+
+        /// <summary>
+        /// Базовая проверка для акций БЕЗ процента скидки
+        /// (подарки, сообщения, купоны, стикеры).
+        /// Товар с ценой со скидкой &lt; 1 руб. не участвует.
         /// </summary>
         private bool IsPriceValidForAction(DataRow row)
         {
             try
             {
-                // Проверяем цену со скидкой (price_at_discount). Если она меньше 1 рубля, товар пропускается.
                 return Convert.ToDecimal(row["price_at_discount"]) >= 1m;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Расширенная проверка для акций С ЯВНЫМ процентом скидки.
+        /// Считает цену ПОСЛЕ скидки от row["price"] — той же величины,
+        /// которую используют сами action-методы при расчёте priceAtDiscount.
+        /// Требует, чтобы после применения процента цена не занулилась.
+        /// </summary>
+        private bool IsPriceValidForAction(DataRow row, decimal persent)
+        {
+            try
+            {
+                // ⚠ Базовая проверка >= 1m здесь СОЗНАТЕЛЬНО не вызывается:
+                // при 99.9% скидке от товара за 1.05 руб. цена занулится —
+                // именно эту проблему и решаем.
+                decimal price = Convert.ToDecimal(row["price"]);
+                decimal remaining = (100m - persent) / 100m;
+
+                if (remaining <= 0m)
+                {
+                    return false; // скидка 100% и больше — обнулится всегда
+                }
+
+                // Без Math.Round: как только произведение опускается ниже копейки,
+                // любое округление может дать 0.00. Это консервативная граница,
+                // не зависящая от MidpointRounding в конкретном action-методе.
+                return price * remaining >= MinPriceAfterDiscount;
             }
             catch
             {

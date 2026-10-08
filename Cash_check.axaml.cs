@@ -1536,21 +1536,20 @@ namespace Cash8Avalon
                         }
                     }
                 }
-
-                // if (isExtraCheckOutOfDate)
-                // {
-                //     await MessageBoxHelper.Show(
-                //         "Печать чеков с признаком 'Extra' доступна только день в день (сегодня на сегодня).", 
-                //         "Ограничение печати", 
-                //         MessageBoxButton.OK, MessageBoxType.Warning, this);
-                //         
-                //     this.pay.IsEnabled = false;
-                //     this.checkBox_to_print_repeatedly.IsEnabled = false;
-                //     this.checkBox_to_print_repeatedly_p.IsEnabled = false;
-                // }
                 // ═══════════════════════════════════════════════════
                 // КОНЕЦ БЛОКА БЛОКИРОВКИ
                 // ═══════════════════════════════════════════════════
+                if (isExtraCheckOutOfDate)
+                {
+                    await MessageBoxHelper.Show(
+                        "Печать чеков с признаком 'Extra' доступна только день в день (сегодня на сегодня).",
+                        "Ограничение печати",
+                        MessageBoxButton.OK, MessageBoxType.Warning, this);
+                
+                    this.pay.IsEnabled = false;
+                    this.checkBox_to_print_repeatedly.IsEnabled = false;
+                    this.checkBox_to_print_repeatedly_p.IsEnabled = false;
+                }
                 else if (MainStaticClass.Use_Fiscall_Print)
                 {
                     if ((MainStaticClass.SystemTaxation != 3) && (MainStaticClass.SystemTaxation != 5))
@@ -3049,21 +3048,21 @@ namespace Cash8Avalon
         {
 
             // Защита от печати просроченных Extra-чеков (даже через горячие клавиши)
-            // if (!IsNewCheck && this.Extra && !string.IsNullOrEmpty(date_time_write))
-            // {
-            //     string[] expectedFormats = { "yyyy-MM-dd HH:mm:ss", "dd-MM-yyyy HH:mm:ss", "dd.MM.yyyy HH:mm:ss", "yyyy.MM.dd HH:mm:ss" };
-            //     if (DateTime.TryParseExact(date_time_write.Trim(), expectedFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dtWrite))
-            //     {
-            //         if (dtWrite.Date != DateTime.Now.Date)
-            //         {
-            //             await MessageBoxHelper.Show(
-            //                 "Печать чеков с признаком 'Extra' доступна только день в день!", 
-            //                 "Ограничение печати", 
-            //                 MessageBoxButton.OK, MessageBoxType.Warning, this);
-            //             return;
-            //         }
-            //     }
-            // }
+            if (!IsNewCheck && this.Extra && !string.IsNullOrEmpty(date_time_write))
+            {
+                string[] expectedFormats = { "yyyy-MM-dd HH:mm:ss", "dd-MM-yyyy HH:mm:ss", "dd.MM.yyyy HH:mm:ss", "yyyy.MM.dd HH:mm:ss" };
+                if (DateTime.TryParseExact(date_time_write.Trim(), expectedFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dtWrite))
+                {
+                    if (dtWrite.Date != DateTime.Now.Date)
+                    {
+                        await MessageBoxHelper.Show(
+                            "Печать чеков с признаком 'Extra' доступна только день в день!", 
+                            "Ограничение печати", 
+                            MessageBoxButton.OK, MessageBoxType.Warning, this);
+                        return;
+                    }
+                }
+            }
 
             Console.WriteLine($"Перед проверкой возможности печати");
             if (await MainStaticClass.PrintingUsingLibraries() == 1)
@@ -11771,7 +11770,8 @@ namespace Cash8Avalon
                 string query =
                     "SELECT checks_header.client, checks_header.cash_desk_number, checks_header.comment, checks_header.cash, " +
                     " checks_header.remainder,checks_header.date_time_start,checks_header.discount,clients.name AS clients_name ,users.name AS users_name  " +
-                    ",tovar.name AS tovar_name ,checks_table.tovar_code, checks_table.quantity,checks_table.price, checks_table.price_at_a_discount,checks_table.sum, " +
+                    ",tovar.name AS tovar_name , tovar.its_certificate, tovar.its_marked, tovar.fractional," +
+                    "checks_table.tovar_code, checks_table.quantity,checks_table.price, checks_table.price_at_a_discount,checks_table.sum, " +
                     " checks_table.sum_at_a_discount,checks_table.action_num_doc,checks_table.action_num_doc1,checks_table.action_num_doc2," +
                     " checks_header.check_type " +
                     " ,characteristic.name AS characteristic_name,checks_header.document_number,checks_header.autor,characteristic.guid,clients.code AS clients_code ," +
@@ -11781,6 +11781,7 @@ namespace Cash8Avalon
                     " checks_header.its_deleted,checks_header.system_taxation,checks_header.guid AS checks_header_guid,checks_header.guid1 AS checks_header_guid," +
                     "payment_by_sbp,checks_header.action_num_doc, " +
                     " checks_header.extra, checks_header.order_state, checks_header.order_id, checks_table.is_added_to_order_on_cash " +
+                    
                     " FROM checks_header left join checks_table ON checks_header.document_number=checks_table.document_number " +
                     " left join clients ON checks_header.client  = clients.code " +
                     " left join tovar ON checks_table.tovar_code = tovar.code " +
@@ -11839,6 +11840,13 @@ namespace Cash8Avalon
 
                     // Получаем цену со скидкой
                     decimal priceAtDiscount = Convert.ToDecimal(reader["price_at_a_discount"]);
+                    
+                    bool isCertificate = reader["its_certificate"] != DBNull.Value
+                                         && Convert.ToBoolean(reader["its_certificate"]);
+                    bool isMarked      = reader["its_marked"] != DBNull.Value
+                                         && Convert.ToBoolean(reader["its_marked"]);
+                    bool isFractional  = reader["fractional"] != DBNull.Value
+                                         && Convert.ToBoolean(reader["fractional"]);
 
                     // Проверяем, является ли строка сертификатом (цена со скидкой < 0)
                     if (priceAtDiscount < 0)
@@ -11872,7 +11880,10 @@ namespace Cash8Avalon
                             Gift = Convert.ToInt32(reader["action_num_doc1"]),
                             Action2 = Convert.ToInt32(reader["action_num_doc2"]),
                             Mark = reader["item_marker"].ToString().Replace("vasya2021", "'").Trim(),
-                            IsAddedToOrderOnCash = Convert.ToBoolean(reader["is_added_to_order_on_cash"])
+                            IsAddedToOrderOnCash = Convert.ToBoolean(reader["is_added_to_order_on_cash"]), 
+                            IsSertificate  = isCertificate,
+                            IsMarked      = isMarked,
+                            IsFractional  = isFractional
                         };
 
                         _productsData.Add(productItem);
